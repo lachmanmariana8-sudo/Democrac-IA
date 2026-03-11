@@ -1,0 +1,19 @@
+# DEMOCRAC.IA (PEIRS) — Dependencies
+# Core
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-anthropic>=0.2.0
+
+# API
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0
+
+# Future integrations (uncomment as needed)
+# playwright              # OSINT scraping
+# neo4j                   # GraphOS power networks
+# pinecone-client         # Vector DB for RAG
+# qdrant-client           # Alternative Vector DB
+# scrapy                  # Advanced scraping
+# pandas                  # Data processing
+# httpx                   # Async HTTP client
