@@ -64,16 +64,23 @@ VDEM_CSV_PATH = os.getenv("VDEM_CSV_PATH", "../data/V-Dem-CY-Full+Others-v15.csv
 # Columnas que vamos a usar de V-Dem (extraemos solo estas para ahorrar memoria)
 VDEM_COLUMNS = [
     "country_text_id", "year",
-    "v2x_libdem",          # Democracia liberal (0-1)
-    "v2x_polyarchy",       # Democracia electoral / poliarquía (0-1)
-    "v2x_partipdem",       # Democracia participativa (0-1)
-    "v2x_delibdem",        # Democracia deliberativa (0-1)
-    "v2x_egaldem",         # Democracia igualitaria (0-1)
-    "v2xel_frefair",       # Elecciones libres y justas (0-1)
-    "v2x_freexp_altinf",   # Libertad de expresión y fuentes alternativas (0-1)
-    "v2x_frassoc_thick",   # Libertad de asociación (0-1)
-    "v2x_suffr",           # Sufragio universal (0-1)
-    "v2xcl_rol",           # Estado de derecho (0-1)
+    # Índices de democracia (0-1)
+    "v2x_libdem",          # Democracia liberal
+    "v2x_polyarchy",       # Democracia electoral / poliarquía
+    "v2x_partipdem",       # Democracia participativa
+    "v2x_delibdem",        # Democracia deliberativa
+    "v2x_egaldem",         # Democracia igualitaria
+    "v2xel_frefair",       # Elecciones libres y justas
+    "v2x_freexp_altinf",   # Libertad de expresión y fuentes alternativas
+    "v2x_frassoc_thick",   # Libertad de asociación
+    "v2x_suffr",           # Sufragio universal
+    "v2xcl_rol",           # Estado de derecho
+    # Organismo Electoral (EMB) — escala continua aprox. -4 a +4
+    "v2elembaut",          # Autonomía del EMB respecto al gobierno
+    "v2elembcap",          # Capacidad técnica del EMB
+    "v2elirreg",           # Irregularidades electorales (negativo = más irregularidades)
+    "v2elintim",           # Intimidación electoral (negativo = más intimidación)
+    "v2elintmon",          # Observación internacional (0=no, 1=sí, por elección)
 ]
 
 # Citación oficial requerida por V-Dem (licencia CC-BY-SA)
@@ -134,6 +141,28 @@ def get_vdem_country(df: Optional[pd.DataFrame], country_code: str, year: int = 
     r = row.iloc[0]
     actual_year = int(r["year"])
 
+    def norm_vdem(val, min_val=-4.0, max_val=4.0):
+        if pd.isna(val):
+            return None
+        return round((float(val) - min_val) / (max_val - min_val), 4)
+
+    def norm_inverted(val, min_val=-4.0, max_val=4.0):
+        n = norm_vdem(val, min_val, max_val)
+        return round(1.0 - n, 4) if n is not None else None
+
+    emb_aut_raw = float(r["v2elembaut"]) if pd.notna(r["v2elembaut"]) else 0.0
+    if emb_aut_raw >= 1.5:
+        emb_independence_level = "full"
+    elif emb_aut_raw >= 0.0:
+        emb_independence_level = "partial"
+    elif emb_aut_raw >= -1.5:
+        emb_independence_level = "compromised"
+    else:
+        emb_independence_level = "captured"
+
+    intmon_raw = r["v2elintmon"]
+    international_observation = bool(intmon_raw == 1.0) if pd.notna(intmon_raw) else None
+
     return {
         "country_code": country_code,
         "year": actual_year,
@@ -147,6 +176,13 @@ def get_vdem_country(df: Optional[pd.DataFrame], country_code: str, year: int = 
         "freedom_of_association": round(float(r["v2x_frassoc_thick"]), 4),
         "universal_suffrage": round(float(r["v2x_suffr"]), 4),
         "rule_of_law": round(float(r["v2xcl_rol"]), 4),
+        "emb_autonomy_raw": round(emb_aut_raw, 4),
+        "emb_autonomy": norm_vdem(r["v2elembaut"]),
+        "emb_capacity": norm_vdem(r["v2elembcap"]),
+        "emb_independence_level": emb_independence_level,
+        "electoral_irregularities": norm_inverted(r["v2elirreg"]),
+        "electoral_intimidation": norm_inverted(r["v2elintim"]),
+        "international_observation": international_observation,
         "citation": VDEM_CITATION,
         "dataset_version": VDEM_VERSION,
     }
@@ -838,19 +874,30 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
             notes=vdem_notes,
         ),
 
-        # Administración Electoral (EMB)
+        # Administración Electoral (EMB) — datos REALES desde V-Dem
         "emb": create_trace(
             value={
-                "name": osint["emb_name"],
-                "independence_level": osint["emb_independence"],
-                "opposition_representation": osint["emb_opposition_representation"],
+                "name": osint["emb_name"],  # Nombre aún mock (pendiente scraping portal EMB)
+                "independence_level": vdem_real["emb_independence_level"] if vdem_real else osint["emb_independence"],
+                "autonomy_score": vdem_real["emb_autonomy"] if vdem_real else None,
+                "autonomy_raw": vdem_real["emb_autonomy_raw"] if vdem_real else None,
+                "capacity_score": vdem_real["emb_capacity"] if vdem_real else None,
+                "electoral_irregularities": vdem_real["electoral_irregularities"] if vdem_real else None,
+                "electoral_intimidation": vdem_real["electoral_intimidation"] if vdem_real else None,
+                "opposition_representation": osint["emb_opposition_representation"],  # Mock pendiente
+                "data_year": vdem_real["year"] if vdem_real else None,
             },
-            source_id=f"emb_portal_{code.lower()}",
-            source_type=SOURCE_MOCK,
-            source_url="",
-            confidence=CONFIDENCE_MOCK,
+            source_id=vdem_source_id if vdem_real else f"emb_mock_{code.lower()}",
+            source_type=vdem_source_type if vdem_real else SOURCE_MOCK,
+            source_url=VDEM_SOURCE_URL if vdem_real else "",
+            confidence=vdem_confidence if vdem_real else CONFIDENCE_MOCK,
+            legal_basis="V-Dem Dataset CC-BY-SA. " + VDEM_CITATION if vdem_real else "",
             agent_id="OSINT_IngestionAgent",
-            notes="Mock data. En producción: Scraping con Playwright al portal oficial de la EMB.",
+            notes=(
+                f"EMB autonomy/capacity/irregularities: V-Dem {VDEM_VERSION} año {vdem_real['year']}. "
+                f"Nivel independencia: {vdem_real['emb_independence_level']}. "
+                f"Nombre EMB: mock pendiente."
+            ) if vdem_real else "Mock data. País no encontrado en V-Dem.",
         ),
 
         # Padrón electoral
@@ -886,12 +933,20 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
             notes="Mock data. En producción: Freedom House + reportes de DDHH del Dept. de Estado de EE.UU.",
         ),
 
-        # Observación internacional
+        # Observación internacional — dato real de V-Dem cuando hay elecciones
         "international_observation": create_trace(
-            value=osint["international_observation"],
-            source_id=f"intl_observation_{code.lower()}",
-            source_type=SOURCE_MOCK,
-            source_url="",
+            value={
+                **osint["international_observation"],
+                "invited": (
+                    vdem_real["international_observation"]
+                    if vdem_real and vdem_real["international_observation"] is not None
+                    else osint["international_observation"]["invited"]
+                ),
+                "data_source": "V-Dem v2elintmon" if (vdem_real and vdem_real["international_observation"] is not None) else "mock",
+            },
+            source_id=vdem_source_id if (vdem_real and vdem_real["international_observation"] is not None) else f"intl_observation_{code.lower()}",
+            source_type=vdem_source_type if (vdem_real and vdem_real["international_observation"] is not None) else SOURCE_MOCK,
+            source_url=VDEM_SOURCE_URL if (vdem_real and vdem_real["international_observation"] is not None) else "",
             confidence=CONFIDENCE_MOCK,
             agent_id="OSINT_IngestionAgent",
             notes="Mock data. En producción: Portales de OEA/OSCE/UA + notas de prensa de misiones.",
@@ -907,9 +962,12 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
     vdem_log_src = f"REAL (V-Dem {VDEM_VERSION})" if vdem_real else "MOCK (fallback)"
     fh_log_val = fh_real['total_score'] if fh_real else osint['freedom_house_score']
     fh_log_src = f"REAL (FH {FH_VERSION})" if fh_real else "MOCK (fallback)"
+    emb_level = vdem_real['emb_independence_level'] if vdem_real else osint['emb_independence']
+    emb_aut = vdem_real['emb_autonomy'] if vdem_real else "N/A"
+    intl_obs = vdem_real['international_observation'] if vdem_real else osint['international_observation']['invited']
     agent_log(state, agent_name, f"Ingesta completada. FH: {fh_log_val}/100 [{fh_log_src}] | V-Dem libdem: {vdem_log_val} [{vdem_log_src}]")
-    agent_log(state, agent_name, f"EMB independencia: {osint['emb_independence']}, Observación internacional: {'permitida' if osint['international_observation']['invited'] else 'restringida'}")
-    agent_log(state, agent_name, f"Trazabilidad: {len(traces)} datos rastreados. FH: {fh_confidence} | V-Dem: {vdem_confidence} | Resto: mock")
+    agent_log(state, agent_name, f"EMB: nivel={emb_level}, autonomía={emb_aut} [V-Dem REAL] | Obs. intl: {intl_obs}")
+    agent_log(state, agent_name, f"Trazabilidad: FH: {fh_confidence} | V-Dem+EMB: {vdem_confidence} | Marco legal, padrón: mock")
     agent_log(state, agent_name, f"Región: {COUNTRY_REGIONS.get(code, 'unknown')} — Instrumentos aplicables: {len(state['applicable_instruments']['all_ids'])}")
 
     return state
