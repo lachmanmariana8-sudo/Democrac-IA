@@ -34,6 +34,7 @@ from langchain_anthropic import ChatAnthropic
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import hashlib
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -50,6 +51,163 @@ llm = ChatAnthropic(
     temperature=LLM_TEMPERATURE,
     anthropic_api_key=ANTHROPIC_API_KEY,
 ) if ANTHROPIC_API_KEY else None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1b. FRAMEWORK DE TRAZABILIDAD
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Niveles de confianza para datos
+CONFIDENCE_CONFIRMED = "confirmed"       # Dato verificado desde fuente primaria oficial
+CONFIDENCE_PROBABLE = "probable"          # Dato de fuente confiable pero no verificado independientemente
+CONFIDENCE_UNVERIFIED = "unverified"      # Dato requiere verificación adicional
+CONFIDENCE_MOCK = "mock"                  # Dato simulado para desarrollo (NO publicable)
+
+# Tipos de fuente
+SOURCE_API = "api"                        # API oficial (V-Dem, Freedom House)
+SOURCE_SCRAPING = "scraping"              # Web scraping de portal gubernamental/EMB
+SOURCE_DOCUMENT = "document"              # Documento legal/tratado internacional
+SOURCE_SOCIAL = "social_media"            # Monitoreo de redes sociales
+SOURCE_MANUAL = "manual_entry"            # Ingreso manual por analista
+SOURCE_MOCK = "mock_data"                 # Datos simulados para desarrollo
+
+# Regiones para instrumentos legales
+REGION_AMERICAS = "americas"
+REGION_EUROPE = "europe"
+REGION_AFRICA = "africa"
+REGION_ASIA_PACIFIC = "asia_pacific"
+REGION_ARAB = "arab_states"
+
+# Mapeo de países a regiones (expandir según se agreguen países)
+COUNTRY_REGIONS = {
+    "VEN": REGION_AMERICAS, "NIC": REGION_AMERICAS, "GTM": REGION_AMERICAS,
+    "URY": REGION_AMERICAS, "COL": REGION_AMERICAS, "BRA": REGION_AMERICAS,
+    "MEX": REGION_AMERICAS, "ARG": REGION_AMERICAS, "CHL": REGION_AMERICAS,
+    "BOL": REGION_AMERICAS, "ECU": REGION_AMERICAS, "PER": REGION_AMERICAS,
+    "HND": REGION_AMERICAS, "SLV": REGION_AMERICAS, "PAN": REGION_AMERICAS,
+}
+
+# Instrumentos legales universales (aplican a todos los países)
+UNIVERSAL_INSTRUMENTS = [
+    {"id": "ICCPR", "name": "Pacto Internacional de Derechos Civiles y Políticos",
+     "key_articles": ["Art. 1", "Art. 2", "Art. 3", "Art. 9", "Art. 14", "Art. 19", "Art. 21", "Art. 22", "Art. 25", "Art. 26"]},
+    {"id": "CEDAW", "name": "Convención sobre la Eliminación de Todas las Formas de Discriminación contra la Mujer",
+     "key_articles": ["Art. 7", "Art. 8"]},
+    {"id": "ICERD", "name": "Convención Internacional sobre la Eliminación de Todas las Formas de Discriminación Racial",
+     "key_articles": ["Art. 5"]},
+    {"id": "CRPD", "name": "Convención sobre los Derechos de las Personas con Discapacidad",
+     "key_articles": ["Art. 29"]},
+    {"id": "UNDRIP", "name": "Declaración de las Naciones Unidas sobre los Derechos de los Pueblos Indígenas",
+     "key_articles": ["Art. 5", "Art. 18"]},
+    {"id": "UNCAC", "name": "Convención de las Naciones Unidas contra la Corrupción",
+     "key_articles": ["Art. 7", "Art. 12", "Art. 13"]},
+]
+
+# Instrumentos legales regionales
+REGIONAL_INSTRUMENTS = {
+    REGION_AMERICAS: [
+        {"id": "CADH", "name": "Convención Americana sobre Derechos Humanos",
+         "key_articles": ["Art. 23"], "observer": "OEA/DECO, UNIORE, Centro Carter"},
+        {"id": "CDI", "name": "Carta Democrática Interamericana",
+         "key_articles": ["Art. 3", "Art. 23", "Art. 24"], "observer": "OEA"},
+    ],
+    REGION_EUROPE: [
+        {"id": "ECHR_P1", "name": "Convenio Europeo de Derechos Humanos, Protocolo 1",
+         "key_articles": ["Art. 3"], "observer": "OSCE/ODIHR, Comisión de Venecia"},
+        {"id": "COPENHAGEN", "name": "Documento de Copenhague OSCE 1990",
+         "key_articles": ["Par. 5", "Par. 6", "Par. 7", "Par. 8"], "observer": "OSCE/ODIHR"},
+    ],
+    REGION_AFRICA: [
+        {"id": "ACHPR", "name": "Carta Africana de Derechos Humanos y de los Pueblos",
+         "key_articles": ["Art. 13"], "observer": "Unión Africana, ECOWAS, SADC"},
+        {"id": "ACDEG", "name": "Carta Africana sobre Democracia, Elecciones y Gobernanza",
+         "key_articles": ["Art. 3", "Art. 17", "Art. 22"], "observer": "Unión Africana"},
+    ],
+    REGION_ASIA_PACIFIC: [
+        {"id": "ANFREL_DEC", "name": "Declaración de Bangkok ANFREL",
+         "key_articles": [], "observer": "ANFREL, Pacific Islands Forum"},
+    ],
+    REGION_ARAB: [
+        {"id": "ARAB_CHARTER", "name": "Carta Árabe de Derechos Humanos",
+         "key_articles": ["Art. 24"], "observer": "Liga Árabe"},
+    ],
+}
+
+
+def create_trace(
+    value: Any,
+    source_id: str,
+    source_type: str,
+    source_url: str = "",
+    confidence: str = CONFIDENCE_MOCK,
+    legal_basis: str = "",
+    agent_id: str = "",
+    notes: str = "",
+) -> Dict[str, Any]:
+    """
+    Crea un dato trazado con metadatos completos.
+    
+    REGLA DE ORO: Si confidence == "mock", el dato NO debe publicarse
+    como real en informes ni dashboard. Se marca visualmente como simulado.
+    """
+    raw_value = json.dumps(value, ensure_ascii=False, default=str) if not isinstance(value, str) else value
+    data_hash = hashlib.sha256(raw_value.encode("utf-8")).hexdigest()[:16]
+
+    return {
+        "value": value,
+        "_trace": {
+            "source_id": source_id,
+            "source_type": source_type,
+            "source_url": source_url,
+            "collected_at": datetime.now(timezone.utc).isoformat(),
+            "data_hash": data_hash,
+            "confidence": confidence,
+            "legal_basis": legal_basis,
+            "agent_id": agent_id,
+            "version": "v0.2.0",
+            "notes": notes,
+            "is_publishable": confidence != CONFIDENCE_MOCK,
+        }
+    }
+
+
+def get_applicable_instruments(country_code: str) -> Dict[str, List]:
+    """Retorna los instrumentos legales aplicables a un país (universales + regionales)."""
+    region = COUNTRY_REGIONS.get(country_code)
+    regional = REGIONAL_INSTRUMENTS.get(region, []) if region else []
+    return {
+        "universal": UNIVERSAL_INSTRUMENTS,
+        "regional": regional,
+        "region": region or "unknown",
+        "all_ids": [i["id"] for i in UNIVERSAL_INSTRUMENTS] + [i["id"] for i in regional],
+    }
+
+
+def extract_value(traced_data: Dict) -> Any:
+    """Extrae el valor de un dato trazado. Si recibe un dato sin traza, lo devuelve directo."""
+    if isinstance(traced_data, dict) and "_trace" in traced_data:
+        return traced_data["value"]
+    return traced_data
+
+
+def get_trace(traced_data: Dict) -> Dict:
+    """Extrae los metadatos de trazabilidad de un dato."""
+    if isinstance(traced_data, dict) and "_trace" in traced_data:
+        return traced_data["_trace"]
+    return {"confidence": "unknown", "is_publishable": False}
+
+
+def collect_traces(data: Dict, prefix: str = "") -> List[Dict]:
+    """Recorre recursivamente un dict y recolecta todos los _trace encontrados."""
+    traces = []
+    for key, val in data.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(val, dict):
+            if "_trace" in val:
+                traces.append({"field": path, **val["_trace"]})
+            else:
+                traces.extend(collect_traces(val, path))
+    return traces
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -84,6 +242,8 @@ class ElectionRiskState(TypedDict):
     # --- Metadatos ---
     agent_logs: List[str]
     errors: List[str]
+    trace_log: List[Dict]          # Registro completo de trazabilidad
+    applicable_instruments: Dict   # Instrumentos legales aplicables al país
 
 
 def create_initial_state(country: str, country_code: str, election_date: str) -> ElectionRiskState:
@@ -104,6 +264,8 @@ def create_initial_state(country: str, country_code: str, election_date: str) ->
         final_report_markdown="",
         agent_logs=[],
         errors=[],
+        trace_log=[],
+        applicable_instruments=get_applicable_instruments(country_code),
     )
 
 
@@ -382,47 +544,100 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
     osint = MOCK_OSINT_DATA[code]
 
     context = {
-        "source": "mock_data_v1",
         "country": state["country"],
         "country_code": code,
+        "region": COUNTRY_REGIONS.get(code, "unknown"),
         "collected_at": datetime.now(timezone.utc).isoformat(),
 
-        # Índices internacionales
-        "freedom_house": {
-            "score": osint["freedom_house_score"],
-            "status": osint["freedom_house_status"],
-        },
-        "vdem": {
-            "liberal_democracy": osint["vdem_liberal_democracy"],
-            "electoral_democracy": osint["vdem_electoral_democracy"],
-        },
+        # Índices internacionales — CON TRAZABILIDAD
+        "freedom_house": create_trace(
+            value={"score": osint["freedom_house_score"], "status": osint["freedom_house_status"]},
+            source_id="freedom_house_fitw_2025",
+            source_type=SOURCE_MOCK,
+            source_url="https://freedomhouse.org/countries/freedom-world/scores",
+            confidence=CONFIDENCE_MOCK,
+            agent_id="OSINT_IngestionAgent",
+            notes="Mock data. En producción: Freedom House API o descarga CSV anual.",
+        ),
+        "vdem": create_trace(
+            value={"liberal_democracy": osint["vdem_liberal_democracy"], "electoral_democracy": osint["vdem_electoral_democracy"]},
+            source_id="vdem_v14_2025",
+            source_type=SOURCE_MOCK,
+            source_url="https://v-dem.net/data_analysis/VariableGraph/",
+            confidence=CONFIDENCE_MOCK,
+            agent_id="OSINT_IngestionAgent",
+            notes="Mock data. En producción: V-Dem API v14 (endpoint público).",
+        ),
 
         # Administración Electoral (EMB)
-        "emb": {
-            "name": osint["emb_name"],
-            "independence_level": osint["emb_independence"],
-            "opposition_representation": osint["emb_opposition_representation"],
-        },
+        "emb": create_trace(
+            value={
+                "name": osint["emb_name"],
+                "independence_level": osint["emb_independence"],
+                "opposition_representation": osint["emb_opposition_representation"],
+            },
+            source_id=f"emb_portal_{code.lower()}",
+            source_type=SOURCE_MOCK,
+            source_url="",
+            confidence=CONFIDENCE_MOCK,
+            agent_id="OSINT_IngestionAgent",
+            notes="Mock data. En producción: Scraping con Playwright al portal oficial de la EMB.",
+        ),
 
         # Padrón electoral
-        "voter_registry": {
-            "status": osint["registry_status"],
-            "size": osint["voter_registry_size"],
-        },
+        "voter_registry": create_trace(
+            value={"status": osint["registry_status"], "size": osint["voter_registry_size"]},
+            source_id=f"voter_registry_{code.lower()}",
+            source_type=SOURCE_MOCK,
+            source_url="",
+            confidence=CONFIDENCE_MOCK,
+            agent_id="OSINT_IngestionAgent",
+            notes="Mock data. En producción: Portal EMB + informes de auditoría.",
+        ),
 
         # Marco legal
-        "legal_framework": osint["legal_framework"],
+        "legal_framework": create_trace(
+            value=osint["legal_framework"],
+            source_id=f"legal_framework_{code.lower()}",
+            source_type=SOURCE_MOCK,
+            source_url="",
+            confidence=CONFIDENCE_MOCK,
+            agent_id="OSINT_IngestionAgent",
+            notes="Mock data. En producción: Scraping de gacetas oficiales y portales legislativos.",
+        ),
 
         # Libertades civiles
-        "civil_liberties": osint["civil_liberties"],
+        "civil_liberties": create_trace(
+            value=osint["civil_liberties"],
+            source_id="freedom_house_civil_liberties",
+            source_type=SOURCE_MOCK,
+            source_url="https://freedomhouse.org/countries/freedom-world/scores",
+            confidence=CONFIDENCE_MOCK,
+            agent_id="OSINT_IngestionAgent",
+            notes="Mock data. En producción: Freedom House + reportes de DDHH del Dept. de Estado de EE.UU.",
+        ),
 
         # Observación internacional
-        "international_observation": osint["international_observation"],
+        "international_observation": create_trace(
+            value=osint["international_observation"],
+            source_id=f"intl_observation_{code.lower()}",
+            source_type=SOURCE_MOCK,
+            source_url="",
+            confidence=CONFIDENCE_MOCK,
+            agent_id="OSINT_IngestionAgent",
+            notes="Mock data. En producción: Portales de OEA/OSCE/UA + notas de prensa de misiones.",
+        ),
     }
+
+    # Registrar trazas en el log global
+    traces = collect_traces(context)
+    state["trace_log"].extend(traces)
 
     state["context_data"] = context
     agent_log(state, agent_name, f"Ingesta completada. Freedom House: {osint['freedom_house_score']}/100, V-Dem: {osint['vdem_liberal_democracy']}")
     agent_log(state, agent_name, f"EMB independencia: {osint['emb_independence']}, Observación internacional: {'permitida' if osint['international_observation']['invited'] else 'restringida'}")
+    agent_log(state, agent_name, f"Trazabilidad: {len(traces)} datos rastreados. Confianza: MOCK (pendiente fuentes reales)")
+    agent_log(state, agent_name, f"Región: {COUNTRY_REGIONS.get(code, 'unknown')} — Instrumentos aplicables: {len(state['applicable_instruments']['all_ids'])}")
 
     return state
 
@@ -558,78 +773,83 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
 
     context = state.get("context_data", {})
     political = state.get("political_data", {})
+    instruments = state.get("applicable_instruments", {})
 
     violations = []
     risk_factors = []
     mitigating_factors = []
 
+    # Helper: extraer valores de datos trazados
+    def val(traced):
+        return extract_value(traced) if isinstance(traced, dict) else traced
+
     # ── Análisis de libertades civiles vs ICCPR ──
 
-    civil = context.get("civil_liberties", {})
+    civil = val(context.get("civil_liberties", {}))
 
     if civil.get("freedom_of_press") in ["severely_restricted", "banned"]:
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 19",
+            "treaty": "ICCPR", "article": "Art. 19",
             "right": "Libertad de Expresión",
             "finding": f"Libertad de prensa clasificada como '{civil['freedom_of_press']}'. "
                        "Violación directa del derecho a buscar, recibir y difundir información.",
             "severity": "critical",
+            "confidence": get_trace(context.get("civil_liberties", {})).get("confidence", "unknown"),
         })
 
     if civil.get("freedom_of_assembly") in ["restricted", "banned"]:
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 21 & Art. 22",
+            "treaty": "ICCPR", "article": "Art. 21 & Art. 22",
             "right": "Libertad de Reunión y Asociación",
             "finding": f"Libertad de reunión clasificada como '{civil['freedom_of_assembly']}'. "
                        "Restricciones incompatibles con el derecho a la reunión pacífica.",
             "severity": "critical" if civil["freedom_of_assembly"] == "banned" else "high",
+            "confidence": get_trace(context.get("civil_liberties", {})).get("confidence", "unknown"),
         })
 
     if civil.get("political_prisoners"):
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 9",
+            "treaty": "ICCPR", "article": "Art. 9",
             "right": "Libertad y Seguridad Personal",
             "finding": "Existencia documentada de presos políticos. "
                        "Detención arbitraria de opositores viola el derecho a la libertad personal.",
             "severity": "critical",
+            "confidence": get_trace(context.get("civil_liberties", {})).get("confidence", "unknown"),
         })
 
     if civil.get("judicial_independence") in ["compromised", "captured"]:
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 14",
+            "treaty": "ICCPR", "article": "Art. 14",
             "right": "Derecho a un Tribunal Independiente",
             "finding": f"Independencia judicial clasificada como '{civil['judicial_independence']}'. "
                        "Compromete el derecho a un recurso efectivo ante disputas electorales.",
             "severity": "critical" if civil["judicial_independence"] == "captured" else "high",
+            "confidence": get_trace(context.get("civil_liberties", {})).get("confidence", "unknown"),
         })
 
     # ── Análisis de administración electoral vs ICCPR Art. 25 ──
 
-    emb = context.get("emb", {})
-    legal_fw = context.get("legal_framework", {})
+    emb = val(context.get("emb", {}))
+    legal_fw = val(context.get("legal_framework", {}))
 
     if emb.get("independence_level") in ["compromised", "captured"]:
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 25",
+            "treaty": "ICCPR", "article": "Art. 25",
             "right": "Derecho a Participar en Asuntos Públicos",
             "finding": f"EMB ({emb.get('name', 'N/A')}) con independencia '{emb['independence_level']}'. "
                        "Administración electoral sin garantías de imparcialidad.",
             "severity": "critical" if emb["independence_level"] == "captured" else "high",
+            "confidence": get_trace(context.get("emb", {})).get("confidence", "unknown"),
         })
 
     if legal_fw.get("candidate_disqualifications", 0) > 0 and legal_fw.get("opposition_party_bans"):
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 25(b)",
+            "treaty": "ICCPR", "article": "Art. 25(b)",
             "right": "Derecho a Ser Elegido",
             "finding": f"{legal_fw['candidate_disqualifications']} candidatos inhabilitados con partidos prohibidos. "
                        "Restricción al derecho de postulación sin garantías de debido proceso.",
             "severity": "critical",
+            "confidence": get_trace(context.get("legal_framework", {})).get("confidence", "unknown"),
         })
 
     # ── Análisis del ecosistema digital vs libertad de expresión ──
@@ -638,33 +858,62 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
 
     if digital.get("censorship_detected"):
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 19(2)",
+            "treaty": "ICCPR", "article": "Art. 19(2)",
             "right": "Libertad de Expresión Digital",
             "finding": f"Censura de dominios web detectada: {digital.get('censored_domains', [])}. "
                        "Bloqueo de medios digitales constituye restricción a la libertad de expresión.",
             "severity": "high",
+            "confidence": CONFIDENCE_MOCK,
         })
 
     if digital.get("voter_suppression_online"):
         violations.append({
-            "treaty": "ICCPR",
-            "article": "Art. 25(a)",
+            "treaty": "ICCPR", "article": "Art. 25(a)",
             "right": "Sufragio Universal",
             "finding": "Tácticas de supresión de votantes online detectadas. "
                        "Manipulación digital que interfiere con el ejercicio libre del sufragio.",
             "severity": "high",
+            "confidence": CONFIDENCE_MOCK,
         })
+
+    # ── Análisis de instrumentos REGIONALES ──
+
+    region = instruments.get("region", "unknown")
+    regional_instruments = instruments.get("regional", [])
+
+    if region == REGION_AMERICAS:
+        # Convención Americana sobre DDHH, Art. 23
+        if emb.get("independence_level") in ["compromised", "captured"]:
+            violations.append({
+                "treaty": "CADH", "article": "Art. 23",
+                "right": "Derechos Políticos (Sistema Interamericano)",
+                "finding": "Administración electoral sin independencia compromete el derecho a participar "
+                           "en la dirección de los asuntos públicos bajo la Convención Americana.",
+                "severity": "high",
+                "confidence": get_trace(context.get("emb", {})).get("confidence", "unknown"),
+            })
+        # Carta Democrática Interamericana
+        if civil.get("freedom_of_press") in ["severely_restricted", "banned"]:
+            violations.append({
+                "treaty": "CDI", "article": "Art. 3-4",
+                "right": "Elementos Esenciales de la Democracia (OEA)",
+                "finding": "Restricción severa a la libertad de prensa viola los elementos esenciales "
+                           "de la democracia representativa según la Carta Democrática Interamericana.",
+                "severity": "high",
+                "confidence": get_trace(context.get("civil_liberties", {})).get("confidence", "unknown"),
+            })
 
     # ── Observación internacional ──
 
-    obs = context.get("international_observation", {})
+    obs = val(context.get("international_observation", {}))
 
     if not obs.get("invited", True):
+        observer_names = ", ".join(i.get("observer", "") for i in regional_instruments if i.get("observer"))
         risk_factors.append({
             "category": "Transparencia",
-            "finding": "Observación internacional no invitada o restringida. "
-                       "Incumplimiento de la Declaración de Principios para la Observación Internacional.",
+            "finding": f"Observación internacional no invitada o restringida. "
+                       f"Incumplimiento de la Declaración de Principios para la Observación Internacional. "
+                       f"Organismos regionales relevantes: {observer_names or 'N/A'}.",
             "severity": "high",
         })
 
@@ -673,7 +922,8 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
     if emb.get("independence_level") == "full":
         mitigating_factors.append("EMB plenamente independiente con representación multipartidaria")
 
-    if context.get("freedom_house", {}).get("score", 0) >= 80:
+    fh_data = val(context.get("freedom_house", {}))
+    if isinstance(fh_data, dict) and fh_data.get("score", 0) >= 80:
         mitigating_factors.append("Alto puntaje Freedom House indica garantías institucionales sólidas")
 
     if not digital.get("bot_activity") and not digital.get("censorship_detected"):
@@ -684,8 +934,14 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
     risk_score = _calculate_risk_score(context, political, violations)
     risk_level = _risk_level_from_score(risk_score)
 
+    # Conteo de confianza de datos
+    confidence_summary = {}
+    for v in violations:
+        conf = v.get("confidence", "unknown")
+        confidence_summary[conf] = confidence_summary.get(conf, 0) + 1
+
     state["legal_analysis"] = {
-        "source": "rule_based_v1",
+        "source": "rule_based_v2_traced",
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
         "violations": violations,
         "violation_count": len(violations),
@@ -693,6 +949,10 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
         "mitigating_factors": mitigating_factors,
         "treaties_referenced": list(set(v["treaty"] for v in violations)),
         "articles_referenced": list(set(f"{v['treaty']} {v['article']}" for v in violations)),
+        "applicable_instruments": instruments.get("all_ids", []),
+        "region": region,
+        "confidence_summary": confidence_summary,
+        "traceability_note": "Cada violación incluye campo 'confidence' indicando nivel de verificabilidad del dato fuente.",
     }
 
     state["risk_score"] = risk_score
@@ -700,6 +960,8 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
 
     agent_log(state, agent_name, f"Violaciones detectadas: {len(violations)}")
     agent_log(state, agent_name, f"Tratados referenciados: {state['legal_analysis']['treaties_referenced']}")
+    agent_log(state, agent_name, f"Instrumentos regionales aplicados: {[i['id'] for i in regional_instruments]}")
+    agent_log(state, agent_name, f"Confianza de datos: {confidence_summary}")
     agent_log(state, agent_name, f"Risk Score calculado: {risk_score}/100 → Nivel: {risk_level.upper()}")
 
     return state
@@ -709,17 +971,24 @@ def _calculate_risk_score(context: dict, political: dict, violations: list) -> f
     """Calcula el índice de riesgo 0-100 basado en múltiples dimensiones."""
     score = 0.0
 
+    # Helper para extraer valores de datos trazados
+    def val(d):
+        return extract_value(d) if isinstance(d, dict) and "_trace" in d else d
+
     # Dimensión 1: Freedom House (invertido: menor score = más riesgo)
-    fh = context.get("freedom_house", {}).get("score", 50)
+    fh_data = val(context.get("freedom_house", {}))
+    fh = fh_data.get("score", 50) if isinstance(fh_data, dict) else 50
     score += (100 - fh) * 0.15
 
     # Dimensión 2: V-Dem (invertido)
-    vdem = context.get("vdem", {}).get("liberal_democracy", 0.5)
+    vdem_data = val(context.get("vdem", {}))
+    vdem = vdem_data.get("liberal_democracy", 0.5) if isinstance(vdem_data, dict) else 0.5
     score += (1 - vdem) * 100 * 0.15
 
     # Dimensión 3: Independencia EMB
     emb_scores = {"full": 0, "partial": 40, "compromised": 75, "captured": 95}
-    emb_level = context.get("emb", {}).get("independence_level", "partial")
+    emb_data = val(context.get("emb", {}))
+    emb_level = emb_data.get("independence_level", "partial") if isinstance(emb_data, dict) else "partial"
     score += emb_scores.get(emb_level, 50) * 0.15
 
     # Dimensión 4: Sesgo mediático
@@ -818,9 +1087,19 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
     legal = state.get("legal_analysis", {})
     violations = legal.get("violations", [])
     critical = [v for v in violations if v.get("severity") == "critical"]
+    context = state.get("context_data", {})
+
+    fh = extract_value(context.get("freedom_house", {}))
+    vdem = extract_value(context.get("vdem", {}))
+    emb = extract_value(context.get("emb", {}))
 
     level_emoji = {"critical": "🔴", "high": "🟠", "moderate": "🟡", "low": "🟢"}
     emoji = level_emoji.get(state["risk_level"], "⚪")
+
+    fh_score = fh.get("score", "N/A") if isinstance(fh, dict) else "N/A"
+    fh_status = fh.get("status", "N/A") if isinstance(fh, dict) else "N/A"
+    vdem_ld = vdem.get("liberal_democracy", "N/A") if isinstance(vdem, dict) else "N/A"
+    emb_ind = emb.get("independence_level", "N/A").upper() if isinstance(emb, dict) else "N/A"
 
     summary = f"""## 1. Resumen Ejecutivo & Dashboard de Riesgo
 
@@ -828,11 +1107,13 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
 
 | Dimensión | Evaluación |
 |---|---|
-| Freedom House | {state['context_data'].get('freedom_house', {}).get('score', 'N/A')}/100 ({state['context_data'].get('freedom_house', {}).get('status', 'N/A')}) |
-| V-Dem Liberal Democracy | {state['context_data'].get('vdem', {}).get('liberal_democracy', 'N/A')} |
-| Independencia EMB | {state['context_data'].get('emb', {}).get('independence_level', 'N/A').upper()} |
+| Freedom House | {fh_score}/100 ({fh_status}) |
+| V-Dem Liberal Democracy | {vdem_ld} |
+| Independencia EMB | {emb_ind} |
 | Violaciones detectadas | {len(violations)} ({len(critical)} críticas) |
 | Tratados referenciados | {', '.join(legal.get('treaties_referenced', []))} |
+| Región legal | {legal.get('region', 'N/A')} |
+| Confianza de datos | {legal.get('confidence_summary', {})} |
 
 **Alertas críticas:** {len(critical)} violaciones de severidad crítica al derecho internacional detectadas.
 """
@@ -843,8 +1124,10 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
 
 
 def _generate_political_context(context: dict) -> str:
-    legal_fw = context.get("legal_framework", {})
-    civil = context.get("civil_liberties", {})
+    legal_fw = extract_value(context.get("legal_framework", {}))
+    civil = extract_value(context.get("civil_liberties", {}))
+    if not isinstance(legal_fw, dict): legal_fw = {}
+    if not isinstance(civil, dict): civil = {}
 
     return f"""## 2. Contexto Político y Marco Legal
 
@@ -863,19 +1146,25 @@ def _generate_political_context(context: dict) -> str:
 
 
 def _generate_emb_chapter(context: dict) -> str:
-    emb = context.get("emb", {})
-    registry = context.get("voter_registry", {})
-    obs = context.get("international_observation", {})
+    emb = extract_value(context.get("emb", {}))
+    registry = extract_value(context.get("voter_registry", {}))
+    obs = extract_value(context.get("international_observation", {}))
+    if not isinstance(emb, dict): emb = {}
+    if not isinstance(registry, dict): registry = {}
+    if not isinstance(obs, dict): obs = {}
+
+    size = registry.get('size', 'N/A')
+    size_str = f"{size:,}" if isinstance(size, (int, float)) else str(size)
 
     return f"""## 3. Administración Electoral (EMB)
 
 **{emb.get('name', 'N/A')}**
-- Nivel de independencia: **{emb.get('independence_level', 'N/A').upper()}**
+- Nivel de independencia: **{emb.get('independence_level', 'N/A').upper() if isinstance(emb.get('independence_level'), str) else 'N/A'}**
 - Representación opositora: {'Sí' if emb.get('opposition_representation') else 'No'}
 
 **Padrón Electoral:**
 - Estado de auditoría: {registry.get('status', 'N/A')}
-- Votantes registrados: {registry.get('size', 'N/A'):,}
+- Votantes registrados: {size_str}
 
 **Observación Internacional:**
 - Invitación: {'Sí' if obs.get('invited') else 'No'}
@@ -1072,9 +1361,11 @@ async def health_check():
     return {
         "status": "operational",
         "system": "DEMOCRAC.IA (PEIRS)",
-        "version": "0.1.0",
+        "version": "0.2.0",
+        "traceability": "enabled",
         "llm_configured": llm is not None,
         "countries_available": len(COUNTRY_CATALOG),
+        "legal_instruments": len(UNIVERSAL_INSTRUMENTS) + sum(len(v) for v in REGIONAL_INSTRUMENTS.values()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -1153,6 +1444,57 @@ async def get_report(run_id: str):
         "agent_logs": result["agent_logs"],
         "errors": result["errors"],
         "timestamp": result["timestamp"],
+        "applicable_instruments": result.get("applicable_instruments", {}),
+        "trace_log": result.get("trace_log", []),
+    }
+
+
+@app.get("/api/report/{run_id}/traceability")
+async def get_report_traceability(run_id: str):
+    """Endpoint dedicado de trazabilidad: muestra el origen y confianza de cada dato."""
+    if run_id not in reports_store:
+        raise HTTPException(status_code=404, detail="Reporte no encontrado")
+
+    result = reports_store[run_id]
+    trace_log = result.get("trace_log", [])
+    legal = result.get("legal_analysis", {})
+
+    # Resumen de confianza
+    confidence_counts = {}
+    for t in trace_log:
+        conf = t.get("confidence", "unknown")
+        confidence_counts[conf] = confidence_counts.get(conf, 0) + 1
+
+    publishable = sum(1 for t in trace_log if t.get("is_publishable", False))
+
+    return {
+        "run_id": run_id,
+        "country": result["country"],
+        "traceability_summary": {
+            "total_traced_fields": len(trace_log),
+            "publishable_fields": publishable,
+            "non_publishable_fields": len(trace_log) - publishable,
+            "confidence_distribution": confidence_counts,
+            "is_report_publishable": publishable > 0 and confidence_counts.get("mock", 0) == 0,
+            "publishability_note": "Un reporte es publicable cuando TODOS sus datos tienen confidence != 'mock'.",
+        },
+        "applicable_instruments": result.get("applicable_instruments", {}),
+        "violation_confidence": legal.get("confidence_summary", {}),
+        "trace_log": trace_log,
+    }
+
+
+@app.get("/api/instruments/{country_code}")
+async def get_instruments(country_code: str):
+    """Retorna los instrumentos legales internacionales aplicables a un país."""
+    code = country_code.upper()
+    instruments = get_applicable_instruments(code)
+    return {
+        "country_code": code,
+        "region": instruments["region"],
+        "universal_instruments": instruments["universal"],
+        "regional_instruments": instruments["regional"],
+        "total_instruments": len(instruments["all_ids"]),
     }
 
 
@@ -1203,16 +1545,21 @@ async def get_dashboard_data():
         ]
 
         # Construir dimensions desde los datos reales del scoring
+        # Usar extract_value para datos trazados
         emb_scores = {"full": 95, "partial": 60, "compromised": 25, "captured": 5}
-        emb_level = context.get("emb", {}).get("independence_level", "partial")
+        emb_data = extract_value(context.get("emb", {}))
+        emb_level = emb_data.get("independence_level", "partial") if isinstance(emb_data, dict) else "partial"
 
         eco_scores = {"healthy": 90, "concerning": 60, "compromised": 35, "hostile": 10}
         eco_level = political.get("digital_ecosystem", {}).get("assessment", "concerning")
 
         finance_score = political.get("campaign_finance", {}).get("transparency_score", 0.5)
 
-        fh = context.get("freedom_house", {}).get("score", 50)
-        vdem_val = context.get("vdem", {}).get("liberal_democracy", 0.5)
+        fh_data = extract_value(context.get("freedom_house", {}))
+        fh = fh_data.get("score", 50) if isinstance(fh_data, dict) else 50
+
+        vdem_data = extract_value(context.get("vdem", {}))
+        vdem_val = vdem_data.get("liberal_democracy", 0.5) if isinstance(vdem_data, dict) else 0.5
 
         media_bias = political.get("media_analysis", {}).get("bias_index", 0.3)
 
