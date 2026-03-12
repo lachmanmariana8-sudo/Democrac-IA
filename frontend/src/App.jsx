@@ -586,7 +586,7 @@ const DetailView = ({ country }) => {
 };
 
 const MethodologyView = () => (
-  <div style={{ padding: 28, maxWidth: 800 }}>
+  <div style={{ padding: 28 }}>
     <h2 style={{ margin: "0 0 8px", fontSize: 22, fontWeight: 800, color: COLORS.text }}>Metodología PEIRS</h2>
     <p style={{ margin: "0 0 28px", fontSize: 13, color: COLORS.textMuted, lineHeight: 1.7 }}>
       El sistema evalúa la integridad electoral basándose exclusivamente en obligaciones del derecho internacional público y estándares de la Declaración de Principios para la Observación Internacional de Elecciones.
@@ -692,10 +692,18 @@ export default function DemocracIADashboard() {
   return (
     <div style={{
       minHeight: "100vh",
+      width: "100%",
       background: COLORS.bg,
       color: COLORS.text,
       fontFamily: "'Outfit', 'Segoe UI', sans-serif",
+      margin: 0,
+      padding: 0,
+      boxSizing: "border-box",
     }}>
+      <style>{`
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; background: ${COLORS.bg}; }
+      `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
       <Navbar activeView={activeView} setActiveView={setActiveView} apiStatus={apiStatus} />
 
@@ -724,7 +732,7 @@ export default function DemocracIADashboard() {
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
         <span style={{ fontSize: 10, color: COLORS.textDim, letterSpacing: 1 }}>
-          DEMOCRAC.IA — PEIRS v0.1.0 — CONECTADO A BACKEND LANGGRAPH
+          DEMOCRAC.IA — PEIRS v0.2.0 — CONECTADO A BACKEND LANGGRAPH
         </span>
         <span style={{ fontSize: 10, color: COLORS.textDim }}>
           © 2026 — Inteligencia Electoral OSINT
