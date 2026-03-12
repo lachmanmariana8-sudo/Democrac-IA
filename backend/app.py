@@ -35,6 +35,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import hashlib
+import pandas as pd
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -54,7 +55,226 @@ llm = ChatAnthropic(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 1b. FRAMEWORK DE TRAZABILIDAD
+# 1b. CARGA DE DATOS REALES — V-Dem Dataset v15
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Ruta al CSV (relativa al backend/, o absoluta si se prefiere)
+VDEM_CSV_PATH = os.getenv("VDEM_CSV_PATH", "../data/V-Dem-CY-Full+Others-v15.csv")
+
+# Columnas que vamos a usar de V-Dem (extraemos solo estas para ahorrar memoria)
+VDEM_COLUMNS = [
+    "country_text_id", "year",
+    "v2x_libdem",          # Democracia liberal (0-1)
+    "v2x_polyarchy",       # Democracia electoral / poliarquía (0-1)
+    "v2x_partipdem",       # Democracia participativa (0-1)
+    "v2x_delibdem",        # Democracia deliberativa (0-1)
+    "v2x_egaldem",         # Democracia igualitaria (0-1)
+    "v2xel_frefair",       # Elecciones libres y justas (0-1)
+    "v2x_freexp_altinf",   # Libertad de expresión y fuentes alternativas (0-1)
+    "v2x_frassoc_thick",   # Libertad de asociación (0-1)
+    "v2x_suffr",           # Sufragio universal (0-1)
+    "v2xcl_rol",           # Estado de derecho (0-1)
+]
+
+# Citación oficial requerida por V-Dem (licencia CC-BY-SA)
+VDEM_CITATION = (
+    "Coppedge et al. 2025. 'V-Dem Country-Year Dataset v15' "
+    "Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds25"
+)
+VDEM_SOURCE_URL = "https://v-dem.net/data/the-v-dem-dataset/"
+VDEM_VERSION = "v15"
+VDEM_LAST_YEAR = 2024  # Último año con datos en v15
+
+
+def load_vdem_data() -> Optional[pd.DataFrame]:
+    """
+    Carga el dataset V-Dem desde el CSV local.
+    Se ejecuta UNA SOLA VEZ al iniciar el backend.
+    Retorna None si el archivo no existe (el sistema cae a datos mock).
+    """
+    if not os.path.exists(VDEM_CSV_PATH):
+        print(f"[V-Dem] AVISO: CSV no encontrado en '{VDEM_CSV_PATH}'. Usando datos mock.")
+        return None
+    try:
+        # Leer solo las columnas que necesitamos (el CSV completo tiene ~4000 columnas)
+        df = pd.read_csv(VDEM_CSV_PATH, usecols=VDEM_COLUMNS, low_memory=False)
+        print(f"[V-Dem] ✅ Dataset cargado: {len(df):,} filas, {len(df.columns)} columnas.")
+        print(f"[V-Dem] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
+        return df
+    except Exception as e:
+        print(f"[V-Dem] ERROR al cargar CSV: {e}. Usando datos mock.")
+        return None
+
+
+def get_vdem_country(df: Optional[pd.DataFrame], country_code: str, year: int = VDEM_LAST_YEAR) -> Optional[Dict]:
+    """
+    Extrae los indicadores V-Dem para un país y año específico.
+    
+    Args:
+        df: DataFrame cargado por load_vdem_data()
+        country_code: Código ISO3 del país (ej: "VEN", "URY")
+        year: Año a consultar (default: último año disponible)
+    
+    Returns:
+        Dict con los indicadores, o None si el país no se encuentra.
+    """
+    if df is None:
+        return None
+
+    row = df[(df["country_text_id"] == country_code) & (df["year"] == year)]
+
+    if row.empty:
+        # Intentar con el año anterior si no hay datos para el año solicitado
+        row = df[(df["country_text_id"] == country_code) & (df["year"] == year - 1)]
+
+    if row.empty:
+        print(f"[V-Dem] AVISO: No se encontraron datos para {country_code} ({year}).")
+        return None
+
+    r = row.iloc[0]
+    actual_year = int(r["year"])
+
+    return {
+        "country_code": country_code,
+        "year": actual_year,
+        "liberal_democracy": round(float(r["v2x_libdem"]), 4),
+        "electoral_democracy": round(float(r["v2x_polyarchy"]), 4),
+        "participatory_democracy": round(float(r["v2x_partipdem"]), 4),
+        "deliberative_democracy": round(float(r["v2x_delibdem"]), 4),
+        "egalitarian_democracy": round(float(r["v2x_egaldem"]), 4),
+        "free_fair_elections": round(float(r["v2xel_frefair"]), 4),
+        "freedom_of_expression": round(float(r["v2x_freexp_altinf"]), 4),
+        "freedom_of_association": round(float(r["v2x_frassoc_thick"]), 4),
+        "universal_suffrage": round(float(r["v2x_suffr"]), 4),
+        "rule_of_law": round(float(r["v2xcl_rol"]), 4),
+        "citation": VDEM_CITATION,
+        "dataset_version": VDEM_VERSION,
+    }
+
+
+# Cargar V-Dem al iniciar el módulo
+VDEM_DF = load_vdem_data()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1b-2. CARGA DE DATOS REALES — Freedom House Freedom in the World 2013-2025
+# ═══════════════════════════════════════════════════════════════════════════════
+
+FH_CSV_PATH = os.getenv("FH_CSV_PATH", "../data/All_data_FIW_2013-2025 - Index.csv")
+
+FH_CITATION = (
+    "Freedom House. 2025. 'Freedom in the World 2025: The Uphill Battle to Safeguard Rights.' "
+    "Washington, DC: Freedom House. https://freedomhouse.org/report/freedom-world"
+)
+FH_SOURCE_URL = "https://freedomhouse.org/report/freedom-world"
+FH_VERSION = "FIW_2025"
+FH_LAST_EDITION = 2025  # Último año disponible en el dataset
+
+# Mapeo ISO3 → nombre exacto en Freedom House
+# Freedom House usa nombres completos en inglés
+FH_COUNTRY_NAMES = {
+    "VEN": "Venezuela",
+    "NIC": "Nicaragua",
+    "GTM": "Guatemala",
+    "URY": "Uruguay",
+    "COL": "Colombia",
+    "BRA": "Brazil",
+    "MEX": "Mexico",
+    "ARG": "Argentina",
+    "CHL": "Chile",
+    "BOL": "Bolivia",
+    "ECU": "Ecuador",
+    "PER": "Peru",
+    "HND": "Honduras",
+    "SLV": "El Salvador",
+    "PAN": "Panama",
+}
+
+
+def load_freedom_house_data() -> Optional[pd.DataFrame]:
+    """
+    Carga el dataset Freedom House desde el CSV local.
+    Se ejecuta UNA SOLA VEZ al iniciar el backend.
+    Retorna None si el archivo no existe (el sistema cae a datos mock).
+    """
+    if not os.path.exists(FH_CSV_PATH):
+        print(f"[FH] AVISO: CSV no encontrado en '{FH_CSV_PATH}'. Usando datos mock.")
+        return None
+    try:
+        df = pd.read_csv(FH_CSV_PATH, sep=";", skiprows=1)
+        # Limpiar nombres de columnas por si tienen espacios extra
+        df.columns = df.columns.str.strip()
+        # Convertir Edition y Total a numérico
+        df["Edition"] = pd.to_numeric(df["Edition"], errors="coerce")
+        df["Total"] = pd.to_numeric(df["Total"], errors="coerce")
+        df["PR rating"] = pd.to_numeric(df["PR rating"], errors="coerce")
+        df["CL rating"] = pd.to_numeric(df["CL rating"], errors="coerce")
+        print(f"[FH] ✅ Dataset cargado: {len(df):,} filas.")
+        print(f"[FH] Ediciones disponibles: {int(df['Edition'].min())}–{int(df['Edition'].max())}")
+        return df
+    except Exception as e:
+        print(f"[FH] ERROR al cargar CSV: {e}. Usando datos mock.")
+        return None
+
+
+def get_freedom_house_country(df: Optional[pd.DataFrame], country_code: str, edition: int = FH_LAST_EDITION) -> Optional[Dict]:
+    """
+    Extrae los datos Freedom House para un país y edición específica.
+
+    Args:
+        df: DataFrame cargado por load_freedom_house_data()
+        country_code: Código ISO3 (ej: "VEN")
+        edition: Año de la edición (default: último disponible)
+
+    Returns:
+        Dict con score, status y ratings, o None si no se encuentra.
+    """
+    if df is None:
+        return None
+
+    fh_name = FH_COUNTRY_NAMES.get(country_code)
+    if not fh_name:
+        print(f"[FH] AVISO: No hay mapeo de nombre para {country_code}.")
+        return None
+
+    row = df[(df["Country/Territory"] == fh_name) & (df["Edition"] == edition)]
+
+    if row.empty:
+        # Intentar con la edición anterior
+        row = df[(df["Country/Territory"] == fh_name) & (df["Edition"] == edition - 1)]
+
+    if row.empty:
+        print(f"[FH] AVISO: No se encontraron datos para {fh_name} ({edition}).")
+        return None
+
+    r = row.iloc[0]
+    actual_edition = int(r["Edition"])
+
+    # Status completo
+    status_map = {"F": "Free", "PF": "Partly Free", "NF": "Not Free"}
+    status_raw = str(r["Status"]).strip() if pd.notna(r["Status"]) else "NF"
+    status_full = status_map.get(status_raw, status_raw)
+
+    return {
+        "country_code": country_code,
+        "country_name_fh": fh_name,
+        "edition": actual_edition,
+        "total_score": int(r["Total"]) if pd.notna(r["Total"]) else 0,
+        "status": status_full,
+        "status_short": status_raw,
+        "political_rights_rating": int(r["PR rating"]) if pd.notna(r["PR rating"]) else 7,
+        "civil_liberties_rating": int(r["CL rating"]) if pd.notna(r["CL rating"]) else 7,
+        "citation": FH_CITATION,
+        "dataset_version": FH_VERSION,
+    }
+
+
+# Cargar Freedom House al iniciar el módulo
+FH_DF = load_freedom_house_data()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1c. FRAMEWORK DE TRAZABILIDAD
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Niveles de confianza para datos
@@ -535,13 +755,60 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
         state["context_data"] = {}
         return state
 
-    # === AQUÍ SE CONECTARÁN LAS FUENTES REALES ===
+    # === FUENTES REALES (implementadas) y MOCK (pendientes) ===
     # TODO: freedom_house_data = await fetch_freedom_house_api(code)
-    # TODO: vdem_data = await fetch_vdem_api(code)
     # TODO: emb_data = await scrape_emb_portal(code)
     # TODO: legal_data = await scrape_legal_framework(code)
 
     osint = MOCK_OSINT_DATA[code]
+
+    # ── V-Dem: datos REALES desde CSV local ──────────────────────────────────
+    vdem_real = get_vdem_country(VDEM_DF, code)
+
+    if vdem_real:
+        vdem_value = vdem_real
+        vdem_confidence = CONFIDENCE_CONFIRMED
+        vdem_source_id = f"vdem_{VDEM_VERSION}_{vdem_real['year']}"
+        vdem_source_type = SOURCE_API  # CSV oficial = fuente primaria
+        vdem_notes = (
+            f"Dato real. V-Dem Dataset {VDEM_VERSION}, año {vdem_real['year']}. "
+            f"Citación: {VDEM_CITATION}"
+        )
+        agent_log(state, agent_name, f"V-Dem REAL cargado: libdem={vdem_real['liberal_democracy']}, "
+                  f"polyarchy={vdem_real['electoral_democracy']}, año={vdem_real['year']}")
+    else:
+        # Fallback a mock si el país no está en el CSV
+        vdem_value = {
+            "liberal_democracy": osint["vdem_liberal_democracy"],
+            "electoral_democracy": osint["vdem_electoral_democracy"],
+        }
+        vdem_confidence = CONFIDENCE_MOCK
+        vdem_source_id = "vdem_mock_fallback"
+        vdem_source_type = SOURCE_MOCK
+        vdem_notes = f"Mock fallback: país {code} no encontrado en V-Dem {VDEM_VERSION}."
+        agent_log(state, agent_name, f"V-Dem MOCK (fallback): {code} no encontrado en CSV.")
+
+    # ── Freedom House: datos REALES desde CSV local ──────────────────────────
+    fh_real = get_freedom_house_country(FH_DF, code)
+
+    if fh_real:
+        fh_value = fh_real
+        fh_confidence = CONFIDENCE_CONFIRMED
+        fh_source_id = f"freedom_house_{FH_VERSION}_{fh_real['edition']}"
+        fh_source_type = SOURCE_API
+        fh_notes = (
+            f"Dato real. Freedom House FIW edición {fh_real['edition']}. "
+            f"Citación: {FH_CITATION}"
+        )
+        agent_log(state, agent_name, f"Freedom House REAL: score={fh_real['total_score']}/100, "
+                  f"status={fh_real['status']}, edición={fh_real['edition']}")
+    else:
+        fh_value = {"score": osint["freedom_house_score"], "status": osint["freedom_house_status"]}
+        fh_confidence = CONFIDENCE_MOCK
+        fh_source_id = "freedom_house_mock_fallback"
+        fh_source_type = SOURCE_MOCK
+        fh_notes = f"Mock fallback: país {code} no encontrado en Freedom House {FH_VERSION}."
+        agent_log(state, agent_name, f"Freedom House MOCK (fallback): {code} no encontrado en CSV.")
 
     context = {
         "country": state["country"],
@@ -551,22 +818,24 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
 
         # Índices internacionales — CON TRAZABILIDAD
         "freedom_house": create_trace(
-            value={"score": osint["freedom_house_score"], "status": osint["freedom_house_status"]},
-            source_id="freedom_house_fitw_2025",
-            source_type=SOURCE_MOCK,
-            source_url="https://freedomhouse.org/countries/freedom-world/scores",
-            confidence=CONFIDENCE_MOCK,
+            value=fh_value,
+            source_id=fh_source_id,
+            source_type=fh_source_type,
+            source_url=FH_SOURCE_URL,
+            confidence=fh_confidence,
+            legal_basis=FH_CITATION,
             agent_id="OSINT_IngestionAgent",
-            notes="Mock data. En producción: Freedom House API o descarga CSV anual.",
+            notes=fh_notes,
         ),
         "vdem": create_trace(
-            value={"liberal_democracy": osint["vdem_liberal_democracy"], "electoral_democracy": osint["vdem_electoral_democracy"]},
-            source_id="vdem_v14_2025",
-            source_type=SOURCE_MOCK,
-            source_url="https://v-dem.net/data_analysis/VariableGraph/",
-            confidence=CONFIDENCE_MOCK,
+            value=vdem_value,
+            source_id=vdem_source_id,
+            source_type=vdem_source_type,
+            source_url=VDEM_SOURCE_URL,
+            confidence=vdem_confidence,
+            legal_basis="V-Dem Dataset CC-BY-SA. " + VDEM_CITATION,
             agent_id="OSINT_IngestionAgent",
-            notes="Mock data. En producción: V-Dem API v14 (endpoint público).",
+            notes=vdem_notes,
         ),
 
         # Administración Electoral (EMB)
@@ -634,9 +903,13 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
     state["trace_log"].extend(traces)
 
     state["context_data"] = context
-    agent_log(state, agent_name, f"Ingesta completada. Freedom House: {osint['freedom_house_score']}/100, V-Dem: {osint['vdem_liberal_democracy']}")
+    vdem_log_val = vdem_real['liberal_democracy'] if vdem_real else osint['vdem_liberal_democracy']
+    vdem_log_src = f"REAL (V-Dem {VDEM_VERSION})" if vdem_real else "MOCK (fallback)"
+    fh_log_val = fh_real['total_score'] if fh_real else osint['freedom_house_score']
+    fh_log_src = f"REAL (FH {FH_VERSION})" if fh_real else "MOCK (fallback)"
+    agent_log(state, agent_name, f"Ingesta completada. FH: {fh_log_val}/100 [{fh_log_src}] | V-Dem libdem: {vdem_log_val} [{vdem_log_src}]")
     agent_log(state, agent_name, f"EMB independencia: {osint['emb_independence']}, Observación internacional: {'permitida' if osint['international_observation']['invited'] else 'restringida'}")
-    agent_log(state, agent_name, f"Trazabilidad: {len(traces)} datos rastreados. Confianza: MOCK (pendiente fuentes reales)")
+    agent_log(state, agent_name, f"Trazabilidad: {len(traces)} datos rastreados. FH: {fh_confidence} | V-Dem: {vdem_confidence} | Resto: mock")
     agent_log(state, agent_name, f"Región: {COUNTRY_REGIONS.get(code, 'unknown')} — Instrumentos aplicables: {len(state['applicable_instruments']['all_ids'])}")
 
     return state
@@ -1087,19 +1360,9 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
     legal = state.get("legal_analysis", {})
     violations = legal.get("violations", [])
     critical = [v for v in violations if v.get("severity") == "critical"]
-    context = state.get("context_data", {})
-
-    fh = extract_value(context.get("freedom_house", {}))
-    vdem = extract_value(context.get("vdem", {}))
-    emb = extract_value(context.get("emb", {}))
 
     level_emoji = {"critical": "🔴", "high": "🟠", "moderate": "🟡", "low": "🟢"}
     emoji = level_emoji.get(state["risk_level"], "⚪")
-
-    fh_score = fh.get("score", "N/A") if isinstance(fh, dict) else "N/A"
-    fh_status = fh.get("status", "N/A") if isinstance(fh, dict) else "N/A"
-    vdem_ld = vdem.get("liberal_democracy", "N/A") if isinstance(vdem, dict) else "N/A"
-    emb_ind = emb.get("independence_level", "N/A").upper() if isinstance(emb, dict) else "N/A"
 
     summary = f"""## 1. Resumen Ejecutivo & Dashboard de Riesgo
 
@@ -1107,13 +1370,11 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
 
 | Dimensión | Evaluación |
 |---|---|
-| Freedom House | {fh_score}/100 ({fh_status}) |
-| V-Dem Liberal Democracy | {vdem_ld} |
-| Independencia EMB | {emb_ind} |
+| Freedom House | {state['context_data'].get('freedom_house', {}).get('score', 'N/A')}/100 ({state['context_data'].get('freedom_house', {}).get('status', 'N/A')}) |
+| V-Dem Liberal Democracy | {state['context_data'].get('vdem', {}).get('liberal_democracy', 'N/A')} |
+| Independencia EMB | {state['context_data'].get('emb', {}).get('independence_level', 'N/A').upper()} |
 | Violaciones detectadas | {len(violations)} ({len(critical)} críticas) |
 | Tratados referenciados | {', '.join(legal.get('treaties_referenced', []))} |
-| Región legal | {legal.get('region', 'N/A')} |
-| Confianza de datos | {legal.get('confidence_summary', {})} |
 
 **Alertas críticas:** {len(critical)} violaciones de severidad crítica al derecho internacional detectadas.
 """
@@ -1124,10 +1385,8 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
 
 
 def _generate_political_context(context: dict) -> str:
-    legal_fw = extract_value(context.get("legal_framework", {}))
-    civil = extract_value(context.get("civil_liberties", {}))
-    if not isinstance(legal_fw, dict): legal_fw = {}
-    if not isinstance(civil, dict): civil = {}
+    legal_fw = context.get("legal_framework", {})
+    civil = context.get("civil_liberties", {})
 
     return f"""## 2. Contexto Político y Marco Legal
 
@@ -1146,25 +1405,19 @@ def _generate_political_context(context: dict) -> str:
 
 
 def _generate_emb_chapter(context: dict) -> str:
-    emb = extract_value(context.get("emb", {}))
-    registry = extract_value(context.get("voter_registry", {}))
-    obs = extract_value(context.get("international_observation", {}))
-    if not isinstance(emb, dict): emb = {}
-    if not isinstance(registry, dict): registry = {}
-    if not isinstance(obs, dict): obs = {}
-
-    size = registry.get('size', 'N/A')
-    size_str = f"{size:,}" if isinstance(size, (int, float)) else str(size)
+    emb = context.get("emb", {})
+    registry = context.get("voter_registry", {})
+    obs = context.get("international_observation", {})
 
     return f"""## 3. Administración Electoral (EMB)
 
 **{emb.get('name', 'N/A')}**
-- Nivel de independencia: **{emb.get('independence_level', 'N/A').upper() if isinstance(emb.get('independence_level'), str) else 'N/A'}**
+- Nivel de independencia: **{emb.get('independence_level', 'N/A').upper()}**
 - Representación opositora: {'Sí' if emb.get('opposition_representation') else 'No'}
 
 **Padrón Electoral:**
 - Estado de auditoría: {registry.get('status', 'N/A')}
-- Votantes registrados: {size_str}
+- Votantes registrados: {registry.get('size', 'N/A') if not isinstance(registry.get('size'), int) else f"{registry.get('size'):,}"}
 
 **Observación Internacional:**
 - Invitación: {'Sí' if obs.get('invited') else 'No'}
@@ -1556,7 +1809,7 @@ async def get_dashboard_data():
         finance_score = political.get("campaign_finance", {}).get("transparency_score", 0.5)
 
         fh_data = extract_value(context.get("freedom_house", {}))
-        fh = fh_data.get("score", 50) if isinstance(fh_data, dict) else 50
+        fh = fh_data.get("total_score", fh_data.get("score", 50)) if isinstance(fh_data, dict) else 50
 
         vdem_data = extract_value(context.get("vdem", {}))
         vdem_val = vdem_data.get("liberal_democracy", 0.5) if isinstance(vdem_data, dict) else 0.5
@@ -1607,8 +1860,8 @@ async def get_dashboard_data():
             "riskScore": result["risk_score"],
             "riskLevel": result["risk_level"],
             "trend": trend,
-            "freedomScore": context.get("freedom_house", {}).get("score", 0),
-            "vdemIndex": context.get("vdem", {}).get("liberal_democracy", 0),
+            "freedomScore": fh,
+            "vdemIndex": round(vdem_val, 3),
             "dimensions": dimensions,
             "violations": violations_simple,
             "timeline": timeline,
