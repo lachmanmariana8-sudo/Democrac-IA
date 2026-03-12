@@ -310,6 +310,103 @@ FH_DF = load_freedom_house_data()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 1b-3. CARGA DE DATOS REALES — PEI Dataset v10.0 (Electoral Integrity Project)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+PEI_CSV_PATH = os.getenv("PEI_CSV_PATH", "../data/PEI/PEI_10 Election External.csv")
+
+PEI_CITATION = (
+    "Garnett, H. A., James, T. S., & Caal-Lam, S. (2024). "
+    "'Perceptions of Electoral Integrity (PEI-10.0).' "
+    "Electoral Integrity Project. https://doi.org/10.7910/DVN/FQ5ECC"
+)
+PEI_SOURCE_URL = "https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/FQ5ECC"
+PEI_VERSION = "PEI-10.0"
+
+# Columnas PEI que usamos
+PEI_COLUMNS = [
+    "ISO", "election", "year", "office",
+    "OVERALLINTEGRITY",     # Score global de integridad (0-100)
+    "EMBs",                 # Score del organismo electoral (0-100)
+    "LAWS",                 # Marco legal electoral (0-100)
+    "PROCEDURES",           # Procedimientos electorales (0-100)
+    "BOUNDARIES",           # Delimitación de circunscripciones (0-100)
+    "VOTERREGISTRATION",    # Registro de votantes (0-100)
+    "MEDIACOVERAGE",        # Cobertura mediática (0-100)
+    "CAMPAIGNFINANCE",      # Financiamiento de campaña (0-100)
+    "VOTINGPROCESS",        # Proceso de votación (0-100)
+    "VOTECOUNT",            # Conteo de votos (0-100)
+    "VOTINGRESULTS",        # Resultados electorales (0-100)
+    "ELECTIONAUTHORITIES",  # Autoridades electorales (0-100) — alias de EMBs
+]
+
+
+def load_pei_data() -> Optional[pd.DataFrame]:
+    """
+    Carga el dataset PEI desde el CSV local.
+    Se ejecuta UNA SOLA VEZ al iniciar el backend.
+    """
+    if not os.path.exists(PEI_CSV_PATH):
+        print(f"[PEI] AVISO: CSV no encontrado en '{PEI_CSV_PATH}'. Usando datos mock.")
+        return None
+    try:
+        df = pd.read_csv(PEI_CSV_PATH, usecols=PEI_COLUMNS, low_memory=False)
+        df["year"] = pd.to_numeric(df["year"], errors="coerce")
+        print(f"[PEI] ✅ Dataset cargado: {len(df):,} elecciones.")
+        print(f"[PEI] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
+        return df
+    except Exception as e:
+        print(f"[PEI] ERROR al cargar CSV: {e}. Usando datos mock.")
+        return None
+
+
+def get_pei_country(df: Optional[pd.DataFrame], country_code: str) -> Optional[Dict]:
+    """
+    Extrae los datos PEI más recientes para un país.
+    Usa la elección más reciente disponible.
+    """
+    if df is None:
+        return None
+
+    rows = df[df["ISO"] == country_code].sort_values("year", ascending=False)
+
+    if rows.empty:
+        print(f"[PEI] AVISO: No hay datos para {country_code}.")
+        return None
+
+    # Preferir la elección presidencial más reciente; si no, la más reciente de cualquier tipo
+    presidential = rows[rows["office"].str.contains("Presidential", na=False)]
+    r = presidential.iloc[0] if not presidential.empty else rows.iloc[0]
+
+    def safe_float(val):
+        return round(float(val), 1) if pd.notna(val) else None
+
+    return {
+        "country_code": country_code,
+        "election_id": str(r["election"]),
+        "year": int(r["year"]),
+        "office": str(r["office"]) if pd.notna(r["office"]) else "N/A",
+        "overall_integrity": safe_float(r["OVERALLINTEGRITY"]),
+        "emb_score": safe_float(r["EMBs"]),
+        "legal_framework": safe_float(r["LAWS"]),
+        "procedures": safe_float(r["PROCEDURES"]),
+        "voter_registration": safe_float(r["VOTERREGISTRATION"]),
+        "media_coverage": safe_float(r["MEDIACOVERAGE"]),
+        "campaign_finance": safe_float(r["CAMPAIGNFINANCE"]),
+        "voting_process": safe_float(r["VOTINGPROCESS"]),
+        "vote_count": safe_float(r["VOTECOUNT"]),
+        "voting_results": safe_float(r["VOTINGRESULTS"]),
+        "election_authorities": safe_float(r["ELECTIONAUTHORITIES"]),
+        "citation": PEI_CITATION,
+        "dataset_version": PEI_VERSION,
+    }
+
+
+# Cargar PEI al iniciar el módulo
+PEI_DF = load_pei_data()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 1c. FRAMEWORK DE TRAZABILIDAD
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -824,6 +921,15 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
         vdem_notes = f"Mock fallback: país {code} no encontrado en V-Dem {VDEM_VERSION}."
         agent_log(state, agent_name, f"V-Dem MOCK (fallback): {code} no encontrado en CSV.")
 
+    # ── PEI: datos REALES desde CSV local ────────────────────────────────────
+    pei_real = get_pei_country(PEI_DF, code)
+
+    if pei_real:
+        agent_log(state, agent_name, f"PEI REAL: elección={pei_real['election_id']}, "
+                  f"EMBs={pei_real['emb_score']}, año={pei_real['year']}")
+    else:
+        agent_log(state, agent_name, f"PEI: no hay datos para {code} — usando mock.")
+
     # ── Freedom House: datos REALES desde CSV local ──────────────────────────
     fh_real = get_freedom_house_country(FH_DF, code)
 
@@ -872,6 +978,27 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
             legal_basis="V-Dem Dataset CC-BY-SA. " + VDEM_CITATION,
             agent_id="OSINT_IngestionAgent",
             notes=vdem_notes,
+        ),
+
+        # PEI — Integridad Electoral (Electoral Integrity Project)
+        "pei": create_trace(
+            value=pei_real if pei_real else {
+                "overall_integrity": None,
+                "emb_score": osint.get("emb_pei_score"),
+                "legal_framework": None,
+                "media_coverage": None,
+                "campaign_finance": None,
+            },
+            source_id=f"pei_{pei_real['election_id']}" if pei_real else f"pei_mock_{code.lower()}",
+            source_type=SOURCE_API if pei_real else SOURCE_MOCK,
+            source_url=PEI_SOURCE_URL,
+            confidence=CONFIDENCE_CONFIRMED if pei_real else CONFIDENCE_MOCK,
+            legal_basis=PEI_CITATION if pei_real else "",
+            agent_id="OSINT_IngestionAgent",
+            notes=(
+                f"PEI {PEI_VERSION}. Elección: {pei_real['election_id']} ({pei_real['year']}). "
+                f"EMBs={pei_real['emb_score']}, Marco legal={pei_real['legal_framework']}."
+            ) if pei_real else f"Mock. País {code} no encontrado en PEI {PEI_VERSION}.",
         ),
 
         # Administración Electoral (EMB) — datos REALES desde V-Dem
@@ -967,7 +1094,9 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
     intl_obs = vdem_real['international_observation'] if vdem_real else osint['international_observation']['invited']
     agent_log(state, agent_name, f"Ingesta completada. FH: {fh_log_val}/100 [{fh_log_src}] | V-Dem libdem: {vdem_log_val} [{vdem_log_src}]")
     agent_log(state, agent_name, f"EMB: nivel={emb_level}, autonomía={emb_aut} [V-Dem REAL] | Obs. intl: {intl_obs}")
-    agent_log(state, agent_name, f"Trazabilidad: FH: {fh_confidence} | V-Dem+EMB: {vdem_confidence} | Marco legal, padrón: mock")
+    pei_log = f"EMBs={pei_real['emb_score']}, año={pei_real['year']}" if pei_real else "no disponible"
+    agent_log(state, agent_name, f"PEI {PEI_VERSION}: {pei_log}")
+    agent_log(state, agent_name, f"Trazabilidad: FH: {fh_confidence} | V-Dem+EMB: {vdem_confidence} | PEI: {'confirmed' if pei_real else 'mock'} | Padrón: mock")
     agent_log(state, agent_name, f"Región: {COUNTRY_REGIONS.get(code, 'unknown')} — Instrumentos aplicables: {len(state['applicable_instruments']['all_ids'])}")
 
     return state
@@ -1982,3 +2111,4 @@ if __name__ == "__main__":
     import sys
     country = sys.argv[1] if len(sys.argv) > 1 else "VEN"
     run_cli_analysis(country)
+
