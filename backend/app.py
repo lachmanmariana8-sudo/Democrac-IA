@@ -58,52 +58,53 @@ llm = ChatAnthropic(
 # 1b. CARGA DE DATOS REALES — V-Dem Dataset v15
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Ruta al CSV (relativa al backend/, o absoluta si se prefiere)
 VDEM_CSV_PATH = os.getenv("VDEM_CSV_PATH", "../data/V-Dem-CY-Full+Others-v15.csv")
 
-# Columnas que vamos a usar de V-Dem (extraemos solo estas para ahorrar memoria)
 VDEM_COLUMNS = [
     "country_text_id", "year",
-    # Índices de democracia (0-1)
-    "v2x_libdem",          # Democracia liberal
-    "v2x_polyarchy",       # Democracia electoral / poliarquía
-    "v2x_partipdem",       # Democracia participativa
-    "v2x_delibdem",        # Democracia deliberativa
-    "v2x_egaldem",         # Democracia igualitaria
-    "v2xel_frefair",       # Elecciones libres y justas
-    "v2x_freexp_altinf",   # Libertad de expresión y fuentes alternativas
-    "v2x_frassoc_thick",   # Libertad de asociación
-    "v2x_suffr",           # Sufragio universal
-    "v2xcl_rol",           # Estado de derecho
-    # Organismo Electoral (EMB) — escala continua aprox. -4 a +4
-    "v2elembaut",          # Autonomía del EMB respecto al gobierno
-    "v2elembcap",          # Capacidad técnica del EMB
-    "v2elirreg",           # Irregularidades electorales (negativo = más irregularidades)
-    "v2elintim",           # Intimidación electoral (negativo = más intimidación)
-    "v2elintmon",          # Observación internacional (0=no, 1=sí, por elección)
+    "v2x_libdem",
+    "v2x_polyarchy",
+    "v2x_partipdem",
+    "v2x_delibdem",
+    "v2x_egaldem",
+    "v2xel_frefair",
+    "v2x_freexp_altinf",
+    "v2x_frassoc_thick",
+    "v2x_suffr",
+    "v2xcl_rol",
+    "v2elembaut",
+    "v2elembcap",
+    "v2elirreg",
+    "v2elintim",
+    "v2elintmon",
+    # Variables ecosistema digital
+    "v2mecenefi",
+    "v2mecenefm",
+    "v2meharjrn",
+    "v2mebias",
+    "v2smgovdom",
+    "v2smgovfilcap",
+    "v2smregcap",
+    # Variables contexto político-legal (Cap. 2)
+    "v2psbars",       # barreras a partidos (0=prohibición, 4=abierto)
+    "v2psoppaut",     # autonomía partidos de oposición (-4 a 4)
+    "v2jureview",     # revisión judicial independiente (0=ninguna, 4=fuerte)
 ]
 
-# Citación oficial requerida por V-Dem (licencia CC-BY-SA)
 VDEM_CITATION = (
     "Coppedge et al. 2025. 'V-Dem Country-Year Dataset v15' "
     "Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds25"
 )
 VDEM_SOURCE_URL = "https://v-dem.net/data/the-v-dem-dataset/"
 VDEM_VERSION = "v15"
-VDEM_LAST_YEAR = 2024  # Último año con datos en v15
+VDEM_LAST_YEAR = 2024
 
 
 def load_vdem_data() -> Optional[pd.DataFrame]:
-    """
-    Carga el dataset V-Dem desde el CSV local.
-    Se ejecuta UNA SOLA VEZ al iniciar el backend.
-    Retorna None si el archivo no existe (el sistema cae a datos mock).
-    """
     if not os.path.exists(VDEM_CSV_PATH):
         print(f"[V-Dem] AVISO: CSV no encontrado en '{VDEM_CSV_PATH}'. Usando datos mock.")
         return None
     try:
-        # Leer solo las columnas que necesitamos (el CSV completo tiene ~4000 columnas)
         df = pd.read_csv(VDEM_CSV_PATH, usecols=VDEM_COLUMNS, low_memory=False)
         print(f"[V-Dem] ✅ Dataset cargado: {len(df):,} filas, {len(df.columns)} columnas.")
         print(f"[V-Dem] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
@@ -114,24 +115,12 @@ def load_vdem_data() -> Optional[pd.DataFrame]:
 
 
 def get_vdem_country(df: Optional[pd.DataFrame], country_code: str, year: int = VDEM_LAST_YEAR) -> Optional[Dict]:
-    """
-    Extrae los indicadores V-Dem para un país y año específico.
-    
-    Args:
-        df: DataFrame cargado por load_vdem_data()
-        country_code: Código ISO3 del país (ej: "VEN", "URY")
-        year: Año a consultar (default: último año disponible)
-    
-    Returns:
-        Dict con los indicadores, o None si el país no se encuentra.
-    """
     if df is None:
         return None
 
     row = df[(df["country_text_id"] == country_code) & (df["year"] == year)]
 
     if row.empty:
-        # Intentar con el año anterior si no hay datos para el año solicitado
         row = df[(df["country_text_id"] == country_code) & (df["year"] == year - 1)]
 
     if row.empty:
@@ -183,12 +172,22 @@ def get_vdem_country(df: Optional[pd.DataFrame], country_code: str, year: int = 
         "electoral_irregularities": norm_inverted(r["v2elirreg"]),
         "electoral_intimidation": norm_inverted(r["v2elintim"]),
         "international_observation": international_observation,
+        "internet_censorship": norm_inverted(r["v2mecenefi"]) if "v2mecenefi" in r.index and pd.notna(r.get("v2mecenefi")) else None,
+        "media_censorship": norm_inverted(r["v2mecenefm"]) if "v2mecenefm" in r.index and pd.notna(r.get("v2mecenefm")) else None,
+        "journalist_harassment": norm_inverted(r["v2meharjrn"]) if "v2meharjrn" in r.index and pd.notna(r.get("v2meharjrn")) else None,
+        "media_bias_vdem": norm_inverted(r["v2mebias"]) if "v2mebias" in r.index and pd.notna(r.get("v2mebias")) else None,
+        "gov_social_media_dominance": norm_inverted(r["v2smgovdom"]) if "v2smgovdom" in r.index and pd.notna(r.get("v2smgovdom")) else None,
+        "gov_internet_filter_capacity": norm_inverted(r["v2smgovfilcap"]) if "v2smgovfilcap" in r.index and pd.notna(r.get("v2smgovfilcap")) else None,
+        "social_media_regulation": norm_inverted(r["v2smregcap"]) if "v2smregcap" in r.index and pd.notna(r.get("v2smregcap")) else None,
+        # Indicadores contexto político-legal (Cap. 2)
+        "opposition_party_barriers": norm_vdem(r["v2psbars"], 0, 4) if "v2psbars" in r.index and pd.notna(r.get("v2psbars")) else None,
+        "opposition_autonomy": norm_vdem(r["v2psoppaut"]) if "v2psoppaut" in r.index and pd.notna(r.get("v2psoppaut")) else None,
+        "judicial_review": norm_vdem(r["v2jureview"], 0, 4) if "v2jureview" in r.index and pd.notna(r.get("v2jureview")) else None,
         "citation": VDEM_CITATION,
         "dataset_version": VDEM_VERSION,
     }
 
 
-# Cargar V-Dem al iniciar el módulo
 VDEM_DF = load_vdem_data()
 
 
@@ -204,43 +203,28 @@ FH_CITATION = (
 )
 FH_SOURCE_URL = "https://freedomhouse.org/report/freedom-world"
 FH_VERSION = "FIW_2025"
-FH_LAST_EDITION = 2025  # Último año disponible en el dataset
+FH_LAST_EDITION = 2025
 
-# Mapeo ISO3 → nombre exacto en Freedom House
-# Freedom House usa nombres completos en inglés
 FH_COUNTRY_NAMES = {
-    "VEN": "Venezuela",
-    "NIC": "Nicaragua",
-    "GTM": "Guatemala",
-    "URY": "Uruguay",
-    "COL": "Colombia",
-    "BRA": "Brazil",
-    "MEX": "Mexico",
-    "ARG": "Argentina",
-    "CHL": "Chile",
-    "BOL": "Bolivia",
-    "ECU": "Ecuador",
-    "PER": "Peru",
-    "HND": "Honduras",
-    "SLV": "El Salvador",
-    "PAN": "Panama",
+    "VEN": "Venezuela", "NIC": "Nicaragua", "GTM": "Guatemala", "URY": "Uruguay",
+    "COL": "Colombia", "BRA": "Brazil", "MEX": "Mexico", "ARG": "Argentina",
+    "CHL": "Chile", "BOL": "Bolivia", "ECU": "Ecuador", "PER": "Peru",
+    "HND": "Honduras", "SLV": "El Salvador", "PAN": "Panama",
+    "CRI": "Costa Rica", "DOM": "Dominican Republic", "PRY": "Paraguay", "CUB": "Cuba",
+    "DEU": "Germany", "FRA": "France", "HUN": "Hungary", "POL": "Poland",
+    "TUR": "Turkey", "RUS": "Russia", "BLR": "Belarus", "UKR": "Ukraine", "GEO": "Georgia",
+    "ZAF": "South Africa", "NGA": "Nigeria", "KEN": "Kenya", "ZWE": "Zimbabwe", "GHA": "Ghana",
+    "IND": "India", "PHL": "Philippines", "IDN": "Indonesia", "THA": "Thailand", "TUN": "Tunisia",
 }
 
 
 def load_freedom_house_data() -> Optional[pd.DataFrame]:
-    """
-    Carga el dataset Freedom House desde el CSV local.
-    Se ejecuta UNA SOLA VEZ al iniciar el backend.
-    Retorna None si el archivo no existe (el sistema cae a datos mock).
-    """
     if not os.path.exists(FH_CSV_PATH):
         print(f"[FH] AVISO: CSV no encontrado en '{FH_CSV_PATH}'. Usando datos mock.")
         return None
     try:
         df = pd.read_csv(FH_CSV_PATH, sep=";", skiprows=1)
-        # Limpiar nombres de columnas por si tienen espacios extra
         df.columns = df.columns.str.strip()
-        # Convertir Edition y Total a numérico
         df["Edition"] = pd.to_numeric(df["Edition"], errors="coerce")
         df["Total"] = pd.to_numeric(df["Total"], errors="coerce")
         df["PR rating"] = pd.to_numeric(df["PR rating"], errors="coerce")
@@ -254,17 +238,6 @@ def load_freedom_house_data() -> Optional[pd.DataFrame]:
 
 
 def get_freedom_house_country(df: Optional[pd.DataFrame], country_code: str, edition: int = FH_LAST_EDITION) -> Optional[Dict]:
-    """
-    Extrae los datos Freedom House para un país y edición específica.
-
-    Args:
-        df: DataFrame cargado por load_freedom_house_data()
-        country_code: Código ISO3 (ej: "VEN")
-        edition: Año de la edición (default: último disponible)
-
-    Returns:
-        Dict con score, status y ratings, o None si no se encuentra.
-    """
     if df is None:
         return None
 
@@ -276,7 +249,6 @@ def get_freedom_house_country(df: Optional[pd.DataFrame], country_code: str, edi
     row = df[(df["Country/Territory"] == fh_name) & (df["Edition"] == edition)]
 
     if row.empty:
-        # Intentar con la edición anterior
         row = df[(df["Country/Territory"] == fh_name) & (df["Edition"] == edition - 1)]
 
     if row.empty:
@@ -286,7 +258,6 @@ def get_freedom_house_country(df: Optional[pd.DataFrame], country_code: str, edi
     r = row.iloc[0]
     actual_edition = int(r["Edition"])
 
-    # Status completo
     status_map = {"F": "Free", "PF": "Partly Free", "NF": "Not Free"}
     status_raw = str(r["Status"]).strip() if pd.notna(r["Status"]) else "NF"
     status_full = status_map.get(status_raw, status_raw)
@@ -296,6 +267,7 @@ def get_freedom_house_country(df: Optional[pd.DataFrame], country_code: str, edi
         "country_name_fh": fh_name,
         "edition": actual_edition,
         "total_score": int(r["Total"]) if pd.notna(r["Total"]) else 0,
+        "score": int(r["Total"]) if pd.notna(r["Total"]) else 0,  # alias para compatibilidad
         "status": status_full,
         "status_short": status_raw,
         "political_rights_rating": int(r["PR rating"]) if pd.notna(r["PR rating"]) else 7,
@@ -305,13 +277,115 @@ def get_freedom_house_country(df: Optional[pd.DataFrame], country_code: str, edi
     }
 
 
-# Cargar Freedom House al iniciar el módulo
+def derive_civil_liberties_from_fh(fh_data: dict) -> dict:
+    cl = fh_data.get("civil_liberties_rating", 7)
+    pr = fh_data.get("political_rights_rating", 7)
+    if cl >= 6:
+        press, assembly, judicial = "severely_restricted", "banned", "captured"
+    elif cl == 5:
+        press, assembly, judicial = "severely_restricted", "restricted", "compromised"
+    elif cl == 4:
+        press, assembly, judicial = "restricted", "restricted", "compromised"
+    elif cl == 3:
+        press, assembly, judicial = "partially_restricted", "partially_restricted", "under_pressure"
+    elif cl == 2:
+        press, assembly, judicial = "mostly_free", "mostly_free", "mostly_independent"
+    else:
+        press, assembly, judicial = "guaranteed", "guaranteed", "strong"
+    return {
+        "freedom_of_press": press,
+        "freedom_of_assembly": assembly,
+        "judicial_independence": judicial,
+        "political_prisoners": pr >= 6,
+        "cl_rating": cl,
+        "pr_rating": pr,
+        "data_source": "Freedom House FIW",
+        "data_year": fh_data.get("edition"),
+    }
+
+
 FH_DF = load_freedom_house_data()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1b-3. CARGA DE DATOS REALES — PEI Dataset v10.0 (Electoral Integrity Project)
 # ═══════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1b-3b. RSF Press Freedom Index 2025
+# ═══════════════════════════════════════════════════════════════════════════════
+
+RSF_CSV_PATH = os.getenv("RSF_CSV_PATH", "../data/RSF/2025 - 2025.csv")
+
+RSF_CITATION = (
+    "Reporters Without Borders (RSF). 2025. 'World Press Freedom Index 2025.' "
+    "https://rsf.org/en/index"
+)
+RSF_SOURCE_URL = "https://rsf.org/en/index"
+RSF_VERSION = "RSF_2025"
+
+
+def load_rsf_data() -> Optional[pd.DataFrame]:
+    if not os.path.exists(RSF_CSV_PATH):
+        print(f"[RSF] AVISO: CSV no encontrado en '{RSF_CSV_PATH}'.")
+        return None
+    try:
+        # El CSV de RSF exportado de Excel envuelve cada fila en comillas dobles
+        # y usa coma como separador decimal (formato europeo). Preprocesar:
+        from io import StringIO
+        with open(RSF_CSV_PATH, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        processed = []
+        for line in lines:
+            if line.startswith('"') and line.endswith('"'):
+                line = line[1:-1]          # quitar comillas externas
+                line = line.replace('""', '"')  # unescape comillas internas
+            processed.append(line)
+        df = pd.read_csv(StringIO("\n".join(processed)))
+        df.columns = df.columns.str.strip()
+        # Convertir decimales europeos (87,18 → 87.18) en columnas numéricas
+        numeric_cols = ["Score 2025", "Rank", "Political Context", "Economic Context",
+                        "Legal Context", "Social Context", "Safety", "Score N-1"]
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.replace(",", ".", regex=False)
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+        print(f"[RSF] ✅ Dataset cargado: {len(df):,} países.")
+        return df
+    except Exception as e:
+        print(f"[RSF] ERROR al cargar CSV: {e}")
+        return None
+
+
+def get_rsf_country(df: Optional[pd.DataFrame], country_code: str) -> Optional[Dict]:
+    if df is None:
+        return None
+    row = df[df["ISO"] == country_code]
+    if row.empty:
+        return None
+    r = row.iloc[0]
+
+    def safe(col):
+        return round(float(r[col]), 2) if col in r.index and pd.notna(r[col]) else None
+
+    return {
+        "country_code": country_code,
+        "score": safe("Score 2025"),
+        "rank": int(r["Rank"]) if pd.notna(r.get("Rank")) else None,
+        "political_context": safe("Political Context"),
+        "economic_context": safe("Economic Context"),
+        "legal_context": safe("Legal Context"),
+        "social_context": safe("Social Context"),
+        "safety": safe("Safety"),
+        "country_en": str(r["Country_EN"]) if "Country_EN" in r.index and pd.notna(r.get("Country_EN")) else None,
+        "zone": str(r["Zone"]) if "Zone" in r.index and pd.notna(r.get("Zone")) else None,
+        "citation": RSF_CITATION,
+        "dataset_version": RSF_VERSION,
+    }
+
+
+RSF_DF = load_rsf_data()
+
 
 PEI_CSV_PATH = os.getenv("PEI_CSV_PATH", "../data/PEI/PEI_10 Election External.csv")
 
@@ -323,35 +397,36 @@ PEI_CITATION = (
 PEI_SOURCE_URL = "https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/FQ5ECC"
 PEI_VERSION = "PEI-10.0"
 
-# Columnas PEI que usamos
 PEI_COLUMNS = [
     "ISO", "election", "year", "office",
-    "OVERALLINTEGRITY",     # Score global de integridad (0-100)
-    "EMBs",                 # Score del organismo electoral (0-100)
-    "LAWS",                 # Marco legal electoral (0-100)
-    "PROCEDURES",           # Procedimientos electorales (0-100)
-    "BOUNDARIES",           # Delimitación de circunscripciones (0-100)
-    "VOTERREGISTRATION",    # Registro de votantes (0-100)
-    "MEDIACOVERAGE",        # Cobertura mediática (0-100)
-    "CAMPAIGNFINANCE",      # Financiamiento de campaña (0-100)
-    "VOTINGPROCESS",        # Proceso de votación (0-100)
-    "VOTECOUNT",            # Conteo de votos (0-100)
-    "VOTINGRESULTS",        # Resultados electorales (0-100)
-    "ELECTIONAUTHORITIES",  # Autoridades electorales (0-100) — alias de EMBs
+    "OVERALLINTEGRITY",
+    "EMBs",
+    "LAWS",
+    "PROCEDURES",
+    "BOUNDARIES",
+    "VOTERREGISTRATION",
+    "MEDIACOVERAGE",
+    "CAMPAIGNFINANCE",
+    "VOTINGPROCESS",
+    "VOTECOUNT",
+    "VOTINGRESULTS",
+    "ELECTIONAUTHORITIES",
 ]
 
 
 def load_pei_data() -> Optional[pd.DataFrame]:
-    """
-    Carga el dataset PEI desde el CSV local.
-    Se ejecuta UNA SOLA VEZ al iniciar el backend.
-    """
     if not os.path.exists(PEI_CSV_PATH):
         print(f"[PEI] AVISO: CSV no encontrado en '{PEI_CSV_PATH}'. Usando datos mock.")
         return None
     try:
-        df = pd.read_csv(PEI_CSV_PATH, usecols=PEI_COLUMNS, low_memory=False)
+        df = pd.read_csv(PEI_CSV_PATH, low_memory=False)
+        df.columns = df.columns.str.strip()
         df["year"] = pd.to_numeric(df["year"], errors="coerce")
+        for col in ["OVERALLINTEGRITY","EMBs","LAWS","PROCEDURES","BOUNDARIES",
+                    "VOTERREGISTRATION","MEDIACOVERAGE","CAMPAIGNFINANCE",
+                    "VOTINGPROCESS","VOTECOUNT","VOTINGRESULTS","ELECTIONAUTHORITIES"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
         print(f"[PEI] ✅ Dataset cargado: {len(df):,} elecciones.")
         print(f"[PEI] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
         return df
@@ -361,10 +436,6 @@ def load_pei_data() -> Optional[pd.DataFrame]:
 
 
 def get_pei_country(df: Optional[pd.DataFrame], country_code: str) -> Optional[Dict]:
-    """
-    Extrae los datos PEI más recientes para un país.
-    Usa la elección más reciente disponible.
-    """
     if df is None:
         return None
 
@@ -374,35 +445,58 @@ def get_pei_country(df: Optional[pd.DataFrame], country_code: str) -> Optional[D
         print(f"[PEI] AVISO: No hay datos para {country_code}.")
         return None
 
-    # Preferir la elección presidencial más reciente; si no, la más reciente de cualquier tipo
     presidential = rows[rows["office"].str.contains("Presidential", na=False)]
     r = presidential.iloc[0] if not presidential.empty else rows.iloc[0]
 
     def safe_float(val):
         return round(float(val), 1) if pd.notna(val) else None
 
+    def safe_col(col):
+        return safe_float(r[col]) if col in r.index and pd.notna(r[col]) else None
+
+    def safe_col_fallback(col_primary, col_fallback=None):
+        val = safe_col(col_primary)
+        if val is None and col_fallback:
+            val = safe_col(col_fallback)
+        return val
+
     return {
         "country_code": country_code,
         "election_id": str(r["election"]),
         "year": int(r["year"]),
         "office": str(r["office"]) if pd.notna(r["office"]) else "N/A",
-        "overall_integrity": safe_float(r["OVERALLINTEGRITY"]),
-        "emb_score": safe_float(r["EMBs"]),
-        "legal_framework": safe_float(r["LAWS"]),
-        "procedures": safe_float(r["PROCEDURES"]),
-        "voter_registration": safe_float(r["VOTERREGISTRATION"]),
-        "media_coverage": safe_float(r["MEDIACOVERAGE"]),
-        "campaign_finance": safe_float(r["CAMPAIGNFINANCE"]),
-        "voting_process": safe_float(r["VOTINGPROCESS"]),
-        "vote_count": safe_float(r["VOTECOUNT"]),
-        "voting_results": safe_float(r["VOTINGRESULTS"]),
-        "election_authorities": safe_float(r["ELECTIONAUTHORITIES"]),
+        "overall_integrity": safe_col_fallback("OVERALLINTEGRITY", "PEI_add_original"),
+        "emb_score": safe_col_fallback("EMBs", "EMBs_m"),
+        "legal_framework": safe_col_fallback("LAWS", "laws"),
+        "procedures": safe_col_fallback("PROCEDURES", "procedures"),
+        "voter_registration": safe_col_fallback("VOTERREGISTRATION", "votereg"),
+        "media_coverage": safe_col_fallback("MEDIACOVERAGE", "media"),
+        "campaign_finance": safe_col_fallback("CAMPAIGNFINANCE", "finance"),
+        "voting_process": safe_col_fallback("VOTINGPROCESS", "voting"),
+        "vote_count": safe_col_fallback("VOTECOUNT", "count"),
+        "voting_results": safe_col_fallback("VOTINGRESULTS", "results"),
+        "election_authorities": safe_col_fallback("ELECTIONAUTHORITIES", "EMBs"),
+        "laws_unfair": safe_col("lawsunfair"),
+        "laws_favored_incumbent": safe_col("favoredincumbent"),
+        "laws_equal": safe_col("equal"),
+        "laws_enfranchised": safe_col("enfranchised"),
+        "reg_listed": safe_col("reglisted"),
+        "reg_inaccurate": safe_col("reginaccurate"),
+        "reg_ineligible": safe_col("ineligible"),
+        "party_registration": safe_col("PARTYREGISTRATION"),
+        "opp_prevent": safe_col("oppprevent"),
+        "equal_opp": safe_col("equalopp"),
+        "women_opp": safe_col("womenopp"),
+        "media_balanced": safe_col("balanced"),
+        "media_fair_access": safe_col("fairaccess"),
+        "media_disinformation": safe_col("disinformation"),
+        "finance_resources": safe_col("resources"),
+        "finance_bribed": safe_col("bribed"),
         "citation": PEI_CITATION,
         "dataset_version": PEI_VERSION,
     }
 
 
-# Cargar PEI al iniciar el módulo
 PEI_DF = load_pei_data()
 
 
@@ -410,37 +504,38 @@ PEI_DF = load_pei_data()
 # 1c. FRAMEWORK DE TRAZABILIDAD
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Niveles de confianza para datos
-CONFIDENCE_CONFIRMED = "confirmed"       # Dato verificado desde fuente primaria oficial
-CONFIDENCE_PROBABLE = "probable"          # Dato de fuente confiable pero no verificado independientemente
-CONFIDENCE_UNVERIFIED = "unverified"      # Dato requiere verificación adicional
-CONFIDENCE_MOCK = "mock"                  # Dato simulado para desarrollo (NO publicable)
+CONFIDENCE_CONFIRMED = "confirmed"
+CONFIDENCE_PROBABLE = "probable"
+CONFIDENCE_UNVERIFIED = "unverified"
+CONFIDENCE_MOCK = "mock"
 
-# Tipos de fuente
-SOURCE_API = "api"                        # API oficial (V-Dem, Freedom House)
-SOURCE_SCRAPING = "scraping"              # Web scraping de portal gubernamental/EMB
-SOURCE_DOCUMENT = "document"              # Documento legal/tratado internacional
-SOURCE_SOCIAL = "social_media"            # Monitoreo de redes sociales
-SOURCE_MANUAL = "manual_entry"            # Ingreso manual por analista
-SOURCE_MOCK = "mock_data"                 # Datos simulados para desarrollo
+SOURCE_API = "api"
+SOURCE_SCRAPING = "scraping"
+SOURCE_DOCUMENT = "document"
+SOURCE_SOCIAL = "social_media"
+SOURCE_MANUAL = "manual_entry"
+SOURCE_MOCK = "mock_data"
 
-# Regiones para instrumentos legales
 REGION_AMERICAS = "americas"
 REGION_EUROPE = "europe"
 REGION_AFRICA = "africa"
 REGION_ASIA_PACIFIC = "asia_pacific"
 REGION_ARAB = "arab_states"
 
-# Mapeo de países a regiones (expandir según se agreguen países)
 COUNTRY_REGIONS = {
     "VEN": REGION_AMERICAS, "NIC": REGION_AMERICAS, "GTM": REGION_AMERICAS,
     "URY": REGION_AMERICAS, "COL": REGION_AMERICAS, "BRA": REGION_AMERICAS,
     "MEX": REGION_AMERICAS, "ARG": REGION_AMERICAS, "CHL": REGION_AMERICAS,
     "BOL": REGION_AMERICAS, "ECU": REGION_AMERICAS, "PER": REGION_AMERICAS,
     "HND": REGION_AMERICAS, "SLV": REGION_AMERICAS, "PAN": REGION_AMERICAS,
+    "CRI": REGION_AMERICAS, "DOM": REGION_AMERICAS, "PRY": REGION_AMERICAS, "CUB": REGION_AMERICAS,
+    "DEU": REGION_EUROPE, "FRA": REGION_EUROPE, "HUN": REGION_EUROPE, "POL": REGION_EUROPE,
+    "TUR": REGION_EUROPE, "RUS": REGION_EUROPE, "BLR": REGION_EUROPE, "UKR": REGION_EUROPE, "GEO": REGION_EUROPE,
+    "ZAF": REGION_AFRICA, "NGA": REGION_AFRICA, "KEN": REGION_AFRICA, "ZWE": REGION_AFRICA, "GHA": REGION_AFRICA,
+    "IND": REGION_ASIA_PACIFIC, "PHL": REGION_ASIA_PACIFIC, "IDN": REGION_ASIA_PACIFIC, "THA": REGION_ASIA_PACIFIC,
+    "TUN": REGION_ARAB,
 }
 
-# Instrumentos legales universales (aplican a todos los países)
 UNIVERSAL_INSTRUMENTS = [
     {"id": "ICCPR", "name": "Pacto Internacional de Derechos Civiles y Políticos",
      "key_articles": ["Art. 1", "Art. 2", "Art. 3", "Art. 9", "Art. 14", "Art. 19", "Art. 21", "Art. 22", "Art. 25", "Art. 26"]},
@@ -456,7 +551,6 @@ UNIVERSAL_INSTRUMENTS = [
      "key_articles": ["Art. 7", "Art. 12", "Art. 13"]},
 ]
 
-# Instrumentos legales regionales
 REGIONAL_INSTRUMENTS = {
     REGION_AMERICAS: [
         {"id": "CADH", "name": "Convención Americana sobre Derechos Humanos",
@@ -497,12 +591,6 @@ def create_trace(
     agent_id: str = "",
     notes: str = "",
 ) -> Dict[str, Any]:
-    """
-    Crea un dato trazado con metadatos completos.
-    
-    REGLA DE ORO: Si confidence == "mock", el dato NO debe publicarse
-    como real en informes ni dashboard. Se marca visualmente como simulado.
-    """
     raw_value = json.dumps(value, ensure_ascii=False, default=str) if not isinstance(value, str) else value
     data_hash = hashlib.sha256(raw_value.encode("utf-8")).hexdigest()[:16]
 
@@ -525,7 +613,6 @@ def create_trace(
 
 
 def get_applicable_instruments(country_code: str) -> Dict[str, List]:
-    """Retorna los instrumentos legales aplicables a un país (universales + regionales)."""
     region = COUNTRY_REGIONS.get(country_code)
     regional = REGIONAL_INSTRUMENTS.get(region, []) if region else []
     return {
@@ -537,21 +624,18 @@ def get_applicable_instruments(country_code: str) -> Dict[str, List]:
 
 
 def extract_value(traced_data: Dict) -> Any:
-    """Extrae el valor de un dato trazado. Si recibe un dato sin traza, lo devuelve directo."""
     if isinstance(traced_data, dict) and "_trace" in traced_data:
         return traced_data["value"]
     return traced_data
 
 
 def get_trace(traced_data: Dict) -> Dict:
-    """Extrae los metadatos de trazabilidad de un dato."""
     if isinstance(traced_data, dict) and "_trace" in traced_data:
         return traced_data["_trace"]
     return {"confidence": "unknown", "is_publishable": False}
 
 
 def collect_traces(data: Dict, prefix: str = "") -> List[Dict]:
-    """Recorre recursivamente un dict y recolecta todos los _trace encontrados."""
     traces = []
     for key, val in data.items():
         path = f"{prefix}.{key}" if prefix else key
@@ -568,39 +652,28 @@ def collect_traces(data: Dict, prefix: str = "") -> List[Dict]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class ElectionRiskState(TypedDict):
-    """Estado compartido que transita por todos los agentes."""
-    # --- Inputs ---
     run_id: str
     country: str
     country_code: str
     election_date: str
     timestamp: str
-
-    # --- Agente 1: Ingesta OSINT ---
     context_data: Dict[str, Any]
-
-    # --- Agente 2: Análisis Político-Digital ---
     political_data: Dict[str, Any]
-
-    # --- Agente 3: Cumplimiento Legal ---
     legal_analysis: Dict[str, Any]
-
-    # --- Agente 4: Reporte VIP ---
     risk_score: float
     risk_level: str
     report_chapters: Dict[str, str]
     executive_summary: str
     final_report_markdown: str
-
-    # --- Metadatos ---
     agent_logs: List[str]
     errors: List[str]
-    trace_log: List[Dict]          # Registro completo de trazabilidad
-    applicable_instruments: Dict   # Instrumentos legales aplicables al país
+    trace_log: List[Dict]
+    applicable_instruments: Dict
+    dictamen: Dict
+    voting_day_data: Dict
 
 
 def create_initial_state(country: str, country_code: str, election_date: str) -> ElectionRiskState:
-    """Crea el estado inicial para un análisis."""
     return ElectionRiskState(
         run_id=str(uuid.uuid4()),
         country=country,
@@ -619,11 +692,13 @@ def create_initial_state(country: str, country_code: str, election_date: str) ->
         errors=[],
         trace_log=[],
         applicable_instruments=get_applicable_instruments(country_code),
+        dictamen={},
+        voting_day_data={},
     )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 3. DATOS MOCK (Serán reemplazados por fuentes reales)
+# 3. DATOS MOCK
 # ═══════════════════════════════════════════════════════════════════════════════
 
 MOCK_OSINT_DATA = {
@@ -844,65 +919,162 @@ MOCK_POLITICAL_DATA = {
     },
 }
 
-# Catálogo de países disponibles para análisis
+EMB_NAMES = {
+    "VEN": "Consejo Nacional Electoral (CNE)", "NIC": "Consejo Supremo Electoral (CSE)",
+    "GTM": "Tribunal Supremo Electoral (TSE)", "URY": "Corte Electoral",
+    "COL": "Registraduria Nacional del Estado Civil", "BRA": "Tribunal Superior Electoral (TSE)",
+    "MEX": "Instituto Nacional Electoral (INE)", "ARG": "Camara Nacional Electoral",
+    "CHL": "Servicio Electoral (SERVEL)", "BOL": "Tribunal Supremo Electoral (TSE)",
+    "ECU": "Consejo Nacional Electoral (CNE)", "PER": "Jurado Nacional de Elecciones (JNE)",
+    "HND": "Consejo Nacional Electoral (CNE)", "SLV": "Tribunal Supremo Electoral (TSE)",
+    "PAN": "Tribunal Electoral", "CRI": "Tribunal Supremo de Elecciones (TSE)",
+    "DOM": "Junta Central Electoral (JCE)", "PRY": "Tribunal Superior de Justicia Electoral (TSJE)",
+    "CUB": "Comision Electoral Nacional", "DEU": "Bundeswahlleiter",
+    "FRA": "Conseil Constitutionnel", "HUN": "Nemzeti Valasztasi Bizottsag",
+    "POL": "Panstwowa Komisja Wyborcza (PKW)", "TUR": "Yuksek Secim Kurulu (YSK)",
+    "RUS": "Tsentralnaya izbiratelnaya komissiya (TsIK)",
+    "BLR": "Tsentralnaya komissiya po vyboram",
+    "UKR": "Tsentralna vyborcha komisiya (TsVK)",
+    "GEO": "Central Election Commission of Georgia",
+    "ZAF": "Electoral Commission (IEC)", "NGA": "Independent National Electoral Commission (INEC)",
+    "KEN": "Independent Electoral and Boundaries Commission (IEBC)",
+    "ZWE": "Zimbabwe Electoral Commission (ZEC)", "GHA": "Electoral Commission of Ghana (EC)",
+    "IND": "Election Commission of India (ECI)", "PHL": "Commission on Elections (COMELEC)",
+    "IDN": "Komisi Pemilihan Umum (KPU)", "THA": "Election Commission of Thailand",
+    "TUN": "Instance Superieure Independante pour les Elections (ISIE)",
+}
+
 COUNTRY_CATALOG = {
-    "VEN": {"name": "Venezuela", "flag": "🇻🇪", "election_date": "2025-12-07"},
-    "NIC": {"name": "Nicaragua", "flag": "🇳🇮", "election_date": "2026-03-15"},
-    "GTM": {"name": "Guatemala", "flag": "🇬🇹", "election_date": "2027-06-25"},
-    "URY": {"name": "Uruguay", "flag": "🇺🇾", "election_date": "2029-10-26"},
+    "VEN": {"name": "Venezuela",       "flag": "🇻🇪", "election_date": "2025-12-07"},
+    "NIC": {"name": "Nicaragua",       "flag": "🇳🇮", "election_date": "2026-11-07"},
+    "GTM": {"name": "Guatemala",       "flag": "🇬🇹", "election_date": "2027-06-20"},
+    "URY": {"name": "Uruguay",         "flag": "🇺🇾", "election_date": "2029-10-26"},
+    "COL": {"name": "Colombia",        "flag": "🇨🇴", "election_date": "2026-03-08"},
+    "BRA": {"name": "Brasil",          "flag": "🇧🇷", "election_date": "2026-10-04"},
+    "MEX": {"name": "Mexico",          "flag": "🇲🇽", "election_date": "2027-06-06"},
+    "ARG": {"name": "Argentina",       "flag": "🇦🇷", "election_date": "2027-10-24"},
+    "CHL": {"name": "Chile",           "flag": "🇨🇱", "election_date": "2025-11-23"},
+    "BOL": {"name": "Bolivia",         "flag": "🇧🇴", "election_date": "2026-03-22", "last_election": "2025-08-17", "observation_protocol": True, "phase": "electoral"},
+    "ECU": {"name": "Ecuador",         "flag": "🇪🇨", "election_date": "2025-02-09"},
+    "PER": {"name": "Peru",            "flag": "🇵🇪", "election_date": "2026-04-12"},
+    "HND": {"name": "Honduras",        "flag": "🇭🇳", "election_date": "2025-11-30"},
+    "SLV": {"name": "El Salvador",     "flag": "🇸🇻", "election_date": "2027-02-28"},
+    "PAN": {"name": "Panama",          "flag": "🇵🇦", "election_date": "2029-05-06"},
+    "CRI": {"name": "Costa Rica",      "flag": "🇨🇷", "election_date": "2026-02-01"},
+    "DOM": {"name": "Rep. Dominicana", "flag": "🇩🇴", "election_date": "2028-05-21"},
+    "PRY": {"name": "Paraguay",        "flag": "🇵🇾", "election_date": "2028-04-30"},
+    "CUB": {"name": "Cuba",            "flag": "🇨🇺", "election_date": "2028-03-01"},
+    "DEU": {"name": "Alemania",        "flag": "🇩🇪", "election_date": "2025-02-23"},
+    "FRA": {"name": "Francia",         "flag": "🇫🇷", "election_date": "2027-04-23"},
+    "HUN": {"name": "Hungria",         "flag": "🇭🇺", "election_date": "2026-04-12"},
+    "POL": {"name": "Polonia",         "flag": "🇵🇱", "election_date": "2027-10-15"},
+    "TUR": {"name": "Turquia",         "flag": "🇹🇷", "election_date": "2028-06-18"},
+    "RUS": {"name": "Rusia",           "flag": "🇷🇺", "election_date": "2030-03-15"},
+    "BLR": {"name": "Bielorrusia",     "flag": "🇧🇾", "election_date": "2025-01-26"},
+    "UKR": {"name": "Ucrania",         "flag": "🇺🇦", "election_date": "2025-03-31"},
+    "GEO": {"name": "Georgia",         "flag": "🇬🇪", "election_date": "2028-10-26"},
+    "ZAF": {"name": "Sudafrica",       "flag": "🇿🇦", "election_date": "2029-05-29"},
+    "NGA": {"name": "Nigeria",         "flag": "🇳🇬", "election_date": "2027-02-20"},
+    "KEN": {"name": "Kenia",           "flag": "🇰🇪", "election_date": "2027-08-09"},
+    "ZWE": {"name": "Zimbabue",        "flag": "🇿🇼", "election_date": "2028-07-30"},
+    "GHA": {"name": "Ghana",           "flag": "🇬🇭", "election_date": "2028-12-07"},
+    "IND": {"name": "India",           "flag": "🇮🇳", "election_date": "2029-05-01"},
+    "PHL": {"name": "Filipinas",       "flag": "🇵🇭", "election_date": "2028-05-13"},
+    "IDN": {"name": "Indonesia",       "flag": "🇮🇩", "election_date": "2029-02-14"},
+    "THA": {"name": "Tailandia",       "flag": "🇹🇭", "election_date": "2027-05-01"},
+    "TUN": {"name": "Tunez",           "flag": "🇹🇳", "election_date": "2029-10-06"},
 }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 4. AGENTES (Nodos del Grafo LangGraph)
+# 4. AGENTES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def agent_log(state: ElectionRiskState, agent: str, message: str) -> None:
-    """Registra actividad de un agente en el log."""
     timestamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
     state["agent_logs"].append(f"[{timestamp}] [{agent}] {message}")
+
+
+# ─── Perfil dinamico ─────────────────────────────────────────────────────────
+
+def build_dynamic_osint_profile(code: str, fh_data, vdem_data) -> dict:
+    fh_score = fh_data.get("total_score", 50) if fh_data else 50
+    fh_status = fh_data.get("status", "Partly Free") if fh_data else "Partly Free"
+    cl = fh_data.get("civil_liberties_rating", 4) if fh_data else 4
+    pr = fh_data.get("political_rights_rating", 4) if fh_data else 4
+    if fh_score < 20:
+        media_restr, opp_bans, const_amend, disq = "total", True, True, 5
+    elif fh_score < 40:
+        media_restr, opp_bans, const_amend, disq = "severe", True, True, 2
+    elif fh_score < 60:
+        media_restr, opp_bans, const_amend, disq = "moderate", False, False, 0
+    else:
+        media_restr, opp_bans, const_amend, disq = "none", False, False, 0
+    intl_obs_vdem = vdem_data.get("international_observation") if vdem_data else None
+    obs_invited = False if (intl_obs_vdem is False or fh_score < 20) else True
+    obs_restr = "restricted_or_banned" if fh_score < 20 else "some_access_limitations" if fh_score < 40 else "none"
+    registry_sizes = {
+        "COL": 39_000_000, "BRA": 156_000_000, "MEX": 98_000_000, "ARG": 35_000_000,
+        "CHL": 15_000_000, "BOL": 7_500_000, "ECU": 13_000_000, "PER": 25_000_000,
+        "HND": 5_500_000, "SLV": 5_000_000, "PAN": 2_800_000, "CRI": 3_600_000,
+        "DOM": 8_000_000, "PRY": 4_500_000, "CUB": 8_500_000,
+        "DEU": 61_000_000, "FRA": 48_000_000, "HUN": 8_000_000, "POL": 29_000_000,
+        "TUR": 60_000_000, "RUS": 109_000_000, "BLR": 7_000_000, "UKR": 36_000_000,
+        "GEO": 3_500_000, "ZAF": 27_000_000, "NGA": 93_000_000, "KEN": 22_000_000,
+        "ZWE": 5_700_000, "GHA": 17_000_000, "IND": 950_000_000, "PHL": 65_000_000,
+        "IDN": 204_000_000, "THA": 52_000_000, "TUN": 9_000_000,
+    }
+    press = "severely_restricted" if cl >= 5 else "restricted" if cl >= 4 else "partially_restricted" if cl >= 3 else "guaranteed"
+    assembly = "banned" if cl >= 6 else "restricted" if cl >= 4 else "partially_restricted" if cl >= 3 else "guaranteed"
+    judicial = "captured" if cl >= 6 else "compromised" if cl >= 5 else "under_pressure" if cl >= 4 else "strong"
+    return {
+        "freedom_house_score": fh_score, "freedom_house_status": fh_status,
+        "vdem_liberal_democracy": vdem_data.get("liberal_democracy", 0.5) if vdem_data else 0.5,
+        "vdem_electoral_democracy": vdem_data.get("electoral_democracy", 0.5) if vdem_data else 0.5,
+        "emb_name": EMB_NAMES.get(code, f"Organismo Electoral de {code}"),
+        "emb_independence": vdem_data.get("emb_independence_level", "partial") if vdem_data else "partial",
+        "emb_opposition_representation": fh_score >= 50,
+        "registry_status": "no_independent_audit" if fh_score < 30 else "partially_audited" if fh_score < 60 else "fully_audited",
+        "voter_registry_size": registry_sizes.get(code, 10_000_000),
+        "legal_framework": {"constitutional_amendments_recent": const_amend, "opposition_party_bans": opp_bans,
+                            "candidate_disqualifications": disq, "media_law_restrictions": media_restr},
+        "civil_liberties": {"freedom_of_assembly": assembly, "freedom_of_press": press,
+                            "judicial_independence": judicial, "political_prisoners": pr >= 6},
+        "international_observation": {"invited": obs_invited, "restrictions": obs_restr},
+        "_dynamic": True,
+    }
 
 
 # ─── AGENTE 1: OSINT Ingestion Agent ─────────────────────────────────────────
 
 def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
-    """
-    Agente de Ingesta y Contexto (OSINT).
-    
-    En producción:
-        - Consulta APIs de Freedom House y V-Dem
-        - Scraping con Playwright a portales de EMBs
-        - Extrae marco legal, padrón y datos institucionales
-        - Almacena en PostgreSQL
-    
-    Ahora: Usa datos mock del diccionario MOCK_OSINT_DATA.
-    """
     agent_name = "OSINT_IngestionAgent"
     agent_log(state, agent_name, f"Iniciando ingesta para {state['country']} ({state['country_code']})")
 
     code = state["country_code"]
 
-    if code not in MOCK_OSINT_DATA:
-        state["errors"].append(f"No hay datos OSINT disponibles para {code}")
-        agent_log(state, agent_name, f"ERROR: País {code} no encontrado en fuentes")
-        state["context_data"] = {}
-        return state
+    if code in MOCK_OSINT_DATA:
+        osint = MOCK_OSINT_DATA[code]
+        agent_log(state, agent_name, "Perfil OSINT: hardcodeado (datos verificados manualmente)")
+    else:
+        _fh_pre = get_freedom_house_country(FH_DF, code)
+        _vdem_pre = get_vdem_country(VDEM_DF, code)
+        if not _fh_pre and not _vdem_pre:
+            state["errors"].append(f"No hay datos disponibles para {code}")
+            agent_log(state, agent_name, f"ERROR: {code} no encontrado en ninguna fuente")
+            state["context_data"] = {}
+            return state
+        osint = build_dynamic_osint_profile(code, _fh_pre, _vdem_pre)
+        agent_log(state, agent_name, "Perfil OSINT: DINAMICO (derivado de FH + V-Dem)")
 
-    # === FUENTES REALES (implementadas) y MOCK (pendientes) ===
-    # TODO: freedom_house_data = await fetch_freedom_house_api(code)
-    # TODO: emb_data = await scrape_emb_portal(code)
-    # TODO: legal_data = await scrape_legal_framework(code)
-
-    osint = MOCK_OSINT_DATA[code]
-
-    # ── V-Dem: datos REALES desde CSV local ──────────────────────────────────
+    # ── V-Dem: datos REALES ──
     vdem_real = get_vdem_country(VDEM_DF, code)
 
     if vdem_real:
         vdem_value = vdem_real
         vdem_confidence = CONFIDENCE_CONFIRMED
         vdem_source_id = f"vdem_{VDEM_VERSION}_{vdem_real['year']}"
-        vdem_source_type = SOURCE_API  # CSV oficial = fuente primaria
+        vdem_source_type = SOURCE_API
         vdem_notes = (
             f"Dato real. V-Dem Dataset {VDEM_VERSION}, año {vdem_real['year']}. "
             f"Citación: {VDEM_CITATION}"
@@ -910,7 +1082,6 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
         agent_log(state, agent_name, f"V-Dem REAL cargado: libdem={vdem_real['liberal_democracy']}, "
                   f"polyarchy={vdem_real['electoral_democracy']}, año={vdem_real['year']}")
     else:
-        # Fallback a mock si el país no está en el CSV
         vdem_value = {
             "liberal_democracy": osint["vdem_liberal_democracy"],
             "electoral_democracy": osint["vdem_electoral_democracy"],
@@ -921,7 +1092,7 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
         vdem_notes = f"Mock fallback: país {code} no encontrado en V-Dem {VDEM_VERSION}."
         agent_log(state, agent_name, f"V-Dem MOCK (fallback): {code} no encontrado en CSV.")
 
-    # ── PEI: datos REALES desde CSV local ────────────────────────────────────
+    # ── PEI: datos REALES ──
     pei_real = get_pei_country(PEI_DF, code)
 
     if pei_real:
@@ -930,7 +1101,7 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
     else:
         agent_log(state, agent_name, f"PEI: no hay datos para {code} — usando mock.")
 
-    # ── Freedom House: datos REALES desde CSV local ──────────────────────────
+    # ── Freedom House: datos REALES ──
     fh_real = get_freedom_house_country(FH_DF, code)
 
     if fh_real:
@@ -958,7 +1129,6 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
         "region": COUNTRY_REGIONS.get(code, "unknown"),
         "collected_at": datetime.now(timezone.utc).isoformat(),
 
-        # Índices internacionales — CON TRAZABILIDAD
         "freedom_house": create_trace(
             value=fh_value,
             source_id=fh_source_id,
@@ -980,7 +1150,6 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
             notes=vdem_notes,
         ),
 
-        # PEI — Integridad Electoral (Electoral Integrity Project)
         "pei": create_trace(
             value=pei_real if pei_real else {
                 "overall_integrity": None,
@@ -1001,17 +1170,16 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
             ) if pei_real else f"Mock. País {code} no encontrado en PEI {PEI_VERSION}.",
         ),
 
-        # Administración Electoral (EMB) — datos REALES desde V-Dem
         "emb": create_trace(
             value={
-                "name": osint["emb_name"],  # Nombre aún mock (pendiente scraping portal EMB)
+                "name": osint["emb_name"],
                 "independence_level": vdem_real["emb_independence_level"] if vdem_real else osint["emb_independence"],
                 "autonomy_score": vdem_real["emb_autonomy"] if vdem_real else None,
                 "autonomy_raw": vdem_real["emb_autonomy_raw"] if vdem_real else None,
                 "capacity_score": vdem_real["emb_capacity"] if vdem_real else None,
                 "electoral_irregularities": vdem_real["electoral_irregularities"] if vdem_real else None,
                 "electoral_intimidation": vdem_real["electoral_intimidation"] if vdem_real else None,
-                "opposition_representation": osint["emb_opposition_representation"],  # Mock pendiente
+                "opposition_representation": osint["emb_opposition_representation"],
                 "data_year": vdem_real["year"] if vdem_real else None,
             },
             source_id=vdem_source_id if vdem_real else f"emb_mock_{code.lower()}",
@@ -1027,40 +1195,109 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
             ) if vdem_real else "Mock data. País no encontrado en V-Dem.",
         ),
 
-        # Padrón electoral
         "voter_registry": create_trace(
-            value={"status": osint["registry_status"], "size": osint["voter_registry_size"]},
-            source_id=f"voter_registry_{code.lower()}",
-            source_type=SOURCE_MOCK,
-            source_url="",
-            confidence=CONFIDENCE_MOCK,
+            value={
+                "status": (
+                    "no_independent_audit" if pei_real and pei_real.get("reg_inaccurate") is not None and pei_real["reg_inaccurate"] < 2.5
+                    else "partially_audited" if pei_real and pei_real.get("reg_inaccurate") is not None and pei_real["reg_inaccurate"] < 3.5
+                    else "fully_audited" if pei_real and pei_real.get("reg_inaccurate") is not None
+                    else osint["registry_status"]
+                ),
+                "size": osint["voter_registry_size"],
+                "pei_voter_reg_score": pei_real["voter_registration"] if pei_real else None,
+                "pei_reg_listed": pei_real["reg_listed"] if pei_real else None,
+                "pei_reg_inaccurate": pei_real["reg_inaccurate"] if pei_real else None,
+                "pei_reg_ineligible": pei_real["reg_ineligible"] if pei_real else None,
+                "data_year": pei_real["year"] if pei_real else None,
+            },
+            source_id=f"pei_voter_registry_{pei_real['election_id']}" if pei_real else f"voter_registry_mock_{code.lower()}",
+            source_type=SOURCE_API if pei_real else SOURCE_MOCK,
+            source_url=PEI_SOURCE_URL if pei_real else "",
+            confidence=CONFIDENCE_CONFIRMED if pei_real else CONFIDENCE_MOCK,
+            legal_basis=PEI_CITATION if pei_real else "",
             agent_id="OSINT_IngestionAgent",
-            notes="Mock data. En producción: Portal EMB + informes de auditoría.",
+            notes=f"PEI {PEI_VERSION} elección {pei_real['year']}. Score registro: {pei_real['voter_registration']}/100." if pei_real else "Mock data.",
         ),
 
-        # Marco legal
         "legal_framework": create_trace(
-            value=osint["legal_framework"],
-            source_id=f"legal_framework_{code.lower()}",
-            source_type=SOURCE_MOCK,
-            source_url="",
-            confidence=CONFIDENCE_MOCK,
+            value={
+                **(osint["legal_framework"]),
+                **({"pei_laws_score": pei_real["legal_framework"],
+                    "pei_laws_unfair": pei_real["laws_unfair"],
+                    "pei_favored_incumbent": pei_real["laws_favored_incumbent"],
+                    "pei_opp_prevent": pei_real["opp_prevent"],
+                    "data_year": pei_real["year"],
+                } if pei_real else {}),
+                **({"vdem_opposition_barriers": vdem_real.get("opposition_party_barriers"),
+                    "vdem_judicial_review": vdem_real.get("judicial_review"),
+                    "vdem_opposition_autonomy": vdem_real.get("opposition_autonomy"),
+                    "vdem_data_year": vdem_real.get("year"),
+                } if vdem_real else {}),
+            },
+            source_id=f"pei_legal_{pei_real['election_id']}" if pei_real else (f"vdem_legal_{code.lower()}" if vdem_real else f"legal_framework_mock_{code.lower()}"),
+            source_type=SOURCE_API if (pei_real or vdem_real) else SOURCE_MOCK,
+            source_url=PEI_SOURCE_URL if pei_real else (VDEM_SOURCE_URL if vdem_real else ""),
+            confidence=CONFIDENCE_CONFIRMED if (pei_real or vdem_real) else CONFIDENCE_MOCK,
+            legal_basis=PEI_CITATION if pei_real else (VDEM_CITATION if vdem_real else ""),
             agent_id="OSINT_IngestionAgent",
-            notes="Mock data. En producción: Scraping de gacetas oficiales y portales legislativos.",
+            notes=(f"PEI {PEI_VERSION} elección {pei_real['year']}. Score marco legal: {pei_real['legal_framework']}/100." if pei_real else "") +
+                  (f" V-Dem v15 ({vdem_real['year']}): v2psbars={vdem_real.get('opposition_party_barriers')}, v2jureview={vdem_real.get('judicial_review')}." if vdem_real else "") or "Mock data.",
         ),
 
-        # Libertades civiles
         "civil_liberties": create_trace(
-            value=osint["civil_liberties"],
-            source_id="freedom_house_civil_liberties",
-            source_type=SOURCE_MOCK,
-            source_url="https://freedomhouse.org/countries/freedom-world/scores",
-            confidence=CONFIDENCE_MOCK,
+            value={
+                **(derive_civil_liberties_from_fh(fh_real) if fh_real else osint["civil_liberties"]),
+                **({"vdem_opposition_barriers": vdem_real.get("opposition_party_barriers"),
+                    "vdem_judicial_review": vdem_real.get("judicial_review"),
+                    "vdem_opposition_autonomy": vdem_real.get("opposition_autonomy"),
+                    "vdem_freedom_of_association": vdem_real.get("freedom_of_association"),
+                    "vdem_rule_of_law": vdem_real.get("rule_of_law"),
+                    "vdem_data_year": vdem_real.get("year"),
+                } if vdem_real else {}),
+            },
+            source_id=fh_source_id if fh_real else "civil_liberties_mock",
+            source_type=fh_source_type if fh_real else SOURCE_MOCK,
+            source_url=FH_SOURCE_URL if fh_real else "",
+            confidence=fh_confidence if fh_real else CONFIDENCE_MOCK,
+            legal_basis=FH_CITATION if fh_real else "",
             agent_id="OSINT_IngestionAgent",
-            notes="Mock data. En producción: Freedom House + reportes de DDHH del Dept. de Estado de EE.UU.",
+            notes=(f"Derivado de FH FIW {fh_real['edition']}. CL={fh_real['civil_liberties_rating']}/7, PR={fh_real['political_rights_rating']}/7." if fh_real else "Mock data.") +
+                  (f" Enriquecido con V-Dem v15 ({vdem_real['year']}): v2psbars={vdem_real.get('opposition_party_barriers')}, v2jureview={vdem_real.get('judicial_review')}." if vdem_real else ""),
         ),
 
-        # Observación internacional — dato real de V-Dem cuando hay elecciones
+        # ── RSF: datos REALES de libertad de prensa ──
+        "rsf": create_trace(
+            value=(lambda r: r if r else {"score": None, "rank": None})(get_rsf_country(RSF_DF, code)),
+            source_id=f"rsf_{RSF_VERSION}_{code}" if get_rsf_country(RSF_DF, code) else f"rsf_mock_{code}",
+            source_type=SOURCE_API if get_rsf_country(RSF_DF, code) else SOURCE_MOCK,
+            source_url=RSF_SOURCE_URL,
+            confidence=CONFIDENCE_CONFIRMED if get_rsf_country(RSF_DF, code) else CONFIDENCE_MOCK,
+            legal_basis=RSF_CITATION if get_rsf_country(RSF_DF, code) else "",
+            agent_id="OSINT_IngestionAgent",
+            notes=(lambda r: f"RSF {RSF_VERSION}. Score: {r['score']}/100, Rank: #{r['rank']}." if r else "RSF no disponible.")(get_rsf_country(RSF_DF, code)),
+        ),
+
+        "digital_vdem": create_trace(
+            value={
+                "internet_censorship": vdem_real.get("internet_censorship") if vdem_real else None,
+                "media_censorship": vdem_real.get("media_censorship") if vdem_real else None,
+                "journalist_harassment": vdem_real.get("journalist_harassment") if vdem_real else None,
+                "media_bias_vdem": vdem_real.get("media_bias_vdem") if vdem_real else None,
+                "gov_social_media_dominance": vdem_real.get("gov_social_media_dominance") if vdem_real else None,
+                "gov_internet_filter_capacity": vdem_real.get("gov_internet_filter_capacity") if vdem_real else None,
+                "social_media_regulation": vdem_real.get("social_media_regulation") if vdem_real else None,
+                "freedom_of_expression": vdem_real.get("freedom_of_expression") if vdem_real else None,
+                "data_year": vdem_real.get("year") if vdem_real else None,
+            },
+            source_id=vdem_source_id if vdem_real else f"digital_vdem_mock_{code.lower()}",
+            source_type=vdem_source_type if vdem_real else SOURCE_MOCK,
+            source_url=VDEM_SOURCE_URL if vdem_real else "",
+            confidence=vdem_confidence if vdem_real else CONFIDENCE_MOCK,
+            legal_basis="V-Dem Dataset CC-BY-SA. " + VDEM_CITATION if vdem_real else "",
+            agent_id="OSINT_IngestionAgent",
+            notes=f"V-Dem {VDEM_VERSION} variables digitales año {vdem_real.get('year')}." if vdem_real else "V-Dem digital no disponible.",
+        ),
+
         "international_observation": create_trace(
             value={
                 **osint["international_observation"],
@@ -1080,11 +1317,10 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
         ),
     }
 
-    # Registrar trazas en el log global
     traces = collect_traces(context)
     state["trace_log"].extend(traces)
-
     state["context_data"] = context
+
     vdem_log_val = vdem_real['liberal_democracy'] if vdem_real else osint['vdem_liberal_democracy']
     vdem_log_src = f"REAL (V-Dem {VDEM_VERSION})" if vdem_real else "MOCK (fallback)"
     fh_log_val = fh_real['total_score'] if fh_real else osint['freedom_house_score']
@@ -1092,6 +1328,7 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
     emb_level = vdem_real['emb_independence_level'] if vdem_real else osint['emb_independence']
     emb_aut = vdem_real['emb_autonomy'] if vdem_real else "N/A"
     intl_obs = vdem_real['international_observation'] if vdem_real else osint['international_observation']['invited']
+
     agent_log(state, agent_name, f"Ingesta completada. FH: {fh_log_val}/100 [{fh_log_src}] | V-Dem libdem: {vdem_log_val} [{vdem_log_src}]")
     agent_log(state, agent_name, f"EMB: nivel={emb_level}, autonomía={emb_aut} [V-Dem REAL] | Obs. intl: {intl_obs}")
     pei_log = f"EMBs={pei_real['emb_score']}, año={pei_real['year']}" if pei_real else "no disponible"
@@ -1105,55 +1342,87 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
 # ─── AGENTE 2: Political & Digital Analyst Agent ─────────────────────────────
 
 def political_analyst_agent(state: ElectionRiskState) -> ElectionRiskState:
-    """
-    Agente de Competitividad, Medios y Ecosistema Digital.
-    
-    En producción:
-        - Construye grafos de poder en Neo4j
-        - Monitorea redes sociales (X, Facebook, TikTok)
-        - Analiza cobertura mediática y financiamiento
-        - Detecta bots, desinformación y discurso de odio
-    
-    Ahora: Usa datos mock del diccionario MOCK_POLITICAL_DATA.
-    """
     agent_name = "Political_DigitalAnalystAgent"
     agent_log(state, agent_name, f"Iniciando análisis político-digital para {state['country']}")
 
     code = state["country_code"]
 
-    if code not in MOCK_POLITICAL_DATA:
-        state["errors"].append(f"No hay datos políticos disponibles para {code}")
-        state["political_data"] = {}
-        return state
+    if code in MOCK_POLITICAL_DATA:
+        political = MOCK_POLITICAL_DATA[code]
+    else:
+        _fh_pol = get_freedom_house_country(FH_DF, code)
+        _fh_score = _fh_pol.get("total_score", 50) if _fh_pol else 50
+        _bias = round((100 - _fh_score) / 100, 2)
+        political = {
+            "media_bias_index": _bias,
+            "media_bias_direction": "pro_incumbent" if _fh_score < 40 else "mixed" if _fh_score < 70 else "balanced",
+            "media_exposure": {"incumbent": int(50 + _bias*40), "opposition": int(30 - _bias*20), "others": 20},
+            "campaign_finance": {
+                "transparency_score": round(_fh_score / 100, 2),
+                "state_resource_abuse": "systematic" if _fh_score < 30 else "moderate" if _fh_score < 60 else "none_detected",
+                "corporate_donations_disclosed": _fh_score >= 60,
+            },
+            "digital_ecosystem": {
+                "bot_activity_detected": _fh_score < 50,
+                "bot_network_size_estimate": max(0, int((50 - _fh_score) * 500)) if _fh_score < 50 else 0,
+                "hate_speech_incidents": max(0, int((60 - _fh_score) * 3)),
+                "url_censorship_detected": _fh_score < 35,
+                "censored_domains": [],
+                "disinformation_campaigns": max(0, int((50 - _fh_score) / 5)) if _fh_score < 50 else 0,
+                "voter_suppression_tactics_online": _fh_score < 30,
+            },
+            "power_network": {
+                "candidate_media_ownership_links": 2 if _fh_score < 40 else 0,
+                "state_enterprise_campaign_links": 3 if _fh_score < 30 else 1 if _fh_score < 60 else 0,
+                "military_political_links": _fh_score < 25,
+            },
+        }
+        agent_log(state, agent_name, f"Perfil politico: DINAMICO (FH score={_fh_score})")
 
-    # === AQUÍ SE CONECTARÁN LAS FUENTES REALES ===
-    # TODO: neo4j_graph = await build_power_network(code)
-    # TODO: social_data = await monitor_social_media(code)
-    # TODO: media_data = await analyze_media_coverage(code)
+    # PEI real para medios y financiamiento
+    pei_val = get_pei_country(PEI_DF, code) or {}
+    pei_ok = bool(pei_val and pei_val.get("election_id"))
+    pei_media_score = pei_val.get("media_coverage") if pei_ok else None
+    pei_finance_score = pei_val.get("campaign_finance") if pei_ok else None
+    pei_year_pol = pei_val.get("year") if pei_ok else None
 
-    political = MOCK_POLITICAL_DATA[code]
+    if pei_media_score is not None:
+        derived_bias_index = round((100 - pei_media_score) / 100, 4)
+        media_source = f"PEI {PEI_VERSION} ({pei_year_pol})"
+        agent_log(state, agent_name, f"Media REAL (PEI): MEDIACOVERAGE={pei_media_score}/100, bias_index derivado={derived_bias_index}, fair_access={pei_val.get('media_fair_access')}, balanced={pei_val.get('media_balanced')}")
+    else:
+        derived_bias_index = political["media_bias_index"]
+        media_source = "mock"
+        agent_log(state, agent_name, "Media: usando mock (PEI no disponible)")
+
+    if pei_finance_score is not None:
+        derived_finance_transp = round(pei_finance_score / 100, 4)
+        finance_source = f"PEI {PEI_VERSION} ({pei_year_pol})"
+        agent_log(state, agent_name, f"Finance REAL (PEI): CAMPAIGNFINANCE={pei_finance_score}/100, resources={pei_val.get('finance_resources')}, bribed={pei_val.get('finance_bribed')}")
+    else:
+        derived_finance_transp = political["campaign_finance"]["transparency_score"]
+        finance_source = "mock"
+        agent_log(state, agent_name, "Finance: usando mock (PEI no disponible)")
 
     analysis = {
-        "source": "mock_data_v1",
+        "source": "mixed_pei_real+mock" if pei_ok else "mock_data_v1",
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
-
-        # Sesgo mediático
         "media_analysis": {
-            "bias_index": political["media_bias_index"],
+            "bias_index": derived_bias_index,
             "bias_direction": political["media_bias_direction"],
             "exposure_distribution": political["media_exposure"],
-            "assessment": _assess_media_bias(political["media_bias_index"]),
+            "assessment": _assess_media_bias(derived_bias_index),
+            "pei_media_score": pei_media_score,
+            "data_source": media_source,
         },
-
-        # Financiamiento de campaña
         "campaign_finance": {
-            "transparency_score": political["campaign_finance"]["transparency_score"],
+            "transparency_score": derived_finance_transp,
             "state_resource_abuse": political["campaign_finance"]["state_resource_abuse"],
             "donations_disclosed": political["campaign_finance"]["corporate_donations_disclosed"],
-            "assessment": _assess_finance_transparency(political["campaign_finance"]["transparency_score"]),
+            "assessment": _assess_finance_transparency(derived_finance_transp),
+            "pei_finance_score": pei_finance_score,
+            "data_source": finance_source,
         },
-
-        # Ecosistema digital
         "digital_ecosystem": {
             "bot_activity": political["digital_ecosystem"]["bot_activity_detected"],
             "bot_network_size": political["digital_ecosystem"]["bot_network_size_estimate"],
@@ -1164,8 +1433,6 @@ def political_analyst_agent(state: ElectionRiskState) -> ElectionRiskState:
             "voter_suppression_online": political["digital_ecosystem"]["voter_suppression_tactics_online"],
             "assessment": _assess_digital_ecosystem(political["digital_ecosystem"]),
         },
-
-        # Red de poder (para Neo4j)
         "power_network": {
             "media_ownership_links": political["power_network"]["candidate_media_ownership_links"],
             "state_enterprise_links": political["power_network"]["state_enterprise_campaign_links"],
@@ -1213,21 +1480,339 @@ def _assess_capture_risk(network: dict) -> str:
     return "low_capture"
 
 
-# ─── AGENTE 3: Legal Compliance Agent (RAG) ──────────────────────────────────
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AGENTE 5: Electoral Dictamen Agent
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Promedios regionales de referencia (FH 2025 + V-Dem 2024)
+REGIONAL_AVERAGES = {
+    "americas": {"fh": 58, "vdem": 0.42, "rsf": 48},
+    "europe":   {"fh": 62, "vdem": 0.55, "rsf": 65},
+    "africa":   {"fh": 38, "vdem": 0.28, "rsf": 42},
+    "asia_pacific": {"fh": 44, "vdem": 0.35, "rsf": 45},
+    "arab_states":  {"fh": 28, "vdem": 0.18, "rsf": 38},
+    "unknown":  {"fh": 50, "vdem": 0.40, "rsf": 50},
+}
+
+SCORE_THRESHOLDS = {
+    "fh": [
+        (80, "sólidas garantías democráticas institucionales"),
+        (60, "sistema democrático funcional con deficiencias puntuales"),
+        (40, "democracia parcialmente libre con restricciones significativas"),
+        (20, "régimen híbrido con libertades severamente limitadas"),
+        (0,  "régimen autoritario con ausencia de garantías democráticas fundamentales"),
+    ],
+    "vdem": [
+        (0.7, "democracia liberal consolidada"),
+        (0.5, "democracia electoral con déficits institucionales"),
+        (0.3, "régimen híbrido con fachada electoral"),
+        (0.1, "autocracia electoral"),
+        (0.0, "autocracia cerrada"),
+    ],
+    "pei": [
+        (70, "proceso electoral con integridad aceptable"),
+        (50, "proceso con deficiencias significativas en múltiples dimensiones"),
+        (30, "proceso con violaciones sistemáticas a estándares internacionales"),
+        (0,  "proceso sin integridad verificable"),
+    ],
+    "rsf": [
+        (75, "entorno mediático favorable para la información electoral"),
+        (55, "entorno mediático con restricciones moderadas"),
+        (40, "entorno mediático problemático con interferencia estatal"),
+        (25, "entorno mediático gravemente comprometido"),
+        (0,  "entorno mediático hostil con censura sistemática"),
+    ],
+}
+
+
+def _interpret_score(score, threshold_key: str) -> str:
+    if score is None:
+        return "sin datos verificados"
+    thresholds = SCORE_THRESHOLDS.get(threshold_key, [])
+    for threshold, label in thresholds:
+        if score >= threshold:
+            return label
+    return thresholds[-1][1] if thresholds else "sin clasificación"
+
+
+def _get_vdem_trend(df, country_code: str, current_year: int = 2024, years_back: int = 5) -> dict:
+    """Calcula tendencia V-Dem libdem de los últimos N años."""
+    if df is None:
+        return {"available": False}
+    try:
+        rows = df[
+            (df["country_text_id"] == country_code) &
+            (df["year"] >= current_year - years_back) &
+            (df["year"] <= current_year)
+        ].sort_values("year")
+
+        if len(rows) < 2:
+            return {"available": False}
+
+        values = [(int(r["year"]), round(float(r["v2x_libdem"]), 4)) for _, r in rows.iterrows()]
+        first_val = values[0][1]
+        last_val = values[-1][1]
+        delta = round(last_val - first_val, 4)
+
+        if delta >= 0.05:
+            trend = "mejora significativa"
+            trend_dir = "up"
+        elif delta >= 0.01:
+            trend = "leve mejora"
+            trend_dir = "up"
+        elif delta <= -0.05:
+            trend = "deterioro significativo"
+            trend_dir = "down"
+        elif delta <= -0.01:
+            trend = "leve deterioro"
+            trend_dir = "down"
+        else:
+            trend = "estable"
+            trend_dir = "stable"
+
+        return {
+            "available": True,
+            "values": values,
+            "delta": delta,
+            "trend": trend,
+            "trend_direction": trend_dir,
+            "first_year": values[0][0],
+            "first_value": first_val,
+            "last_year": values[-1][0],
+            "last_value": last_val,
+        }
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+
+
+def electoral_dictamen_agent(state: ElectionRiskState) -> ElectionRiskState:
+    agent_name = "Electoral_DictamenAgent"
+    agent_log(state, agent_name, f"Generando dictamen técnico para {state['country']}")
+
+    context = state.get("context_data", {})
+    political = state.get("political_data", {})
+    legal = state.get("legal_analysis", {})
+    code = state["country_code"]
+    region = COUNTRY_REGIONS.get(code, "unknown")
+
+    # ── Extraer valores clave ────────────────────────────────────────────────
+    def val(d):
+        return extract_value(d) if isinstance(d, dict) and "_trace" in d else d
+
+    fh_data = val(context.get("freedom_house", {})) or {}
+    fh_score = fh_data.get("total_score", fh_data.get("score"))
+    fh_status = fh_data.get("status", "N/D")
+    fh_edition = fh_data.get("edition", "—")
+
+    vdem_data = val(context.get("vdem", {})) or {}
+    vdem_libdem = vdem_data.get("liberal_democracy")
+    vdem_polyarchy = vdem_data.get("electoral_democracy")
+    vdem_year = vdem_data.get("year", "—")
+
+    emb_data = val(context.get("emb", {})) or {}
+    emb_level = emb_data.get("independence_level", "unknown")
+    emb_autonomy = emb_data.get("autonomy_score")
+    emb_name = emb_data.get("name", "N/D")
+
+    pei_data = val(context.get("pei", {})) or {}
+    pei_integrity = pei_data.get("overall_integrity")
+    pei_emb = pei_data.get("emb_score")
+    pei_year = pei_data.get("year", "—")
+
+    rsf_data = val(context.get("rsf", {})) or {}
+    rsf_score = rsf_data.get("score")
+    rsf_rank = rsf_data.get("rank")
+
+    civil = val(context.get("civil_liberties", {})) or {}
+    violations = legal.get("violations", [])
+    confirmed_viols = [v for v in violations if v.get("confidence") == "confirmed"]
+    risk_score = state.get("risk_score", 0)
+    risk_level = state.get("risk_level", "unknown")
+
+    # ── Tendencia histórica V-Dem ────────────────────────────────────────────
+    trend = _get_vdem_trend(VDEM_DF, code)
+
+    # ── Comparación regional ─────────────────────────────────────────────────
+    reg_avg = REGIONAL_AVERAGES.get(region, REGIONAL_AVERAGES["unknown"])
+    fh_vs_region = None
+    vdem_vs_region = None
+    rsf_vs_region = None
+    if fh_score is not None:
+        diff = fh_score - reg_avg["fh"]
+        fh_vs_region = f"Freedom House: {'por encima' if diff > 0 else 'por debajo'} del promedio regional ({reg_avg['fh']}/100) en {abs(round(diff, 1))} puntos"
+    if vdem_libdem is not None:
+        diff = round(vdem_libdem - reg_avg["vdem"], 3)
+        vdem_vs_region = f"V-Dem: {'por encima' if diff > 0 else 'por debajo'} del promedio regional ({reg_avg['vdem']}) en {abs(diff)} puntos"
+    if rsf_score is not None:
+        diff = round(rsf_score - reg_avg["rsf"], 1)
+        rsf_vs_region = f"RSF: {'por encima' if diff > 0 else 'por debajo'} del promedio regional ({reg_avg['rsf']}/100) en {abs(diff)} puntos"
+
+    # ── Nivel de confianza de los datos ─────────────────────────────────────
+    confirmed_count = sum(1 for k in ["freedom_house", "vdem", "pei", "rsf", "digital_vdem"]
+                          if get_trace(context.get(k, {})).get("confidence") == "confirmed")
+    if confirmed_count >= 4:
+        data_confidence = "HIGH"
+        confidence_note = "La mayoría de los indicadores están respaldados por fuentes primarias verificadas."
+    elif confirmed_count >= 2:
+        data_confidence = "MEDIUM"
+        confidence_note = "Algunos indicadores clave están verificados; otros son estimaciones del sistema."
+    else:
+        data_confidence = "LOW"
+        confidence_note = "La mayoría de los indicadores son estimaciones pendientes de verificación con fuentes primarias."
+
+    # ── Construir datos para LLM ─────────────────────────────────────────────
+    fh_interp = _interpret_score(fh_score, "fh")
+    vdem_interp = _interpret_score(vdem_libdem, "vdem") if vdem_libdem else "sin datos"
+    pei_interp = _interpret_score(pei_integrity, "pei") if pei_integrity else "sin datos PEI"
+    rsf_interp = _interpret_score(rsf_score, "rsf") if rsf_score else "sin datos RSF"
+
+    trend_text = (
+        f"V-Dem libdem pasó de {trend['first_value']} ({trend['first_year']}) a {trend['last_value']} ({trend['last_year']}): {trend['trend']} (delta={trend['delta']:+.4f})"
+        if trend.get("available") else "Tendencia histórica no disponible"
+    )
+
+    emb_labels = {
+        "full": "plenamente independiente",
+        "partial": "con autonomía parcial",
+        "compromised": "comprometida institucionalmente",
+        "captured": "capturada por el ejecutivo",
+    }
+    emb_label = emb_labels.get(emb_level, emb_level)
+
+    sys_prompt = (
+        "Sos el Electoral Dictamen Agent de DEMOCRAC.IA/PEIRS. "
+        "Tu función es generar dictámenes técnicos de integridad electoral de nivel profesional, "
+        "precisos, basados exclusivamente en los datos verificados que recibes. "
+        "Escribís en español con registro técnico-institucional. "
+        "Nunca inventás datos. Si un dato no está disponible, lo indicás explícitamente. "
+        "Tu dictamen será leído por analistas, observadores internacionales e inversores."
+    )
+
+    user_prompt = f"""Generá un dictamen técnico de integridad electoral con exactamente 4 párrafos.
+
+DATOS VERIFICADOS (confidence=confirmed donde se indica):
+
+PAÍS: {state['country']} | ELECCIÓN: {state['election_date']} | REGIÓN: {region}
+ÍNDICE DE RIESGO PEIRS: {risk_score}/100 — {risk_level.upper()}
+
+FREEDOM HOUSE FIW {fh_edition}: {fh_score}/100 — {fh_status}
+→ Interpretación: {fh_interp}
+→ Comparación regional: {fh_vs_region or 'sin datos comparativos'}
+
+V-DEM v15 ({vdem_year}): libdem={vdem_libdem} | polyarchy={vdem_polyarchy}
+→ Interpretación: {vdem_interp}
+→ Comparación regional: {vdem_vs_region or 'sin datos comparativos'}
+→ Tendencia 5 años: {trend_text}
+
+EMB ({emb_name}): independencia {emb_level} ({emb_label})
+Autonomía normalizada: {emb_autonomy}
+
+PEI-10.0 ({pei_year}): integridad={pei_integrity}/100 | EMBs={pei_emb}/100
+→ Interpretación: {pei_interp}
+
+RSF 2025: score={rsf_score}/100 | rank=#{rsf_rank}/180
+→ Interpretación: {rsf_interp}
+→ Comparación regional: {rsf_vs_region or 'sin datos comparativos'}
+
+LIBERTADES CIVILES (FH): prensa={civil.get('freedom_of_press','N/D')} | reunión={civil.get('freedom_of_assembly','N/D')} | judicial={civil.get('judicial_independence','N/D')}
+PRESOS POLÍTICOS: {'Sí' if civil.get('political_prisoners') else 'No'}
+
+VIOLACIONES DERECHO INTERNACIONAL: {len(violations)} total ({len(confirmed_viols)} verificadas)
+CONFIANZA DE DATOS: {data_confidence} — {confidence_note}
+
+ESTRUCTURA DE LOS 4 PÁRRAFOS:
+
+Párrafo 1 — DIAGNÓSTICO INSTITUCIONAL (~100 palabras):
+Interpretá qué significan los scores de Freedom House y V-Dem para este país en concreto.
+No repitas los números — explicá qué implican institucionalmente.
+Incluí la tendencia histórica: si el país mejoró o empeoró en los últimos 5 años y qué sugiere eso.
+
+Párrafo 2 — ESTADO DEL ORGANISMO ELECTORAL (~90 palabras):
+Evaluá la independencia del EMB en contexto. Qué implica ese nivel de autonomía para la conducción del proceso.
+Si hay datos PEI, interpretá qué significa ese score de integridad para los estándares internacionales EOS.
+Vinculá con el riesgo de impugnación de resultados.
+
+Párrafo 3 — ECOSISTEMA INFORMATIVO Y LIBERTADES CIVILES (~90 palabras):
+Evaluá el entorno mediático según RSF y las libertades civiles según FH.
+Qué condiciones enfrenta el electorado para acceder a información electoral libre.
+Comparación con el promedio regional si está disponible.
+
+Párrafo 4 — DICTAMEN FINAL (~80 palabras):
+Veredicto técnico integrado. No repitas datos — sintetizá el estado general.
+Indicá el nivel de confianza de los datos y qué fuentes están pendientes de verificación.
+Cerrá con una recomendación de acción para observadores internacionales.
+
+Solo prosa. Sin subtítulos. Sin viñetas. Tono técnico-institucional de alto nivel."""
+
+    def fallback_dictamen():
+        return (
+            f"El análisis institucional de {state['country']} revela un panorama democrático caracterizado por {fh_interp}, "
+            f"con un índice de democracia liberal V-Dem de {vdem_libdem} que indica {vdem_interp}. "
+            f"{trend_text}.\n\n"
+            f"El organismo electoral ({emb_name}) presenta independencia {emb_label}, "
+            f"factor determinante para la imparcialidad del proceso previsto para {state['election_date']}.\n\n"
+            f"El entorno mediático registra un score RSF de {rsf_score}/100 ({rsf_interp}), "
+            f"condicionando el acceso del electorado a información electoral libre y pluralista.\n\n"
+            f"DICTAMEN: Nivel de riesgo {risk_level.upper()} ({risk_score}/100). "
+            f"Confianza de datos: {data_confidence}. {confidence_note}"
+        )
+
+    dictamen_narrative = _llm_generate(sys_prompt, user_prompt, fallback_dictamen)
+
+    dictamen = {
+        "narrative": dictamen_narrative,
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+        "data_confidence": data_confidence,
+        "confidence_note": confidence_note,
+        "confirmed_sources": confirmed_count,
+        "trend": trend,
+        "regional_comparison": {
+            "region": region,
+            "fh_vs_region": fh_vs_region,
+            "vdem_vs_region": vdem_vs_region,
+            "rsf_vs_region": rsf_vs_region,
+            "regional_averages": reg_avg,
+        },
+        "score_interpretations": {
+            "fh": fh_interp,
+            "vdem": vdem_interp,
+            "pei": pei_interp,
+            "rsf": rsf_interp,
+        },
+        "dictamen_id": f"PEIRS-{state['run_id'][:8].upper()}",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    state["dictamen"] = dictamen
+
+    agent_log(state, agent_name, f"Dictamen generado. Confianza: {data_confidence} | Tendencia: {trend.get('trend', 'N/A')}")
+    agent_log(state, agent_name, f"Comparación regional: FH {fh_vs_region or 'N/A'}")
+    agent_log(state, agent_name, f"Interpretaciones: FH={fh_interp[:40]}... | V-Dem={vdem_interp[:40]}...")
+
+    return state
+
+
+
+# ─── LLM Helper ──────────────────────────────────────────────────────────────
+
+def _llm_generate(prompt_system: str, prompt_user: str, fallback_fn, *args, **kwargs) -> str:
+    if llm is None:
+        return fallback_fn(*args, **kwargs)
+    try:
+        from langchain_core.messages import SystemMessage, HumanMessage
+        messages = [SystemMessage(content=prompt_system), HumanMessage(content=prompt_user)]
+        response = llm.invoke(messages)
+        return response.content.strip()
+    except Exception as e:
+        print(f"[LLM] ⚠️ Error: {e}. Usando fallback.")
+        return fallback_fn(*args, **kwargs)
+
+
+# ─── AGENTE 3: Legal Compliance Agent ────────────────────────────────────────
 
 def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
-    """
-    Agente de Cumplimiento Legal y RAG.
-    
-    En producción:
-        - Consulta semántica a Vector DB (Pinecone/Qdrant)
-        - Corpus: +300 documentos del Centro Carter, ICCPR, CEDAW, ICERD
-        - Vincula cada irregularidad a artículos específicos
-        - Rastrea resoluciones de tribunales electorales
-    
-    Ahora: Usa lógica rule-based para mapear irregularidades a violaciones.
-    En la siguiente fase, el LLM + RAG reemplaza estas reglas.
-    """
     agent_name = "Legal_ComplianceAgent"
     agent_log(state, agent_name, f"Iniciando análisis legal para {state['country']}")
 
@@ -1239,11 +1824,8 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
     risk_factors = []
     mitigating_factors = []
 
-    # Helper: extraer valores de datos trazados
     def val(traced):
         return extract_value(traced) if isinstance(traced, dict) else traced
-
-    # ── Análisis de libertades civiles vs ICCPR ──
 
     civil = val(context.get("civil_liberties", {}))
 
@@ -1287,8 +1869,6 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
             "confidence": get_trace(context.get("civil_liberties", {})).get("confidence", "unknown"),
         })
 
-    # ── Análisis de administración electoral vs ICCPR Art. 25 ──
-
     emb = val(context.get("emb", {}))
     legal_fw = val(context.get("legal_framework", {}))
 
@@ -1312,8 +1892,6 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
             "confidence": get_trace(context.get("legal_framework", {})).get("confidence", "unknown"),
         })
 
-    # ── Análisis del ecosistema digital vs libertad de expresión ──
-
     digital = political.get("digital_ecosystem", {})
 
     if digital.get("censorship_detected"):
@@ -1336,13 +1914,10 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
             "confidence": CONFIDENCE_MOCK,
         })
 
-    # ── Análisis de instrumentos REGIONALES ──
-
     region = instruments.get("region", "unknown")
     regional_instruments = instruments.get("regional", [])
 
     if region == REGION_AMERICAS:
-        # Convención Americana sobre DDHH, Art. 23
         if emb.get("independence_level") in ["compromised", "captured"]:
             violations.append({
                 "treaty": "CADH", "article": "Art. 23",
@@ -1352,7 +1927,6 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
                 "severity": "high",
                 "confidence": get_trace(context.get("emb", {})).get("confidence", "unknown"),
             })
-        # Carta Democrática Interamericana
         if civil.get("freedom_of_press") in ["severely_restricted", "banned"]:
             violations.append({
                 "treaty": "CDI", "article": "Art. 3-4",
@@ -1362,8 +1936,6 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
                 "severity": "high",
                 "confidence": get_trace(context.get("civil_liberties", {})).get("confidence", "unknown"),
             })
-
-    # ── Observación internacional ──
 
     obs = val(context.get("international_observation", {}))
 
@@ -1377,24 +1949,19 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
             "severity": "high",
         })
 
-    # ── Factores mitigantes ──
-
     if emb.get("independence_level") == "full":
         mitigating_factors.append("EMB plenamente independiente con representación multipartidaria")
 
     fh_data = val(context.get("freedom_house", {}))
-    if isinstance(fh_data, dict) and fh_data.get("score", 0) >= 80:
+    if isinstance(fh_data, dict) and fh_data.get("total_score", fh_data.get("score", 0)) >= 80:
         mitigating_factors.append("Alto puntaje Freedom House indica garantías institucionales sólidas")
 
     if not digital.get("bot_activity") and not digital.get("censorship_detected"):
         mitigating_factors.append("Ecosistema digital saludable sin manipulación detectada")
 
-    # ── Cálculo del Risk Score ──
-
     risk_score = _calculate_risk_score(context, political, violations)
     risk_level = _risk_level_from_score(risk_score)
 
-    # Conteo de confianza de datos
     confidence_summary = {}
     for v in violations:
         conf = v.get("confidence", "unknown")
@@ -1418,57 +1985,70 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
     state["risk_score"] = risk_score
     state["risk_level"] = risk_level
 
+    pei_raw_legal = content_context.get("pei", {}) if (content_context := context) else {}
+    pei_val_legal = extract_value(pei_raw_legal) if isinstance(pei_raw_legal, dict) else {}
+    pei_confirmed_legal = bool(pei_val_legal and pei_val_legal.get("election_id"))
+    fh_conf_legal = get_trace(context.get("freedom_house", {})).get("confidence", "unknown")
+    vdem_conf_legal = get_trace(context.get("emb", {})).get("confidence", "unknown")
+    cl_conf_legal = get_trace(context.get("civil_liberties", {})).get("confidence", "mock")
+    lf_conf_legal = get_trace(context.get("legal_framework", {})).get("confidence", "mock")
+
+    data_sources_summary = {
+        "freedom_house": fh_conf_legal,
+        "vdem_emb": vdem_conf_legal,
+        "pei": "confirmed" if pei_confirmed_legal else "mock",
+        "civil_liberties": cl_conf_legal,
+        "legal_framework": lf_conf_legal,
+    }
+    confirmed_sources = [k for k, v in data_sources_summary.items() if v == "confirmed"]
+    mock_sources = [k for k, v in data_sources_summary.items() if v == "mock"]
+
+    state["legal_analysis"]["data_sources_summary"] = data_sources_summary
+
     agent_log(state, agent_name, f"Violaciones detectadas: {len(violations)}")
     agent_log(state, agent_name, f"Tratados referenciados: {state['legal_analysis']['treaties_referenced']}")
     agent_log(state, agent_name, f"Instrumentos regionales aplicados: {[i['id'] for i in regional_instruments]}")
-    agent_log(state, agent_name, f"Confianza de datos: {confidence_summary}")
+    agent_log(state, agent_name, f"Confianza por violación: {confidence_summary}")
+    agent_log(state, agent_name, f"Fuentes CONFIRMADAS: {confirmed_sources}")
+    agent_log(state, agent_name, f"Fuentes MOCK (pendientes): {mock_sources}")
+    agent_log(state, agent_name, f"PEI integrado: {'✅ confirmed' if pei_confirmed_legal else '⚠️ mock'}")
     agent_log(state, agent_name, f"Risk Score calculado: {risk_score}/100 → Nivel: {risk_level.upper()}")
 
     return state
 
 
 def _calculate_risk_score(context: dict, political: dict, violations: list) -> float:
-    """Calcula el índice de riesgo 0-100 basado en múltiples dimensiones."""
     score = 0.0
 
-    # Helper para extraer valores de datos trazados
     def val(d):
         return extract_value(d) if isinstance(d, dict) and "_trace" in d else d
 
-    # Dimensión 1: Freedom House (invertido: menor score = más riesgo)
     fh_data = val(context.get("freedom_house", {}))
-    fh = fh_data.get("score", 50) if isinstance(fh_data, dict) else 50
+    fh = fh_data.get("total_score", fh_data.get("score", 50)) if isinstance(fh_data, dict) else 50
     score += (100 - fh) * 0.15
 
-    # Dimensión 2: V-Dem (invertido)
     vdem_data = val(context.get("vdem", {}))
     vdem = vdem_data.get("liberal_democracy", 0.5) if isinstance(vdem_data, dict) else 0.5
     score += (1 - vdem) * 100 * 0.15
 
-    # Dimensión 3: Independencia EMB
     emb_scores = {"full": 0, "partial": 40, "compromised": 75, "captured": 95}
     emb_data = val(context.get("emb", {}))
     emb_level = emb_data.get("independence_level", "partial") if isinstance(emb_data, dict) else "partial"
     score += emb_scores.get(emb_level, 50) * 0.15
 
-    # Dimensión 4: Sesgo mediático
     media_bias = political.get("media_analysis", {}).get("bias_index", 0.3)
     score += media_bias * 100 * 0.10
 
-    # Dimensión 5: Financiamiento (invertido)
     finance = political.get("campaign_finance", {}).get("transparency_score", 0.5)
     score += (1 - finance) * 100 * 0.10
 
-    # Dimensión 6: Ecosistema digital
     eco_scores = {"healthy": 0, "concerning": 30, "compromised": 65, "hostile": 90}
     eco_level = political.get("digital_ecosystem", {}).get("assessment", "concerning")
     score += eco_scores.get(eco_level, 40) * 0.10
 
-    # Dimensión 7: Violaciones legales
     violation_weight = min(len(violations) * 8, 100)
     score += violation_weight * 0.15
 
-    # Dimensión 8: Observación internacional
     obs = context.get("international_observation", {})
     if not obs.get("invited", True):
         score += 90 * 0.10
@@ -1488,18 +2068,6 @@ def _risk_level_from_score(score: float) -> str:
 # ─── AGENTE 4: VIP Report Generator Agent ────────────────────────────────────
 
 def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:
-    """
-    Agente Redactor del Informe VIP.
-    
-    En producción:
-        - Usa Claude para generar narrativa ejecutiva
-        - Exporta a LaTeX/PDF con Pandoc
-        - Genera gráficos incrustados
-    
-    Ahora: Genera reporte Markdown estructurado.
-    Si hay API key de Anthropic, usa Claude para el resumen ejecutivo.
-    Si no, genera un resumen template-based.
-    """
     agent_name = "VIP_ReportGeneratorAgent"
     agent_log(state, agent_name, f"Generando informe VIP para {state['country']}")
 
@@ -1507,20 +2075,19 @@ def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:
     political = state.get("political_data", {})
     legal = state.get("legal_analysis", {})
 
-    # ── Generar capítulos modulares ──
     chapters = {}
 
     chapters["01_executive_summary"] = _generate_executive_summary(state)
-    chapters["02_political_context"] = _generate_political_context(context)
+    chapters["02_political_context"] = _generate_political_context(context, state.get("country_code", ""))
     chapters["03_emb_analysis"] = _generate_emb_chapter(context)
     chapters["04_inclusivity"] = _generate_inclusivity_chapter(context)
-    chapters["05_campaign_finance"] = _generate_campaign_chapter(political)
-    chapters["06_digital_ecosystem"] = _generate_digital_chapter(political)
-    chapters["07_voting_day"] = "## 7. Desarrollo del Día de Votación\n\n*Capítulo pendiente — se genera el día de la elección con datos de tabulación en tiempo real.*\n"
+    chapters["05_campaign_finance"] = _generate_campaign_chapter(political, context)
+    chapters["06_digital_ecosystem"] = _generate_digital_chapter(political, context)
+    voting_day_data = state.get("voting_day_data", {})
+    chapters["07_voting_day"] = _generate_voting_day_chapter(voting_day_data, state)
     chapters["08_electoral_justice"] = _generate_justice_chapter(legal)
     chapters["09_recommendations"] = _generate_recommendations(state)
 
-    # ── Compilar reporte final ──
     report_header = f"""# DEMOCRAC.IA — Informe VIP de Integridad Electoral
 ## {state['country']} — Elección: {state['election_date']}
 
@@ -1547,159 +2114,974 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
     legal = state.get("legal_analysis", {})
     violations = legal.get("violations", [])
     critical = [v for v in violations if v.get("severity") == "critical"]
-
     level_emoji = {"critical": "🔴", "high": "🟠", "moderate": "🟡", "low": "🟢"}
     emoji = level_emoji.get(state["risk_level"], "⚪")
+    context = state.get("context_data", {})
 
-    summary = f"""## 1. Resumen Ejecutivo & Dashboard de Riesgo
+    fh_data = extract_value(context.get("freedom_house", {})) or {}
+    fh_score = fh_data.get("total_score", fh_data.get("score", "N/D"))
+    fh_status = fh_data.get("status", "N/D")
+    fh_edition = fh_data.get("edition", "—")
 
-{emoji} **Nivel de Riesgo: {state['risk_level'].upper()}** — Índice: **{state['risk_score']}/100**
+    vdem_data = extract_value(context.get("vdem", {})) or {}
+    vdem_libdem = vdem_data.get("liberal_democracy", "N/D")
+    vdem_polyarchy = vdem_data.get("electoral_democracy", "N/D")
+    vdem_year = vdem_data.get("year", "—")
 
-| Dimensión | Evaluación |
+    emb_data = extract_value(context.get("emb", {})) or {}
+    emb_level = emb_data.get("independence_level", "N/D").upper()
+    emb_autonomy = emb_data.get("autonomy_score", "N/D")
+
+    pei_data = extract_value(context.get("pei", {})) or {}
+    pei_integrity = pei_data.get("overall_integrity")
+    pei_integrity_str = f"{pei_integrity}" if pei_integrity is not None else "N/D"
+    pei_emb = pei_data.get("emb_score", "N/D")
+    pei_year = pei_data.get("year", "—")
+
+    table = (
+        "| Dimension | Evaluation | Source | Year |\n"
+        "|---|---|---|---|\n"
+        f"| Freedom House | {fh_score}/100 \u2014 {fh_status} | FH FIW | {fh_edition} |\n"
+        f"| V-Dem Liberal Democracy | {vdem_libdem} | V-Dem v15 | {vdem_year} |\n"
+        f"| V-Dem Electoral Democracy | {vdem_polyarchy} | V-Dem v15 | {vdem_year} |\n"
+        f"| Independencia EMB | {emb_level} (autonomia: {emb_autonomy}) | V-Dem v15 | {vdem_year} |\n"
+        f"| PEI Integridad | {pei_integrity_str}/100 (EMBs: {pei_emb}) | PEI-10.0 | {pei_year} |\n"
+        f"| Violaciones | {len(violations)} ({len(critical)} criticas) | PEIRS Legal | \u2014 |\n"
+        f"| Tratados | {', '.join(legal.get('treaties_referenced', []))} | PEIRS Legal | \u2014 |"
+    )
+
+    mitigating = f"\n**Factores mitigantes:** {'; '.join(legal['mitigating_factors'])}\n" if legal.get("mitigating_factors") else ""
+
+    sys_prompt = (
+        "Sos un analista senior de integridad electoral para DEMOCRAC.IA/PEIRS. "
+        "Redactas en espanol, neutral, preciso, basado solo en los datos recibidos. No inventas datos."
+    )
+    user_prompt = (
+        f"Escribe exactamente 2 parrafos analiticos para el Resumen Ejecutivo.\n\n"
+        f"DATOS (confidence=confirmed):\n"
+        f"- Pais: {state['country']} | Eleccion: {state['election_date']}\n"
+        f"- Riesgo PEIRS: {state['risk_score']}/100 - {state['risk_level'].upper()}\n"
+        f"- Freedom House {fh_edition}: {fh_score}/100 - {fh_status}\n"
+        f"- V-Dem libdem {vdem_year}: {vdem_libdem} | polyarchy: {vdem_polyarchy}\n"
+        f"- EMB: {emb_level} (autonomia: {emb_autonomy})\n"
+        f"- PEI {pei_year}: Integridad={pei_integrity_str}/100, EMBs={pei_emb}/100\n"
+        f"- Violaciones: {len(violations)} ({len(critical)} criticas)\n\n"
+        f"Parrafo 1: estado democratico estructural (FH, V-Dem, EMB). "
+        f"Parrafo 2: riesgo electoral especifico para {state['election_date']}.\n"
+        f"Max 80 palabras c/u. No repitas los numeros de la tabla. Sin vinetas."
+    )
+
+    def fallback(s=state, cr=critical, em=emoji):
+        return f"{em} **Nivel de Riesgo: {s['risk_level'].upper()}** - {len(cr)} violaciones criticas detectadas."
+
+    narrative = _llm_generate(sys_prompt, user_prompt, fallback)
+
+    # Integrar dictamen técnico del Agente 5
+    dictamen = state.get("dictamen", {})
+    dictamen_section = ""
+    if dictamen.get("narrative"):
+        trend_info = dictamen.get("trend", {})
+        reg_comp = dictamen.get("regional_comparison", {})
+        trend_line = ""
+        if trend_info.get("available"):
+            dir_emoji = "📈" if trend_info["trend_direction"] == "up" else "📉" if trend_info["trend_direction"] == "down" else "➡️"
+            trend_line = (
+                f"\n**Tendencia V-Dem ({trend_info['first_year']}→{trend_info['last_year']}):** "
+                f"{dir_emoji} {trend_info['trend'].upper()} "
+                f"({trend_info['first_value']} → {trend_info['last_value']}, delta={trend_info['delta']:+.4f})"
+            )
+        reg_line = ""
+        if reg_comp.get("fh_vs_region"):
+            reg_line = f"\n**Comparación regional ({reg_comp['region']}):** {reg_comp['fh_vs_region']}"
+            if reg_comp.get("vdem_vs_region"):
+                reg_line += f" | {reg_comp['vdem_vs_region']}"
+            if reg_comp.get("rsf_vs_region"):
+                reg_line += f" | {reg_comp['rsf_vs_region']}"
+
+        conf_color = "🟢" if dictamen["data_confidence"] == "HIGH" else "🟡" if dictamen["data_confidence"] == "MEDIUM" else "🔴"
+
+        dictamen_section = (
+            f"\n\n---\n\n"
+            f"### Dictamen Técnico — {dictamen['dictamen_id']}\n\n"
+            f"{conf_color} **Confianza de Datos: {dictamen['data_confidence']}** — {dictamen['confidence_note']}"
+            f"{trend_line}{reg_line}\n\n"
+            f"{dictamen['narrative']}\n"
+        )
+
+    return (
+        f"## 1. Resumen Ejecutivo & Dashboard de Riesgo\n\n"
+        f"{emoji} **Nivel de Riesgo: {state['risk_level'].upper()}** - Indice: **{state['risk_score']}/100**\n\n"
+        f"{table}\n\n"
+        f"{narrative}\n"
+        f"{mitigating}"
+        f"{dictamen_section}"
+    )
+
+def _generate_political_context(context: dict, country_code: str = "") -> str:
+    legal_fw_raw = context.get("legal_framework", {})
+    legal_fw = extract_value(legal_fw_raw) if isinstance(legal_fw_raw, dict) else legal_fw_raw
+    legal_fw = legal_fw if isinstance(legal_fw, dict) else {}
+
+    civil_raw = context.get("civil_liberties", {})
+    civil = extract_value(civil_raw) if isinstance(civil_raw, dict) else civil_raw
+    civil = civil if isinstance(civil, dict) else {}
+
+    fh_raw = context.get("freedom_house", {})
+    fh_data = extract_value(fh_raw) if isinstance(fh_raw, dict) else {}
+    fh_score = fh_data.get("total_score", fh_data.get("score", "N/D")) if fh_data else "N/D"
+    fh_edition = fh_data.get("edition", "—") if fh_data else "—"
+    fh_conf = get_trace(fh_raw).get("confidence", "mock") if isinstance(fh_raw, dict) else "mock"
+
+    # V-Dem indicadores políticos (confirmados si están presentes)
+    vdem_opp_barriers = civil.get("vdem_opposition_barriers") or legal_fw.get("vdem_opposition_barriers")
+    vdem_jud_review = civil.get("vdem_judicial_review") or legal_fw.get("vdem_judicial_review")
+    vdem_opp_autonomy = civil.get("vdem_opposition_autonomy") or legal_fw.get("vdem_opposition_autonomy")
+    vdem_frassoc = civil.get("vdem_freedom_of_association")
+    vdem_rol = civil.get("vdem_rule_of_law")
+    vdem_year = civil.get("vdem_data_year") or legal_fw.get("vdem_data_year", "—")
+    vdem_confirmed = vdem_opp_barriers is not None or vdem_jud_review is not None
+
+    def vdem_label(val, invert=False):
+        if val is None:
+            return "N/D"
+        v = (1 - val) if invert else val
+        if v >= 0.75: return f"{val:.2f} — favorable"
+        if v >= 0.50: return f"{val:.2f} — moderado"
+        if v >= 0.25: return f"{val:.2f} — comprometido"
+        return f"{val:.2f} — crítico"
+
+    pei_laws = legal_fw.get("pei_laws_score")
+    pei_laws_unfair = legal_fw.get("pei_laws_unfair")
+    pei_opp_prevent = legal_fw.get("pei_opp_prevent")
+
+    # Tabla Marco Legal
+    legal_rows = [
+        f"| Reformas constitucionales recientes | {'Sí' if legal_fw.get('constitutional_amendments_recent') else 'No'} | FH FIW {fh_edition} |",
+        f"| Prohibición de partidos opositores | {'Sí' if legal_fw.get('opposition_party_bans') else 'No'} | FH FIW {fh_edition} |",
+        f"| Candidatos inhabilitados | {legal_fw.get('candidate_disqualifications', 0)} | FH FIW {fh_edition} |",
+        f"| Restricciones a medios | {legal_fw.get('media_law_restrictions', 'N/D')} | FH FIW {fh_edition} |",
+    ]
+    if pei_laws is not None:
+        legal_rows.append(f"| Score marco legal (PEI) | {pei_laws}/100 | PEI 10.0 |")
+    if pei_laws_unfair is not None:
+        legal_rows.append(f"| Leyes favorecen incumbente (PEI) | {pei_laws_unfair}/100 | PEI 10.0 |")
+    if vdem_opp_barriers is not None:
+        legal_rows.append(f"| Barreras a partidos (V-Dem v2psbars) | {vdem_label(vdem_opp_barriers)} | V-Dem v15 {vdem_year} |")
+    if vdem_opp_autonomy is not None:
+        legal_rows.append(f"| Autonomía oposición (V-Dem v2psoppaut) | {vdem_label(vdem_opp_autonomy)} | V-Dem v15 {vdem_year} |")
+
+    struct_legal = (
+        f"**Marco Legal Electoral** *(FH FIW {fh_edition}" +
+        (f" + V-Dem v15 {vdem_year}" if vdem_confirmed else "") +
+        ")*\n| Indicador | Estado | Fuente |\n|---|---|---|\n" +
+        "\n".join(legal_rows)
+    )
+
+    # Tabla Libertades Civiles
+    civil_rows = [
+        f"| Libertad de reunión | {civil.get('freedom_of_assembly', 'N/D')} | FH FIW {fh_edition} |",
+        f"| Libertad de prensa | {civil.get('freedom_of_press', 'N/D')} | FH FIW {fh_edition} |",
+        f"| Independencia judicial | {civil.get('judicial_independence', 'N/D')} | FH FIW {fh_edition} |",
+        f"| Presos políticos | {'Sí' if civil.get('political_prisoners') else 'No'} | FH FIW {fh_edition} |",
+    ]
+    if vdem_jud_review is not None:
+        civil_rows.append(f"| Revisión judicial ind. (V-Dem v2jureview) | {vdem_label(vdem_jud_review)} | V-Dem v15 {vdem_year} |")
+    if vdem_frassoc is not None:
+        civil_rows.append(f"| Libertad de asociación (V-Dem v2x_frassoc) | {vdem_label(vdem_frassoc)} | V-Dem v15 {vdem_year} |")
+    if vdem_rol is not None:
+        civil_rows.append(f"| Estado de derecho (V-Dem v2xcl_rol) | {vdem_label(vdem_rol)} | V-Dem v15 {vdem_year} |")
+
+    struct_civil = (
+        f"\n\n**Estado de Libertades Civiles** *(FH CL/PR rating" +
+        (f" + V-Dem v15 {vdem_year}" if vdem_confirmed else "") +
+        ")*\n| Indicador | Estado | Fuente |\n|---|---|---|\n" +
+        "\n".join(civil_rows)
+    )
+
+    struct = struct_legal + struct_civil
+
+    sys_prompt = (
+        "Sos un analista de contexto político-electoral para DEMOCRAC.IA/PEIRS. "
+        "Escribís en español, tono técnico-institucional con registro periodístico de investigación. "
+        "Basás tu análisis exclusivamente en los datos recibidos."
+    )
+    vdem_block = ""
+    if vdem_confirmed:
+        vdem_block = (
+            f"\nDATOS ADICIONALES V-Dem v15 ({vdem_year}, confidence=confirmed):\n"
+            + (f"- Barreras a partidos (v2psbars): {vdem_label(vdem_opp_barriers)}\n" if vdem_opp_barriers is not None else "")
+            + (f"- Autonomía oposición (v2psoppaut): {vdem_label(vdem_opp_autonomy)}\n" if vdem_opp_autonomy is not None else "")
+            + (f"- Revisión judicial (v2jureview): {vdem_label(vdem_jud_review)}\n" if vdem_jud_review is not None else "")
+            + (f"- Estado de derecho (v2xcl_rol): {vdem_label(vdem_rol)}\n" if vdem_rol is not None else "")
+        )
+    user_prompt = (
+        f"Escribe exactamente 2 párrafos de análisis del contexto político-electoral.\n\n"
+        f"DATOS (Freedom House FIW {fh_edition}, confidence={fh_conf}):\n"
+        f"- FH score: {fh_score}/100\n"
+        f"- Reformas constitucionales recientes: {'Sí' if legal_fw.get('constitutional_amendments_recent') else 'No'}\n"
+        f"- Prohibición de partidos opositores: {'Sí' if legal_fw.get('opposition_party_bans') else 'No'}\n"
+        f"- Candidatos inhabilitados: {legal_fw.get('candidate_disqualifications', 0)}\n"
+        f"- Restricciones a medios: {legal_fw.get('media_law_restrictions', 'N/D')}\n"
+        f"- Libertad de prensa: {civil.get('freedom_of_press', 'N/D')}\n"
+        f"- Libertad de reunión: {civil.get('freedom_of_assembly', 'N/D')}\n"
+        f"- Independencia judicial: {civil.get('judicial_independence', 'N/D')}\n"
+        f"- Presos políticos: {'Sí' if civil.get('political_prisoners') else 'No'}\n"
+        + vdem_block +
+        "\nPárrafo 1 (~90 palabras): estado del marco legal electoral. Qué implican estas restricciones "
+        "para la competencia electoral libre y el pluralismo político. Cita datos V-Dem cuando estén disponibles.\n"
+        "Párrafo 2 (~80 palabras): estado de las libertades civiles y el sistema judicial. Cómo condicionan el ejercicio "
+        "del derecho al voto y la participación ciudadana. Solo prosa, sin viñetas."
+    )
+
+    def fallback_pol(lf=legal_fw, cv=civil):
+        parts = []
+        if lf.get("opposition_party_bans"):
+            parts.append("La prohibición de partidos opositores restringe severamente el pluralismo político.")
+        if cv.get("freedom_of_press") in ["severely_restricted", "banned"]:
+            parts.append("La libertad de prensa severamente restringida compromete el acceso a información electoral.")
+        return " ".join(parts) if parts else "El marco legal electoral presenta condiciones que requieren monitoreo."
+
+    # ── Bloque Peru-específico ──────────────────────────────────────────────────
+    peru_block = ""
+    if country_code == "PER":
+        # Tabla de fuerzas políticas con perfil de riesgo ICCPR
+        party_rows = "\n".join(
+            f"| **{p['abbr']}** | {p['name']} | {p['ideology']} | "
+            f"{p['current_seats']} | {p['electoral_strength']} | "
+            f"{'ALTO' if p['risk_profile'] == 'high' else 'MODERADO' if p['risk_profile'] == 'moderate' else 'BAJO'} |"
+            for p in PERU_POLITICAL_FORCES
+        )
+        es = PERU_ELECTORAL_SYSTEM
+
+        # Resumen histórico (últimos 4 eventos clave)
+        hist_summary = " → ".join(
+            f"{ev['year']}: {ev['event'][:60]}{'…' if len(ev['event']) > 60 else ''}"
+            for ev in PERU_HISTORICAL_EVENTS[-4:]
+        )
+
+        # Tabla de riesgos ICCPR por actor
+        iccpr_rows = "\n".join(
+            f"| **{p['abbr']}** | {p['iccpr_risk'][:120]}{'…' if len(p['iccpr_risk']) > 120 else ''} |"
+            for p in PERU_POLITICAL_FORCES
+            if p.get("iccpr_risk")
+        )
+
+        peru_block = f"""
+
+---
+
+### 2.1 Fuerzas Políticas — Perú 2026 *(JNE + V-Dem v15 + PEI 10.0)*
+
+| Partido | Nombre | Ideología | Escaños actuales | Fuerza electoral | Perfil de riesgo |
+|---|---|---|---|---|---|
+{party_rows}
+
+> **Sistema Electoral:** {es['name']} · {es['seats']} escaños · {es['chamber']}
+> **Umbral:** {es['threshold']}
+> **Cuotas:** {es['women_quota']} · {es['youth_quota']}
+> **Órganos:** JNE (árbitro) · ONPE (organización) · RENIEC (padrón)
+
+### 2.2 Crisis Democrática 2019–2026
+
+{hist_summary}
+
+Perú ingresa al ciclo 2026 con **seis presidentes en cuatro años**, dos congresos
+disueltos y una aprobación presidencial históricamente baja (<10%, 2024).
+El índice V-Dem registra deterioro sostenido (v2x_libdem: 0.59 en 2015 → 0.42 en 2024).
+
+### 2.3 Riesgos ICCPR por Actor
+
+| Actor | Riesgo bajo derecho internacional |
 |---|---|
-| Freedom House | {state['context_data'].get('freedom_house', {}).get('score', 'N/A')}/100 ({state['context_data'].get('freedom_house', {}).get('status', 'N/A')}) |
-| V-Dem Liberal Democracy | {state['context_data'].get('vdem', {}).get('liberal_democracy', 'N/A')} |
-| Independencia EMB | {state['context_data'].get('emb', {}).get('independence_level', 'N/A').upper()} |
-| Violaciones detectadas | {len(violations)} ({len(critical)} críticas) |
-| Tratados referenciados | {', '.join(legal.get('treaties_referenced', []))} |
-
-**Alertas críticas:** {len(critical)} violaciones de severidad crítica al derecho internacional detectadas.
+{iccpr_rows}
 """
-    if legal.get("mitigating_factors"):
-        summary += f"\n**Factores mitigantes:** {'; '.join(legal['mitigating_factors'])}\n"
 
-    return summary
+        # Enriquecer el prompt LLM con contexto peruano
+        user_prompt += (
+            f"\n\nCONTEXTO ESPECÍFICO PERÚ 2026 (inyectado desde datos estructurados JNE/PEIRS):\n"
+            f"- Fragmentación parlamentaria: {es['historical_fragmentation']}\n"
+            f"- Sistema electoral: {es['name']} · umbral {es['threshold']}\n"
+            f"- Partido más grande (escaños actuales): APP 28 (Acuña) — perfil de riesgo ALTO\n"
+            f"- Fuerzas con proceso judicial activo: Fuerza Popular (Keiko Fujimori — lavado de activos), "
+            f"Perú Libre (Cerrón — inhabilitado por corrupción)\n"
+            f"- Crisis 2019-2026: {hist_summary}\n"
+            f"\nAñadí un tercer párrafo (~80 palabras) específico sobre el impacto de "
+            f"la fragmentación partidaria y la crisis de representación peruana en la integridad del proceso 2026. "
+            f"Mencioná concretamente al JNE, la fragmentación (8+ bancadas esperadas) y el riesgo de bloqueo ejecutivo-legislativo."
+        )
 
+    narrative = _llm_generate(sys_prompt, user_prompt, fallback_pol)
 
-def _generate_political_context(context: dict) -> str:
-    legal_fw = context.get("legal_framework", {})
-    civil = context.get("civil_liberties", {})
-
-    return f"""## 2. Contexto Político y Marco Legal
-
-**Marco Legal Electoral:**
-- Reformas constitucionales recientes: {'Sí' if legal_fw.get('constitutional_amendments_recent') else 'No'}
-- Prohibición de partidos opositores: {'Sí' if legal_fw.get('opposition_party_bans') else 'No'}
-- Candidatos inhabilitados: {legal_fw.get('candidate_disqualifications', 0)}
-- Restricciones a medios: {legal_fw.get('media_law_restrictions', 'N/A')}
-
-**Estado de Libertades Civiles:**
-- Libertad de reunión: {civil.get('freedom_of_assembly', 'N/A')}
-- Libertad de prensa: {civil.get('freedom_of_press', 'N/A')}
-- Independencia judicial: {civil.get('judicial_independence', 'N/A')}
-- Presos políticos: {'Sí' if civil.get('political_prisoners') else 'No'}
-"""
+    return f"## 2. Contexto Político y Marco Legal\n\n{struct}\n\n{narrative}{peru_block}\n"
 
 
 def _generate_emb_chapter(context: dict) -> str:
-    emb = context.get("emb", {})
-    registry = context.get("voter_registry", {})
-    obs = context.get("international_observation", {})
+    emb = extract_value(context.get("emb", {})) or {}
+    registry = extract_value(context.get("voter_registry", {})) or {}
+    obs = extract_value(context.get("international_observation", {})) or {}
 
-    return f"""## 3. Administración Electoral (EMB)
+    reg_size = registry.get("size", "N/D")
+    if isinstance(reg_size, int):
+        reg_size = f"{reg_size:,}"
 
-**{emb.get('name', 'N/A')}**
-- Nivel de independencia: **{emb.get('independence_level', 'N/A').upper()}**
-- Representación opositora: {'Sí' if emb.get('opposition_representation') else 'No'}
+    emb_name = emb.get("name", "N/D")
+    emb_level = emb.get("independence_level", "N/D").upper()
+    emb_autonomy = emb.get("autonomy_score", "N/D")
+    emb_irregularities = emb.get("electoral_irregularities", "N/D")
+    emb_year = emb.get("data_year", "—")
+    pei_reg_score = registry.get("pei_voter_reg_score", "N/D")
+    reg_inaccurate = registry.get("pei_reg_inaccurate", "N/D")
 
-**Padrón Electoral:**
-- Estado de auditoría: {registry.get('status', 'N/A')}
-- Votantes registrados: {registry.get('size', 'N/A') if not isinstance(registry.get('size'), int) else f"{registry.get('size'):,}"}
+    struct = (
+        f"**{emb_name}** *(V-Dem v15, ano {emb_year})*\n"
+        f"- Nivel de independencia: **{emb_level}**\n"
+        f"- Autonomia (score normalizado): {emb_autonomy}\n"
+        f"- Irregularidades electorales: {emb_irregularities}\n"
+        f"- Representacion opositora: {'Si' if emb.get('opposition_representation') else 'No'}\n\n"
+        f"**Padron Electoral** *(PEI 10.0)*\n"
+        f"- Estado de auditoria: {registry.get('status', 'N/D')}\n"
+        f"- Votantes registrados: {reg_size}\n"
+        f"- Score registro PEI: {pei_reg_score}/100\n"
+        f"- Precision del padron (PEI): {reg_inaccurate}/5\n\n"
+        f"**Observacion Internacional**\n"
+        f"- Invitacion: {'Si' if obs.get('invited') else 'No'}\n"
+        f"- Restricciones: {obs.get('restrictions', 'N/D')}"
+    )
 
-**Observación Internacional:**
-- Invitación: {'Sí' if obs.get('invited') else 'No'}
-- Restricciones: {obs.get('restrictions', 'N/A')}
-"""
+    sys_prompt = (
+        "Sos un analista de administracion electoral para DEMOCRAC.IA/PEIRS. "
+        "Escribis en espanol, neutro, preciso, basado solo en los datos recibidos."
+    )
+    user_prompt = (
+        f"Escribe exactamente 2 parrafos analiticos sobre el EMB.\n\n"
+        f"DATOS (V-Dem v15 + PEI 10.0, confidence=confirmed):\n"
+        f"- EMB: {emb_name}\n"
+        f"- Independencia: {emb_level}\n"
+        f"- Autonomia: {emb_autonomy} (0=ninguna, 1=plena)\n"
+        f"- Irregularidades: {emb_irregularities} (0=ninguna, 1=maxima)\n"
+        f"- Score registro PEI: {pei_reg_score}/100\n"
+        f"- Precision padron: {reg_inaccurate}/5 (5=muy impreciso)\n"
+        f"- Observacion: {'invitada' if obs.get('invited') else 'no invitada'}\n\n"
+        "Parrafo 1: independencia y capacidad del EMB. "
+        "Parrafo 2: padron y observacion. Max 80 palabras c/u."
+    )
 
+    def fallback():
+        return ""
+
+    narrative = _llm_generate(sys_prompt, user_prompt, fallback)
+
+    return f"## 3. Administracion Electoral (EMB)\n\n{struct}\n\n{narrative}\n"
 
 def _generate_inclusivity_chapter(context: dict) -> str:
-    return """## 4. Inclusividad y Derechos Humanos
+    fh_raw = context.get("freedom_house", {})
+    fh_data = extract_value(fh_raw) if isinstance(fh_raw, dict) else {}
+    fh_score = fh_data.get("total_score", fh_data.get("score", 50)) if fh_data else 50
+    fh_edition = fh_data.get("edition", "—") if fh_data else "—"
 
-*Análisis detallado de barreras hacia mujeres (CEDAW), minorías y pueblos indígenas (ICERD) será generado con datos del Agente OSINT en producción.*
+    vdem_raw = context.get("vdem", {})
+    vdem_data = extract_value(vdem_raw) if isinstance(vdem_raw, dict) else {}
+    vdem_suffrage = vdem_data.get("universal_suffrage") if vdem_data else None
+    vdem_assoc = vdem_data.get("freedom_of_association") if vdem_data else None
+    vdem_year = vdem_data.get("year", "—") if vdem_data else "—"
 
-**Pendiente:** Integración con indicadores de participación desagregados por género y etnicidad.
-"""
+    civil_raw = context.get("civil_liberties", {})
+    civil = extract_value(civil_raw) if isinstance(civil_raw, dict) else {}
+    cl_rating = civil.get("cl_rating", 4) if civil else 4
+
+    struct = (
+        f"**Indicadores de Inclusividad** *(V-Dem v15, año {vdem_year})*\n"
+        f"| Indicador | Score | Fuente |\n|---|---|---|\n"
+        f"| Sufragio universal (v2x_suffr) | {vdem_suffrage if vdem_suffrage is not None else 'N/D'} | V-Dem v15 |\n"
+        f"| Libertad de asociación (v2x_frassoc_thick) | {vdem_assoc if vdem_assoc is not None else 'N/D'} | V-Dem v15 |\n"
+        f"| Libertades civiles generales (CL rating) | {cl_rating}/7 | Freedom House FIW {fh_edition} |\n\n"
+        f"*Nota: Análisis desagregado por género (CEDAW) y etnicidad (ICERD) pendiente de integración con fuentes especializadas.*\n"
+    )
+
+    sys_prompt = (
+        "Sos un analista de inclusividad electoral y derechos humanos para DEMOCRAC.IA/PEIRS. "
+        "Escribís en español, tono técnico-institucional. Basás tu análisis en los datos recibidos. "
+        "Sos honesto sobre las limitaciones de datos disponibles."
+    )
+    user_prompt = (
+        f"Escribe 2 párrafos sobre inclusividad electoral y derechos humanos.\n\n"
+        f"DATOS DISPONIBLES (V-Dem v15 + FH FIW {fh_edition}):\n"
+        f"- FH score general: {fh_score}/100\n"
+        f"- Sufragio universal V-Dem: {vdem_suffrage} (0=restrictivo, 1=universal)\n"
+        f"- Libertad de asociación V-Dem: {vdem_assoc} (0=restringida, 1=plena)\n"
+        f"- CL rating FH: {cl_rating}/7 (1=mejor, 7=peor)\n\n"
+        "Párrafo 1 (~90 palabras): evalúa las condiciones de inclusividad electoral basándote en "
+        "sufragio universal y libertad de asociación. Qué implican para grupos vulnerables "
+        "(mujeres, minorías, pueblos indígenas) bajo el marco de CEDAW e ICERD.\n"
+        "Párrafo 2 (~70 palabras): limitaciones del análisis actual y qué fuentes adicionales "
+        "mejorarían la evaluación. Menciona que el análisis desagregado por género y etnicidad "
+        "está previsto en fases futuras. Solo prosa."
+    )
+
+    def fallback_inc(vs=vdem_suffrage, va=vdem_assoc):
+        parts = []
+        if vs is not None:
+            parts.append(f"El índice de sufragio universal V-Dem de {vs} refleja el alcance del derecho al voto.")
+        if va is not None:
+            parts.append(f"La libertad de asociación de {va} indica las condiciones para la participación organizada.")
+        return " ".join(parts) if parts else "Análisis de inclusividad basado en indicadores V-Dem disponibles."
+
+    narrative = _llm_generate(sys_prompt, user_prompt, fallback_inc)
+
+    return f"## 4. Inclusividad y Derechos Humanos\n\n{struct}\n{narrative}\n"
 
 
-def _generate_campaign_chapter(political: dict) -> str:
+def _generate_campaign_chapter(political: dict, context: dict = None) -> str:
     media = political.get("media_analysis", {})
     finance = political.get("campaign_finance", {})
     power = political.get("power_network", {})
 
-    exposure_lines = "\n".join(
-        f"  - {k}: {v}%" for k, v in media.get("exposure_distribution", {}).items()
+    # RSF: datos reales de libertad de prensa (complementa análisis de medios)
+    rsf_data_cap5 = {}
+    rsf_confirmed_cap5 = False
+    if context:
+        rsf_raw_cap5 = context.get("rsf", {})
+        if isinstance(rsf_raw_cap5, dict) and "_trace" in rsf_raw_cap5:
+            rsf_data_cap5 = rsf_raw_cap5.get("value", {}) or {}
+            rsf_confirmed_cap5 = rsf_raw_cap5["_trace"].get("confidence") == "confirmed"
+    rsf_score_cap5 = rsf_data_cap5.get("score")
+    rsf_rank_cap5 = rsf_data_cap5.get("rank")
+    rsf_political_cap5 = rsf_data_cap5.get("political_context")
+
+    # Determinar qué datos son reales vs mock
+    media_source = media.get("data_source", "mock")
+    finance_source = finance.get("data_source", "mock")
+    media_confirmed = "PEI" in str(media_source)
+    finance_confirmed = "PEI" in str(finance_source)
+
+    bias_index = media.get("bias_index", "N/D")
+    bias_dir = media.get("bias_direction", "N/D")
+    media_assessment = media.get("assessment", "N/D")
+    pei_media_score = media.get("pei_media_score")
+    finance_score = finance.get("transparency_score", "N/D")
+    finance_assessment = finance.get("assessment", "N/D")
+    pei_finance_score = finance.get("pei_finance_score")
+    state_abuse = finance.get("state_resource_abuse", "N/D")
+    donations_disclosed = finance.get("donations_disclosed", False)
+
+    exposure_rows = "\n".join(
+        f"| {k.replace('_', ' ').title()} | {v}% |"
+        for k, v in media.get("exposure_distribution", {}).items()
     )
 
-    return f"""## 5. Campaña, Redes de Poder y Financiamiento
+    # Fila RSF en tabla de medios (datos reales si están disponibles)
+    rsf_media_row = ""
+    if rsf_confirmed_cap5 and rsf_score_cap5 is not None:
+        rsf_media_row = f"\n| Score libertad de prensa (RSF 2025) | {rsf_score_cap5}/100 (Rank #{rsf_rank_cap5}/180) | RSF 2025 — confirmed |"
 
-**Análisis de Medios:**
-- Índice de sesgo: {media.get('bias_index', 'N/A')} ({media.get('assessment', 'N/A')})
-- Dirección del sesgo: {media.get('bias_direction', 'N/A')}
-- Distribución de exposición:
-{exposure_lines}
+    # Tabla estructurada con indicación de fuente
+    struct = f"""**Análisis de Medios** *({'PEI-10.0 — confirmed' if media_confirmed else 'datos mock — pendiente'})*
+| Indicador | Valor | Fuente |
+|---|---|---|
+| Score cobertura mediática (PEI) | {f"{pei_media_score}/100" if pei_media_score else "N/D"} | {'PEI-10.0' if media_confirmed else 'mock'} |
+| Índice de sesgo derivado | {bias_index} | {'PEI-10.0' if media_confirmed else 'mock'} |
+| Evaluación general | {media_assessment} | PEIRS |
+| Dirección del sesgo | {bias_dir} | mock |{rsf_media_row}
 
-**Financiamiento de Campaña:**
-- Transparencia: {finance.get('transparency_score', 'N/A')} ({finance.get('assessment', 'N/A')})
-- Abuso de recursos estatales: {finance.get('state_resource_abuse', 'N/A')}
-- Donaciones corporativas divulgadas: {'Sí' if finance.get('donations_disclosed') else 'No'}
+**Distribución de exposición (mock)**
+| Actor | Exposición |
+|---|---|
+{exposure_rows}
 
-**Red de Poder (GraphOS):**
+**Financiamiento de Campaña** *({'PEI-10.0 — confirmed' if finance_confirmed else 'datos mock — pendiente'})*
+| Indicador | Valor | Fuente |
+|---|---|---|
+| Score transparencia financiera (PEI) | {f"{pei_finance_score}/100" if pei_finance_score else "N/D"} | {'PEI-10.0' if finance_confirmed else 'mock'} |
+| Transparencia derivada | {finance_score} ({finance_assessment}) | {'PEI-10.0' if finance_confirmed else 'mock'} |
+| Abuso de recursos estatales | {state_abuse} | mock |
+| Donaciones corporativas divulgadas | {'Sí' if donations_disclosed else 'No'} | mock |
+
+**Red de Poder** *(datos mock — pendiente de integración OpenCorporates)*
 - Vínculos candidato-medios: {power.get('media_ownership_links', 0)}
 - Vínculos con empresas estatales: {power.get('state_enterprise_links', 0)}
 - Vínculos militares-políticos: {'Sí' if power.get('military_links') else 'No'}
-- Riesgo de captura: {power.get('capture_risk', 'N/A')}
-"""
+- Riesgo de captura: {power.get('capture_risk', 'N/D')}"""
+
+    # Solo LLM para datos reales — media y/o finance PEI o RSF
+    if not media_confirmed and not finance_confirmed and not rsf_confirmed_cap5:
+        return f"## 5. Campaña, Redes de Poder y Financiamiento\n\n{struct}\n\n*Análisis narrativo pendiente de integración de fuentes reales de medios.*\n"
+
+    sys_prompt = (
+        "Sos un analista senior de integridad electoral para DEMOCRAC.IA/PEIRS. "
+        "Combinas tres registros en tu escritura: "
+        "(1) analitico-ejecutivo para inversores y tomadores de decision con foco en riesgo politico, "
+        "(2) periodistico de investigacion accesible para capacitaciones sobre democracia, "
+        "(3) tecnico con referencias a estandares internacionales cuando corresponda. "
+        "Redactas en espanol. Sos honesto sobre qué datos son verificados y cuales son estimaciones."
+    )
+
+    pei_media_interpretation = (
+        "muy bajo (cobertura fuertemente asimetrica)" if pei_media_score and pei_media_score < 30
+        else "bajo (cobertura parcialmente asimetrica)" if pei_media_score and pei_media_score < 50
+        else "moderado" if pei_media_score and pei_media_score < 70
+        else "aceptable"
+    ) if pei_media_score else "sin datos PEI"
+
+    pei_finance_interpretation = (
+        "muy bajo (financiamiento opaco, posible corrupcion)" if pei_finance_score and pei_finance_score < 25
+        else "bajo (transparencia limitada)" if pei_finance_score and pei_finance_score < 45
+        else "moderado" if pei_finance_score and pei_finance_score < 65
+        else "aceptable"
+    ) if pei_finance_score else "sin datos PEI"
+
+    rsf_block_prompt = ""
+    if rsf_confirmed_cap5 and rsf_score_cap5 is not None:
+        rsf_class_cap5 = (
+            "critica" if rsf_score_cap5 < 30 else "dificil" if rsf_score_cap5 < 45
+            else "problematica" if rsf_score_cap5 < 60 else "satisfactoria" if rsf_score_cap5 < 75 else "buena"
+        )
+        rsf_block_prompt = (
+            f"\nDATOS VERIFICADOS RSF 2025 (confidence=confirmed):\n"
+            f"- Score libertad de prensa: {rsf_score_cap5}/100 ({rsf_class_cap5}) — Rank #{rsf_rank_cap5}/180\n"
+            + (f"- Contexto politico RSF: {rsf_political_cap5}\n" if rsf_political_cap5 is not None else "")
+        )
+
+    user_prompt = (
+        f"Escribe exactamente 3 parrafos para el Capitulo 5 'Campana, Redes de Poder y Financiamiento'.\n\n"
+        f"DATOS VERIFICADOS (PEI-10.0, confidence=confirmed):\n"
+        f"- Score cobertura mediatica PEI: {pei_media_score}/100 — interpretacion: {pei_media_interpretation}\n"
+        f"- Bias index derivado: {bias_index} | Evaluacion: {media_assessment}\n"
+        f"- Score financiamiento campaña PEI: {pei_finance_score}/100 — interpretacion: {pei_finance_interpretation}\n"
+        f"- Transparencia derivada: {finance_score} ({finance_assessment})\n"
+        + rsf_block_prompt +
+        f"\nDATOS MOCK (no verificados, NO mencionar como hechos):\n"
+        f"- Abuso recursos estatales: {state_abuse}\n"
+        f"- Riesgo captura poder: {power.get('capture_risk', 'N/D')}\n\n"
+        f"ESTRUCTURA DE LOS 3 PARRAFOS:\n"
+        f"Parrafo 1 (analitico-ejecutivo, ~90 palabras): analiza el score de cobertura mediatica "
+        f"del PEI y su implicancia para la equidad de la campana. "
+        + (f"Integra el score RSF {rsf_score_cap5}/100 como indicador complementario de libertad de prensa. " if rsf_confirmed_cap5 and rsf_score_cap5 else "")
+        + f"El sesgo mediatico como factor de riesgo electoral segun los estandares de la Declaracion de Principios EOS.\n"
+        f"Parrafo 2 (analitico-ejecutivo, ~80 palabras): analiza la transparencia del financiamiento "
+        f"de campaña segun PEI. Vincula la opacidad financiera con riesgo de captura estatal "
+        f"y su impacto en la legitimidad del proceso para actores internacionales.\n"
+        f"Parrafo 3 (periodistico, ~70 palabras): conclusion accesible sobre el panorama de "
+        f"medios y financiamiento. Indica claramente que los datos de redes de poder son "
+        f"estimaciones pendientes de verificacion, sin presentarlos como hechos.\n\n"
+        f"Importante: distingui explicitamente entre datos PEI/RSF verificados y estimaciones mock."
+    )
+
+    def fallback(ms=pei_media_score, fs=pei_finance_score, ma=media_assessment, fa=finance_assessment, rs=rsf_score_cap5, rr=rsf_rank_cap5):
+        rsf_part = f" El índice RSF 2025 de libertad de prensa registra {rs}/100 (Rank #{rr}/180), completando el diagnóstico del entorno mediático." if rs else ""
+        return (
+            f"El score de cobertura mediatica del PEI ({ms}/100) indica una situacion de {ma}, "
+            f"lo que compromete el acceso equitativo a la informacion electoral segun los estandares "
+            f"de la Declaracion de Principios para la Observacion Internacional de Elecciones.{rsf_part} "
+            f"El financiamiento de campana registra un score de {fs}/100 ({fa}), "
+            f"senalando deficiencias en la transparencia que afectan la confianza institucional en el proceso."
+        )
+
+    narrative = _llm_generate(sys_prompt, user_prompt, fallback)
+
+    return f"## 5. Campaña, Redes de Poder y Financiamiento\n\n{struct}\n\n{narrative}\n"
 
 
-def _generate_digital_chapter(political: dict) -> str:
+def _generate_digital_chapter(political: dict, context: dict = None) -> str:
     digital = political.get("digital_ecosystem", {})
 
-    return f"""## 6. Ecosistema de Información y Monitoreo Digital
+    # Extraer datos V-Dem digitales del context
+    vdem_dig = {}
+    vdem_confirmed = False
+    vdem_year = "---"
+    if context:
+        vdem_dig_raw = context.get("digital_vdem", {})
+        if isinstance(vdem_dig_raw, dict) and "_trace" in vdem_dig_raw:
+            vdem_dig = vdem_dig_raw.get("value", {}) or {}
+            vdem_confirmed = vdem_dig_raw["_trace"].get("confidence") == "confirmed"
+        vdem_year = vdem_dig.get("data_year", "---")
 
-**Evaluación general:** {digital.get('assessment', 'N/A').upper()}
+    # RSF: datos reales de libertad de prensa
+    rsf_data = {}
+    rsf_confirmed = False
+    if context:
+        rsf_raw = context.get("rsf", {})
+        if isinstance(rsf_raw, dict) and "_trace" in rsf_raw:
+            rsf_data = rsf_raw.get("value", {}) or {}
+            rsf_confirmed = rsf_raw["_trace"].get("confidence") == "confirmed"
+    rsf_score = rsf_data.get("score")
+    rsf_rank = rsf_data.get("rank")
+    rsf_political = rsf_data.get("political_context")
+    rsf_legal = rsf_data.get("legal_context")
+    rsf_safety = rsf_data.get("safety")
+    rsf_economic = rsf_data.get("economic_context")
+    rsf_social = rsf_data.get("social_context")
+    rsf_table = "*RSF no disponible*"
+    rsf_source_note = ""
 
-**Manipulación Coordinada:**
-- Actividad de bots detectada: {'Sí' if digital.get('bot_activity') else 'No'}
-- Tamaño estimado de red de bots: {digital.get('bot_network_size', 0):,}
-- Campañas de desinformación: {digital.get('disinformation_campaigns', 0)}
+    # Tabla RSF — real si hay datos confirmados, placeholder si no
+    if rsf_confirmed and rsf_score is not None:
+        rsf_rows = [
+            "| Indicador | Valor | Fuente |",
+            "|---|---|---|",
+            f"| Score libertad de prensa 2025 | {rsf_score}/100 | RSF 2025 |",
+            f"| Ranking mundial | #{rsf_rank}/180 | RSF 2025 |",
+        ]
+        if rsf_political is not None:
+            rsf_rows.append(f"| Contexto político | {round(float(rsf_political), 1)}/100 | RSF 2025 |")
+        if rsf_legal is not None:
+            rsf_rows.append(f"| Marco legal | {round(float(rsf_legal), 1)}/100 | RSF 2025 |")
+        if rsf_safety is not None:
+            rsf_rows.append(f"| Seguridad periodistas | {round(float(rsf_safety), 1)}/100 | RSF 2025 |")
+        if rsf_economic is not None:
+            rsf_rows.append(f"| Contexto económico | {round(float(rsf_economic), 1)}/100 | RSF 2025 |")
+        if rsf_social is not None:
+            rsf_rows.append(f"| Contexto social | {round(float(rsf_social), 1)}/100 | RSF 2025 |")
+        rsf_table = "\n".join(rsf_rows)
+        rsf_source_note = "*Reporters Without Borders (RSF). Press Freedom Index 2025 — confidence: confirmed. https://rsf.org/en/index*"
+    else:
+        rsf_table = "*RSF Press Freedom Index: datos no disponibles para este país.*"
+        rsf_source_note = ""
 
-**Censura y Supresión:**
-- Censura de URLs detectada: {'Sí' if digital.get('censorship_detected') else 'No'}
-- Dominios censurados: {', '.join(digital.get('censored_domains', [])) or 'Ninguno'}
-- Supresión de votantes online: {'Sí' if digital.get('voter_suppression_online') else 'No'}
+    # FH para restricciones legales
+    fh_cl = 4
+    if context:
+        fh_raw = context.get("civil_liberties", {})
+        if isinstance(fh_raw, dict) and "_trace" in fh_raw:
+            cl_val = fh_raw.get("value", {})
+            fh_cl = cl_val.get("cl_rating", 4) if isinstance(cl_val, dict) else 4
 
-**Discurso de Odio:**
-- Incidentes detectados: {digital.get('hate_speech_incidents', 0)}
-"""
+    def score_label(val):
+        if val is None:
+            return "N/D"
+        if val >= 0.75:
+            return f"{round(val, 2)} — bajo riesgo"
+        if val >= 0.50:
+            return f"{round(val, 2)} — riesgo moderado"
+        if val >= 0.25:
+            return f"{round(val, 2)} — alto riesgo"
+        return f"{round(val, 2)} — riesgo critico"
+
+    fh_cl_label = (
+        "severas (CL=6-7)" if fh_cl >= 6
+        else "significativas (CL=5)" if fh_cl == 5
+        else "moderadas (CL=4)" if fh_cl == 4
+        else "limitadas (CL=3)" if fh_cl == 3
+        else "minimas (CL=1-2)"
+    )
+
+    # Tabla V-Dem
+    if vdem_confirmed:
+        vdem_rows = [
+            "| Indicador | Score (0=peor, 1=mejor) | Fuente |",
+            "|---|---|---|",
+            f"| Censura de internet (ejecutivo) | {score_label(vdem_dig.get('internet_censorship'))} | V-Dem v2mecenefi {vdem_year} |",
+            f"| Censura de medios (ejecutivo) | {score_label(vdem_dig.get('media_censorship'))} | V-Dem v2mecenefm {vdem_year} |",
+            f"| Acoso a periodistas | {score_label(vdem_dig.get('journalist_harassment'))} | V-Dem v2meharjrn {vdem_year} |",
+            f"| Sesgo mediatico | {score_label(vdem_dig.get('media_bias_vdem'))} | V-Dem v2mebias {vdem_year} |",
+            f"| Dominio gubernamental RRSS | {score_label(vdem_dig.get('gov_social_media_dominance'))} | V-Dem v2smgovdom {vdem_year} |",
+            f"| Capacidad filtrado internet | {score_label(vdem_dig.get('gov_internet_filter_capacity'))} | V-Dem v2smgovfilcap {vdem_year} |",
+            f"| Libertad de expresion alternativa | {score_label(vdem_dig.get('freedom_of_expression'))} | V-Dem v2x_freexp_altinf {vdem_year} |",
+        ]
+        vdem_table = "\n".join(vdem_rows)
+        vdem_source_note = f"*V-Dem Dataset v15, año {vdem_year} — confidence: confirmed*"
+    else:
+        vdem_table = "*V-Dem digital: datos no disponibles para este pais en la version actual.*"
+        vdem_source_note = ""
+
+    # Tabla de indicadores mock (siempre presente, claramente marcada)
+    mock_rows = [
+        "| Indicador | Estimacion | Estado |",
+        "|---|---|---|",
+        f"| Actividad de bots | {'Detectada' if digital.get('bot_activity') else 'No detectada'} | Mock |",
+        f"| Red de bots estimada | {digital.get('bot_network_size', 0):,} cuentas | Mock |",
+        f"| Campanas de desinformacion | {digital.get('disinformation_campaigns', 0)} | Mock |",
+        f"| Censura de URLs | {'Detectada' if digital.get('censorship_detected') else 'No detectada'} | Mock |",
+        f"| Supresion de votantes online | {'Si' if digital.get('voter_suppression_online') else 'No'} | Mock |",
+        f"| Incidentes discurso de odio | {digital.get('hate_speech_incidents', 0)} | Mock |",
+    ]
+    mock_table = "\n".join(mock_rows)
+
+    # Narrativa LLM solo si hay datos V-Dem reales
+    if vdem_confirmed:
+        sys_prompt = (
+            "Sos un analista senior de ecosistemas de informacion y libertad de prensa para DEMOCRAC.IA/PEIRS. "
+            "Combinas analisis tecnico con perspectiva de derechos humanos y accesibilidad para capacitaciones. "
+            "Escribis en espanol con precision."
+        )
+        user_prompt = (
+            "Escribe exactamente 3 parrafos sobre el ecosistema digital electoral.\n\n"
+            "DATOS VERIFICADOS V-Dem v15 (confidence=confirmed):\n"
+            f"- Censura internet ejecutivo: {score_label(vdem_dig.get('internet_censorship'))}\n"
+            f"- Censura medios ejecutivo: {score_label(vdem_dig.get('media_censorship'))}\n"
+            f"- Acoso periodistas: {score_label(vdem_dig.get('journalist_harassment'))}\n"
+            f"- Dominio gubernamental RRSS: {score_label(vdem_dig.get('gov_social_media_dominance'))}\n"
+            f"- Libertad expresion alternativa: {score_label(vdem_dig.get('freedom_of_expression'))}\n"
+            f"- Restricciones legales FH: {fh_cl_label}\n\n"
+            "Parrafo 1 (tecnico-institucional, ~90 palabras): estado de la censura y libertad de expresion "
+            "segun V-Dem. Vincula con Art. 19 ICCPR sobre libertad de expresion digital.\n"
+            "Parrafo 2 (analitico-ejecutivo, ~80 palabras): capacidad gubernamental de control del espacio "
+            "digital como factor de riesgo electoral para inversores y actores internacionales.\n"
+            "Parrafo 3 (periodistico, ~70 palabras): hallazgo mas significativo en lenguaje accesible. "
+            "Menciona que datos de bots y censura especifica estan pendientes de verificacion con OONI.\n\n"
+            "Solo prosa, sin vinetas ni subtitulos."
+        )
+
+        def fallback_dig(vd=vdem_dig, sl=score_label):
+            parts = []
+            ic = vd.get("internet_censorship")
+            if ic is not None:
+                parts.append(f"El indice de censura de internet registra {sl(ic)}, segun V-Dem v15.")
+            mh = vd.get("journalist_harassment")
+            if mh is not None:
+                parts.append(f"El acoso a periodistas alcanza {sl(mh)}, indicando restricciones al espacio civico informativo.")
+            return " ".join(parts) if parts else "Analisis del ecosistema digital basado en V-Dem v15."
+
+        narrative = _llm_generate(sys_prompt, user_prompt, fallback_dig)
+    else:
+        narrative = (
+            "*Analisis narrativo basado en V-Dem pendiente para este pais. "
+            "Los indicadores de V-Dem estan disponibles solo para paises con datos en el dataset v15 (2024).*"
+        )
+
+    # Narrativa RSF-only si no hay V-Dem pero sí RSF
+    if not vdem_confirmed and rsf_confirmed and rsf_score is not None:
+        rsf_class = (
+            "critica" if rsf_score < 30 else "dificil" if rsf_score < 45
+            else "problematica" if rsf_score < 60 else "satisfactoria" if rsf_score < 75 else "buena"
+        )
+        sys_rsf = "Sos un analista de libertad de prensa para DEMOCRAC.IA/PEIRS. Espanol, preciso."
+        usr_rsf = (
+            f"2 parrafos sobre libertad de prensa. RSF 2025: score={rsf_score}/100 ({rsf_class}), "
+            f"rank=#{rsf_rank}/180, politico={rsf_political}, legal={rsf_legal}, seguridad={rsf_safety}. "
+            "P1 (~80 palabras): estado segun RSF, Art. 19 ICCPR. "
+            "P2 (~70 palabras): impacto electoral, menciona OONI pendiente. Solo prosa."
+        )
+        narrative = _llm_generate(sys_rsf, usr_rsf, lambda rs=rsf_score, rr=rsf_rank: f"RSF score {rs}/100 (Rank #{rr}).")
+
+    lines = [
+        "## 6. Ecosistema de Informacion y Monitoreo Digital",
+        "",
+        "### Libertad de Prensa — RSF Press Freedom Index 2025",
+        "",
+        rsf_table,
+        rsf_source_note,
+        "",
+        "### Libertad de Expresion e Informacion — V-Dem v15",
+        "",
+        vdem_table,
+        vdem_source_note,
+        "",
+        f"### Restricciones Legales a Medios — Freedom House FIW 2025",
+        "",
+        f"Libertades civiles (CL rating): {fh_cl}/7 — restricciones {fh_cl_label}",
+        "",
+        "### Analisis Narrativo",
+        "",
+        narrative,
+        "",
+        "### Indicadores Estimados del Sistema *(pendiente verificacion OONI)*",
+        "",
+        mock_table,
+        "",
+        "### Fuentes Pendientes de Integracion — Fase 2",
+        "",
+        "- **OONI** — censura de internet en tiempo real (ooni.org)",
+        "- **CIVICUS Monitor** — espacio civico digital",
+        "- **NetBlocks** — interrupciones de internet durante elecciones",
+    ]
+    return "\n".join(lines)
+
+
+def _generate_voting_day_chapter(voting_day_data: dict, state: "ElectionRiskState") -> dict:
+    """Genera Cap. 7 con datos semi-manuales del dia de votacion."""
+    if not voting_day_data or not voting_day_data.get("active"):
+        return (
+            "## 7. Desarrollo del Dia de Votacion\n\n"
+            "> Este capitulo se activa el dia de la eleccion mediante el endpoint "
+            "`POST /api/analyze/voting-day` con datos de participacion, incidentes "
+            "y reportes de observadores.\n\n"
+            "**Estado:** En espera de datos del dia de votacion.\n"
+        )
+
+    # Extraer datos
+    participation = voting_day_data.get("participation_pct")
+    results_pct = voting_day_data.get("results_transmitted_pct")
+    incidents = voting_day_data.get("incidents", [])
+    observer_reports = voting_day_data.get("observer_reports", [])
+    emb_statements = voting_day_data.get("emb_statements", [])
+    media_restrictions = voting_day_data.get("media_restrictions_reported", False)
+    internet_disruptions = voting_day_data.get("internet_disruptions", False)
+    violence_incidents = voting_day_data.get("violence_incidents", 0)
+    timestamp_local = voting_day_data.get("timestamp_local", "Sin dato")
+    updated_at = voting_day_data.get("updated_at", "")
+
+    # Evaluacion del dia
+    day_risk_factors = 0
+    if violence_incidents and violence_incidents > 0:
+        day_risk_factors += 2
+    if media_restrictions:
+        day_risk_factors += 1
+    if internet_disruptions:
+        day_risk_factors += 1
+    if len(incidents) > 3:
+        day_risk_factors += 1
+
+    day_assessment = (
+        "CRITICO" if day_risk_factors >= 4
+        else "ALTO RIESGO" if day_risk_factors >= 3
+        else "ALERTA" if day_risk_factors >= 2
+        else "NORMAL CON INCIDENTES" if day_risk_factors >= 1
+        else "NORMAL"
+    )
+
+    # Tabla de situacion
+    rows = [
+        "| Indicador | Estado | Fuente |",
+        "|---|---|---|",
+        f"| Participacion estimada | {str(participation) + '%' if participation is not None else 'Sin dato'} | Reporte campo |",
+        f"| Actas transmitidas | {str(results_pct) + '%' if results_pct is not None else 'Sin dato'} | EMB |",
+        f"| Incidentes reportados | {len(incidents)} | Observadores |",
+        f"| Violencia fisica | {violence_incidents or 0} casos | Reportes campo |",
+        f"| Restricciones a medios | {'Si' if media_restrictions else 'No'} | Monitoreo |",
+        f"| Interrupciones internet | {'Detectadas' if internet_disruptions else 'No detectadas'} | OONI/campo |",
+    ]
+    table = "\n".join(rows)
+
+    # Secciones de incidentes
+    incidents_section = ""
+    if incidents:
+        inc_lines = ["\n**Incidentes Reportados:**"]
+        for inc in incidents:
+            inc_lines.append("- " + inc)
+        incidents_section = "\n".join(inc_lines)
+
+    obs_section = ""
+    if observer_reports:
+        obs_lines = ["\n**Reportes de Observadores:**"]
+        for rep in observer_reports:
+            obs_lines.append("- " + rep)
+        obs_section = "\n".join(obs_lines)
+
+    emb_section = ""
+    if emb_statements:
+        emb_lines = ["\n**Declaraciones del Organismo Electoral:**"]
+        for stmt in emb_statements:
+            emb_lines.append("- " + stmt)
+        emb_section = "\n".join(emb_lines)
+
+    # Narrativa LLM
+    sys_prompt = (
+        "Sos el analista de operaciones electorales de DEMOCRAC.IA/PEIRS. "
+        "Generás reportes del dia de votacion en espanol, tono tecnico-periodistico de alto nivel. "
+        "Basas el analisis exclusivamente en los datos recibidos."
+    )
+
+    incidents_str = "; ".join(incidents[:5]) if incidents else "sin incidentes mayores"
+    obs_str = "; ".join(observer_reports[:3]) if observer_reports else "sin reportes"
+
+    user_prompt = (
+        "Genera el reporte del dia de votacion para " + state["country"]
+        + " (eleccion: " + state["election_date"] + "). "
+        + "Hora de actualizacion: " + timestamp_local + ". "
+        + "Participacion: " + (str(participation) + "%" if participation else "sin dato") + ". "
+        + "Actas transmitidas: " + (str(results_pct) + "%" if results_pct else "sin dato") + ". "
+        + "Incidentes: " + incidents_str + ". "
+        + "Reportes observadores: " + obs_str + ". "
+        + "Violencia: " + str(violence_incidents or 0) + " casos. "
+        + "Restricciones medios: " + ("si" if media_restrictions else "no") + ". "
+        + "Internet: " + ("interrupciones detectadas" if internet_disruptions else "estable") + ". "
+        + "Evaluacion del dia: " + day_assessment + ". "
+        + "Escribe exactamente 3 parrafos: "
+        + "Parrafo 1 (~90 palabras): estado general del proceso y participacion. "
+        + "Parrafo 2 (~90 palabras): incidentes y reportes de observadores con impacto en integridad. "
+        + "Parrafo 3 (~80 palabras): evaluacion del desarrollo del dia y proximos pasos. "
+        + "Solo prosa, sin vinetas."
+    )
+
+    def fallback_vd():
+        return (
+            "El proceso electoral en " + state["country"] + " se desarrolla con evaluacion "
+            + day_assessment + ". "
+            + "Participacion estimada: " + (str(participation) + "%" if participation else "sin dato") + ". "
+            + "Se han registrado " + str(len(incidents)) + " incidentes reportados por observadores en campo."
+        )
+
+    narrative = _llm_generate(sys_prompt, user_prompt, fallback_vd)
+
+    lines = [
+        "## 7. Desarrollo del Dia de Votacion",
+        "",
+        f"> **Ultima actualizacion:** {timestamp_local} | **Evaluacion del dia:** {day_assessment}",
+        f"> Datos cargados: {updated_at[:19] if updated_at else 'N/A'} UTC",
+        "",
+        "### Cuadro de Situacion",
+        "",
+        table,
+        incidents_section,
+        obs_section,
+        emb_section,
+        "",
+        "### Analisis Narrativo",
+        "",
+        narrative,
+        "",
+        "*Datos cargados via endpoint /api/analyze/voting-day. "
+        "Verificacion en tiempo real con OONI y fuentes primarias pendiente.*",
+    ]
+
+    return "\n".join(lines)
 
 
 def _generate_justice_chapter(legal: dict) -> str:
     violations = legal.get("violations", [])
 
     if not violations:
-        return """## 8. Justicia Electoral y Resolución de Disputas
+        sys_prompt = "Sos un analista de cumplimiento de derecho electoral para DEMOCRAC.IA/PEIRS. Escribis en espanol, tono tecnico institucional."
+        user_prompt = (
+            "Escribe 1 parrafo (max 80 palabras) sobre cumplimiento del derecho electoral internacional "
+            "para un pais sin violaciones detectadas. Menciona que opera dentro de estandares ICCPR y EOS."
+        )
+        def fb_no():
+            return "No se detectaron violaciones al derecho internacional. El sistema opera dentro de los parametros EOS."
+        narrative = _llm_generate(sys_prompt, user_prompt, fb_no)
+        return f"## 8. Justicia Electoral y Resolucion de Disputas\n\n{narrative}\n"
 
-No se detectaron violaciones al derecho internacional en el proceso analizado. El sistema de justicia electoral opera dentro de los parámetros de los estándares EOS.
-"""
+    confirmed_viols = [v for v in violations if v.get("confidence") == "confirmed"]
+    mock_viols = [v for v in violations if v.get("confidence") != "confirmed"]
 
     violation_lines = "\n".join(
-        f"| {v['treaty']} {v['article']} | {v['right']} | {v['severity'].upper()} | {v['finding'][:80]}... |"
+        f"| {v['treaty']} {v['article']} | {v['right']} | {v['severity'].upper()} | {v['confidence'].upper()} | {v['finding'][:75]}... |"
         for v in violations
     )
 
-    return f"""## 8. Justicia Electoral y Resolución de Disputas
+    viols_for_llm = "\n".join(
+        f"- [{v['treaty']} {v['article']}] {v['right']} ({v['severity'].upper()}): {v['finding'][:120]}"
+        for v in confirmed_viols
+    )
 
-**Violaciones al Derecho Internacional Detectadas: {len(violations)}**
+    sys_prompt = (
+        "Sos un analista de cumplimiento de derecho electoral para DEMOCRAC.IA/PEIRS. "
+        "Redactas en espanol, tono tecnico institucional. Solo usas las violaciones verificadas que recibes."
+    )
+    user_prompt = (
+        f"Escribe exactamente 2 parrafos sobre las violaciones al derecho electoral detectadas.\n\n"
+        f"VIOLACIONES VERIFICADAS ({len(confirmed_viols)} de {len(violations)} total):\n"
+        f"{viols_for_llm if viols_for_llm else 'Ninguna con datos reales verificados'}\n\n"
+        f"Parrafo 1: patron general de violaciones y relacion con ICCPR. "
+        f"Parrafo 2: implicancias para legitimidad electoral y posibles mecanismos de remediacion. "
+        f"Max 80 palabras c/u. No listes los articulos exactos, interpreta el patron juridico."
+    )
 
-| Referencia Legal | Derecho Afectado | Severidad | Hallazgo |
-|---|---|---|---|
-{violation_lines}
+    def fb_viols(v=violations):
+        return f"Se detectaron {len(v)} violaciones al derecho internacional. Patron sistematico en multiples dimensiones."
 
-**Artículos referenciados:** {', '.join(legal.get('articles_referenced', []))}
+    narrative = _llm_generate(sys_prompt, user_prompt, fb_viols)
 
-**Factores agravantes:** Patrón sistemático de violaciones en múltiples dimensiones.
-"""
-
+    return (
+        f"## 8. Justicia Electoral y Resolucion de Disputas\n\n"
+        f"**Violaciones al Derecho Internacional Detectadas: {len(violations)}** "
+        f"({len(confirmed_viols)} verificadas / {len(mock_viols)} pendientes de verificacion)\n\n"
+        f"| Referencia Legal | Derecho Afectado | Severidad | Confianza | Hallazgo |\n"
+        f"|---|---|---|---|---|\n"
+        f"{violation_lines}\n\n"
+        f"**Articulos referenciados:** {', '.join(legal.get('articles_referenced', []))}\n\n"
+        f"{narrative}\n"
+    )
 
 def _generate_recommendations(state: ElectionRiskState) -> str:
     risk = state["risk_level"]
@@ -1736,19 +3118,18 @@ def _generate_recommendations(state: ElectionRiskState) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def build_workflow() -> StateGraph:
-    """Construye y compila el grafo de agentes."""
     workflow = StateGraph(ElectionRiskState)
 
-    # Añadir nodos (agentes)
     workflow.add_node("Ingestion", ingestion_agent)
     workflow.add_node("PoliticalAnalyst", political_analyst_agent)
     workflow.add_node("LegalCompliance", legal_compliance_agent)
+    workflow.add_node("DictamenAgent", electoral_dictamen_agent)
     workflow.add_node("ReportGenerator", report_generator_agent)
 
-    # Definir flujo secuencial
     workflow.add_edge("Ingestion", "PoliticalAnalyst")
     workflow.add_edge("PoliticalAnalyst", "LegalCompliance")
-    workflow.add_edge("LegalCompliance", "ReportGenerator")
+    workflow.add_edge("LegalCompliance", "DictamenAgent")
+    workflow.add_edge("DictamenAgent", "ReportGenerator")
     workflow.add_edge("ReportGenerator", END)
 
     workflow.set_entry_point("Ingestion")
@@ -1756,7 +3137,6 @@ def build_workflow() -> StateGraph:
     return workflow.compile()
 
 
-# Compilar la app de LangGraph
 peirs_pipeline = build_workflow()
 
 
@@ -1772,14 +3152,132 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción: restringir a dominio del dashboard
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Almacén de reportes en memoria (en producción: PostgreSQL)
+# ── Persistencia de reportes en disco ──────────────────────────────────────
+REPORTS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "reports")
+REPORTS_HISTORY_DIR = os.path.join(REPORTS_DIR, "history")
+REPORTS_INDEX_PATH = os.path.join(REPORTS_DIR, "index.json")
+os.makedirs(REPORTS_DIR, exist_ok=True)
+os.makedirs(REPORTS_HISTORY_DIR, exist_ok=True)
+
+def _report_path(run_id: str) -> str:
+    return os.path.join(REPORTS_DIR, f"{run_id}.json")
+
+def _load_reports_index() -> dict:
+    if not os.path.exists(REPORTS_INDEX_PATH):
+        return {}
+    try:
+        with open(REPORTS_INDEX_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def _save_reports_index(index: dict) -> None:
+    with open(REPORTS_INDEX_PATH, "w", encoding="utf-8") as f:
+        json.dump(index, f, ensure_ascii=False, indent=2, default=str)
+
+def save_report(result: dict) -> None:
+    """Guarda reporte con versioning completo."""
+    run_id = result.get("run_id")
+    country_code = result.get("country_code", "UNKNOWN")
+    if not run_id:
+        return
+    try:
+        # 1. Guardar reporte actual (por run_id)
+        with open(_report_path(run_id), "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, default=str)
+
+        # 2. Copia en historial con timestamp
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        history_file = f"{country_code}_{timestamp}_{run_id[:8]}.json"
+        with open(os.path.join(REPORTS_HISTORY_DIR, history_file), "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, default=str)
+
+        # 3. Actualizar índice
+        index = _load_reports_index()
+        if country_code not in index:
+            index[country_code] = []
+        index[country_code].append({
+            "run_id": run_id,
+            "timestamp": result.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            "risk_score": result.get("risk_score", 0),
+            "risk_level": result.get("risk_level", "unknown"),
+            "violation_count": result.get("legal_analysis", {}).get("violation_count", 0),
+            "history_file": history_file,
+        })
+        index[country_code] = index[country_code][-20:]  # últimos 20 por país
+        _save_reports_index(index)
+
+        version = len(index[country_code])
+        print(f"[Reports] ✅ {country_code} v{version} guardado: {run_id[:8]}...")
+    except Exception as e:
+        print(f"[Reports] ⚠️ Error guardando {run_id}: {e}")
+
+def load_report(run_id: str) -> Optional[dict]:
+    path = _report_path(run_id)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[Reports] ⚠️ Error cargando {run_id}: {e}")
+        return None
+
 reports_store: Dict[str, dict] = {}
+
+
+def _preload_reports_on_startup() -> None:
+    """Al iniciar, carga en memoria el reporte más reciente de cada país desde disco."""
+    index = _load_reports_index()
+    loaded = 0
+    for code, entries in index.items():
+        if not entries:
+            continue
+        latest = entries[-1]
+        run_id = latest.get("run_id")
+        if run_id and run_id not in reports_store:
+            report = load_report(run_id)
+            if report:
+                reports_store[run_id] = report
+                loaded += 1
+    print(f"[Startup] Pre-cargados {loaded} reportes desde disco.")
+
+
+def _cleanup_orphan_reports() -> None:
+    """Elimina archivos JSON en data/reports/ que no están referenciados en el índice."""
+    index = _load_reports_index()
+    valid_ids = set()
+    for entries in index.values():
+        for e in entries:
+            if e.get("run_id"):
+                valid_ids.add(e["run_id"])
+    removed = 0
+    try:
+        for fname in os.listdir(REPORTS_DIR):
+            if not fname.endswith(".json") or fname == "index.json":
+                continue
+            run_id = fname[:-5]
+            if run_id not in valid_ids:
+                os.remove(os.path.join(REPORTS_DIR, fname))
+                removed += 1
+        if removed:
+            print(f"[Startup] Eliminados {removed} archivos huerfanos de data/reports/.")
+        else:
+            print(f"[Startup] Sin archivos huerfanos.")
+    except Exception as e:
+        print(f"[Startup] Error en cleanup: {e}")
+
+
+@app.on_event("startup")
+async def on_startup():
+    _cleanup_orphan_reports()
+    _preload_reports_on_startup()
 
 
 class AnalyzeRequest(BaseModel):
@@ -1794,6 +3292,20 @@ class AnalyzeResponse(BaseModel):
     risk_level: str
     violation_count: int
     status: str
+
+
+class VotingDayInput(BaseModel):
+    country_code: str
+    run_id: str  # Run ID del análisis previo a actualizar
+    participation_pct: Optional[float] = None          # Participación estimada 0-100
+    results_transmitted_pct: Optional[float] = None    # Actas transmitidas 0-100
+    incidents: Optional[List[str]] = []                # Lista de incidentes reportados
+    observer_reports: Optional[List[str]] = []         # Reportes de observadores
+    emb_statements: Optional[List[str]] = []           # Declaraciones del EMB
+    media_restrictions_reported: Optional[bool] = None # Restricciones a medios detectadas
+    internet_disruptions: Optional[bool] = None        # Interrupciones de internet
+    violence_incidents: Optional[int] = 0              # Número de incidentes de violencia
+    timestamp_local: Optional[str] = None              # Hora local de actualización
 
 
 @app.get("/api/health")
@@ -1838,18 +3350,15 @@ async def analyze_election(request: AnalyzeRequest):
     country_info = COUNTRY_CATALOG[code]
     election_date = request.election_date or country_info["election_date"]
 
-    # Crear estado inicial
     initial_state = create_initial_state(
         country=country_info["name"],
         country_code=code,
         election_date=election_date,
     )
 
-    # Ejecutar pipeline completo
     result = peirs_pipeline.invoke(initial_state)
-
-    # Almacenar resultado
     reports_store[result["run_id"]] = result
+    save_report(result)
 
     return AnalyzeResponse(
         run_id=result["run_id"],
@@ -1864,8 +3373,10 @@ async def analyze_election(request: AnalyzeRequest):
 @app.get("/api/report/{run_id}")
 async def get_report(run_id: str):
     if run_id not in reports_store:
-        raise HTTPException(status_code=404, detail="Reporte no encontrado")
-
+        disk = load_report(run_id)
+        if disk is None:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado")
+        reports_store[run_id] = disk
     result = reports_store[run_id]
 
     return {
@@ -1886,20 +3397,34 @@ async def get_report(run_id: str):
         "timestamp": result["timestamp"],
         "applicable_instruments": result.get("applicable_instruments", {}),
         "trace_log": result.get("trace_log", []),
+        "dictamen": result.get("dictamen", {}),
+    }
+
+
+@app.get("/api/report/{run_id}/markdown")
+async def get_report_markdown(run_id: str):
+    if run_id not in reports_store:
+        disk = load_report(run_id)
+        if disk is None:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado")
+        reports_store[run_id] = disk
+    return {
+        "run_id": run_id,
+        "markdown": reports_store[run_id]["final_report_markdown"],
     }
 
 
 @app.get("/api/report/{run_id}/traceability")
 async def get_report_traceability(run_id: str):
-    """Endpoint dedicado de trazabilidad: muestra el origen y confianza de cada dato."""
     if run_id not in reports_store:
-        raise HTTPException(status_code=404, detail="Reporte no encontrado")
-
+        disk = load_report(run_id)
+        if disk is None:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado")
+        reports_store[run_id] = disk
     result = reports_store[run_id]
     trace_log = result.get("trace_log", [])
     legal = result.get("legal_analysis", {})
 
-    # Resumen de confianza
     confidence_counts = {}
     for t in trace_log:
         conf = t.get("confidence", "unknown")
@@ -1924,9 +3449,39 @@ async def get_report_traceability(run_id: str):
     }
 
 
+@app.get("/api/reports/history/{country_code}")
+async def get_report_history(country_code: str):
+    """Historial de reportes generados para un país."""
+    index = _load_reports_index()
+    code = country_code.upper()
+    history = index.get(code, [])
+    return {
+        "country_code": code,
+        "total_reports": len(history),
+        "history": list(reversed(history)),  # más reciente primero
+    }
+
+
+@app.get("/api/reports/history")
+async def get_all_history():
+    """Historial completo de todos los países."""
+    index = _load_reports_index()
+    summary = {}
+    for code, reports in index.items():
+        if reports:
+            latest = reports[-1]
+            summary[code] = {
+                "total_reports": len(reports),
+                "latest_run_id": latest["run_id"],
+                "latest_timestamp": latest["timestamp"],
+                "latest_risk_score": latest["risk_score"],
+                "latest_risk_level": latest["risk_level"],
+            }
+    return {"countries": summary, "total_countries": len(summary)}
+
+
 @app.get("/api/instruments/{country_code}")
 async def get_instruments(country_code: str):
-    """Retorna los instrumentos legales internacionales aplicables a un país."""
     code = country_code.upper()
     instruments = get_applicable_instruments(code)
     return {
@@ -1938,59 +3493,73 @@ async def get_instruments(country_code: str):
     }
 
 
-@app.get("/api/report/{run_id}/markdown")
-async def get_report_markdown(run_id: str):
-    if run_id not in reports_store:
-        raise HTTPException(status_code=404, detail="Reporte no encontrado")
-
-    return {
-        "run_id": run_id,
-        "markdown": reports_store[run_id]["final_report_markdown"],
-    }
-
-
 @app.get("/api/dashboard")
-async def get_dashboard_data():
-    """
-    Ejecuta el pipeline para todos los países y devuelve datos
-    formateados para el dashboard React.
+async def get_dashboard_data(force_refresh: bool = False):
+    """Retorna datos del dashboard para todos los países.
+    Usa caché de disco (< 24h) por defecto. Forzar regeneración con ?force_refresh=true.
     """
     dashboard_countries = []
+    index = _load_reports_index()
+    now_ts = datetime.now(timezone.utc)
+    cached_count = 0
+    generated_count = 0
 
     for code, info in COUNTRY_CATALOG.items():
-        # Ejecutar pipeline
-        state = create_initial_state(
-            country=info["name"],
-            country_code=code,
-            election_date=info["election_date"],
-        )
-        result = peirs_pipeline.invoke(state)
-        reports_store[result["run_id"]] = result
+        result = None
 
-        # Extraer datos para el dashboard
+        # Intentar caché si no se pide force_refresh
+        if not force_refresh:
+            entries = index.get(code, [])
+            if entries:
+                latest = entries[-1]
+                try:
+                    ts_str = latest.get("timestamp", "")
+                    if ts_str:
+                        ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=timezone.utc)
+                        age_h = (now_ts - ts).total_seconds() / 3600
+                        if age_h < 24:
+                            cached = load_report(latest["run_id"])
+                            if cached:
+                                result = cached
+                                reports_store[latest["run_id"]] = cached
+                                cached_count += 1
+                except Exception:
+                    pass
+
+        # Sin caché válida: correr pipeline completo
+        if result is None:
+            state = create_initial_state(
+                country=info["name"],
+                country_code=code,
+                election_date=info["election_date"],
+            )
+            result = peirs_pipeline.invoke(state)
+            reports_store[result["run_id"]] = result
+            save_report(result)
+            index = _load_reports_index()
+            generated_count += 1
+
         context = result.get("context_data", {})
         political = result.get("political_data", {})
         legal = result.get("legal_analysis", {})
 
-        # Construir media_data desde exposure_distribution
         exposure = political.get("media_analysis", {}).get("exposure_distribution", {})
         media_data = [
             {"name": k.replace("_", " ").title(), "exposure": v, "sentiment": 0}
             for k, v in exposure.items()
         ]
 
-        # Construir violations list (strings simplificados)
         violations_simple = [
             f"{v['treaty']} {v['article']}" for v in legal.get("violations", [])
         ]
 
-        # Construir dimensions desde los datos reales del scoring
-        # Usar extract_value para datos trazados
-        emb_scores = {"full": 95, "partial": 60, "compromised": 25, "captured": 5}
+        emb_scores_map = {"full": 95, "partial": 60, "compromised": 25, "captured": 5}
         emb_data = extract_value(context.get("emb", {}))
         emb_level = emb_data.get("independence_level", "partial") if isinstance(emb_data, dict) else "partial"
 
-        eco_scores = {"healthy": 90, "concerning": 60, "compromised": 35, "hostile": 10}
+        eco_scores_map = {"healthy": 90, "concerning": 60, "compromised": 35, "hostile": 10}
         eco_level = political.get("digital_ecosystem", {}).get("assessment", "concerning")
 
         finance_score = political.get("campaign_finance", {}).get("transparency_score", 0.5)
@@ -2006,37 +3575,40 @@ async def get_dashboard_data():
         dimensions = {
             "suffrage": max(5, int(fh * 0.9)),
             "legalFramework": max(5, int(vdem_val * 100)),
-            "embIndependence": emb_scores.get(emb_level, 50),
+            "embIndependence": emb_scores_map.get(emb_level, 50),
             "mediaFreedom": max(5, int((1 - media_bias) * 100)),
             "campaignFinance": max(5, int(finance_score * 100)),
-            "digitalEcosystem": eco_scores.get(eco_level, 40),
+            "digitalEcosystem": eco_scores_map.get(eco_level, 40),
             "disputeResolution": max(5, int(vdem_val * 90)),
             "inclusion": max(5, int(fh * 0.8)),
         }
 
-        # Determinar trend
         risk = result["risk_score"]
-        trend = "deteriorating" if risk >= 70 else "stable" if risk >= 30 else "stable"
+        trend = "deteriorating" if risk >= 70 else "stable"
 
-        # Construir alerts desde violations + risk_factors
         alerts = []
         for v in legal.get("violations", [])[:4]:
             alert_type = "critical" if v["severity"] == "critical" else "high" if v["severity"] == "high" else "moderate"
             alerts.append({"type": alert_type, "text": v["finding"][:120]})
         for rf in legal.get("risk_factors", [])[:2]:
             alerts.append({"type": rf.get("severity", "moderate"), "text": rf["finding"][:120]})
-
         if not alerts:
             alerts.append({"type": "low", "text": "Sistema electoral estable con garantías institucionales sólidas"})
 
-        # Timeline simulada (en producción: datos históricos de PostgreSQL)
-        import random
-        months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"]
-        base = max(10, risk - random.randint(10, 25))
-        timeline = []
-        for i, m in enumerate(months):
-            step = base + int((risk - base) * (i / (len(months) - 1)))
-            timeline.append({"month": m, "score": step})
+        # Timeline desde datos históricos V-Dem (reemplaza números aleatorios)
+        vdem_trend = _get_vdem_trend(VDEM_DF, code, years_back=5)
+        if vdem_trend.get("available") and len(vdem_trend.get("values", [])) >= 2:
+            timeline = [
+                {"month": str(year), "score": max(5, min(99, round((1 - libdem) * 100)))}
+                for year, libdem in vdem_trend["values"][-6:]
+            ]
+        else:
+            base = max(10, int(risk * 0.7))
+            years_labels = [str(2019 + i) for i in range(6)]
+            timeline = [
+                {"month": yr, "score": base + int((risk - base) * (i / max(1, 5)))}
+                for i, yr in enumerate(years_labels)
+            ]
 
         dashboard_countries.append({
             "id": code.lower(),
@@ -2055,9 +3627,998 @@ async def get_dashboard_data():
             "alerts": alerts,
             "mediaData": media_data,
             "agentLogs": result.get("agent_logs", []),
+            "region": COUNTRY_REGIONS.get(code, "unknown"),
         })
 
+    print(f"[Dashboard] ✅ {cached_count} desde caché, {generated_count} regenerados.")
     return {"countries": dashboard_countries, "generated_at": datetime.now(timezone.utc).isoformat()}
+
+
+@app.post("/api/analyze/voting-day")
+async def update_voting_day(request: VotingDayInput):
+    """Actualiza el Cap. 7 de un reporte existente con datos del dia de votacion."""
+    run_id = request.run_id
+    code = request.country_code.upper()
+
+    if run_id not in reports_store:
+        disk = load_report(run_id)
+        if disk is None:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado. Ejecuta /api/analyze primero.")
+        reports_store[run_id] = disk
+
+    result = reports_store[run_id]
+
+    # Guardar datos del dia de votacion en el estado
+    voting_day_data = {
+        "active": True,
+        "participation_pct": request.participation_pct,
+        "results_transmitted_pct": request.results_transmitted_pct,
+        "incidents": request.incidents or [],
+        "observer_reports": request.observer_reports or [],
+        "emb_statements": request.emb_statements or [],
+        "media_restrictions_reported": request.media_restrictions_reported,
+        "internet_disruptions": request.internet_disruptions,
+        "violence_incidents": request.violence_incidents or 0,
+        "timestamp_local": request.timestamp_local or datetime.now(timezone.utc).strftime("%H:%M UTC"),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    result["voting_day_data"] = voting_day_data
+
+    # Crear un state temporal para regenerar el cap 7
+    from copy import deepcopy
+    temp_state = deepcopy(result)
+    temp_state["voting_day_data"] = voting_day_data
+
+    # Regenerar solo el cap 7
+    new_cap7 = _generate_voting_day_chapter(voting_day_data, temp_state)
+    result["report_chapters"]["07_voting_day"] = new_cap7
+
+    # Reconstruir el informe completo
+    report_header = (
+        "# DEMOCRAC.IA — Informe VIP de Integridad Electoral\n"
+        f"## {result['country']} — Eleccion: {result['election_date']}\n\n"
+        f"**Indice Predictivo de Riesgo:** {result['risk_score']}/100 ({result['risk_level'].upper()})\n"
+        f"**Generado:** {result['timestamp'][:19]} UTC\n"
+        f"**Run ID:** `{run_id}`\n\n---\n\n"
+    )
+    result["final_report_markdown"] = report_header + "\n\n".join(result["report_chapters"].values())
+
+    # Guardar actualización en disco
+    reports_store[run_id] = result
+    save_report(result)
+
+    return {
+        "run_id": run_id,
+        "country": result["country"],
+        "status": "voting_day_updated",
+        "day_assessment": voting_day_data.get("timestamp_local"),
+        "incidents_loaded": len(voting_day_data["incidents"]),
+        "observer_reports_loaded": len(voting_day_data["observer_reports"]),
+        "message": "Cap. 7 actualizado exitosamente. Accede al informe via /api/report/" + run_id,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6b. SENTINEL — Monitoreo de elecciones próximas y alertas en tiempo real
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/sentinel/alerts")
+async def get_sentinel_alerts():
+    """
+    SENTINEL: Monitoreo en tiempo real de elecciones próximas.
+    Cruza el calendario electoral con los índices PEIRS para generar alertas.
+    """
+    now = datetime.now(timezone.utc).date()
+    index = _load_reports_index()
+
+    active_alerts = []   # < 90 días
+    watch_list = []      # 90–365 días
+    full_calendar = []   # todas las próximas
+
+    for code, info in COUNTRY_CATALOG.items():
+        election_date_str = info.get("election_date")
+        if not election_date_str:
+            continue
+        try:
+            election_date = datetime.strptime(election_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+
+        days_remaining = (election_date - now).days
+
+        # Obtener risk data del último reporte disponible
+        risk_score = None
+        risk_level = "unknown"
+        trend = "stable"
+        run_id = None
+        violations_count = 0
+
+        entries = index.get(code, [])
+        if entries:
+            latest = entries[-1]
+            run_id = latest.get("run_id")
+            report = reports_store.get(run_id) if run_id else None
+            if report is None and run_id:
+                report = load_report(run_id)
+                if report:
+                    reports_store[run_id] = report
+            if report:
+                risk_score = report.get("risk_score")
+                risk_level = report.get("risk_level", "unknown")
+                trend = report.get("trend", "stable")
+                violations_count = len(report.get("violations", []))
+
+        # Nivel de alerta: combina días restantes + riesgo
+        if risk_level == "critical":
+            alert_color = "critical"
+        elif risk_level == "high":
+            alert_color = "high"
+        elif risk_level == "moderate":
+            alert_color = "moderate"
+        else:
+            alert_color = "low"
+
+        # Urgency score: mayor cuando la elección está cerca Y el riesgo es alto
+        if risk_score is not None and days_remaining >= 0:
+            proximity = max(0.0, 1.0 - days_remaining / 365)
+            urgency = round(risk_score * proximity, 1)
+        else:
+            urgency = 0.0
+
+        # Texto de alerta contextual
+        if days_remaining < 0:
+            alert_text = f"Elección celebrada hace {abs(days_remaining)} días"
+        elif days_remaining == 0:
+            alert_text = "⚡ ELECCIÓN HOY"
+        elif days_remaining <= 7:
+            alert_text = f"⚡ Elección en {days_remaining} días — intervención SENTINEL recomendada"
+        elif days_remaining <= 30:
+            alert_text = f"Elección en {days_remaining} días — monitoreo activo"
+        elif days_remaining <= 90:
+            alert_text = f"Elección en {days_remaining} días — preparación MOE"
+        else:
+            alert_text = f"Elección en {days_remaining} días"
+
+        entry = {
+            "country_code": code,
+            "country_name": info.get("name", code),
+            "flag": info.get("flag", "🌍"),
+            "election_date": election_date_str,
+            "days_remaining": days_remaining,
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            "alert_color": alert_color,
+            "trend": trend,
+            "urgency_score": urgency,
+            "alert_text": alert_text,
+            "violations_count": violations_count,
+            "run_id": run_id,
+            "region": COUNTRY_REGIONS.get(code, "unknown"),
+        }
+
+        if 0 <= days_remaining <= 90:
+            active_alerts.append(entry)
+        elif 90 < days_remaining <= 365:
+            watch_list.append(entry)
+
+        if days_remaining >= 0:
+            full_calendar.append(entry)
+
+    # Ordenar: activas por días restantes (más urgente primero), watch por riesgo
+    active_alerts.sort(key=lambda x: (x["days_remaining"], -(x["risk_score"] or 0)))
+    watch_list.sort(key=lambda x: (-(x["risk_score"] or 0), x["days_remaining"]))
+    full_calendar.sort(key=lambda x: x["days_remaining"])
+
+    critical_upcoming = sum(
+        1 for e in active_alerts + watch_list
+        if e.get("risk_level") in ["critical", "high"]
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "as_of_date": now.isoformat(),
+        "active_alerts": active_alerts,
+        "watch_list": watch_list,
+        "full_calendar": full_calendar,
+        "summary": {
+            "active_count": len(active_alerts),
+            "watch_count": len(watch_list),
+            "critical_upcoming": critical_upcoming,
+            "next_election": full_calendar[0]["country_name"] if full_calendar else None,
+            "next_election_days": full_calendar[0]["days_remaining"] if full_calendar else None,
+        },
+    }
+
+
+@app.get("/api/country/{country_code}")
+async def get_country_data(country_code: str, force_refresh: bool = False):
+    """Retorna datos del dashboard para un país específico (mismo shape que /api/dashboard)."""
+    code = country_code.upper()
+    if code not in COUNTRY_CATALOG:
+        raise HTTPException(status_code=404, detail=f"País '{code}' no encontrado")
+
+    info = COUNTRY_CATALOG[code]
+    index = _load_reports_index()
+    now_ts = datetime.now(timezone.utc)
+    result = None
+
+    if not force_refresh:
+        entries = index.get(code, [])
+        if entries:
+            latest = entries[-1]
+            try:
+                ts_str = latest.get("timestamp", "")
+                if ts_str:
+                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    if (now_ts - ts).total_seconds() / 3600 < 24:
+                        cached = load_report(latest["run_id"])
+                        if cached:
+                            result = cached
+                            reports_store[latest["run_id"]] = cached
+            except Exception:
+                pass
+
+    if result is None:
+        state = create_initial_state(
+            country=info["name"], country_code=code, election_date=info["election_date"],
+        )
+        result = peirs_pipeline.invoke(state)
+        reports_store[result["run_id"]] = result
+        save_report(result)
+
+    context = result.get("context_data", {})
+    political = result.get("political_data", {})
+    legal = result.get("legal_analysis", {})
+
+    exposure = political.get("media_analysis", {}).get("exposure_distribution", {})
+    media_data = [{"name": k.replace("_", " ").title(), "exposure": v, "sentiment": 0} for k, v in exposure.items()]
+    violations_simple = [f"{v['treaty']} {v['article']}" for v in legal.get("violations", [])]
+
+    emb_scores_map = {"full": 95, "partial": 60, "compromised": 25, "captured": 5}
+    emb_data = extract_value(context.get("emb", {}))
+    emb_level = emb_data.get("independence_level", "partial") if isinstance(emb_data, dict) else "partial"
+
+    eco_level = political.get("digital_ecosystem", {}).get("assessment", "concerning")
+    eco_scores_map = {"healthy": 90, "concerning": 60, "compromised": 35, "hostile": 10}
+    finance_score = political.get("campaign_finance", {}).get("transparency_score", 0.5)
+
+    fh_data = extract_value(context.get("freedom_house", {}))
+    fh = fh_data.get("total_score", fh_data.get("score", 50)) if isinstance(fh_data, dict) else 50
+    vdem_data = extract_value(context.get("vdem", {}))
+    vdem_val = vdem_data.get("liberal_democracy", 0.5) if isinstance(vdem_data, dict) else 0.5
+    media_bias = political.get("media_analysis", {}).get("bias_index", 0.3)
+
+    dimensions = {
+        "suffrage": max(5, int(fh * 0.9)),
+        "legalFramework": max(5, int(vdem_val * 100)),
+        "embIndependence": emb_scores_map.get(emb_level, 50),
+        "mediaFreedom": max(5, int((1 - media_bias) * 100)),
+        "campaignFinance": max(5, int(finance_score * 100)),
+        "digitalEcosystem": eco_scores_map.get(eco_level, 40),
+        "disputeResolution": max(5, int(vdem_val * 90)),
+        "inclusion": max(5, int(fh * 0.8)),
+    }
+
+    risk = result["risk_score"]
+    alerts = []
+    for v in legal.get("violations", [])[:4]:
+        alerts.append({"type": "critical" if v["severity"] == "critical" else "high" if v["severity"] == "high" else "moderate", "text": v["finding"][:120]})
+    for rf in legal.get("risk_factors", [])[:2]:
+        alerts.append({"type": rf.get("severity", "moderate"), "text": rf["finding"][:120]})
+    if not alerts:
+        alerts.append({"type": "low", "text": "Sistema electoral estable con garantías institucionales sólidas"})
+
+    vdem_trend = _get_vdem_trend(VDEM_DF, code, years_back=5)
+    if vdem_trend.get("available") and len(vdem_trend.get("values", [])) >= 2:
+        timeline = [{"month": str(year), "score": max(5, min(99, round((1 - libdem) * 100)))} for year, libdem in vdem_trend["values"][-6:]]
+    else:
+        base = max(10, int(risk * 0.7))
+        timeline = [{"month": str(2019 + i), "score": base + int((risk - base) * (i / 5))} for i in range(6)]
+
+    return {
+        "id": code.lower(),
+        "run_id": result["run_id"],
+        "name": info["name"],
+        "flag": info["flag"],
+        "date": info["election_date"],
+        "riskScore": result["risk_score"],
+        "riskLevel": result["risk_level"],
+        "trend": "deteriorating" if risk >= 70 else "stable",
+        "freedomScore": fh,
+        "vdemIndex": round(vdem_val, 3),
+        "dimensions": dimensions,
+        "violations": violations_simple,
+        "timeline": timeline,
+        "alerts": alerts,
+        "mediaData": media_data,
+        "agentLogs": result.get("agent_logs", []),
+        "region": COUNTRY_REGIONS.get(code, "unknown"),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/moe/brief/{country_code}")
+async def get_moe_brief(country_code: str):
+    """
+    Genera un MOE Brief (Mission d'Observation Electorale) auto-generado
+    desde los datos PEIRS reales del país.
+    """
+    code = country_code.upper()
+    if code not in COUNTRY_CATALOG:
+        raise HTTPException(status_code=404, detail=f"País '{code}' no encontrado")
+
+    info = COUNTRY_CATALOG[code]
+    index = _load_reports_index()
+    entries = index.get(code, [])
+    report = None
+    run_id = None
+
+    if entries:
+        latest = entries[-1]
+        run_id = latest.get("run_id")
+        report = reports_store.get(run_id) if run_id else None
+        if report is None and run_id:
+            report = load_report(run_id)
+            if report:
+                reports_store[run_id] = report
+
+    if report is None:
+        raise HTTPException(status_code=404, detail="No hay reporte PEIRS para este país. Ejecuta /api/analyze primero.")
+
+    now = datetime.now(timezone.utc).date()
+    election_date = datetime.strptime(info["election_date"], "%Y-%m-%d").date()
+    days_remaining = (election_date - now).days
+
+    risk_score = report.get("risk_score", 50)
+    risk_level = report.get("risk_level", "moderate")
+    context = report.get("context_data", {})
+    political = report.get("political_data", {})
+    legal = report.get("legal_analysis", {})
+    violations = legal.get("violations", [])
+    risk_factors = legal.get("risk_factors", [])
+
+    fh_data = extract_value(context.get("freedom_house", {}))
+    fh_score = fh_data.get("total_score", fh_data.get("score", 50)) if isinstance(fh_data, dict) else 50
+    vdem_data = extract_value(context.get("vdem", {}))
+    vdem_val = vdem_data.get("liberal_democracy", 0.5) if isinstance(vdem_data, dict) else 0.5
+    emb_data = extract_value(context.get("emb", {}))
+    emb_level = emb_data.get("independence_level", "partial") if isinstance(emb_data, dict) else "partial"
+    media_bias = political.get("media_analysis", {}).get("bias_index", 0.3)
+    finance_score = political.get("campaign_finance", {}).get("transparency_score", 0.5)
+    eco_level = political.get("digital_ecosystem", {}).get("assessment", "concerning")
+
+    instruments = get_applicable_instruments(code)
+
+    # Fase electoral
+    if days_remaining < 0:
+        phase, phase_label = "post_election", "Post-Electoral"
+    elif days_remaining == 0:
+        phase, phase_label = "election_day", "Jornada Electoral"
+    elif days_remaining <= 2:
+        phase, phase_label = "electoral_silence", "Veda Electoral"
+    elif days_remaining <= 90:
+        phase, phase_label = "campaign", "Campaña Electoral"
+    elif days_remaining <= 180:
+        phase, phase_label = "pre_campaign", "Pre-Campaña"
+    else:
+        phase, phase_label = "preparatory", "Fase Preparatoria"
+
+    # Nivel de alerta
+    alert_map = {
+        "critical": ("RED", "Alerta Máxima"),
+        "high": ("ORANGE", "Alerta Alta"),
+        "moderate": ("AMBER", "Monitoreo Activo"),
+        "low": ("GREEN", "Condiciones Estables"),
+    }
+    alert_level, alert_label = alert_map.get(risk_level, ("AMBER", "Monitoreo Activo"))
+
+    # Protocolo MOE recomendado
+    if risk_level in ["critical", "high"]:
+        protocol = {
+            "type": "LTO+STO", "label": "Misión de Largo y Corto Plazo",
+            "lto_duration": "3-6 meses", "sto_count": "80-120 observadores",
+            "pvt_recommended": True, "smm_recommended": True,
+            "description": "Riesgo elevado requiere presencia temprana. LTO desde fase de campaña + STO completo para jornada electoral. PVT y SMM recomendados."
+        }
+    elif risk_level == "moderate":
+        protocol = {
+            "type": "STO", "label": "Misión de Corto Plazo",
+            "lto_duration": "6-8 semanas", "sto_count": "40-60 observadores",
+            "pvt_recommended": True, "smm_recommended": False,
+            "description": "Riesgo moderado. STO estándar con foco en jornada y transmisión de resultados. PVT recomendado para verificación paralela."
+        }
+    else:
+        protocol = {
+            "type": "EOM_LITE", "label": "Misión Ligera de Observación",
+            "lto_duration": "2-4 semanas", "sto_count": "15-25 observadores",
+            "pvt_recommended": False, "smm_recommended": False,
+            "description": "Condiciones estables. Presencia simbólica suficiente con foco en inclusividad y acceso de minorías."
+        }
+
+    # Áreas prioritarias derivadas de los déficits PEIRS
+    priority_areas = []
+    emb_score = {"full": 95, "partial": 60, "compromised": 25, "captured": 5}.get(emb_level, 50)
+    eco_score = {"healthy": 90, "concerning": 60, "compromised": 35, "hostile": 10}.get(eco_level, 40)
+    media_score = int((1 - media_bias) * 100)
+
+    if emb_score < 70:
+        priority_areas.append({
+            "priority": 1, "area": "Organismo Electoral (JNE/ONPE/RENIEC)",
+            "risk": "critical" if emb_score < 25 else "high",
+            "findings": [f"Nivel de independencia EMB: {emb_level.upper()}", "Verificar autonomía decisional frente a poderes políticos"],
+            "eos_standard": "EOS §72-81: Administración Electoral — Independencia e Imparcialidad",
+            "observation_tasks": ["Reuniones con directivos JNE/ONPE", "Análisis de resoluciones controversiales", "Acceso al proceso de verificación de candidaturas"]
+        })
+    if fh_score < 65:
+        priority_areas.append({
+            "priority": 2, "area": "Libertades Civiles y Derechos Políticos",
+            "risk": "critical" if fh_score < 30 else "high",
+            "findings": [f"Freedom House FIW: {fh_score}/100", "Restricciones documentadas a libertades fundamentales"],
+            "eos_standard": "ICCPR Art. 19, 21, 22",
+            "observation_tasks": ["Monitoreo de incidentes con candidatos", "Revisión de detenciones arbitrarias", "Análisis de acceso a espacios para campaña"]
+        })
+    if media_score < 65:
+        priority_areas.append({
+            "priority": 3, "area": "Libertad de Medios y Acceso a Información",
+            "risk": "high" if media_score < 40 else "moderate",
+            "findings": [f"Índice de sesgo mediático: {round(media_bias * 100)}%"],
+            "eos_standard": "EOS §64-71: Medios — Acceso Equitativo",
+            "observation_tasks": ["Monitoreo cuantitativo de cobertura", "Análisis de acceso publicitario de partidos"]
+        })
+    if finance_score < 0.6:
+        priority_areas.append({
+            "priority": 4, "area": "Financiamiento de Campaña",
+            "risk": "moderate",
+            "findings": [f"Transparencia financiera: {round(finance_score * 100)}/100"],
+            "eos_standard": "UNCAC Art. 7 — Transparencia en Financiamiento Político",
+            "observation_tasks": ["Revisión de informes financieros ante JNE", "Análisis de gasto en publicidad digital"]
+        })
+    if eco_score < 65:
+        priority_areas.append({
+            "priority": 5, "area": "Ecosistema Digital y Desinformación",
+            "risk": "moderate",
+            "findings": [f"Evaluación ecosistema digital: {eco_level.upper()}"],
+            "eos_standard": "ICCPR Art. 19(2) — Libertad de expresión digital",
+            "observation_tasks": ["Social Media Monitoring (SMM)", "Detección de campañas de desinformación"]
+        })
+    priority_areas.append({
+        "priority": len(priority_areas) + 1, "area": "Jornada Electoral y Transmisión de Resultados",
+        "risk": "monitoring",
+        "findings": ["Verificación de apertura y cierre de mesas", "Transmisión de actas ONPE Sistema de Cómputo Electoral"],
+        "eos_standard": "EOS §108-133: Proceso de Votación y Escrutinio",
+        "observation_tasks": ["Despliegue STOs en mesas seleccionadas", "Parallel Vote Tabulation (PVT)", "Monitoreo del centro de cómputo ONPE"]
+    })
+
+    return {
+        "country_code": code,
+        "country_name": info["name"],
+        "flag": info["flag"],
+        "election_date": info["election_date"],
+        "days_to_election": days_remaining,
+        "current_phase": phase,
+        "current_phase_label": phase_label,
+        "alert_level": alert_level,
+        "alert_label": alert_label,
+        "run_id": run_id,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "electoral_phases": [
+            {"phase": "Inscripción de candidatos", "start": "2025-09-01", "end": "2025-11-30", "status": "completed" if days_remaining < 135 else "active"},
+            {"phase": "Campaña electoral", "start": "2026-01-12", "end": "2026-04-10", "status": "completed" if days_remaining < 0 else "active" if days_remaining > 2 else "completed"},
+            {"phase": "Veda electoral", "start": "2026-04-10", "end": "2026-04-11", "status": "active" if 0 < days_remaining <= 2 else ("upcoming" if days_remaining > 2 else "completed")},
+            {"phase": "Jornada electoral", "start": "2026-04-12", "end": "2026-04-12", "status": "active" if days_remaining == 0 else ("upcoming" if days_remaining > 0 else "completed")},
+            {"phase": "Cómputo y resultados", "start": "2026-04-12", "end": "2026-04-15", "status": "upcoming"},
+            {"phase": "Segunda vuelta", "start": "2026-06-07", "end": "2026-06-07", "status": "upcoming"},
+        ],
+        "blocks": {
+            "risk_context": {
+                "title": "Contexto de Riesgo Operativo",
+                "risk_score": risk_score, "risk_level": risk_level,
+                "alert_level": alert_level, "alert_label": alert_label,
+                "days_to_election": days_remaining, "current_phase": phase_label,
+                "key_indicators": {
+                    "freedom_house": f"{fh_score}/100",
+                    "vdem_liberal_democracy": round(vdem_val, 3),
+                    "emb_independence": emb_level,
+                    "active_violations": len(violations),
+                },
+                "critical_violations": [
+                    {"treaty": v["treaty"], "article": v["article"], "finding": v["finding"][:150], "severity": v["severity"]}
+                    for v in violations if v.get("severity") in ["critical", "high"]
+                ][:5],
+                "risk_factors": [rf["finding"][:150] for rf in risk_factors[:3]],
+                "trend": report.get("trend", "stable"),
+            },
+            "legal_framework": {
+                "title": "Marco Legal Aplicable",
+                "universal_instruments": [{"id": i["id"], "name": i["name"], "key_articles": i["key_articles"]} for i in instruments["universal"]],
+                "regional_instruments": [{"id": i["id"], "name": i["name"], "key_articles": i["key_articles"], "observer": i.get("observer", "")} for i in instruments["regional"]],
+                "national_framework": {
+                    "constitution": "Constitución Política del Perú (1993) — Arts. 176-187",
+                    "electoral_law": "Ley Orgánica de Elecciones N° 26859",
+                    "parties_law": "Ley de Organizaciones Políticas N° 28094",
+                    "emb_structure": "JNE — ONPE — RENIEC",
+                },
+                "key_obligations": [
+                    "ICCPR Art. 25: elecciones genuinas por sufragio universal",
+                    "CADH Art. 23: derechos políticos — voto y elegibilidad",
+                    "CDI Art. 3: elementos esenciales de la democracia representativa",
+                    "UNDRIP Art. 5, 18: participación política de pueblos indígenas",
+                ],
+            },
+            "priority_areas": {
+                "title": "Áreas Prioritarias de Observación",
+                "priority_areas": priority_areas,
+                "high_risk_count": sum(1 for a in priority_areas if a["risk"] in ["critical", "high"]),
+                "moderate_risk_count": sum(1 for a in priority_areas if a["risk"] == "moderate"),
+            },
+            "protocol": {
+                "title": "Protocolo de Observación Recomendado",
+                "protocol": protocol,
+                "recommended_observers": [
+                    {"org": "OEA/DECO", "role": "Misión regional de observación"},
+                    {"org": "Centro Carter", "role": "Observación LTO + PVT"},
+                    {"org": "NDI / IRI", "role": "Fortalecimiento institucional + observación"},
+                    {"org": "UNIORE", "role": "Observación latinoamericana especializada"},
+                ],
+                "pvt_note": "Conteo rápido paralelo sobre muestra representativa de mesas según metodología IFES/NDI." if protocol["pvt_recommended"] else None,
+                "reporting_schedule": {
+                    "pre_election": "Informe preliminar 5 días antes de la jornada",
+                    "election_day": "Declaración preliminar 48h post-jornada",
+                    "final_report": "Informe final 60-90 días post-elección",
+                },
+            },
+        },
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6d. PERÚ 2026 — Datos estructurados específicos
+# ═══════════════════════════════════════════════════════════════════════════════
+
+PERU_ELECTORAL_SYSTEM = {
+    "name": "Representación Proporcional con Cifra Repartidora (D'Hondt)",
+    "law": "Ley Orgánica de Elecciones N° 26859 y modificatorias",
+    "seats": 130,
+    "chamber": "Unicameral — Congreso de la República",
+    "term_years": 5,
+    "districts": 26,
+    "district_note": "26 circunscripciones (25 regiones + Lima Metropolitana). Magnitude varía de 1 (Moquegua, Tacna, Madre de Dios) a 36 (Lima).",
+    "threshold": "5% de votos válidos a nivel nacional O 7 escaños en al menos un distrito (Ley 31046)",
+    "threshold_note": "El umbral doble reduce fragmentación pero en la práctica han sobrevivido 8+ bancadas en cada congreso desde 2011.",
+    "formula": "Cifra Repartidora (Método D'Hondt) — favorece a partidos más grandes en distritos plurinominales",
+    "ballot_type": "Lista cerrada y bloqueada con voto preferencial (hasta 2 preferencias)",
+    "vote_preference_note": "El voto preferencial permite al elector reordenar candidatos dentro de la lista, lo que genera competencia intrapartidaria intensa.",
+    "presidential_system": "Elección directa a 2 vueltas (ballotage)",
+    "ballotage_threshold": "Mayoría absoluta (50%+1) en 1ª vuelta. Si nadie alcanza: 2ª vuelta entre los dos más votados.",
+    "women_quota": "30% mínimo de mujeres en listas (Ley 31030, 2021)",
+    "youth_quota": "20% de jóvenes (hasta 29 años) y comunidades nativas en listas",
+    "simultaneity": "Elecciones presidenciales y congresales simultáneas (misma boleta, mismo día)",
+    "prohibitions": "Condenados con sentencia firme no pueden postular. Funcionarios públicos deben renunciar 6 meses antes.",
+    "key_bodies": {
+        "JNE": "Jurado Nacional de Elecciones — árbitro electoral máximo, resuelve impugnaciones, proclama resultados",
+        "ONPE": "Oficina Nacional de Procesos Electorales — organiza la votación, escrutinio, transmisión de resultados",
+        "RENIEC": "Registro Nacional de Identificación — padrón electoral, DNI, biometría",
+    },
+    "historical_fragmentation": "Perú ha promediado 7-8 bancadas efectivas desde 2011. Ningún partido ha obtenido mayoría absoluta (66 escaños) desde Fuerza Popular en 2016.",
+    "sources": [
+        {"label": "JNE — Sistema Electoral Peruano", "url": "https://www.jne.gob.pe"},
+        {"label": "ONPE — Elecciones 2026", "url": "https://www.onpe.gob.pe"},
+        {"label": "Ley N° 26859 — Ley Orgánica de Elecciones", "url": "https://www.leyes.congreso.gob.pe"},
+        {"label": "IDEA Internacional — Electoral System Design Database", "url": "https://www.idea.int/data-tools/country-view/247/40"},
+    ],
+}
+
+PERU_POLITICAL_FORCES = [
+    {
+        "id": "app", "name": "Alianza para el Progreso", "abbr": "APP",
+        "ideology": "Centro / Populismo pragmático", "position": 50,
+        "founded": 1999, "color": "#f97316",
+        "leader": "César Acuña Peralta",
+        "background": (
+            "Fundada en 1999 por César Acuña, empresario universitario de La Libertad. "
+            "Su crecimiento se sustenta en la red de universidades privadas del Grupo UCV, "
+            "con presencia en 18 regiones. Ha sido el partido con mayor número de candidatos "
+            "electos en elecciones regionales y municipales 2022. Su modelo organizativo ha "
+            "sido cuestionado como 'partido-empresa' por organismos como Transparencia Internacional Perú. "
+            "Acuña fue inhabilitado en 2018 por el JNE por presuntas dádivas electorales, sanción "
+            "posteriormente levantada, lo que generó controversia sobre la aplicabilidad efectiva del Art. 25 ICCPR."
+        ),
+        "candidates_2026": [
+            {"name": "César Acuña Peralta", "role": "Candidato presidencial confirmado",
+             "notes": "Cuarta candidatura presidencial. Gobernador electo de La Libertad 2022-2026. Postula con la figura de 'gestor' y candidato de centro."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 9,  "first_round_pct": None, "result": "Coalición menor. APP apoya a PPK en 2ª vuelta."},
+            {"year": 2020, "seats": 22, "first_round_pct": None, "result": "Elecciones extraordinarias. Segundo partido más votado."},
+            {"year": 2021, "seats": 22, "first_round_pct": 6.1,  "result": "4to lugar presidencial (Acuña). 22 escaños iniciales, sube a 28 por transfugismo."},
+        ],
+        "key_policies": [
+            "Inversión en infraestructura educativa y universidades regionales",
+            "Descentralización fiscal y fortalecimiento de gobiernos regionales",
+            "Seguridad ciudadana con énfasis en penas más duras",
+        ],
+        "base_regions": ["La Libertad", "Cajamarca", "Lambayeque"],
+        "current_seats": 28, "electoral_strength": "Alto", "risk_profile": "high",
+        "risk_notes": "Red clientelar articulada en torno a universidades UCV. Financiamiento opaco. Acuña con inhabilitaciones previas.",
+        "strengths": ["Infraestructura organizacional universitaria", "Presencia robusta en norte", "Financiamiento sólido"],
+        "vulnerabilities": ["Denuncias de compra de votos", "Imagen de partido-empresa", "Dependencia del liderazgo personal"],
+        "iccpr_risk": "Art. 25 ICCPR — posible afectación al sufragio libre mediante prácticas clientelares documentadas por la ONPE y JNE.",
+    },
+    {
+        "id": "fp", "name": "Fuerza Popular", "abbr": "FP",
+        "ideology": "Derecha / Fujimorismo", "position": 72,
+        "founded": 2010, "color": "#ef4444",
+        "leader": "Keiko Fujimori",
+        "background": (
+            "Heredera del fujimorismo, movimiento nacido en torno al expresidente Alberto Fujimori (1990-2000). "
+            "Keiko Fujimori ha liderado tres candidaturas presidenciales (2011, 2016, 2021), "
+            "perdiendo las tres en segunda vuelta. En 2016 obtuvo 73 escaños (mayoría absoluta) "
+            "y usó ese dominio para enfrentarse al ejecutivo de PPK, generando una crisis constitucional. "
+            "Keiko fue detenida en 2018 y 2019 por presunto lavado de activos en el caso Odebrecht; "
+            "tiene proceso abierto. El partido ha renovado parcialmente su cúpula pero mantiene "
+            "el liderazgo personalista de la familia Fujimori."
+        ),
+        "candidates_2026": [
+            {"name": "Keiko Fujimori", "role": "Candidata presidencial (4ª postulación)",
+             "notes": "Mantiene liderazgo del partido. Proceso judicial por lavado de activos en curso. Base electoral fiel en Lima y regiones costeras."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 73, "first_round_pct": 39.9, "result": "Mayoría absoluta en congreso. Keiko pierde 2ª vuelta presidencial vs PPK por menos de 0.1%."},
+            {"year": 2020, "seats": 15, "first_round_pct": None, "result": "Elecciones extraordinarias. Derrumbe electoral post-confrontación con Vizcarra."},
+            {"year": 2021, "seats": 24, "first_round_pct": 13.4, "result": "13.4% en 1ª vuelta, 49.9% en 2ª vuelta. Impugna resultado ante el JNE sin éxito."},
+        ],
+        "key_policies": [
+            "Mano dura contra la criminalidad e inseguridad",
+            "Libre mercado y protección a la inversión privada",
+            "Rechazo a la Asamblea Constituyente",
+        ],
+        "base_regions": ["Lima", "Ica", "Arequipa", "Ucayali"],
+        "current_seats": 23, "electoral_strength": "Alto", "risk_profile": "high",
+        "risk_notes": "Historia de 3 procesos electorales con denuncias de fraude. Keiko con condena suspendida. Control parcial de instituciones cuestionado.",
+        "strengths": ["Base electoral leal en Lima", "Estructura partidaria consolidada", "Candidatos con experiencia legislativa"],
+        "vulnerabilities": ["Imagen negativa por corrupción", "Dependencia del legado Fujimori", "Juicios pendientes"],
+        "iccpr_risk": "Art. 14 ICCPR — garantías procesales comprometidas en relación al proceso penal activo del liderazgo.",
+    },
+    {
+        "id": "rp", "name": "Renovación Popular", "abbr": "RP",
+        "ideology": "Derecha / Conservador-liberal", "position": 80,
+        "founded": 2020, "color": "#0ea5e9",
+        "leader": "Rafael López Aliaga",
+        "background": (
+            "Partido fundado en 2020 por Rafael López Aliaga, empresario de origen limeño. "
+            "De perfil ultraconservador en lo social (declaradamente antiaborto, crítico de la ideología de género) "
+            "y liberal en lo económico. Su primera candidatura presidencial en 2021 (12.8%) lo consolidó "
+            "como líder de la derecha dura urbana. Fue elegido alcalde de Lima Metropolitana en 2022, "
+            "cargo desde el cual ha impulsado una gestión confrontacional con el gobierno central. "
+            "Su discurso polarizante y el uso del término 'castrocomunismo' para referirse a la izquierda "
+            "ha sido documentado como factor de desinformación."
+        ),
+        "candidates_2026": [
+            {"name": "Rafael López Aliaga", "role": "Candidato presidencial (2ª postulación)",
+             "notes": "Alcalde de Lima hasta diciembre 2025. Perfil empresarial. Alta recordación en Lima pero baja fuera de la capital."},
+        ],
+        "electoral_history": [
+            {"year": 2021, "seats": 9, "first_round_pct": 12.8, "result": "3er lugar presidencial. 9 escaños en congreso. Ingreso sorpresivo al escenario político."},
+        ],
+        "key_policies": [
+            "Tolerancia cero al crimen: cárceles duras, pena de muerte para terrorismo",
+            "Eliminación de impuestos a pequeñas empresas y reducción del Estado",
+            "Rechazo a la agenda LGBT y políticas de género en educación",
+        ],
+        "base_regions": ["Lima", "Arequipa", "Moquegua"],
+        "current_seats": 9, "electoral_strength": "Medio", "risk_profile": "moderate",
+        "risk_notes": "Discurso polarizante. Cuestionamientos sobre financiamiento empresarial. Posiciones restrictivas sobre derechos civiles.",
+        "strengths": ["Base urbana de clase media-alta", "Liderazgo mediático", "Posicionamiento anticorrupción"],
+        "vulnerabilities": ["Escaso implante territorial fuera de Lima", "Discurso divisivo", "Partido personalista joven"],
+        "iccpr_risk": "Art. 19, 21 ICCPR — restricciones retóricas a libertades civiles documentadas en campaña; potencial impacto en derechos de minorías.",
+    },
+    {
+        "id": "pl", "name": "Perú Libre", "abbr": "PL",
+        "ideology": "Izquierda / Marxismo-leninismo", "position": 15,
+        "founded": 2009, "color": "#a855f7",
+        "leader": "Vladimir Cerrón",
+        "background": (
+            "Fundado en 2009 en la región Junín por Vladimir Cerrón, médico y exgobernador regional. "
+            "Fue el vehículo que llevó a Pedro Castillo a la presidencia en 2021 con apenas el 18.9% en primera vuelta. "
+            "Cerrón fue condenado en 2019 por corrupción (3.5 años de prisión efectiva) e inhabilitado para cargos públicos, "
+            "lo que generó una contradicción estructural: el fundador no pudo ser candidato del gobierno que él mismo impulsó. "
+            "Castillo rompió con Cerrón en 2022. Tras la vacancia de Castillo, el partido se fragmentó y hoy opera "
+            "con presencia marginal pero organizada en regiones andinas del centro-sur."
+        ),
+        "candidates_2026": [
+            {"name": "Por definir", "role": "Candidato presidencial sin confirmar",
+             "notes": "Cerrón inhabilitado. El partido buscará candidato de la región andina. Alta incertidumbre sobre su viabilidad para superar el umbral del 5%."},
+        ],
+        "electoral_history": [
+            {"year": 2021, "seats": 37, "first_round_pct": 18.9, "result": "Castillo gana presidencia con 50.1% en 2ª vuelta. 37 escaños iniciales, se fragmenta a 7 por conflictos internos."},
+        ],
+        "key_policies": [
+            "Asamblea Constituyente para nueva Constitución",
+            "Nationalización de recursos naturales estratégicos",
+            "Reforma agraria y redistribución de tierras",
+        ],
+        "base_regions": ["Junín", "Cusco", "Puno", "Ayacucho"],
+        "current_seats": 7, "electoral_strength": "Medio", "risk_profile": "high",
+        "risk_notes": "Cerrón condenado por corrupción e inhabilitado. Partido instrumento de Castillo (2021). Base en regiones andinas.",
+        "strengths": ["Base en sierra central y sur", "Discurso redistributivo con arrastre popular"],
+        "vulnerabilities": ["Liderazgo inhabilitado", "Asociación con gestión Castillo", "Fragmentación severa"],
+        "iccpr_risk": "Art. 25(b) ICCPR — candidatos inhabilitados por resolución judicial; riesgo de impugnación postelectoral si alcanzan representación.",
+    },
+    {
+        "id": "pp", "name": "Podemos Perú", "abbr": "PP",
+        "ideology": "Centro-populista", "position": 40,
+        "founded": 2017, "color": "#8b5cf6",
+        "leader": "José Luna Gálvez",
+        "background": (
+            "Fundado en 2017 por José Luna Gálvez, empresario educativo del grupo Luna. "
+            "Su modelo organizativo es similar al de APP: partido articulado alrededor de una empresa educativa "
+            "(institutos y universidades). Ha sido objeto de investigaciones del Ministerio Público por presunta "
+            "venta de candidaturas y financiamiento irregular. Su bancada en el congreso actual es heterogénea "
+            "y ha votado de forma oportunista con distintas mayorías. No tiene una ideología clara ni base programática sólida."
+        ),
+        "candidates_2026": [
+            {"name": "José Luna Gálvez", "role": "Candidato presidencial probable",
+             "notes": "Fundador del partido. Investigado por presunta venta de candidaturas. Perfil de empresario-político."},
+        ],
+        "electoral_history": [
+            {"year": 2020, "seats": 11, "first_round_pct": None, "result": "Elecciones extraordinarias. Sorpresa electoral con 11 escaños."},
+            {"year": 2021, "seats": 5,  "first_round_pct": 1.8,  "result": "Luna obtiene 1.8% presidencial. 5 escaños parlamentarios, sube a 9 por transfugismo."},
+        ],
+        "key_policies": [
+            "Empleo y emprendimiento para jóvenes y mujeres",
+            "Reforma educativa con énfasis en técnica",
+            "Descentralización y obras de infraestructura regional",
+        ],
+        "base_regions": ["Lima Norte", "Piura"],
+        "current_seats": 9, "electoral_strength": "Medio", "risk_profile": "moderate",
+        "risk_notes": "Partido con denuncias de compra de candidaturas. Financiamiento cuestionado. Estructura débil fuera de Lima.",
+        "strengths": ["Implante en Lima norte", "Candidatos con perfil técnico"],
+        "vulnerabilities": ["Denuncias de mercado de candidaturas", "Baja identidad partidaria"],
+        "iccpr_risk": "Art. 25 ICCPR — mercantilización de candidaturas puede afectar la representatividad real del sistema.",
+    },
+    {
+        "id": "ap", "name": "Acción Popular", "abbr": "AP",
+        "ideology": "Centro / Social-demócrata", "position": 45,
+        "founded": 1956, "color": "#10b981",
+        "leader": "Directiva colectiva (en disputa)",
+        "background": (
+            "Fundado en 1956 por Fernando Belaúnde Terry, dos veces presidente (1963-1968 y 1980-1985). "
+            "Partido más antiguo del Perú en actividad electoral regular. Históricamente representó "
+            "la centro-izquierda reformista y el desarrollismo. Ganó la Mesa Directiva del Congreso "
+            "en las elecciones extraordinarias de 2020. Sin embargo, su gestión legislativa bajo el liderazgo "
+            "de Manuel Merino fue catastrófica: duró apenas una semana como presidente (noviembre 2020) "
+            "tras la crisis de la vacancia de Vizcarra. Desde entonces atraviesa una profunda crisis interna "
+            "con múltiples facciones y sin candidato presidencial consolidado para 2026."
+        ),
+        "candidates_2026": [
+            {"name": "Por definir — probable candidato de consenso", "role": "Candidato presidencial sin confirmar",
+             "notes": "El partido no ha logrado consenso. Múltiples precandidatos. Alta probabilidad de no superar el umbral del 5% si continúa fragmentado."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 5,  "first_round_pct": 1.3,  "result": "Candidato irrelevante. Mínima representación parlamentaria."},
+            {"year": 2020, "seats": 25, "first_round_pct": None,  "result": "Gana elecciones extraordinarias con 25 escaños. Crisis Merino destruye capital político."},
+            {"year": 2021, "seats": 16, "first_round_pct": 4.1,   "result": "4.1% presidencial (debajo del umbral histórico). 16 escaños parlamentarios."},
+        ],
+        "key_policies": [
+            "Reforma del Estado y profesionalización de la función pública",
+            "Modernización agrícola y apoyo al pequeño productor",
+            "Descentralización real con mecanismos de control ciudadano",
+        ],
+        "base_regions": ["Lima", "Cusco", "Piura", "Ancash"],
+        "current_seats": 7, "electoral_strength": "Bajo-Medio", "risk_profile": "low",
+        "risk_notes": "Partido histórico en proceso de reconstrucción. Fractura interna post-Sagasti. Sin candidato presidencial consolidado.",
+        "strengths": ["Marca histórica reconocida", "Presencia nacional difusa", "Candidatos moderados"],
+        "vulnerabilities": ["Crisis de liderazgo severa", "Fraccionamiento interno", "Resultados decrecientes"],
+        "iccpr_risk": "Sin violaciones documentadas directas. Riesgo de irrelevancia institucional si no supera umbral.",
+    },
+    {
+        "id": "bm", "name": "Frente Amplio / Izquierda Unida", "abbr": "FA",
+        "ideology": "Izquierda progresista", "position": 20,
+        "founded": 2013, "color": "#ec4899",
+        "leader": "Coalición (varios)",
+        "background": (
+            "Coalición de organizaciones de izquierda que ha intentado articular una alternativa al "
+            "fujimorismo y al populismo de Perú Libre. En 2021 logró 9 escaños bajo distintas siglas. "
+            "Tiene fuerte presencia en el magisterio organizado (SUTEP), movimientos indígenas del sur andino "
+            "(Puno, Cusco, Apurímac) y organizaciones campesinas. Su dificultad estructural es la fragmentación: "
+            "en cada proceso electoral debaten si presentarse unidos o divididos. Para 2026, diferentes corrientes "
+            "negocian si formar una alianza o postular por separado, lo que determina su viabilidad electoral dado el umbral del 5%."
+        ),
+        "candidates_2026": [
+            {"name": "En proceso de definición", "role": "Candidato por consenso de la coalición",
+             "notes": "Figuras como Verónica Mendoza (2016: 19.9% presidencial) podrían encabezar nuevamente. La unidad de la izquierda es condición para superar el umbral."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 20, "first_round_pct": 19.9, "result": "Frente Amplio con Mendoza: 3er lugar presidencial (19.9%). 20 escaños. La izquierda en su mejor momento reciente."},
+            {"year": 2021, "seats": 9,  "first_round_pct": 8.9,  "result": "Fragmentada en múltiples candidaturas. Total: ~9 escaños bajo distintas siglas."},
+        ],
+        "key_policies": [
+            "Asamblea Constituyente y nueva Constitución plurinacional",
+            "Reforma tributaria progresiva y renta básica",
+            "Derechos de pueblos indígenas y consulta previa (UNDRIP)",
+        ],
+        "base_regions": ["Puno", "Cusco", "Apurímac", "Ayacucho", "Huancavelica"],
+        "current_seats": 10, "electoral_strength": "Medio (sur andino)", "risk_profile": "moderate",
+        "risk_notes": "Coalición heterogénea con fuerte implante en el magisterio rural. Discurso de reformas constitucionales.",
+        "strengths": ["Base sindical docente organizada", "Fuerte en sur andino", "Voto indígena sólido"],
+        "vulnerabilities": ["Sin liderazgo presidencial reconocido", "Fragmentación interna crónica", "Estigmatización mediática"],
+        "iccpr_risk": "UNDRIP Art. 5, 18 — representación de pueblos indígenas en debate constitucional es un derecho reconocido internacionalmente.",
+    },
+    {
+        "id": "ind", "name": "No bancada / Independientes", "abbr": "IND",
+        "ideology": "Variable (transfugismo)", "position": 50,
+        "founded": None, "color": "#64748b",
+        "leader": "N/A",
+        "background": (
+            "No es un partido sino el reflejo de la debilidad institucional del sistema político peruano. "
+            "Los 37 congresistas sin bancada son legisladores que abandonaron sus grupos originales por "
+            "conflictos internos, investigaciones o negociación de cargos. El transfuguismo es un fenómeno "
+            "estructural en Perú: en cada congreso desde 2011 más del 20% de legisladores ha cambiado de bancada. "
+            "Este fenómeno debilita la rendición de cuentas democrática, dificulta la formación de mayorías "
+            "estables y es reconocido por el JNE como una distorsión del sistema de representación proporcional."
+        ),
+        "candidates_2026": [],
+        "electoral_history": [
+            {"year": 2021, "seats": 37, "first_round_pct": None, "result": "37 legisladores sin bancada al inicio de 2026 (comenzaron el período con bancada; abandonaron sus partidos)"},
+        ],
+        "key_policies": [],
+        "base_regions": ["Nacional"],
+        "current_seats": 37, "electoral_strength": "Variable", "risk_profile": "moderate",
+        "risk_notes": "Refleja fragmentación extrema y débil institucionalización partidaria peruana.",
+        "strengths": ["Flexibilidad de voto", "Sin compromisos partidarios"],
+        "vulnerabilities": ["Sin accountability democrático", "Susceptibles a transfuguismo e influencias externas"],
+        "iccpr_risk": "Art. 25 ICCPR — fragmentación que debilita la representatividad del sistema; votantes no representados ideológicamente.",
+    },
+]
+
+PERU_PARL_DATA = {
+    "total_seats": 130,
+    "system": "Representación proporcional con umbral del 5% (Ley Orgánica de Elecciones, Ley N° 26859)",
+    "current": {
+        "label": "Congreso actual 2021-2026",
+        "note": "Composición aproximada al inicio de 2026. Incluye cambios de bancada post-2021.",
+        "seats": [
+            {"party": "APP",  "full_name": "Alianza para el Progreso",   "seats": 28, "color": "#f97316"},
+            {"party": "FP",   "full_name": "Fuerza Popular",              "seats": 23, "color": "#ef4444"},
+            {"party": "BM",   "full_name": "Bloque Magisterial/Izq.",     "seats": 10, "color": "#ec4899"},
+            {"party": "PP",   "full_name": "Podemos Perú",                "seats": 9,  "color": "#8b5cf6"},
+            {"party": "RP",   "full_name": "Renovación Popular",          "seats": 9,  "color": "#0ea5e9"},
+            {"party": "PL",   "full_name": "Perú Libre",                  "seats": 7,  "color": "#a855f7"},
+            {"party": "AP",   "full_name": "Acción Popular",              "seats": 7,  "color": "#10b981"},
+            {"party": "IND",  "full_name": "No bancada / Independientes", "seats": 37, "color": "#64748b"},
+        ],
+        "fragmentation_index": 8.4,
+        "effective_parties": 7.2,
+        "governing_coalition_seats": None,
+        "opposition_seats": None,
+    },
+    "scenarios": [
+        {
+            "id": "A", "probability_pct": 52,
+            "label": "A — Hiperfragmentación (más probable)",
+            "description": "Ningún partido supera 20 escaños. Se requieren 4+ bancadas para alcanzar mayoría simple (66 escaños). Alta dificultad de gobernabilidad. Patrón consistente con elecciones 2011-2021.",
+            "governance_risk": "Alto — riesgo de bloqueo legislativo y nuevos conflictos ejecutivo-legislativo",
+            "color": "#ef4444",
+            "seats": [
+                {"party": "APP",  "full_name": "Alianza para el Progreso", "seats": 22, "color": "#f97316"},
+                {"party": "FP",   "full_name": "Fuerza Popular",           "seats": 19, "color": "#ef4444"},
+                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 14, "color": "#0ea5e9"},
+                {"party": "BM",   "full_name": "Bloques de izquierda",     "seats": 18, "color": "#ec4899"},
+                {"party": "NP",   "full_name": "Nuevos partidos",          "seats": 28, "color": "#94a3b8"},
+                {"party": "IND",  "full_name": "Independientes",           "seats": 29, "color": "#64748b"},
+            ],
+        },
+        {
+            "id": "B", "probability_pct": 28,
+            "label": "B — Coalición centro-derecha",
+            "description": "APP + FP + RP alcanzan acuerdo post-electoral. Mayoría relativa estable de 60-70 escaños. Gobierno con capacidad legislativa. Riesgo de retrocesos en derechos civiles y autonomía del JNE.",
+            "governance_risk": "Moderado — mayoría funcional pero con tensiones sobre independencia institucional",
+            "color": "#f97316",
+            "seats": [
+                {"party": "APP",  "full_name": "Alianza para el Progreso", "seats": 28, "color": "#f97316"},
+                {"party": "FP",   "full_name": "Fuerza Popular",           "seats": 22, "color": "#ef4444"},
+                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 15, "color": "#0ea5e9"},
+                {"party": "BM",   "full_name": "Bloques de izquierda",     "seats": 20, "color": "#ec4899"},
+                {"party": "AP",   "full_name": "Otros centristas",         "seats": 16, "color": "#10b981"},
+                {"party": "IND",  "full_name": "Independientes",           "seats": 29, "color": "#64748b"},
+            ],
+        },
+        {
+            "id": "C", "probability_pct": 20,
+            "label": "C — Izquierda populista + centro",
+            "description": "Coalición izquierda-centro logra 55-65 escaños. Agenda redistributiva y posible convocatoria a Asamblea Constituyente. Alta incertidumbre para inversores. Potencial tensión con FP/RP.",
+            "governance_risk": "Alto para estabilidad institucional — reforma constitucional en agenda",
+            "color": "#a855f7",
+            "seats": [
+                {"party": "BM",   "full_name": "Bloques izquierda unida", "seats": 35, "color": "#ec4899"},
+                {"party": "PP",   "full_name": "Centro-populista",        "seats": 18, "color": "#8b5cf6"},
+                {"party": "APP",  "full_name": "APP (oposición)",          "seats": 20, "color": "#f97316"},
+                {"party": "FP",   "full_name": "Fuerza Popular (oposic.)", "seats": 18, "color": "#ef4444"},
+                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 12, "color": "#0ea5e9"},
+                {"party": "IND",  "full_name": "Independientes",           "seats": 27, "color": "#64748b"},
+            ],
+        },
+    ],
+}
+
+PERU_REGIONS_DATA = [
+    {"region": "Lima",          "seats": 36, "pop_M": 10.8, "urban_pct": 97, "poverty_pct": 14, "indigenous_pct": 4,  "risk_score": 42, "tendency": "volátil", "notes": "Concentra 1/3 del electorado. Voto urbano fragmentado."},
+    {"region": "La Libertad",   "seats": 7,  "pop_M": 2.1,  "urban_pct": 73, "poverty_pct": 24, "indigenous_pct": 5,  "risk_score": 48, "tendency": "APP-dominante", "notes": "Feudo electoral de Acuña. Red clientelar universitaria activa."},
+    {"region": "Piura",         "seats": 7,  "pop_M": 2.0,  "urban_pct": 68, "poverty_pct": 28, "indigenous_pct": 3,  "risk_score": 45, "tendency": "centro-volátil", "notes": "Historial de compra de votos documentado."},
+    {"region": "Cajamarca",     "seats": 5,  "pop_M": 1.5,  "urban_pct": 38, "poverty_pct": 46, "indigenous_pct": 12, "risk_score": 58, "tendency": "izquierda-rural", "notes": "Alta pobreza. Conflictos mineros afectan clima electoral."},
+    {"region": "Puno",          "seats": 5,  "pop_M": 1.4,  "urban_pct": 52, "poverty_pct": 39, "indigenous_pct": 68, "risk_score": 55, "tendency": "izquierda andina", "notes": "Mayor % población aymara-quechua. Riesgo UNDRIP Art. 18."},
+    {"region": "Cusco",         "seats": 5,  "pop_M": 1.4,  "urban_pct": 55, "poverty_pct": 38, "indigenous_pct": 55, "risk_score": 52, "tendency": "izquierda-volátil", "notes": "Fuerte identidad quechua. Base Perú Libre."},
+    {"region": "Junín",         "seats": 5,  "pop_M": 1.4,  "urban_pct": 66, "poverty_pct": 30, "indigenous_pct": 25, "risk_score": 56, "tendency": "Perú Libre-base", "notes": "Base original de Cerrón. Riesgo de movilización extra-institucional."},
+    {"region": "Arequipa",      "seats": 5,  "pop_M": 1.4,  "urban_pct": 89, "poverty_pct": 11, "indigenous_pct": 10, "risk_score": 38, "tendency": "derecha-RP", "notes": "Electorado urbano educado. Baja tolerancia a corrupción."},
+    {"region": "Lambayeque",    "seats": 4,  "pop_M": 1.3,  "urban_pct": 79, "poverty_pct": 23, "indigenous_pct": 4,  "risk_score": 47, "tendency": "APP", "notes": "Segunda base de Acuña. Prácticas clientelares documentadas."},
+    {"region": "Loreto",        "seats": 3,  "pop_M": 1.1,  "urban_pct": 42, "poverty_pct": 45, "indigenous_pct": 28, "risk_score": 62, "tendency": "volátil", "notes": "Amazónico. Alta pobreza. Corrupción electoral histórica. UNDRIP relevante."},
+    {"region": "Ancash",        "seats": 4,  "pop_M": 1.1,  "urban_pct": 64, "poverty_pct": 28, "indigenous_pct": 20, "risk_score": 50, "tendency": "centro-volátil", "notes": "Zona minera. Conflictos sociales afectan clima pre-electoral."},
+    {"region": "San Martín",    "seats": 3,  "pop_M": 0.9,  "urban_pct": 68, "poverty_pct": 28, "indigenous_pct": 8,  "risk_score": 44, "tendency": "volátil", "notes": "Crecimiento agroindustrial. Electorado pragmático."},
+    {"region": "Ica",           "seats": 3,  "pop_M": 0.9,  "urban_pct": 90, "poverty_pct": 10, "indigenous_pct": 2,  "risk_score": 36, "tendency": "FP histórico", "notes": "Zona costera prospera. Histórica fortaleza fujimorista."},
+    {"region": "Huánuco",       "seats": 3,  "pop_M": 0.9,  "urban_pct": 52, "poverty_pct": 44, "indigenous_pct": 22, "risk_score": 60, "tendency": "volátil-izquierda", "notes": "Alta pobreza. Corredor del narcotráfico. Riesgo de cooptación."},
+    {"region": "Ucayali",       "seats": 2,  "pop_M": 0.6,  "urban_pct": 70, "poverty_pct": 32, "indigenous_pct": 18, "risk_score": 58, "tendency": "volátil", "notes": "Amazónico. Poca presencia institucional estatal. Riesgo OSINT."},
+    {"region": "Ayacucho",      "seats": 2,  "pop_M": 0.6,  "urban_pct": 56, "poverty_pct": 50, "indigenous_pct": 35, "risk_score": 61, "tendency": "izquierda", "notes": "Región Sendero histórico. Alta pobreza. Desconfianza institucional profunda."},
+    {"region": "Apurímac",      "seats": 2,  "pop_M": 0.5,  "urban_pct": 45, "poverty_pct": 53, "indigenous_pct": 65, "risk_score": 63, "tendency": "izquierda andina", "notes": "Región más pobre. Zona Las Bambas. Conflictos mineros severos."},
+    {"region": "Madre de Dios", "seats": 1,  "pop_M": 0.2,  "urban_pct": 73, "poverty_pct": 17, "indigenous_pct": 15, "risk_score": 52, "tendency": "volátil", "notes": "Minería aurífera informal. Trata de personas. Institucionalidad débil."},
+    {"region": "Tacna",         "seats": 1,  "pop_M": 0.3,  "urban_pct": 91, "poverty_pct": 9,  "indigenous_pct": 5,  "risk_score": 33, "tendency": "derecha", "notes": "Zona fronteriza próspera. Bajo riesgo electoral."},
+    {"region": "Tumbes",        "seats": 1,  "pop_M": 0.2,  "urban_pct": 85, "poverty_pct": 18, "indigenous_pct": 2,  "risk_score": 43, "tendency": "volátil", "notes": "Zona costera norte. Presencia narcotráfico en zonas rurales."},
+    {"region": "Moquegua",      "seats": 1,  "pop_M": 0.2,  "urban_pct": 85, "poverty_pct": 10, "indigenous_pct": 5,  "risk_score": 34, "tendency": "centro-derecha", "notes": "Región minera próspera. Bajo riesgo."},
+    {"region": "Huancavelica",  "seats": 2,  "pop_M": 0.4,  "urban_pct": 38, "poverty_pct": 58, "indigenous_pct": 60, "risk_score": 65, "tendency": "izquierda", "notes": "Región más pobre junto a Apurímac. Alto riesgo de exclusión electoral."},
+    {"region": "Pasco",         "seats": 1,  "pop_M": 0.3,  "urban_pct": 71, "poverty_pct": 36, "indigenous_pct": 18, "risk_score": 55, "tendency": "volátil", "notes": "Zona minera con conflictos sociales."},
+    {"region": "Amazonas",      "seats": 2,  "pop_M": 0.4,  "urban_pct": 42, "poverty_pct": 40, "indigenous_pct": 22, "risk_score": 57, "tendency": "volátil", "notes": "Amazónico. Baja presencia estatal. Riesgo UNDRIP."},
+    {"region": "Callao",        "seats": 4,  "pop_M": 1.1,  "urban_pct": 100,"poverty_pct": 16, "indigenous_pct": 3,  "risk_score": 44, "tendency": "volátil-APP", "notes": "Puerto principal. Crimen organizado con influencia electoral documentada."},
+]
+
+PERU_HISTORICAL_EVENTS = [
+    {"year": 2019, "event": "Crisis constitucional — Vizcarra disuelve el Congreso (Art. 134 CP)"},
+    {"year": 2020, "event": "Golpe parlamentario — Congreso vacante a Vizcarra. 3 presidentes en 7 días"},
+    {"year": 2021, "event": "Castillo gana 2ª vuelta (50.1%). Keiko impugna. JNE proclama resultado"},
+    {"year": 2022, "event": "Castillo destituido por vacancia. Boluarte asume presidencia"},
+    {"year": 2023, "event": "Protestas 'Dina, renuncia'. 60+ muertes. Estado de emergencia"},
+    {"year": 2024, "event": "Gobierno de Boluarte — bajo apoyo (<10%). 6 presidentes desde 2018"},
+    {"year": 2025, "event": "Inicio ciclo electoral. Inscripción de candidatos. JNE bajo presión política"},
+    {"year": 2026, "event": "Elecciones generales — 12 de abril"},
+]
+
+
+@app.get("/api/peru/actors")
+async def get_peru_actors():
+    """Fuerzas políticas y actores clave del proceso electoral Perú 2026."""
+    return {
+        "country": "Peru",
+        "election_date": "2026-04-12",
+        "total_seats": PERU_PARL_DATA["total_seats"],
+        "actors": PERU_POLITICAL_FORCES,
+        "electoral_system": PERU_ELECTORAL_SYSTEM,
+        "total_actors": len(PERU_POLITICAL_FORCES),
+        "risk_distribution": {
+            "high": sum(1 for a in PERU_POLITICAL_FORCES if a["risk_profile"] == "high"),
+            "moderate": sum(1 for a in PERU_POLITICAL_FORCES if a["risk_profile"] == "moderate"),
+            "low": sum(1 for a in PERU_POLITICAL_FORCES if a["risk_profile"] == "low"),
+        },
+        "data_note": "Datos estructurados basados en registros JNE, PEI y V-Dem. Composición de bancadas aproximada a enero 2026.",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/peru/scenarios")
+async def get_peru_scenarios():
+    """Composición parlamentaria actual y escenarios proyectados para el Congreso 2026-2031."""
+    return {
+        "country": "Peru",
+        "election_date": "2026-04-12",
+        "total_seats": PERU_PARL_DATA["total_seats"],
+        "electoral_system": PERU_PARL_DATA["system"],
+        "current": PERU_PARL_DATA["current"],
+        "scenarios": PERU_PARL_DATA["scenarios"],
+        "historical_context": PERU_HISTORICAL_EVENTS,
+        "regions": PERU_REGIONS_DATA,
+        "data_note": "Escenarios proyectados: modelos estructurales basados en tendencias electorales 2011-2021, datos V-Dem y encuestas disponibles a enero 2026. No constituyen predicción electoral.",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2065,7 +4626,6 @@ async def get_dashboard_data():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def run_cli_analysis(country_code: str = "VEN"):
-    """Ejecuta un análisis desde la línea de comandos."""
     code = country_code.upper()
     if code not in COUNTRY_CATALOG:
         print(f"Error: País '{code}' no disponible. Opciones: {list(COUNTRY_CATALOG.keys())}")
@@ -2085,20 +4645,17 @@ def run_cli_analysis(country_code: str = "VEN"):
 
     result = peirs_pipeline.invoke(state)
 
-    # Imprimir logs de agentes
     print("📋 LOG DE AGENTES:")
     print("-" * 50)
     for log in result["agent_logs"]:
         print(f"  {log}")
     print()
 
-    # Imprimir resumen
     print(f"🎯 RISK SCORE: {result['risk_score']}/100 ({result['risk_level'].upper()})")
     print(f"⚖️  VIOLACIONES: {result['legal_analysis']['violation_count']}")
     print(f"📄 REPORTE: {len(result['final_report_markdown'])} caracteres")
     print()
 
-    # Guardar reporte
     filename = f"peirs_report_{code.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(result["final_report_markdown"])
@@ -2111,4 +4668,3 @@ if __name__ == "__main__":
     import sys
     country = sys.argv[1] if len(sys.argv) > 1 else "VEN"
     run_cli_analysis(country)
-

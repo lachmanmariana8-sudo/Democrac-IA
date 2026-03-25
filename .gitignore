@@ -16,3 +16,19 @@ App.jsx
 App.txt
 Gitignore.txt
 backend/peirs_report_*.md
+
+# Archivos de datos grandes (>100MB — no soportados por GitHub)
+data/V-Dem-CY-Full+Others-v15.csv
+data/*.dta
+data/**/*.dta
+data/**/*.xlsx
+data/2025*.xlsx
+data/RSF/*.xlsx
+
+# Reportes generados (auto-generados por el pipeline, no necesitan versionarse)
+data/reports/
+
+# Logs y temporales
+*.log
+dist/
+.dist/
