@@ -28,6 +28,9 @@ data/RSF/*.xlsx
 # Reportes generados (auto-generados por el pipeline, no necesitan versionarse)
 data/reports/
 
+# Base de datos SQLite (se regenera en startup desde los datos)
+data/democracia.db
+
 # Logs y temporales
 *.log
 dist/

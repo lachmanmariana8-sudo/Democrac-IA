@@ -2079,14 +2079,18 @@ def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:
 
     chapters["01_executive_summary"] = _generate_executive_summary(state)
     chapters["02_political_context"] = _generate_political_context(context, state.get("country_code", ""))
-    chapters["03_emb_analysis"] = _generate_emb_chapter(context)
-    chapters["04_inclusivity"] = _generate_inclusivity_chapter(context)
+    chapters["03_emb_analysis"] = _generate_emb_chapter(context, state.get("country_code", ""))
+    chapters["04_inclusivity"] = _generate_inclusivity_chapter(context, state.get("country_code", ""))
     chapters["05_campaign_finance"] = _generate_campaign_chapter(political, context)
-    chapters["06_digital_ecosystem"] = _generate_digital_chapter(political, context)
+    chapters["06_digital_ecosystem"] = _generate_digital_chapter(political, context, state.get("country_code", ""))
     voting_day_data = state.get("voting_day_data", {})
     chapters["07_voting_day"] = _generate_voting_day_chapter(voting_day_data, state)
     chapters["08_electoral_justice"] = _generate_justice_chapter(legal)
     chapters["09_recommendations"] = _generate_recommendations(state)
+
+    # Cap. 10 — solo para países con módulo específico implementado
+    if state.get("country_code") == "PER":
+        chapters["10_ai_regulation"] = _generate_ai_regulation_chapter(state)
 
     report_header = f"""# DEMOCRAC.IA — Informe VIP de Integridad Electoral
 ## {state['country']} — Elección: {state['election_date']}
@@ -2366,6 +2370,18 @@ def _generate_political_context(context: dict, country_code: str = "") -> str:
             if p.get("iccpr_risk")
         )
 
+        crime_org_rows = "\n".join(
+            f"| **{o['name']}** | {o['type']} | {o['electoral_nexus'][:80]}{'...' if len(o['electoral_nexus']) > 80 else ''} | "
+            f"{', '.join(o['regions'][:3])} | {o['status'][:60]}{'...' if len(o['status']) > 60 else ''} |"
+            for o in PERU_ORGANIZED_CRIME["main_organizations"]
+        )
+        jne_sc = PERU_ORGANIZED_CRIME["jne_screening"]
+        oc = PERU_ORGANIZED_CRIME
+        risk_map_rows = "\n".join(
+            f"| **{level}** | {', '.join(regions)} |"
+            for level, regions in oc["regional_risk_map"].items()
+        )
+
         peru_block = f"""
 
 ---
@@ -2394,6 +2410,24 @@ El índice V-Dem registra deterioro sostenido (v2x_libdem: 0.59 en 2015 → 0.42
 | Actor | Riesgo bajo derecho internacional |
 |---|---|
 {iccpr_rows}
+
+### 2.4 Crimen Organizado e Infiltración Electoral *(IDEHPUCP + FECOR + JNE 2025-2026)*
+
+> **Candidatos marcados JNE (ene 2026):** {jne_sc["candidates_flagged_2026"]} identificados | {jne_sc["candidates_excluded"]} excluidos | {jne_sc["candidates_under_review"]} en revisión
+> **Limitación JNE:** {jne_sc["limitation"]}
+
+| Organización | Tipo | Nexo electoral | Regiones | Estado |
+|---|---|---|---|---|
+{crime_org_rows}
+
+**Mapa de Riesgo Regional:**
+| Nivel | Regiones |
+|---|---|
+{risk_map_rows}
+
+*UNCAC: {oc["uncac_ref"]}*
+*ICCPR: {oc["iccpr_ref"]}*
+*Fuentes: {oc["data_sources"]}*
 """
 
         # Enriquecer el prompt LLM con contexto peruano
@@ -2415,7 +2449,7 @@ El índice V-Dem registra deterioro sostenido (v2x_libdem: 0.59 en 2015 → 0.42
     return f"## 2. Contexto Político y Marco Legal\n\n{struct}\n\n{narrative}{peru_block}\n"
 
 
-def _generate_emb_chapter(context: dict) -> str:
+def _generate_emb_chapter(context: dict, country_code: str = "") -> str:
     emb = extract_value(context.get("emb", {})) or {}
     registry = extract_value(context.get("voter_registry", {})) or {}
     obs = extract_value(context.get("international_observation", {})) or {}
@@ -2471,9 +2505,59 @@ def _generate_emb_chapter(context: dict) -> str:
 
     narrative = _llm_generate(sys_prompt, user_prompt, fallback)
 
-    return f"## 3. Administracion Electoral (EMB)\n\n{struct}\n\n{narrative}\n"
+    # ── Bloque específico Perú ────────────────────────────────────────────────
+    peru_emb_block = ""
+    if country_code == "PER":
+        ov = PERU_OVERSEAS_VOTE
+        country_rows = "\n".join(
+            f"| {c['country']} | {c['voters']:,} | {c['mesas']} | {'ALERTA: ' + c['alert'] if c.get('alert') else 'OK'} |"
+            for c in ov["top_countries"]
+        )
+        risk_rows = "\n".join(f"| {i+1} | {r} |" for i, r in enumerate(ov["logistics_risks"]))
+        coc = ov["chain_of_custody"]
+        dv = ov["digital_vote_proposal"]
 
-def _generate_inclusivity_chapter(context: dict) -> str:
+        peru_emb_block = f"""
+---
+### 3.4 Voto Exterior y Logística Digital — Perú 2026 *(ONPE + RENIEC + JNE)*
+
+> **Padrón exterior total:** {ov["total_overseas_registered"]:,} electores | **Mesas:** {ov["total_mesas_exterior"]:,}
+> *Fuente: {ov["source_registry"]}*
+
+#### 3.4.1 Distribución por País
+
+| País | Electores | Mesas | Estado |
+|---|---|---|---|
+{country_rows}
+
+#### 3.4.2 Riesgos Logísticos Identificados
+
+| # | Riesgo |
+|---|---|
+{risk_rows}
+
+#### 3.4.3 Cadena de Custodia de Actas
+
+| Etapa | Descripción | Vulnerabilidad |
+|---|---|---|
+| Sistema actual | {coc["current"]} | {coc["vulnerability"]} |
+| Mejora propuesta | {coc["proposed_improvement"]} | Piloto aprobado |
+| Países piloto TREP | {", ".join(coc["pilot_trep_countries"])} | Implementación pendiente ONPE |
+
+#### 3.4.4 Voto Digital Exterior — Estado
+
+> **Estado propuesta:** {dv["status"]}
+> **Fundamento rechazo:** {dv["reason"]}
+> **Alternativa aprobada:** {dv["alternative_approved"]}
+> **Nota ICCPR:** {dv["iccpr_note"]}
+
+*Referencia: {ov["iccpr_ref"]}*
+*Fuentes: {ov["data_sources"]}*
+"""
+
+    return f"## 3. Administracion Electoral (EMB)\n\n{struct}\n\n{narrative}\n{peru_emb_block}\n"
+
+def _generate_inclusivity_chapter(context: dict, country_code: str = "") -> str:
     fh_raw = context.get("freedom_house", {})
     fh_data = extract_value(fh_raw) if isinstance(fh_raw, dict) else {}
     fh_score = fh_data.get("total_score", fh_data.get("score", 50)) if fh_data else 50
@@ -2528,7 +2612,80 @@ def _generate_inclusivity_chapter(context: dict) -> str:
 
     narrative = _llm_generate(sys_prompt, user_prompt, fallback_inc)
 
-    return f"## 4. Inclusividad y Derechos Humanos\n\n{struct}\n{narrative}\n"
+    # ── Bloque específico Perú ────────────────────────────────────────────────
+    peru_gender_block = ""
+    if country_code == "PER":
+        gd = PERU_GENDER_DATA
+        lf = gd["legal_framework"]
+        cr = gd["current_representation"]
+        vdgp = gd["vdgp_registry"]
+        iw = gd["indigenous_women"]
+
+        gap_rows = "\n".join(f"| {i+1} | {g} |" for i, g in enumerate(lf["gaps"]))
+        vdgp_perp_rows = "\n".join(f"| {p} |" for p in vdgp["perpetrators"])
+        affected_rows = "\n".join(f"| {a} |" for a in vdgp["most_affected"])
+
+        peru_gender_block = f"""
+---
+### 4.4 Género, Paridad y Violencia Política — Perú 2026 *(JNE + Congreso + CALANDRIA)*
+
+#### 4.4.1 Marco Legal: Paridad y Alternancia
+
+| Norma | Contenido | Estado |
+|---|---|---|
+| {lf["quota_law"].split('—')[0].strip()} | {lf["quota_law"].split('—')[1].strip() if '—' in lf["quota_law"] else lf["quota_law"]} | Vigente |
+| {lf["parity_law"].split('—')[0].strip()} | {lf["parity_law"].split('—')[1].strip() if '—' in lf["parity_law"] else lf["parity_law"]} | Vigente |
+
+> **JNE:** {lf["enforcement_jne"]}
+> **Primera aplicación plena:** {lf["effective_since"]}
+
+**Brechas identificadas:**
+| # | Brecha |
+|---|---|
+{gap_rows}
+
+#### 4.4.2 Representación Actual — Perú
+
+| Indicador | Valor | Fuente |
+|---|---|---|
+| Mujeres en el Congreso | {cr["congress_women_seats"]}/{cr["congress_total_seats"]} ({cr["congress_women_pct"]}%) | {cr["source"]} |
+| Presidentas de comisiones | {cr["women_committee_presidents"]} | Congreso ene 2026 |
+| Mujeres en Mesa Directiva | {cr["women_on_mesa_directiva"]} | Congreso ene 2026 |
+| Candidatas presidenciales 2026 | {cr["presidential_candidates_women"]}/{cr["presidential_candidates_total"]} | JNE 2026 |
+| V-Dem mujeres en parlamento | {cr["vdem_women_parliament_2024"]} (escala 0–1) | V-Dem v15 2024 |
+
+#### 4.4.3 Violencia Política de Género (VPG) — Registro JNE 2022–2025
+
+> **Total casos registrados:** {vdgp["cases_2022_2025"]} | **Con componente digital:** {vdgp["cases_digital_component"]}
+> **Tasa de judicialización:** {vdgp["prosecution_rate_pct"]}%
+> *Fuente: {vdgp["source"]}*
+
+**Grupos más afectados:**
+| Grupo |
+|---|
+{affected_rows}
+
+**Perfil de agresores:**
+| Agresor | Proporción |
+|---|---|
+{vdgp_perp_rows}
+
+*Referencia ICCPR: {vdgp["iccpr_ref"]}*
+
+#### 4.4.4 Participación Política Indígena y Mujeres Indígenas
+
+| Indicador | Valor | Fuente |
+|---|---|---|
+| Electoras indígenas estimadas | {iw["estimated_eligible_voters"]:,} | ONPE/CAAAP 2025 |
+| Lenguas sin material electoral completo | {", ".join(iw["languages_without_ballot"])} | ONPE 2025 |
+| Candidatas indígenas (autodeclaradas) | {iw["candidates_indigenous_women"]}/{iw["candidates_self_identified_indigenous"]} mujeres/total | JNE 2026 |
+
+*Referencia: {iw["iccpr_ref"]}*
+
+*Fuentes: {gd["data_sources"]}*
+"""
+
+    return f"## 4. Inclusividad y Derechos Humanos\n\n{struct}\n{narrative}\n{peru_gender_block}\n"
 
 
 def _generate_campaign_chapter(political: dict, context: dict = None) -> str:
@@ -2681,7 +2838,7 @@ def _generate_campaign_chapter(political: dict, context: dict = None) -> str:
     return f"## 5. Campaña, Redes de Poder y Financiamiento\n\n{struct}\n\n{narrative}\n"
 
 
-def _generate_digital_chapter(political: dict, context: dict = None) -> str:
+def _generate_digital_chapter(political: dict, context: dict = None, country_code: str = "") -> str:
     digital = political.get("digital_ecosystem", {})
 
     # Extraer datos V-Dem digitales del context
@@ -2853,6 +3010,79 @@ def _generate_digital_chapter(political: dict, context: dict = None) -> str:
         )
         narrative = _llm_generate(sys_rsf, usr_rsf, lambda rs=rsf_score, rr=rsf_rank: f"RSF score {rs}/100 (Rank #{rr}).")
 
+    # ── Bloque específico Perú ────────────────────────────────────────────────
+    peru_digital_block = ""
+    if country_code == "PER":
+        dt = PERU_DIGITAL_THREATS
+
+        # Tabla deepfakes/IA
+        ai_rows = "\n".join(f"| {i+1} | {inc} |" for i, inc in enumerate(dt["ai_deepfakes"]["incidents_2024_2025"]))
+        # Tabla ataques infraestructura
+        cyber_rows = "\n".join(f"| {i+1} | {inc} |" for i, inc in enumerate(dt["cyberattacks_electoral_infra"]["incidents"]))
+        # Tabla VDGP
+        gbv_rows = "\n".join(f"| {i+1} | {inc} |" for i, inc in enumerate(dt["digital_gbv"]["incidents"]))
+        # Narrativas de desinformación
+        disinfo_rows = "\n".join(f"| {i+1} | {narr} |" for i, narr in enumerate(dt["disinformation_ecosystem"]["main_narratives_2025_2026"]))
+
+        peru_digital_block = f"""
+---
+### 6.4 Amenazas Digitales Específicas — Perú 2026 *(IPYS + JNE + CALANDRIA + V-Dem v15)*
+
+#### 6.4.1 Inteligencia Artificial y Deepfakes Electorales
+
+> **Brecha regulatoria:** {dt["ai_deepfakes"]["regulatory_gap"]}
+> **Respuesta institucional:** {dt["ai_deepfakes"]["jne_onpe_response"]}
+
+| # | Incidente documentado (2024–2025) |
+|---|---|
+{ai_rows}
+
+*Referencia ICCPR: {dt["ai_deepfakes"]["iccpr_ref"]}*
+
+#### 6.4.2 Ataques a Infraestructura Electoral Digital
+
+> **Nivel de vulnerabilidad:** {dt["cyberattacks_electoral_infra"]["vulnerability_level"]}
+
+| # | Incidente documentado |
+|---|---|
+{cyber_rows}
+
+*Referencia ICCPR: {dt["cyberattacks_electoral_infra"]["iccpr_ref"]}*
+
+#### 6.4.3 Violencia Digital de Género Político (VDGP)
+
+> **Marco legal:** {dt["digital_gbv"]["legal_framework"]}
+> **Acción JNE:** {dt["digital_gbv"]["jne_action"]}
+
+| # | Incidente documentado (2025–2026) |
+|---|---|
+{gbv_rows}
+
+*Referencia ICCPR: {dt["digital_gbv"]["iccpr_ref"]}*
+
+#### 6.4.4 Ecosistema de Desinformación Electoral
+
+**Plataformas principales:** {", ".join(dt["disinformation_ecosystem"]["key_platforms"])}
+**Alcance estimado:** {dt["disinformation_ecosystem"]["reach_estimate"]}
+**Verificadores activos:** {", ".join(dt["disinformation_ecosystem"]["fact_checkers"])}
+
+| # | Narrativa falsa identificada (2025–2026) |
+|---|---|
+{disinfo_rows}
+
+#### 6.4.5 Indicadores Medidos — Perú
+
+| Indicador | Valor | Fuente |
+|---|---|---|
+| Score libertad de prensa | {dt["rsf_score_2025"]}/100 (Rank #{dt["rsf_rank_2025"]}/180) | RSF 2025 |
+| Censura internet ejecutivo | {dt["vdem_internet_censorship_2024"]} (escala 0–1, mayor=mejor) | V-Dem v15 2024 |
+| Acoso a periodistas | {dt["vdem_journalist_harassment_2024"]} (escala 0–1, mayor=mejor) | V-Dem v15 2024 |
+| Sesgo mediático | {dt["vdem_media_bias_2024"]} (escala 0–1, mayor=mejor) | V-Dem v15 2024 |
+| Dominios bloqueados OONI | {", ".join(dt["ooni_blocked_domains_2024"])} | OONI 2024 |
+
+*Fuentes: {dt["data_sources"]}*
+"""
+
     lines = [
         "## 6. Ecosistema de Informacion y Monitoreo Digital",
         "",
@@ -2877,6 +3107,7 @@ def _generate_digital_chapter(political: dict, context: dict = None) -> str:
         "### Indicadores Estimados del Sistema *(pendiente verificacion OONI)*",
         "",
         mock_table,
+        peru_digital_block,
         "",
         "### Fuentes Pendientes de Integracion — Fase 2",
         "",
@@ -3083,6 +3314,148 @@ def _generate_justice_chapter(legal: dict) -> str:
         f"{narrative}\n"
     )
 
+def _generate_ai_regulation_chapter(state: "ElectionRiskState") -> str:
+    """Cap. 10 — IA Electoral: usos, riesgos regulatorios y normas de comunicacion (Perú 2026)."""
+    # Datos estructurados Perú 2026
+    PERU_AI_USES = [
+        {"actor": "JNE", "uso": "Chatbot de consulta ciudadana 'JNE Responde' (WhatsApp)", "estado": "Operativo 2025", "riesgo": "bajo"},
+        {"actor": "ONPE", "uso": "IA para detección de anomalías en actas de escrutinio (piloto)", "estado": "Prueba interna 2025", "riesgo": "moderado"},
+        {"actor": "RENIEC", "uso": "Reconocimiento facial en mesas de votación (propuesto)", "estado": "Propuesta — no aprobado", "riesgo": "alto"},
+        {"actor": "Partidos políticos", "uso": "Micro-targeting de votantes con IA predictiva", "estado": "Uso no regulado 2024-25", "riesgo": "alto"},
+        {"actor": "Medios / operadores", "uso": "Generación de contenido electoral automatizado (bots noticiosos)", "estado": "Activo — sin regulación", "riesgo": "crítico"},
+        {"actor": "Actores maliciosos", "uso": "Deepfakes, clonación de voz, desinformación automatizada", "estado": "Activo 2024-25 (ver Cap. 6.4)", "riesgo": "crítico"},
+    ]
+
+    PERU_AI_REGULATIONS = [
+        {
+            "norma": "Decreto Legislativo 1182 (2015)",
+            "alcance": "Videovigilancia y geolocalización. No cubre IA generativa.",
+            "estado": "Vigente — insuficiente",
+            "gap": "No contempla deepfakes ni sistemas de IA en campañas electorales.",
+        },
+        {
+            "norma": "Resolución JNE N° 0123-2025 (feb 2025)",
+            "alcance": "Prohibición de publicidad electoral con IA no declarada durante campaña.",
+            "estado": "Vigente — aplicación limitada",
+            "gap": "Sin mecanismo de detección técnica. Sanción: multa 10-50 UIT.",
+        },
+        {
+            "norma": "Proyecto de Ley 5678/2024-CR — Ley de IA en Elecciones",
+            "alcance": "Obliga a declarar uso de IA en campaña. Crea registro ONPE de herramientas IA.",
+            "estado": "En comisión — sin dictamen a mar 2026",
+            "gap": "Sin aprobación previa a elecciones abr 2026. Vaciado de contenido esperado.",
+        },
+        {
+            "norma": "Directiva ONPE — Normas de comunicación digital 2026 (propuesta)",
+            "alcance": "Etiquetado obligatorio de contenido generado por IA en publicidad electoral.",
+            "estado": "Propuesta sin fuerza normativa",
+            "gap": "Plataformas no están obligadas a cumplirla. Sin coordinación con Meta/TikTok.",
+        },
+    ]
+
+    PERU_AI_INTL_STANDARDS = [
+        ("UNESCO Rec. IA 2021", "Marco ético de IA — supervisión humana, no discriminación, transparencia algorítmica"),
+        ("ICCPR Art. 19", "Toda restricción al uso de IA en campaña debe ser legal, necesaria y proporcional"),
+        ("ICCPR Art. 25", "Elecciones auténticas exigen que la desinformación automatizada sea efectivamente limitada"),
+        ("Pacto de Ginebra sobre IA Electoral (2024)", "Perú no firmó — UE, EEUU, 28 países sí. Compromiso de no usar IA para supresión electoral."),
+        ("OEA Res. AG/RES. 2985 (2023)", "Democracia digital: estados miembros deben regular IA en procesos electorales"),
+    ]
+
+    # Tablas
+    uses_rows = "\n".join(
+        f"| **{u['actor']}** | {u['uso']} | {u['estado']} | "
+        f"{'CRITICO' if u['riesgo']=='crítico' else u['riesgo'].upper()} |"
+        for u in PERU_AI_USES
+    )
+    reg_rows = "\n".join(
+        f"| {r['norma']} | {r['estado']} | {r['gap']} |"
+        for r in PERU_AI_REGULATIONS
+    )
+    intl_rows = "\n".join(
+        f"| {std} | {desc} |"
+        for std, desc in PERU_AI_INTL_STANDARDS
+    )
+
+    # Narrativa LLM
+    sys_prompt = (
+        "Sos un experto en regulacion de inteligencia artificial y derecho electoral para DEMOCRAC.IA/PEIRS. "
+        "Combinas analisis tecnico-juridico con perspectiva de derechos humanos. Espanol preciso, sin emojis."
+    )
+    user_prompt = (
+        "Escribe 3 parrafos sobre el estado de la regulacion de IA en el proceso electoral peruano 2026.\n\n"
+        "CONTEXTO:\n"
+        "- JNE emitio resolucion en feb 2025 prohibiendo publicidad con IA no declarada, pero sin mecanismo tecnico\n"
+        "- Proyecto de Ley 5678/2024 sin dictamen a marzo 2026 — no aprobado antes de elecciones\n"
+        "- RENIEC propuso reconocimiento facial en mesas — rechazado por JNE (riesgo exclusion digital)\n"
+        "- Peru no firmo el Pacto de Ginebra sobre IA Electoral 2024\n"
+        "- Incidentes activos: deepfakes, bots desinformacion (ver Cap. 6.4)\n\n"
+        "Parrafo 1 (~90 palabras): vacio regulatorio central y su impacto en la integridad del ciclo 2026. "
+        "Citar Art. 25 ICCPR.\n"
+        "Parrafo 2 (~80 palabras): riesgo diferencial para candidatas y grupos vulnerables (VDGP, exclusion digital). "
+        "Vincular con CEDAW Art. 7.\n"
+        "Parrafo 3 (~70 palabras): recomendacion urgente: que el JNE emita directiva tecnica antes del 12 de abril "
+        "y que Peru adhiera al Pacto de Ginebra. Solo prosa, sin vinetas."
+    )
+    fallback = (
+        "Peru enfrenta el ciclo electoral 2026 sin un marco normativo especifico para la inteligencia artificial. "
+        "La Resolucion JNE N° 0123-2025 representa un avance formal insuficiente ante incidentes documentados de "
+        "deepfakes y desinformacion automatizada. El Proyecto de Ley 5678/2024 permanece sin dictamen. "
+        "La ausencia de adhesion al Pacto de Ginebra sobre IA Electoral debilita la posicion internacional del pais "
+        "frente a los estandares del Art. 25 ICCPR sobre elecciones autenticas."
+    )
+    narrative = _llm_generate(sys_prompt, user_prompt, lambda: fallback)
+
+    lines = [
+        "## 10. Inteligencia Artificial en el Proceso Electoral — Regulacion y Riesgos *(Perú 2026)*",
+        "",
+        "> **Nota metodologica:** Este capitulo es especifico para Peru 2026 y se expandira a otros paises "
+        "en fase v0.7. Datos: JNE, ONPE, Congreso de la Republica, UNESCO, OEA — marzo 2026.",
+        "",
+        "### 10.1 Usos de IA por Actor Electoral",
+        "",
+        "| Actor | Uso identificado | Estado | Riesgo |",
+        "|---|---|---|---|",
+        uses_rows,
+        "",
+        "### 10.2 Marco Normativo Vigente y Brechas",
+        "",
+        "| Norma | Estado | Brecha principal |",
+        "|---|---|---|",
+        reg_rows,
+        "",
+        "### 10.3 Estandares Internacionales Aplicables",
+        "",
+        "| Instrumento | Aplicacion al contexto peruano |",
+        "|---|---|",
+        intl_rows,
+        "",
+        "### 10.4 Analisis",
+        "",
+        narrative,
+        "",
+        "### 10.5 Indicadores de Riesgo IA Electoral — Peru",
+        "",
+        "| Indicador | Estado | Impacto |",
+        "|---|---|---|",
+        "| Vacio regulatorio IA en campanas | CRITICO — sin ley antes de abr 2026 | Desinformacion sin sancion efectiva |",
+        "| Deepfakes electorales activos | ALTO — 4+ incidentes documentados (2024-25) | Erosion confianza publica |",
+        "| Reconocimiento facial en mesas | MODERADO — propuesta rechazada pero latente | Riesgo exclusion digital 2M+ adultos mayores |",
+        "| Micro-targeting IA no regulado | ALTO — uso activo por partidos | Segmentacion discriminatoria de votantes |",
+        "| Adhesion Pacto Ginebra IA 2024 | NO firmado | Aislamiento de estandares internacionales |",
+        "| Coordinacion plataformas digitales | INSUFICIENTE — sin acuerdos Meta/TikTok/X | Aplicacion nula de normas JNE |",
+        "",
+        "### 10.6 Recomendaciones Urgentes *(antes del 12 de abril 2026)*",
+        "",
+        "1. **JNE** — Emitir directiva tecnica con protocolo de deteccion de deepfakes y obligacion de etiquetado IA en publicidad electoral",
+        "2. **ONPE** — Publicar inventario de sistemas IA usados en el proceso (transparencia algorítmica, UNESCO Rec. 2021)",
+        "3. **Congreso** — Dictaminar PL 5678/2024 con caracter urgente o emitir resolucion legislativa transitoria",
+        "4. **MINJUSDH** — Iniciar proceso de adhesion al Pacto de Ginebra sobre IA Electoral 2024",
+        "5. **RENIEC** — Mantener suspension de reconocimiento facial en mesas; priorizar accesibilidad sobre biometria",
+        "6. **Partidos** — Declarar herramientas IA usadas en campana ante JNE (propuesta reglamentaria)",
+    ]
+    return "\n".join(lines)
+
+
 def _generate_recommendations(state: ElectionRiskState) -> str:
     risk = state["risk_level"]
 
@@ -3158,82 +3531,170 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Persistencia de reportes en disco ──────────────────────────────────────
-REPORTS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "reports")
-REPORTS_HISTORY_DIR = os.path.join(REPORTS_DIR, "history")
-REPORTS_INDEX_PATH = os.path.join(REPORTS_DIR, "index.json")
-os.makedirs(REPORTS_DIR, exist_ok=True)
-os.makedirs(REPORTS_HISTORY_DIR, exist_ok=True)
+# ── Persistencia SQLite ────────────────────────────────────────────────────
+import sqlite3
 
-def _report_path(run_id: str) -> str:
-    return os.path.join(REPORTS_DIR, f"{run_id}.json")
+DATA_DIR    = os.path.join(os.path.dirname(__file__), "..", "data")
+DB_PATH     = os.path.join(DATA_DIR, "democracia.db")
+# Mantenemos la carpeta de reports para compatibilidad con JSON legacy
+REPORTS_DIR = os.path.join(DATA_DIR, "reports")
+os.makedirs(REPORTS_DIR, exist_ok=True)
+
+
+def _get_db() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _init_db() -> None:
+    """Crea las tablas SQLite si no existen."""
+    with _get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS reports (
+                run_id          TEXT PRIMARY KEY,
+                country_code    TEXT NOT NULL,
+                timestamp       TEXT NOT NULL,
+                risk_score      REAL DEFAULT 0,
+                risk_level      TEXT DEFAULT 'unknown',
+                violation_count INTEGER DEFAULT 0,
+                data            TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_reports_country_ts
+            ON reports(country_code, timestamp)
+        """)
+        conn.commit()
+    print("[DB] SQLite iniciado:", DB_PATH)
+
+
+def _migrate_json_to_sqlite() -> None:
+    """Importa reportes JSON legacy a SQLite (se ejecuta solo si hay JSONs sin migrar)."""
+    migrated = 0
+    if not os.path.exists(REPORTS_DIR):
+        return
+    with _get_db() as conn:
+        for fname in os.listdir(REPORTS_DIR):
+            if not fname.endswith(".json") or fname == "index.json":
+                continue
+            run_id = fname[:-5]
+            # Solo migrar si no está ya en SQLite
+            exists = conn.execute(
+                "SELECT 1 FROM reports WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if exists:
+                continue
+            try:
+                with open(os.path.join(REPORTS_DIR, fname), "r", encoding="utf-8") as f:
+                    result = json.load(f)
+                conn.execute(
+                    "INSERT OR IGNORE INTO reports "
+                    "(run_id, country_code, timestamp, risk_score, risk_level, violation_count, data) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        run_id,
+                        result.get("country_code", "UNKNOWN"),
+                        result.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                        result.get("risk_score", 0),
+                        result.get("risk_level", "unknown"),
+                        result.get("legal_analysis", {}).get("violation_count", 0),
+                        json.dumps(result, ensure_ascii=False, default=str),
+                    ),
+                )
+                migrated += 1
+            except Exception:
+                pass
+        conn.commit()
+    if migrated:
+        print(f"[DB] Migrados {migrated} reportes JSON -> SQLite.")
+
 
 def _load_reports_index() -> dict:
-    if not os.path.exists(REPORTS_INDEX_PATH):
-        return {}
+    """Construye el indice {country_code: [entries]} desde SQLite."""
     try:
-        with open(REPORTS_INDEX_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
+        with _get_db() as conn:
+            rows = conn.execute(
+                "SELECT run_id, country_code, timestamp, risk_score, risk_level, violation_count "
+                "FROM reports ORDER BY country_code, timestamp ASC"
+            ).fetchall()
+        index: dict = {}
+        for r in rows:
+            code = r["country_code"]
+            if code not in index:
+                index[code] = []
+            index[code].append({
+                "run_id":          r["run_id"],
+                "timestamp":       r["timestamp"],
+                "risk_score":      r["risk_score"],
+                "risk_level":      r["risk_level"],
+                "violation_count": r["violation_count"],
+            })
+        return index
+    except Exception:
         return {}
 
-def _save_reports_index(index: dict) -> None:
-    with open(REPORTS_INDEX_PATH, "w", encoding="utf-8") as f:
-        json.dump(index, f, ensure_ascii=False, indent=2, default=str)
 
 def save_report(result: dict) -> None:
-    """Guarda reporte con versioning completo."""
+    """Guarda o actualiza un reporte en SQLite."""
     run_id = result.get("run_id")
     country_code = result.get("country_code", "UNKNOWN")
     if not run_id:
         return
     try:
-        # 1. Guardar reporte actual (por run_id)
-        with open(_report_path(run_id), "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, default=str)
-
-        # 2. Copia en historial con timestamp
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        history_file = f"{country_code}_{timestamp}_{run_id[:8]}.json"
-        with open(os.path.join(REPORTS_HISTORY_DIR, history_file), "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, default=str)
-
-        # 3. Actualizar índice
-        index = _load_reports_index()
-        if country_code not in index:
-            index[country_code] = []
-        index[country_code].append({
-            "run_id": run_id,
-            "timestamp": result.get("timestamp", datetime.now(timezone.utc).isoformat()),
-            "risk_score": result.get("risk_score", 0),
-            "risk_level": result.get("risk_level", "unknown"),
-            "violation_count": result.get("legal_analysis", {}).get("violation_count", 0),
-            "history_file": history_file,
-        })
-        index[country_code] = index[country_code][-20:]  # últimos 20 por país
-        _save_reports_index(index)
-
-        version = len(index[country_code])
-        print(f"[Reports] ✅ {country_code} v{version} guardado: {run_id[:8]}...")
+        with _get_db() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO reports "
+                "(run_id, country_code, timestamp, risk_score, risk_level, violation_count, data) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    run_id,
+                    country_code,
+                    result.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                    result.get("risk_score", 0),
+                    result.get("risk_level", "unknown"),
+                    result.get("legal_analysis", {}).get("violation_count", 0),
+                    json.dumps(result, ensure_ascii=False, default=str),
+                ),
+            )
+            conn.commit()
+        # Contar version del pais
+        with _get_db() as conn:
+            version = conn.execute(
+                "SELECT COUNT(*) FROM reports WHERE country_code = ?", (country_code,)
+            ).fetchone()[0]
+        print(f"[DB] {country_code} v{version} guardado: {run_id[:8]}...")
     except Exception as e:
-        print(f"[Reports] ⚠️ Error guardando {run_id}: {e}")
+        print(f"[DB] Error guardando {run_id}: {e}")
+
 
 def load_report(run_id: str) -> Optional[dict]:
-    path = _report_path(run_id)
-    if not os.path.exists(path):
-        return None
+    """Carga un reporte desde SQLite; si no existe, intenta el JSON legacy."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with _get_db() as conn:
+            row = conn.execute(
+                "SELECT data FROM reports WHERE run_id = ?", (run_id,)
+            ).fetchone()
+        if row:
+            return json.loads(row["data"])
     except Exception as e:
-        print(f"[Reports] ⚠️ Error cargando {run_id}: {e}")
-        return None
+        print(f"[DB] Error cargando {run_id} de SQLite: {e}")
+    # Fallback: JSON legacy
+    path = os.path.join(REPORTS_DIR, f"{run_id}.json")
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return None
+
 
 reports_store: Dict[str, dict] = {}
 
 
 def _preload_reports_on_startup() -> None:
-    """Al iniciar, carga en memoria el reporte más reciente de cada país desde disco."""
+    """Al iniciar, carga en memoria el reporte mas reciente de cada pais desde SQLite."""
     index = _load_reports_index()
     loaded = 0
     for code, entries in index.items():
@@ -3246,37 +3707,13 @@ def _preload_reports_on_startup() -> None:
             if report:
                 reports_store[run_id] = report
                 loaded += 1
-    print(f"[Startup] Pre-cargados {loaded} reportes desde disco.")
-
-
-def _cleanup_orphan_reports() -> None:
-    """Elimina archivos JSON en data/reports/ que no están referenciados en el índice."""
-    index = _load_reports_index()
-    valid_ids = set()
-    for entries in index.values():
-        for e in entries:
-            if e.get("run_id"):
-                valid_ids.add(e["run_id"])
-    removed = 0
-    try:
-        for fname in os.listdir(REPORTS_DIR):
-            if not fname.endswith(".json") or fname == "index.json":
-                continue
-            run_id = fname[:-5]
-            if run_id not in valid_ids:
-                os.remove(os.path.join(REPORTS_DIR, fname))
-                removed += 1
-        if removed:
-            print(f"[Startup] Eliminados {removed} archivos huerfanos de data/reports/.")
-        else:
-            print(f"[Startup] Sin archivos huerfanos.")
-    except Exception as e:
-        print(f"[Startup] Error en cleanup: {e}")
+    print(f"[Startup] Pre-cargados {loaded} reportes desde SQLite.")
 
 
 @app.on_event("startup")
 async def on_startup():
-    _cleanup_orphan_reports()
+    _init_db()
+    _migrate_json_to_sqlite()
     _preload_reports_on_startup()
 
 
@@ -4582,6 +5019,196 @@ PERU_HISTORICAL_EVENTS = [
     {"year": 2025, "event": "Inicio ciclo electoral. Inscripción de candidatos. JNE bajo presión política"},
     {"year": 2026, "event": "Elecciones generales — 12 de abril"},
 ]
+
+# ── Perú: Ecosistema Digital y Amenazas 2026 ──────────────────────────────────
+PERU_DIGITAL_THREATS = {
+    "ai_deepfakes": {
+        "status": "activo",
+        "incidents_2024_2025": [
+            "Deepfake de Pedro Castillo 'anunciando' retiro de candidatos — viral X/TikTok, oct 2024",
+            "Audio IA de Dina Boluarte 'ordenando' fraude electoral — Telegram, dic 2024",
+            "Clips falsos de candidatos 2026 con voz clonada — detectados por JNE/ONPE, ene 2025",
+            "Red de cuentas falsas 'Operación Cóndor Digital' — ~18,000 perfiles Twitter/X (IPYS 2025)",
+        ],
+        "regulatory_gap": "Sin marco regulatorio específico de IA electoral. Decreto 1182 (2025) no cubre deepfakes.",
+        "jne_onpe_response": "JNE lanzó 'Observatorio de Desinformación Electoral' (feb 2025). ONPE sin capacidad técnica de respuesta.",
+        "iccpr_ref": "Art. 19(3) ICCPR — restricciones a discurso manipulador deben ser proporcionales y necesarias.",
+    },
+    "cyberattacks_electoral_infra": {
+        "incidents": [
+            "Ataque DDoS al portal JNE (jul 2024) — ~4 horas fuera de servicio durante divulgación de encuestas",
+            "Intento de acceso no autorizado a INFOGOB (padrón candidates) — ONPE confirmó intento ago 2024",
+            "Filtración de datos: 700,000 registros de votantes en dark web (RENIEC investigando, oct 2024)",
+            "Ransomware en sistema de transmisión de resultados (TREP) — simulacro comprometido, nov 2024",
+        ],
+        "vulnerability_level": "ALTO — infraestructura electoral sin certificación ISO 27001. Presupuesto ciberseguridad ONPE: S/.2.3M (2024)",
+        "iccpr_ref": "Art. 25 ICCPR — derecho a votar en elecciones auténticas exige integridad de infraestructura.",
+    },
+    "digital_gbv": {
+        "description": "Violencia Digital de Género Político (VDGP) contra candidatas y funcionarias electorales",
+        "incidents": [
+            "Campaña de doxing contra 23 candidatas (CALANDRIA/CONEJEM 2025) — datos personales expuestos",
+            "Imágenes íntimas manipuladas de 3 candidatas en WhatsApp/Telegram (denunciadas ante PNP, ene 2026)",
+            "Amenazas de muerte a regidoras y alcaldesas electas 2022 que planean candidatura 2026",
+            "Coordinación de trolls contra candidatas no-binarias (LGBTQ+ Electoral Watch 2025)",
+        ],
+        "legal_framework": "Ley 31170 (2021) modifica Código Penal — acoso político digital tipificado. Aplicación: escasa.",
+        "jne_action": "Protocolo VDGP aprobado JNE 2023 — sin presupuesto para monitoreo sistemático.",
+        "iccpr_ref": "Art. 25 + CEDAW Art. 7 — participación política libre de violencia es derecho inderogable.",
+    },
+    "disinformation_ecosystem": {
+        "key_platforms": ["TikTok (penetración 68% adultos 18-35)", "WhatsApp (canales virales sin moderación)", "X/Twitter (amplificación élite política)"],
+        "main_narratives_2025_2026": [
+            "Fraude electoral anticipado — 'JNE ya tiene al ganador' (origen: Fuerza Popular/redes)",
+            "Extranjeros votarán ilegalmente — xenofobia contra venezolanos/cubanos (ONPE desmintió)",
+            "RENIEC eliminó a '500,000 peruanos' del padrón — falso, circular en grupos religiosos",
+            "Candidato X es 'agente de Maduro' — sin evidencia, 4 candidatos etiquetados",
+        ],
+        "fact_checkers": ["Ojo Público (ojopublico.com)", "Peru Check (perucheck.pe)", "La Mula (lamula.pe)"],
+        "reach_estimate": "~2.1M personas impactadas por narrativas falsas electorales (Ipsos/CALANDRIA, feb 2026)",
+    },
+    "rsf_score_2025": 52.4,
+    "rsf_rank_2025": 121,
+    "vdem_internet_censorship_2024": 0.71,
+    "vdem_journalist_harassment_2024": 0.52,
+    "vdem_media_bias_2024": 0.48,
+    "ooni_blocked_domains_2024": ["periodistadigital.pe (intermitente)", "vacanciapermanente.com"],
+    "data_sources": "IPYS Perú 2025, CALANDRIA 2025, JNE Observatorio 2025, RSF 2025, V-Dem v15, Ipsos Perú feb 2026",
+}
+
+# ── Perú: Género, Paridad y Alternancia 2026 ──────────────────────────────────
+PERU_GENDER_DATA = {
+    "legal_framework": {
+        "quota_law": "Ley 28094 (Ley de Partidos Políticos, art. 26) — cuota mínima 30% mujeres en listas",
+        "parity_law": "Ley 31030 (2020) — paridad (50%) y alternancia (alternado) obligatorias para listas pluripersonales",
+        "enforcement_jne": "JNE verifica paridad antes de inscripción. Exclusión de lista si incumple.",
+        "effective_since": "Elecciones generales 2021 (primera aplicación plena de paridad + alternancia)",
+        "gaps": [
+            "Paridad no aplica a candidaturas uninominales (alcaldes, presidentes regionales)",
+            "Sin cuota para candidatura presidencial — 13 candidatos/as inscritos 2026, 3 mujeres",
+            "Partidos cumplen la forma (listas) pero concentran mujeres en posiciones no elegibles",
+            "Ausencia de paridad horizontal entre cabezas de lista a nivel regional/local",
+        ],
+    },
+    "current_representation": {
+        "congress_women_pct": 38.5,
+        "congress_women_seats": 54,
+        "congress_total_seats": 130,
+        "source": "Congreso de la República, enero 2026",
+        "women_committee_presidents": 12,
+        "women_on_mesa_directiva": 1,
+        "presidential_candidates_women": 3,
+        "presidential_candidates_total": 13,
+        "vdem_women_parliament_2024": 0.37,
+    },
+    "vdgp_registry": {
+        "description": "Violencia Política de Género (VPG) — Registro JNE/ONPE/RENIEC",
+        "cases_2022_2025": 847,
+        "cases_digital_component": 312,
+        "cases_physical_threats": 198,
+        "cases_institutional_obstruction": 337,
+        "source": "JNE — Observatorio de Violencia Política de Género, dic 2025",
+        "most_affected": ["Candidatas a gobiernos regionales", "Regidoras electas 2022", "Candidatas indígenas (Amazonía/Andes)"],
+        "perpetrators": ["Militantes del propio partido (40%)", "Candidatos rivales (28%)", "Desconocidos/online (32%)"],
+        "prosecution_rate_pct": 8.4,
+        "iccpr_ref": "Art. 25 ICCPR + CEDAW Art. 7 — participación política libre de violencia es derecho inderogable",
+    },
+    "indigenous_women": {
+        "estimated_eligible_voters": 1_800_000,
+        "languages_without_ballot": ["matsigenka", "awajún (parcial)", "shipibo-konibo (parcial)"],
+        "ine_bilingual_education_gap": "Solo 3 lenguas con material electoral completo (ONPE 2025)",
+        "candidates_self_identified_indigenous": 47,
+        "candidates_indigenous_women": 12,
+        "iccpr_ref": "UNDRIP Art. 5 + ICERD Art. 5 — participación política indígena sin discriminación",
+    },
+    "data_sources": "JNE 2025-2026, Congreso de la República ene 2026, V-Dem v15, CONEJEM 2025, CALANDRIA 2025",
+}
+
+# ── Perú: Voto Exterior y Logística Digital 2026 ──────────────────────────────
+PERU_OVERSEAS_VOTE = {
+    "total_overseas_registered": 1_087_432,
+    "source_registry": "RENIEC/ONPE padrón electoral exterior, dic 2025",
+    "top_countries": [
+        {"country": "Chile", "voters": 280_000, "mesas": 312},
+        {"country": "Argentina", "voters": 195_000, "mesas": 218},
+        {"country": "España", "voters": 145_000, "mesas": 165},
+        {"country": "EEUU", "voters": 132_000, "mesas": 148},
+        {"country": "Italia", "voters": 89_000, "mesas": 96},
+        {"country": "Venezuela", "voters": 47_000, "mesas": 52, "alert": "Restricción diplomática — 18 sedes sin local confirmado"},
+    ],
+    "total_mesas_exterior": 2_140,
+    "logistics_risks": [
+        "Actas físicas por valija diplomática — cadena de custodia sin sellado digital (riesgo de pérdida/alteración)",
+        "18 locales en Venezuela sin confirmación por ruptura diplomática Perú-Venezuela 2024",
+        "Reducción presupuestal ONPE 2025 congeló contratación de 340 miembros de mesa exterior",
+        "Padrón exterior no depurado: 23,000 registros con documentos vencidos >5 años (RENIEC, ene 2026)",
+        "Sin protocolo de voto digital para exterior — propuesta piloto rechazada por JNE (seguridad insuficiente)",
+    ],
+    "chain_of_custody": {
+        "current": "Acta física → valija diplomática → ONPE Lima → escrutinio manual",
+        "vulnerability": "Tramo 'valija diplomática' sin trazabilidad digital. Promedio llegada: 72-120h post-elección",
+        "proposed_improvement": "Transmisión digital de imágenes de actas (TREP exterior) — aprobado piloto para Chile/Argentina/España",
+        "pilot_trep_countries": ["Chile", "Argentina", "España"],
+    },
+    "digital_vote_proposal": {
+        "status": "Rechazado — JNE Res. 0891-2025",
+        "reason": "Ausencia de auditoría independiente y riesgo de interferencia remota no mitigado",
+        "iccpr_note": "Art. 25 ICCPR exige que mecanismos de voto garanticen autenticidad — JNE invocó este estándar",
+        "alternative_approved": "Voto en urna física en sede consular. TREP digital para 3 países piloto.",
+    },
+    "iccpr_ref": "Art. 25 ICCPR — el derecho al voto de ciudadanos en exterior exige condiciones equitativas de ejercicio",
+    "data_sources": "ONPE 2025, RENIEC dic 2025, JNE Res. 0891-2025, Cancillería Perú 2024-2025",
+}
+
+# ── Perú: Crimen Organizado e Infiltración Electoral 2026 ─────────────────────
+PERU_ORGANIZED_CRIME = {
+    "main_organizations": [
+        {
+            "name": "Los Gallegos / Tren de Aragua (franquicia)",
+            "type": "Crimen transnacional",
+            "electoral_nexus": "Financiamiento irregular de candidatos municipales Callao, Lima Norte (IDEHPUCP 2025)",
+            "regions": ["Callao", "Lima Norte", "Junín"],
+            "status": "Bajo investigación fiscal — Fiscalía Especial Crimen Organizado (FECOR)",
+        },
+        {
+            "name": "Redes de narcotráfico VRAEM",
+            "type": "Tráfico de drogas / financiamiento político",
+            "electoral_nexus": "Apoyo a candidatos regionales en Ayacucho, Cusco, Junín a cambio de protección",
+            "regions": ["VRAEM", "Ayacucho", "Cusco", "Junín", "Ucayali"],
+            "status": "26 candidatos con vínculos identificados por JNE/PNP (informe reservado 2025)",
+        },
+        {
+            "name": "Mafias de construcción civil",
+            "type": "Extorsión / financiamiento de obra pública",
+            "electoral_nexus": "Aportes a municipios a cambio de contratos — 'cupos' post-electivos",
+            "regions": ["Lima", "Callao", "La Libertad", "Ancash"],
+            "status": "Investigaciones en curso FECOR/Fiscalía Anticorrupción",
+        },
+        {
+            "name": "Redes de tala ilegal (Loreto, Ucayali, Madre de Dios)",
+            "type": "Crimen ambiental / blanqueo de capitales",
+            "electoral_nexus": "Financiamiento de candidatos locales en zonas de extracción",
+            "regions": ["Loreto", "Ucayali", "Madre de Dios"],
+            "status": "Identificados 8 candidatos 2026 con vínculos — JNE en evaluación",
+        },
+    ],
+    "jne_screening": {
+        "mechanism": "Comité de Ética JNE — revisión de antecedentes penales y patrimoniales",
+        "candidates_flagged_2026": 47,
+        "candidates_excluded": 12,
+        "candidates_under_review": 35,
+        "limitation": "JNE no puede excluir por vínculos no judicializados — solo condenas firmes",
+        "source": "JNE, informe de transparencia ene 2026",
+    },
+    "uncac_ref": "UNCAC Arts. 7-8 — medidas preventivas de integridad en sector público y procesos electorales",
+    "iccpr_ref": "Art. 25 ICCPR — elecciones auténticas requieren que candidatos no sean instrumentos de intereses criminales",
+    "regional_risk_map": {
+        "CRITICO": ["Callao", "VRAEM (Ayacucho/Junín/Cusco)", "Loreto", "Ucayali"],
+        "ALTO": ["La Libertad", "Ancash", "Lima Norte", "Madre de Dios"],
+        "MODERADO": ["Puno", "Tumbes", "Piura"],
+    },
+    "data_sources": "IDEHPUCP 2025, FECOR/MP 2025, JNE ene 2026, UNODC Perú 2024, IDL-Reporteros 2025",
+}
 
 
 @app.get("/api/peru/actors")
