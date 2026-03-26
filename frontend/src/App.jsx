@@ -1878,117 +1878,540 @@ const renderMarkdownWithTooltips = (md) => {
 
 
 // ── GENERADOR HTML DESCARGABLE ────────────────────────────────────────────────
-const generateHtmlReport = (markdown, country, runId, timestamp) => {
-  // Convertir markdown a HTML básico para el documento descargable
-  let html = markdown
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/^- (.+)$/gm, "<li>$1</li>")
-    .replace(/^(\| .+)$/gm, (m) => m)
-    .replace(/\n\n/g, "</p><p>");
+const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => {
+  // ── Colores por nivel de riesgo ───────────────────────────────────────────
+  const riskPalette = {
+    critical: { hex: "#b91c1c", light: "#fef2f2", mid: "#fca5a5", label: "CRÍTICO" },
+    high:     { hex: "#c2410c", light: "#fff7ed", mid: "#fdba74", label: "ALTO" },
+    moderate: { hex: "#b45309", light: "#fffbeb", mid: "#fcd34d", label: "MODERADO" },
+    low:      { hex: "#065f46", light: "#ecfdf5", mid: "#6ee7b7", label: "BAJO" },
+  };
+  const rp = riskPalette[country.riskLevel] || riskPalette.moderate;
+  const score = country.riskScore || 0;
 
-  // Convertir tablas markdown a HTML
-  const tableRegex = /(\|.+\|\n\|[-|: ]+\|\n(?:\|.+\|\n?)*)/g;
-  html = html.replace(tableRegex, (tableStr) => {
-    const rows = tableStr.trim().split("\n").filter(r => !r.match(/^\|[-|: ]+\|$/));
-    const headerRow = rows[0].split("|").map(c => c.trim()).filter(Boolean);
-    const dataRows = rows.slice(1);
-    let tableHtml = "<table><thead><tr>" + headerRow.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
-    dataRows.forEach(row => {
-      const cells = row.split("|").map(c => c.trim()).filter(Boolean);
-      tableHtml += "<tr>" + cells.map(c => {
-        if (c === "CONFIRMED") return `<td class="confirmed">✓ VERIFICADO</td>`;
-        if (c === "MOCK") return `<td class="mock">⚠ PENDIENTE</td>`;
-        return `<td>${c}</td>`;
-      }).join("") + "</tr>";
+  // ── Extractor de datos con trazabilidad ───────────────────────────────────
+  const ctx = (reportData && reportData.context_data) || {};
+  const legal = (reportData && reportData.legal_analysis) || {};
+  const chapters = (reportData && reportData.report_chapters) || {};
+  const dims = country.dimensions || {};
+  const violations = legal.violations || [];
+  const dataSources = legal.data_sources_summary || {};
+
+  const xv = (d) => (d && d._trace) ? d.value : (d || {});
+  const fh   = xv(ctx.freedom_house);   const fhScore  = fh.total_score || fh.score || "—";
+  const vdem = xv(ctx.vdem);            const vdemIdx  = vdem.liberal_democracy || "—";
+  const pei  = xv(ctx.pei);             const peiScore = pei.overall_integrity || "—";
+  const rsf  = xv(ctx.rsf);             const rsfScore = rsf.score || "—";
+  const emb  = xv(ctx.emb);             const embLevel = emb.independence_level || "—";
+
+  // ── SVG: Gauge semicircular ───────────────────────────────────────────────
+  const gaugeAngle = 180 - (score / 100) * 180;
+  const gaugeRad = (gaugeAngle * Math.PI) / 180;
+  const gx = Math.round(100 + 75 * Math.cos(gaugeRad));
+  const gy = Math.round(100 - 75 * Math.sin(gaugeRad));
+  const largeArc = score > 50 ? 1 : 0;
+  const gaugeSvg = `
+<svg viewBox="0 0 200 120" width="180" height="108" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 25 100 A 75 75 0 0 1 175 100" stroke="#e2e8f0" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <path d="M 25 100 A 75 75 0 ${largeArc} 1 ${gx} ${gy}" stroke="${rp.hex}" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <circle cx="${gx}" cy="${gy}" r="5" fill="${rp.hex}"/>
+  <text x="100" y="90" text-anchor="middle" font-size="36" font-weight="900" fill="${rp.hex}" font-family="Georgia,serif">${score}</text>
+  <text x="100" y="108" text-anchor="middle" font-size="9" fill="#64748b" font-family="sans-serif" letter-spacing="1">ÍNDICE DE RIESGO / 100</text>
+</svg>`;
+
+  // ── SVG: Barras de dimensiones ────────────────────────────────────────────
+  const dimDefs = [
+    { key: "suffrage",         label: "Sufragio Universal" },
+    { key: "legalFramework",   label: "Marco Legal" },
+    { key: "embIndependence",  label: "Independencia EMB" },
+    { key: "mediaFreedom",     label: "Libertad de Medios" },
+    { key: "campaignFinance",  label: "Financiamiento" },
+    { key: "digitalEcosystem", label: "Ecosistema Digital" },
+    { key: "disputeResolution",label: "Justicia Electoral" },
+    { key: "inclusion",        label: "Inclusividad" },
+  ];
+  const barColor = (v) => v >= 70 ? "#065f46" : v >= 45 ? "#b45309" : v >= 25 ? "#c2410c" : "#991b1b";
+  const dimBarsHtml = dimDefs.map(({ key, label }) => {
+    const val = Math.round(dims[key] || 0);
+    const w = Math.max(2, val);
+    const col = barColor(val);
+    return `
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+  <div style="width:160px;font-size:11px;color:#475569;text-align:right;flex-shrink:0">${label}</div>
+  <div style="flex:1;background:#f1f5f9;border-radius:4px;height:14px;position:relative">
+    <div style="height:100%;width:${w}%;background:${col};border-radius:4px;transition:width 1s"></div>
+  </div>
+  <div style="width:36px;font-size:12px;font-weight:700;color:${col};font-family:monospace">${val}</div>
+</div>`;
+  }).join("");
+
+  // ── Convertidor Markdown → HTML completo ─────────────────────────────────
+  const mdToHtml = (md) => {
+    if (!md) return "";
+    // Tablas primero (antes de otros reemplazos)
+    const tableRegex = /(\|.+\|\n\|[-|: ]+\|\n(?:\|.+\|\n?)+)/g;
+    md = md.replace(tableRegex, (tableStr) => {
+      const rows = tableStr.trim().split("\n").filter(r => !r.match(/^\|[-|:\s]+\|$/));
+      if (rows.length < 1) return tableStr;
+      const headerCells = rows[0].split("|").map(c => c.trim()).filter(Boolean);
+      const dataRows = rows.slice(1);
+      let t = `<table><thead><tr>${headerCells.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>`;
+      dataRows.forEach(row => {
+        const cells = row.split("|").map(c => c.trim()).filter(Boolean);
+        const cls = cells.some(c => c === "CRITICO" || c === "CRÍTICO") ? ' class="risk-critical"'
+                  : cells.some(c => c === "ALTO") ? ' class="risk-high"' : "";
+        t += `<tr${cls}>${cells.map(c => {
+          if (c === "confirmed" || c === "VERIFICADO" || c === "✓ VERIFICADO") return `<td class="conf-ok">&#10003; Verificado</td>`;
+          if (c === "mock" || c === "MOCK" || c === "PENDIENTE") return `<td class="conf-pend">&#9888; Pendiente</td>`;
+          if (c === "CRITICO" || c === "CRÍTICO") return `<td style="color:#991b1b;font-weight:700">${c}</td>`;
+          if (c === "ALTO") return `<td style="color:#c2410c;font-weight:700">${c}</td>`;
+          return `<td>${c}</td>`;
+        }).join("")}</tr>`;
+      });
+      t += "</tbody></table>";
+      return t;
     });
-    tableHtml += "</tbody></table>";
-    return tableHtml;
-  });
+    // Headings
+    md = md
+      .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
+      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+      // Bold/italic
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+?)\*/g, "<em>$1</em>")
+      // Code
+      .replace(/`(.+?)`/g, "<code>$1</code>")
+      // Blockquotes
+      .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
+      // HR
+      .replace(/^---$/gm, "<hr>")
+      // Numbered lists
+      .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
+      // Bullet lists
+      .replace(/^[-*] (.+)$/gm, "<li>$1</li>");
+    // Wrap consecutive <li> in <ul>
+    md = md.replace(/(<li>[\s\S]+?<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
+    // Paragraphs: blocks not starting with HTML tag
+    const blocks = md.split(/\n{2,}/);
+    md = blocks.map(b => {
+      b = b.trim();
+      if (!b) return "";
+      if (/^<[a-zA-Z]/.test(b)) return b;
+      if (/^\|/.test(b)) return b;
+      return `<p>${b}</p>`;
+    }).join("\n");
+    return md;
+  };
 
-  const riskColor = country.riskLevel === "critical" ? "#ef4444" :
-    country.riskLevel === "high" ? "#f97316" :
-    country.riskLevel === "moderate" ? "#f59e0b" : "#00d4aa";
+  // ── Capítulos en HTML ─────────────────────────────────────────────────────
+  const chapOrder = [
+    "01_executive_summary","02_political_context","03_emb_analysis",
+    "04_inclusivity","05_campaign_finance","06_digital_ecosystem",
+    "07_voting_day","08_electoral_justice","09_recommendations","10_ai_regulation",
+  ];
+  const chapHtml = chapOrder
+    .filter(k => chapters[k])
+    .map(k => `<section class="chapter">${mdToHtml(chapters[k])}</section>`)
+    .join("\n");
+
+  // ── Violaciones ───────────────────────────────────────────────────────────
+  const violHtml = violations.length > 0 ? `
+<table>
+  <thead><tr><th>Artículo</th><th>Derecho</th><th>Severidad</th><th>Confianza</th></tr></thead>
+  <tbody>
+    ${violations.map(v => `
+    <tr>
+      <td><code>${v.article || "—"}</code></td>
+      <td>${v.right || v.description || "—"}</td>
+      <td class="${v.severity === "critical" ? "risk-critical" : v.severity === "high" ? "risk-high" : ""}">${(v.severity || "—").toUpperCase()}</td>
+      <td class="${v.confidence === "confirmed" ? "conf-ok" : "conf-pend"}">${v.confidence === "confirmed" ? "&#10003; Verificado" : "&#9888; Pendiente"}</td>
+    </tr>`).join("")}
+  </tbody>
+</table>` : `<p class="no-data">No se detectaron violaciones activas para este ciclo electoral.</p>`;
+
+  // ── Tabla de fuentes ──────────────────────────────────────────────────────
+  const srcRows = [
+    { key: "V-Dem v15",          val: "27,913 observaciones — Coppedge et al. 2025", status: "confirmed" },
+    { key: "Freedom House FIW",  val: `Edición ${fh.edition || "2025"} — ${fhScore}/100`, status: dataSources.freedom_house || "confirmed" },
+    { key: "PEI Dataset 10.0",   val: `${peiScore !== "—" ? peiScore+"/100" : "N/A"} — Harvard Dataverse`, status: dataSources.pei || "confirmed" },
+    { key: "RSF Press Freedom",  val: `Score ${rsfScore}/100 — 180 países`, status: "confirmed" },
+    { key: "Libertades Civiles", val: "Freedom House CL/PR rating", status: dataSources.civil_liberties || "confirmed" },
+    { key: "Marco Legal",        val: "V-Dem + ICCPR framework", status: dataSources.legal_framework || "confirmed" },
+  ].map(s => `
+<tr>
+  <td><strong>${s.key}</strong></td>
+  <td>${s.val}</td>
+  <td class="${s.status === "confirmed" ? "conf-ok" : "conf-pend"}">${s.status === "confirmed" ? "&#10003; Verificado" : "&#9888; Pendiente"}</td>
+</tr>`).join("");
+
+  // ── Fecha ─────────────────────────────────────────────────────────────────
+  const genDate = new Date(timestamp || Date.now());
+  const dateStr = genDate.toLocaleDateString("es-AR", { day:"2-digit", month:"long", year:"numeric", timeZone:"UTC" });
+  const timeStr = genDate.toLocaleTimeString("es-AR", { hour:"2-digit", minute:"2-digit", timeZone:"UTC" }) + " UTC";
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DEMOCRAC.IA — Informe ${country.name} — ${runId.slice(0,8)}</title>
+<title>Democrac.IA — Informe PEIRS — ${country.name} ${new Date().getFullYear()}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500;600&family=Lora:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Variables ── */
   :root {
-    --bg: #0a0e17; --surface: #111827; --surface2: #1a2332;
-    --border: #1e2d3d; --text: #e2e8f0; --muted: #64748b;
-    --accent: #00d4aa; --danger: #ef4444; --warning: #f59e0b;
-    --risk: ${riskColor};
+    --ink:       #1e293b;
+    --ink-light: #475569;
+    --ink-dim:   #94a3b8;
+    --paper:     #ffffff;
+    --paper-2:   #f8fafc;
+    --paper-3:   #f1f5f9;
+    --border:    #e2e8f0;
+    --accent:    #0f766e;
+    --accent-bg: #f0fdf4;
+    --risk-hex:  ${rp.hex};
+    --risk-bg:   ${rp.light};
+    --risk-mid:  ${rp.mid};
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; line-height: 1.7; padding: 0; }
-  .header { background: linear-gradient(135deg, #0d1220 0%, var(--surface) 100%); border-bottom: 2px solid var(--risk); padding: 32px 48px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .brand { font-size: 24px; font-weight: 900; color: var(--text); font-family: monospace; }
-  .brand span { color: var(--accent); }
-  .meta { text-align: right; }
-  .run-id { font-size: 11px; color: var(--muted); font-family: monospace; margin-bottom: 4px; }
-  .risk-badge { display: inline-block; padding: 6px 16px; border-radius: 6px; background: ${riskColor}22; border: 1px solid ${riskColor}66; color: var(--risk); font-weight: 800; font-family: monospace; font-size: 14px; }
-  .content { max-width: 900px; margin: 0 auto; padding: 48px; }
-  h1 { font-size: 26px; font-weight: 900; color: var(--text); margin: 0 0 8px; }
-  h2 { font-size: 14px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-family: monospace; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 1px solid ${COLORS.accent}33; }
-  p { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-  strong { color: var(--text); font-weight: 700; }
-  code { background: var(--surface2); color: var(--accent); padding: 1px 6px; border-radius: 4px; font-size: 11px; font-family: monospace; }
-  li { font-size: 12px; color: var(--text); margin-bottom: 6px; list-style: none; padding-left: 16px; position: relative; }
-  li::before { content: "▸"; color: var(--accent); position: absolute; left: 0; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
-  th { padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); border-bottom: 2px solid ${COLORS.accent}44; background: var(--surface2); }
-  td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
-  tr:nth-child(even) td { background: var(--surface2); }
-  td.confirmed { color: var(--accent); font-family: monospace; font-size: 11px; }
-  td.mock { color: var(--warning); font-family: monospace; font-size: 11px; }
-  hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-  .traceability { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 48px; }
-  .traceability h3 { font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-family: monospace; margin-bottom: 16px; }
-  .trace-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
-  .trace-key { color: var(--muted); }
-  .trace-val { color: var(--text); font-family: monospace; }
-  .footer { text-align: center; padding: 32px; border-top: 1px solid var(--border); margin-top: 48px; font-size: 11px; color: var(--muted); }
-  @media print { body { background: white; color: black; } }
+
+  /* ── Base ── */
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.75;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  /* ── Portada ── */
+  .cover {
+    background: linear-gradient(160deg, #0f172a 0%, #1e293b 55%, #0f766e11 100%);
+    color: #f8fafc;
+    padding: 56px 64px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 80% 20%, ${rp.hex}22 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .cover-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; }
+  .brand-block .brand-name { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+  .brand-block .brand-name em { color: #2dd4bf; font-style: normal; }
+  .brand-block .brand-sub { font-size: 9px; letter-spacing: 3px; color: #64748b; text-transform: uppercase; margin-top: 4px; }
+  .confidential { font-size: 9px; letter-spacing: 3px; color: #475569; border: 1px solid #334155; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; }
+
+  .cover-main { display: flex; justify-content: space-between; align-items: flex-end; }
+  .cover-left .country-flag { font-size: 52px; line-height: 1; margin-bottom: 12px; }
+  .cover-left .country-name { font-family: 'Lora', Georgia, serif; font-size: 44px; font-weight: 700; color: #f8fafc; line-height: 1.1; margin-bottom: 8px; }
+  .cover-left .election-date { font-size: 13px; color: #94a3b8; font-family: 'DM Mono', monospace; margin-bottom: 24px; }
+  .cover-left .risk-pill {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: ${rp.hex}22; border: 1px solid ${rp.hex}55;
+    border-radius: 10px; padding: 10px 20px;
+  }
+  .cover-left .risk-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: ${rp.mid}; font-family: 'DM Mono', monospace; }
+  .cover-left .risk-score { font-size: 40px; font-weight: 900; color: ${rp.hex}; font-family: 'DM Mono', monospace; line-height: 1; }
+  .cover-left .risk-level { font-size: 14px; font-weight: 700; color: ${rp.mid}; font-family: 'DM Mono', monospace; }
+  .cover-right { text-align: right; }
+  .cover-meta { font-size: 10px; color: #64748b; font-family: 'DM Mono', monospace; line-height: 2; }
+
+  /* ── Indicadores rápidos ── */
+  .kpi-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--risk-hex);
+  }
+  .kpi-cell {
+    padding: 18px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .kpi-cell:last-child { border-right: none; }
+  .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--ink-dim); font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 800; color: var(--ink); font-family: 'DM Mono', monospace; line-height: 1; }
+  .kpi-sub { font-size: 10px; color: var(--ink-light); margin-top: 4px; }
+
+  /* ── Layout principal ── */
+  .report-body { padding: 0 64px; }
+
+  /* ── Gráficos ── */
+  .charts-grid {
+    display: grid; grid-template-columns: 220px 1fr;
+    gap: 0; border: 1px solid var(--border); margin: 32px 0;
+  }
+  .chart-panel {
+    padding: 28px 24px;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .chart-panel-right { padding: 28px 28px; }
+  .chart-panel-title {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--ink-dim); font-family: 'DM Mono', monospace; margin-bottom: 16px; text-align: center;
+  }
+
+  /* ── Secciones ── */
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    border-top: 2px solid var(--border);
+    padding: 28px 0 16px;
+    margin-top: 32px;
+  }
+  .section-number {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: white;
+    font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; }
+
+  /* ── Capítulos ── */
+  .chapter { margin-bottom: 8px; }
+
+  h1 { font-family: 'Lora', Georgia, serif; font-size: 22px; font-weight: 700; color: var(--ink); margin: 24px 0 12px; border-bottom: 2px solid var(--risk-hex); padding-bottom: 8px; }
+  h2 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent); font-family: 'DM Mono', monospace;
+    margin: 32px 0 14px; padding: 10px 16px;
+    background: var(--paper-2); border-left: 3px solid var(--accent);
+  }
+  h3 {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    margin: 22px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+  h4 { font-size: 12px; font-weight: 600; color: var(--ink-light); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; }
+
+  p { color: var(--ink-light); margin-bottom: 12px; font-size: 13px; }
+  strong { color: var(--ink); font-weight: 600; }
+  em { font-style: italic; color: var(--ink-light); }
+  code { background: var(--paper-3); color: var(--accent); padding: 1px 6px; border-radius: 3px; font-size: 11px; font-family: 'DM Mono', monospace; border: 1px solid var(--border); }
+
+  blockquote {
+    border-left: 3px solid var(--risk-hex); margin: 12px 0;
+    padding: 10px 16px; background: var(--risk-bg); border-radius: 0 6px 6px 0;
+    font-size: 12px; color: var(--ink-light);
+  }
+  hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  ul { margin: 8px 0 14px 0; padding: 0; list-style: none; }
+  li { padding: 3px 0 3px 20px; position: relative; font-size: 12px; color: var(--ink-light); }
+  li::before { content: "▸"; color: var(--accent); position: absolute; left: 2px; font-size: 10px; top: 5px; }
+
+  /* ── Tablas ── */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 12px; }
+  thead th {
+    padding: 9px 12px; text-align: left; font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.5px; color: #475569;
+    background: var(--paper-3); border-bottom: 2px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--ink-light); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: var(--paper-2); }
+  tbody tr:hover td { background: #f0fdf4; }
+  td.conf-ok { color: #065f46; font-weight: 600; font-family: 'DM Mono', monospace; font-size: 11px; }
+  td.conf-pend { color: #92400e; font-family: 'DM Mono', monospace; font-size: 11px; }
+  tr.risk-critical td { background: #fef2f2; }
+  tr.risk-high td { background: #fff7ed; }
+  .no-data { font-style: italic; color: var(--ink-dim); padding: 16px; background: var(--paper-2); border: 1px solid var(--border); border-radius: 6px; }
+
+  /* ── Trazabilidad ── */
+  .trace-section {
+    background: var(--paper-2); border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    padding: 32px; margin: 40px 0;
+    page-break-inside: avoid;
+  }
+  .trace-title { font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); font-family: 'DM Mono', monospace; margin-bottom: 20px; font-weight: 700; }
+  .trace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .trace-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .trace-key { color: var(--ink-dim); font-family: 'DM Mono', monospace; }
+  .trace-val { color: var(--ink); font-family: 'DM Mono', monospace; font-weight: 500; }
+  .disclaimer {
+    background: #fffbeb; border: 1px solid #fcd34d; border-left: 3px solid #b45309;
+    padding: 12px 16px; margin-top: 20px; font-size: 11px; color: #78350f; border-radius: 0 4px 4px 0;
+  }
+
+  /* ── Footer ── */
+  .report-footer {
+    border-top: 2px solid var(--border);
+    padding: 24px 64px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--paper-2);
+    margin-top: 48px;
+  }
+  .footer-brand { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .footer-brand em { color: var(--accent); font-style: normal; }
+  .footer-meta { font-size: 10px; color: var(--ink-dim); text-align: right; line-height: 1.8; }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 11px; max-width: none; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .kpi-strip, .charts-grid, .trace-section { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    blockquote { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .chapter { page-break-inside: avoid; }
+    h2, h3 { page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    @page { margin: 18mm 15mm; size: A4; }
+    .report-footer { display: flex; }
+  }
 </style>
 </head>
 <body>
-<div class="header">
+
+<!-- ══ PORTADA ════════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-top">
+    <div class="brand-block">
+      <div class="brand-name">Democrac<em>.IA</em></div>
+      <div class="brand-sub">Predictive Electoral Integrity &amp; Risk System</div>
+    </div>
+    <div class="confidential">Uso analítico restringido</div>
+  </div>
+  <div class="cover-main">
+    <div class="cover-left">
+      <div class="country-flag">${country.flag || ""}</div>
+      <div class="country-name">${country.name}</div>
+      <div class="election-date">Elección proyectada: ${country.date || "—"}</div>
+      <div class="risk-pill">
+        <div>
+          <div class="risk-label">Índice de Riesgo</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span class="risk-score">${score}</span>
+            <span class="risk-level">${rp.label}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cover-right">
+      <div style="margin-bottom:16px">${gaugeSvg}</div>
+      <div class="cover-meta">
+        RUN ID: ${runId.slice(0,8).toUpperCase()}…<br>
+        Generado: ${dateStr}<br>
+        ${timeStr}<br>
+        PEIRS v0.5.0
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KPIs ═══════════════════════════════════════════════════════════════════ -->
+<div class="kpi-strip">
+  <div class="kpi-cell">
+    <div class="kpi-label">Freedom House</div>
+    <div class="kpi-value">${fhScore}<span style="font-size:14px;font-weight:400;color:#94a3b8">/100</span></div>
+    <div class="kpi-sub">FIW ${fh.edition || "2025"} — ${fh.status || "—"}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">V-Dem Liberal Democracy</div>
+    <div class="kpi-value">${typeof vdemIdx === "number" ? vdemIdx.toFixed(3) : vdemIdx}</div>
+    <div class="kpi-sub">V-Dem v15 — ${vdem.year || "2024"}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">PEI Integridad</div>
+    <div class="kpi-value">${peiScore !== "—" ? peiScore : "N/A"}<span style="font-size:14px;font-weight:400;color:#94a3b8">${peiScore !== "—" ? "/100" : ""}</span></div>
+    <div class="kpi-sub">PEI-10.0 — ${pei.year || "—"}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">RSF Prensa Libre</div>
+    <div class="kpi-value">${rsfScore !== "—" ? rsfScore : "N/A"}<span style="font-size:14px;font-weight:400;color:#94a3b8">${rsfScore !== "—" ? "/100" : ""}</span></div>
+    <div class="kpi-sub">RSF 2025 — Rank #${rsf.rank || "—"}/180</div>
+  </div>
+</div>
+
+<!-- ══ CUERPO PRINCIPAL ════════════════════════════════════════════════════════ -->
+<div class="report-body">
+
+  <!-- Gráficos -->
+  <div class="charts-grid">
+    <div class="chart-panel">
+      <div class="chart-panel-title">Gauge de Riesgo</div>
+      ${gaugeSvg}
+      <div style="margin-top:12px;text-align:center">
+        <div style="font-size:10px;color:#94a3b8;font-family:monospace">EMB: ${(embLevel || "—").toUpperCase()}</div>
+        <div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">${violations.length} violación${violations.length !== 1 ? "es" : ""} detectada${violations.length !== 1 ? "s" : ""}</div>
+      </div>
+    </div>
+    <div class="chart-panel-right">
+      <div class="chart-panel-title" style="text-align:left;margin-bottom:18px">Dimensiones de Integridad Electoral</div>
+      ${dimBarsHtml}
+      <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
+        <span style="font-size:10px;color:#065f46">&#9632; 70-100: Satisfactorio</span>
+        <span style="font-size:10px;color:#b45309">&#9632; 45-69: Monitoreo</span>
+        <span style="font-size:10px;color:#c2410c">&#9632; 25-44: Deficiencias</span>
+        <span style="font-size:10px;color:#991b1b">&#9632; 0-24: Crítico</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capítulos del informe -->
+  <div class="section-header">
+    <div class="section-number">A</div>
+    <div class="section-title">Análisis Detallado por Capítulo</div>
+  </div>
+  ${chapHtml || mdToHtml(markdown)}
+
+  <!-- Violaciones al Derecho Internacional -->
+  <div class="section-header">
+    <div class="section-number">B</div>
+    <div class="section-title">Violaciones al Derecho Internacional Electoral</div>
+  </div>
+  ${violHtml}
+
+  <!-- Trazabilidad -->
+  <div class="section-header">
+    <div class="section-number">C</div>
+    <div class="section-title">Trazabilidad de Fuentes y Metadatos</div>
+  </div>
+  <div class="trace-section">
+    <div class="trace-title">&#128206; Anexo de Verificabilidad — PEIRS v0.5.0</div>
+    <table>
+      <thead><tr><th>Fuente</th><th>Descripción</th><th>Confianza</th></tr></thead>
+      <tbody>${srcRows}</tbody>
+    </table>
+    <div style="margin-top:20px">
+      <div class="trace-title" style="margin-bottom:12px">Metadatos del Análisis</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+        <div class="trace-row"><span class="trace-key">Run ID</span><span class="trace-val">${runId}</span></div>
+        <div class="trace-row"><span class="trace-key">Sistema</span><span class="trace-val">Democrac.IA / PEIRS v0.5.0</span></div>
+        <div class="trace-row"><span class="trace-key">País</span><span class="trace-val">${country.name}</span></div>
+        <div class="trace-row"><span class="trace-key">Elección</span><span class="trace-val">${country.date || "—"}</span></div>
+        <div class="trace-row"><span class="trace-key">Generado</span><span class="trace-val">${genDate.toISOString()}</span></div>
+        <div class="trace-row"><span class="trace-key">Agentes IA</span><span class="trace-val">4 (LangGraph + Claude Sonnet)</span></div>
+        <div class="trace-row"><span class="trace-key">Riesgo calculado</span><span class="trace-val">${score}/100 — ${rp.label}</span></div>
+        <div class="trace-row"><span class="trace-key">Violaciones</span><span class="trace-val">${violations.length} detectadas</span></div>
+      </div>
+    </div>
+    <div class="disclaimer">
+      <strong>Nota metodológica:</strong> Este informe es de carácter analítico y no constituye validación oficial de resultados electorales. Los datos son citados bajo licencias académicas abiertas (CC-BY-SA / CC-BY-4.0). La clasificación de riesgo es una estimación predictiva basada en indicadores históricos y estructurales, no en eventos futuros verificados.
+    </div>
+  </div>
+
+</div><!-- /report-body -->
+
+<!-- ══ FOOTER ════════════════════════════════════════════════════════════════ -->
+<div class="report-footer">
   <div>
-    <div class="brand">Democrac<span>.IA</span></div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:monospace">PREDICTIVE ELECTORAL INTEGRITY & RISK SYSTEM</div>
+    <div class="footer-brand">Democrac<em>.IA</em></div>
+    <div style="font-size:10px;color:#94a3b8;margin-top:4px;font-family:monospace">Predictive Electoral Integrity &amp; Risk System</div>
   </div>
-  <div class="meta">
-    <div class="run-id">RUN ID: ${runId}</div>
-    <div class="run-id">GENERADO: ${new Date(timestamp || Date.now()).toLocaleString('es-AR', {timeZone:'UTC'})} UTC</div>
-    <div style="margin-top:8px"><span class="risk-badge">${(country.riskLevel || "").toUpperCase()} — ${country.riskScore}/100</span></div>
+  <div class="footer-meta">
+    © ${new Date().getFullYear()} Democrac.IA — Análisis electoral global con IA<br>
+    V-Dem v15 · Freedom House FIW 2025 · PEI-10.0 · RSF 2025<br>
+    RUN/${runId.slice(0,8).toUpperCase()} · ${dateStr}
   </div>
 </div>
-<div class="content">
-${html}
-<div class="traceability">
-  <h3>📎 Anexo de Trazabilidad</h3>
-  <div class="trace-row"><span class="trace-key">Run ID</span><span class="trace-val">${runId}</span></div>
-  <div class="trace-row"><span class="trace-key">País analizado</span><span class="trace-val">${country.name}</span></div>
-  <div class="trace-row"><span class="trace-key">Elección proyectada</span><span class="trace-val">${country.date}</span></div>
-  <div class="trace-row"><span class="trace-key">Generado</span><span class="trace-val">${new Date(timestamp || Date.now()).toISOString()}</span></div>
-  <div class="trace-row"><span class="trace-key">Sistema</span><span class="trace-val">DEMOCRAC.IA / PEIRS v0.4.0</span></div>
-  <div class="trace-row"><span class="trace-key">Freedom House</span><span class="trace-val">FIW 2025 — confirmed</span></div>
-  <div class="trace-row"><span class="trace-key">V-Dem</span><span class="trace-val">v15 (2024) — confirmed</span></div>
-  <div class="trace-row"><span class="trace-key">PEI</span><span class="trace-val">PEI-10.0 — confirmed</span></div>
-  <div class="trace-row"><span class="trace-key">Libertades civiles</span><span class="trace-val">Freedom House CL/PR — confirmed</span></div>
-  <div class="trace-row"><span class="trace-key">Nota legal</span><span class="trace-val">Los datos son para fines analíticos. PEIRS no valida resultados electorales.</span></div>
-</div>
-</div>
-<div class="footer">
-  DEMOCRAC.IA — Predictive Electoral Integrity &amp; Risk System — © 2026<br>
-  Todos los datos citados bajo licencias académicas abiertas (CC-BY-SA).
-</div>
+
 </body>
 </html>`;
 };
@@ -2346,7 +2769,7 @@ const ReportViewer = ({ runId, country }) => {
   const handleDownload = () => {
     if (!reportData || !country) return;
     const md = reportData.final_report_markdown || "";
-    const htmlContent = generateHtmlReport(md, country, runId, reportData.timestamp);
+    const htmlContent = generateHtmlReport(md, country, runId, reportData.timestamp, reportData);
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
