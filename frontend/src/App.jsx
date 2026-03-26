@@ -4232,23 +4232,142 @@ function PeruSituationRoom() {
                 </div>
               </Card>
 
-              <Card className="peru-card">
-                <SectionTitle icon="🕐">Línea del Tiempo — Crisis Democrática 2016–2026</SectionTitle>
-                <div style={{ maxHeight: 260, overflowY: "auto", paddingRight: 4 }}>
-                  {PERU_HIST_EVENTS.map((ev, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10, alignItems: "flex-start" }}>
-                      <div style={{
-                        minWidth: 38, padding: "2px 6px", borderRadius: 5,
-                        background: ev.year === 2026 ? alertColor + "22" : COLORS.surfaceLight,
-                        border: `1px solid ${ev.year === 2026 ? alertColor + "66" : COLORS.border}`,
-                        fontSize: 10, fontWeight: 700,
-                        color: ev.year === 2026 ? alertColor : COLORS.textDim,
-                        fontFamily: "'DM Mono', monospace", textAlign: "center",
-                      }}>{ev.year}</div>
-                      <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5, paddingTop: 2 }}>{ev.label}</div>
+              <Card className="peru-card" style={{ padding: 0, overflow: "hidden" }}>
+                {/* ── PIZARRA: Draw-my-life timeline ── */}
+                {(() => {
+                  const TL = [
+                    { yr:"16", cx:50,  cy:132, r:10, col:"#3b82f6", bg:"#1e3a5f", tc:"#93c5fd", above:true,  hdr:"2016 🗳️", l1:"PPK presidente", l2:"FP domina Congreso", d:"1.0s" },
+                    { yr:"18", cx:145, cy:137, r:10, col:"#f59e0b", bg:"#1f1500", tc:"#fcd34d", above:false, hdr:"2018 ⚠️", l1:"PPK renuncia",    l2:"Vizcarra asume",    d:"1.3s" },
+                    { yr:"19", cx:240, cy:126, r:10, col:"#f97316", bg:"#1c1208", tc:"#fb923c", above:true,  hdr:"2019 💥", l1:"Congreso",         l2:"disuelto",          d:"1.6s" },
+                    { yr:"20", cx:330, cy:140, r:13, col:"#ef4444", bg:"#2d0808", tc:"#fca5a5", above:false, hdr:"2020 🔥", l1:"3 presidentes",   l2:"en 7 días",         d:"1.9s", big:true },
+                    { yr:"21", cx:420, cy:126, r:10, col:"#dc2626", bg:"#2d0808", tc:"#fca5a5", above:true,  hdr:"2021 🗳️", l1:"Castillo gana",   l2:"FH:71 · VDem:0.52", d:"2.1s" },
+                    { yr:"22", cx:510, cy:140, r:10, col:"#b91c1c", bg:"#2d0808", tc:"#fca5a5", above:false, hdr:"2022 ⚡", l1:"Castillo",         l2:"destituido",        d:"2.3s" },
+                    { yr:"23", cx:600, cy:120, r:13, col:"#991b1b", bg:"#3b0000", tc:"#fca5a5", above:true,  hdr:"2023 🚨 CRISIS", l1:"60+ muertes", l2:"CIDH cautelares",  d:"2.5s", crisis:true },
+                    { yr:"24", cx:685, cy:140, r:10, col:"#7f1d1d", bg:"#1a0808", tc:"#fca5a5", above:false, hdr:"2024 📉", l1:"Aprobación",       l2:"<10% histórico",    d:"2.7s" },
+                    { yr:"26", cx:770, cy:130, r:14, col:"#0d9488", bg:"#042f2e", tc:"#2dd4bf", above:true,  hdr:"2026 🗳️", l1:"Elecciones",       l2:"12 de abril ▶",     d:"2.9s", election:true },
+                  ];
+                  const VDEM = [
+                    {cx:50,v:0.59},{cx:145,v:0.56},{cx:240,v:0.54},{cx:330,v:0.50},
+                    {cx:420,v:0.52},{cx:510,v:0.47},{cx:600,v:0.44},{cx:685,v:0.42},{cx:770,v:0.40},
+                  ];
+                  const CARD_W = 84; const CARD_H = 36;
+                  return (
+                    <div style={{ background:"linear-gradient(175deg,#080e1a 0%,#0d1424 100%)", borderRadius:10 }}>
+                      {/* Title bar */}
+                      <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px 6px" }}>
+                        <div style={{ fontSize:9, fontWeight:700, letterSpacing:3, color:"#475569", fontFamily:"monospace", textTransform:"uppercase" }}>Pizarra — Crisis Democrática</div>
+                        <div style={{ flex:1, height:1, background:"#1e293b" }}/>
+                        <div style={{ fontSize:9, color:"#334155", fontFamily:"monospace" }}>2016 → 2026</div>
+                      </div>
+
+                      <svg viewBox="0 0 820 282" style={{ width:"100%", height:"auto", display:"block" }} xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <style>{`
+                            .ptl-line{stroke-dasharray:1050;stroke-dashoffset:1050;animation:ptl-draw 3.4s cubic-bezier(.4,0,.2,1) forwards .1s}
+                            .ptl-n{opacity:0;transform-box:fill-box;transform-origin:center;animation:ptl-pop .5s cubic-bezier(.34,1.56,.64,1) forwards}
+                            .ptl-c{opacity:0;animation:ptl-fade .45s ease forwards}
+                            @keyframes ptl-draw{to{stroke-dashoffset:0}}
+                            @keyframes ptl-pop{0%{opacity:0;transform:scale(.1)}100%{opacity:1;transform:scale(1)}}
+                            @keyframes ptl-fade{to{opacity:1}}
+                          `}</style>
+                          <pattern id="ptl-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+                            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(255,255,255,0.022)" strokeWidth=".6"/>
+                          </pattern>
+                          <filter id="ptl-chalk" x="-5%" y="-5%" width="110%" height="110%">
+                            <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="4" result="n"/>
+                            <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G"/>
+                          </filter>
+                          <filter id="ptl-glow" x="-40%" y="-40%" width="180%" height="180%">
+                            <feGaussianBlur stdDeviation="3.5" result="b"/>
+                            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                          </filter>
+                          <marker id="ptl-arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L9,3 z" fill="rgba(248,250,252,0.45)" filter="url(#ptl-chalk)"/>
+                          </marker>
+                        </defs>
+
+                        {/* Board grid */}
+                        <rect width="820" height="282" fill="url(#ptl-grid)"/>
+
+                        {/* Watermark */}
+                        <text x="410" y="156" textAnchor="middle" fontSize="32" fill="rgba(255,255,255,0.032)"
+                          fontFamily="monospace" fontWeight="900" letterSpacing="5">CRISIS DEMOCRÁTICA</text>
+
+                        {/* Chalk path */}
+                        <path
+                          className="ptl-line"
+                          d="M 50 132 C 98 120,122 148,145 137 C 170 125,215 116,240 126 C 268 138,305 152,330 140 C 356 128,398 113,420 126 C 446 142,483 155,510 140 C 536 125,573 106,600 120 C 626 136,658 152,685 140 C 710 128,745 117,770 130"
+                          stroke="rgba(248,250,252,0.48)" strokeWidth="2.2" fill="none"
+                          strokeLinecap="round" filter="url(#ptl-chalk)" markerEnd="url(#ptl-arr)"
+                        />
+
+                        {/* Events */}
+                        {TL.map((n) => {
+                          const connY1 = n.above ? n.cy - n.r     : n.cy + n.r;
+                          const connY2 = n.above ? n.cy - n.r - 20 : n.cy + n.r + 20;
+                          const cardX  = Math.min(Math.max(n.cx - CARD_W / 2, 4), 820 - CARD_W - 4);
+                          const cardY  = n.above ? connY2 - CARD_H : connY2;
+                          return (
+                            <g key={n.yr}>
+                              {/* Dashed connector */}
+                              <line x1={n.cx} y1={connY1} x2={n.cx} y2={connY2}
+                                stroke={n.col + "60"} strokeWidth="1" strokeDasharray="3 2.5"/>
+                              {/* Crisis/election pulse ring */}
+                              {(n.crisis || n.election) && (
+                                <circle cx={n.cx} cy={n.cy} r={n.r + 9} fill="none"
+                                  stroke={n.col} strokeWidth="1.2" opacity="0.3" strokeDasharray="4 3"/>
+                              )}
+                              {/* Node */}
+                              <g className="ptl-n" style={{ animationDelay: n.d }}>
+                                <circle cx={n.cx} cy={n.cy} r={n.r} fill={n.col} filter="url(#ptl-glow)"/>
+                                <text x={n.cx} y={n.cy + 3.5} textAnchor="middle" fontSize="8.5" fill="white" fontWeight="800">{n.yr}</text>
+                              </g>
+                              {/* Card */}
+                              <g className="ptl-c" style={{ animationDelay: `calc(${n.d} + 0.18s)` }}>
+                                <rect x={cardX} y={cardY} width={CARD_W} height={CARD_H} rx="4"
+                                  fill={n.bg} stroke={n.col + (n.crisis || n.election ? "bb" : "66")} strokeWidth={n.crisis || n.election ? 1.5 : 1}/>
+                                <text x={cardX + CARD_W/2} y={cardY + 13} textAnchor="middle" fontSize="7.5" fill={n.tc} fontWeight="700">{n.hdr}</text>
+                                <text x={cardX + CARD_W/2} y={cardY + 24} textAnchor="middle" fontSize="7" fill="#94a3b8">{n.l1}</text>
+                                <text x={cardX + CARD_W/2} y={cardY + 33} textAnchor="middle" fontSize="6.5" fill="#475569">{n.l2}</text>
+                              </g>
+                            </g>
+                          );
+                        })}
+
+                        {/* V-Dem sparkline */}
+                        <line x1="36" y1="240" x2="36" y2="268" stroke="#1e293b" strokeWidth="1"/>
+                        <line x1="36" y1="268" x2="800" y2="268" stroke="#1e293b" strokeWidth="1"/>
+                        <text x="16" y="250" textAnchor="middle" fontSize="6.5" fill="#334155" fontFamily="monospace"
+                          transform="rotate(-90,16,250)">V-Dem</text>
+                        {VDEM.map(({ cx, v }) => {
+                          const maxH = 28;
+                          const bH = Math.max(3, Math.round(((v - 0.35) / 0.30) * maxH));
+                          const bY = 268 - bH;
+                          const col = v >= 0.55 ? "#3b82f6" : v >= 0.50 ? "#f59e0b" : v >= 0.45 ? "#f97316" : "#ef4444";
+                          return (
+                            <g key={cx}>
+                              <rect x={cx - 8} y={bY} width="16" height={bH} rx="2" fill={col} opacity="0.7"/>
+                              <text x={cx} y="277" textAnchor="middle" fontSize="6.5" fill="#475569" fontFamily="monospace">{v.toFixed(2)}</text>
+                            </g>
+                          );
+                        })}
+                        {/* Trend arrow between first and last V-Dem bar */}
+                        <line x1="50" y1="245" x2="770" y2="265" stroke="#ef444440" strokeWidth="1" strokeDasharray="5 3"/>
+                        <text x="720" y="243" fontSize="7" fill="#ef444488" fontFamily="monospace" fontStyle="italic">↘ -0.19</text>
+                      </svg>
+
+                      {/* Legend */}
+                      <div style={{ display:"flex", gap:14, padding:"5px 14px 10px", flexWrap:"wrap" }}>
+                        {[["#3b82f6","Estabilidad relativa"],["#f59e0b","Transición"],["#ef4444","Crisis aguda"],["#0d9488","2026 Electoral"]].map(([col,label]) => (
+                          <div key={label} style={{ display:"flex", alignItems:"center", gap:5 }}>
+                            <div style={{ width:7, height:7, borderRadius:"50%", background:col }}/>
+                            <span style={{ fontSize:9, color:"#475569", fontFamily:"monospace" }}>{label}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </Card>
             </div>
           </div>
