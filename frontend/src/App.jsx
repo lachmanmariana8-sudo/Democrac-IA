@@ -2252,16 +2252,53 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
   .footer-brand em { color: var(--accent); font-style: normal; }
   .footer-meta { font-size: 10px; color: var(--ink-dim); text-align: right; line-height: 1.8; }
 
+  /* ── Metodología ── */
+  .methodology {
+    background: var(--paper-2); border: 1px solid var(--border);
+    border-left: 4px solid #7c3aed;
+    padding: 28px 32px; margin: 32px 0;
+    page-break-inside: avoid;
+  }
+  .method-title { font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #7c3aed; font-family: 'DM Mono', monospace; margin-bottom: 20px; font-weight: 700; }
+  .method-step { margin-bottom: 18px; }
+  .method-step-num { display: inline-block; width: 22px; height: 22px; background: #7c3aed; color: white; border-radius: 50%; font-size: 10px; font-weight: 700; text-align: center; line-height: 22px; font-family: 'DM Mono', monospace; margin-right: 10px; flex-shrink: 0; }
+  .method-step-title { font-size: 12px; font-weight: 700; color: var(--ink); display: inline; }
+  .method-step p { color: var(--ink-light); font-size: 12px; margin: 6px 0 0 32px; }
+  .method-weight-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--border); margin: 16px 0; }
+  .method-weight-cell { padding: 10px 12px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .method-weight-cell:nth-child(4n) { border-right: none; }
+  .method-weight-label { font-size: 9px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; }
+  .method-weight-val { font-size: 18px; font-weight: 800; color: #7c3aed; font-family: 'DM Mono', monospace; line-height: 1.2; }
+  .limitation-box { background: #fffbeb; border: 1px solid #fcd34d; border-left: 3px solid #b45309; padding: 12px 16px; margin-top: 16px; border-radius: 0 4px 4px 0; }
+  .limitation-box p { font-size: 11px; color: #78350f; margin: 0; }
+
+  /* ── APA Bibliography ── */
+  .apa-section {
+    margin: 32px 0;
+    page-break-inside: avoid;
+    border-top: 2px solid var(--border);
+    padding-top: 28px;
+  }
+  .apa-title { font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #0f766e; font-family: 'DM Mono', monospace; margin-bottom: 20px; font-weight: 700; }
+  .apa-ref { font-size: 11px; color: var(--ink-light); line-height: 1.7; margin-bottom: 8px; padding-left: 24px; text-indent: -24px; }
+  .apa-ref a { color: var(--accent); text-decoration: none; font-family: 'DM Mono', monospace; font-size: 10px; }
+  .apa-ref strong { color: var(--ink); font-weight: 600; }
+
+  /* ── Static timeline in print ── */
+  .timeline-print { margin: 20px 0; background: #0a0f1a; border-radius: 8px; padding: 4px 0; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
   /* ── Print ── */
   @media print {
     body { font-size: 11px; max-width: none; }
     .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .kpi-strip, .charts-grid, .trace-section { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .kpi-strip, .charts-grid, .trace-section, .methodology, .timeline-print { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     blockquote { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .chapter { page-break-inside: avoid; }
     h2, h3 { page-break-after: avoid; }
     table { page-break-inside: avoid; }
+    .apa-section { page-break-before: always; }
+    .methodology { page-break-inside: avoid; }
     @page { margin: 18mm 15mm; size: A4; }
     .report-footer { display: flex; }
   }
@@ -2387,14 +2424,108 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
         <div class="trace-row"><span class="trace-key">País</span><span class="trace-val">${country.name}</span></div>
         <div class="trace-row"><span class="trace-key">Elección</span><span class="trace-val">${country.date || "—"}</span></div>
         <div class="trace-row"><span class="trace-key">Generado</span><span class="trace-val">${genDate.toISOString()}</span></div>
-        <div class="trace-row"><span class="trace-key">Agentes IA</span><span class="trace-val">4 (LangGraph + Claude Sonnet)</span></div>
+        <div class="trace-row"><span class="trace-key">Agentes IA</span><span class="trace-val">4 (LangGraph + Claude Sonnet 4.6)</span></div>
         <div class="trace-row"><span class="trace-key">Riesgo calculado</span><span class="trace-val">${score}/100 — ${rp.label}</span></div>
         <div class="trace-row"><span class="trace-key">Violaciones</span><span class="trace-val">${violations.length} detectadas</span></div>
       </div>
     </div>
-    <div class="disclaimer">
-      <strong>Nota metodológica:</strong> Este informe es de carácter analítico y no constituye validación oficial de resultados electorales. Los datos son citados bajo licencias académicas abiertas (CC-BY-SA / CC-BY-4.0). La clasificación de riesgo es una estimación predictiva basada en indicadores históricos y estructurales, no en eventos futuros verificados.
+  </div>
+
+  <!-- Metodología -->
+  <div class="section-header">
+    <div class="section-number">D</div>
+    <div class="section-title">Metodología del Sistema PEIRS</div>
+  </div>
+  <div class="methodology">
+    <div class="method-title">&#9881; Arquitectura y Proceso Analítico — Democrac.IA / PEIRS v0.5.0</div>
+
+    <div class="method-step">
+      <span class="method-step-num">1</span>
+      <span class="method-step-title">Agente OSINT — Recopilación y Estructuración de Datos</span>
+      <p>Consume cuatro fuentes primarias en tiempo cuasi-real: <strong>V-Dem v15</strong> (Coppedge et al., 2025) — 27,913 observaciones país-año; <strong>Freedom House FIW 2025</strong> — 195 países; <strong>PEI-10.0</strong> (Norris et al., 2024) — 586 elecciones; <strong>RSF 2025</strong> — 180 países. Cada campo estructurado lleva metadatos de trazabilidad: <code>confidence ∈ {confirmed, mock, unverified}</code>. Datos confirmados provienen de APIs o archivos CSV verificados; datos "mock" son estimaciones basadas en rangos históricos pendientes de actualización.</p>
     </div>
+
+    <div class="method-step">
+      <span class="method-step-num">2</span>
+      <span class="method-step-title">Agente Político — Análisis de Actores y Contexto</span>
+      <p>Evalúa el ecosistema político-partidario del país: fragmentación parlamentaria, fuerzas electorales, riesgos asociados a actores específicos (Art. 25 ICCPR), financiamiento de campaña y ecosistema digital. Para Perú, integra 8 bases de datos estructuradas (JNE, ONPE, RENIEC, IDEHPUCP, FECOR) hardcodeadas en el sistema PEIRS. Genera narrativa analítica mediante prompts especializados con Claude Sonnet 4.6.</p>
+    </div>
+
+    <div class="method-step">
+      <span class="method-step-num">3</span>
+      <span class="method-step-title">Agente Legal — Detección de Violaciones al Derecho Electoral Internacional</span>
+      <p>Compara el contexto del país con el corpus normativo: <strong>ICCPR Arts. 9, 14, 19, 21, 22, 25</strong>; <strong>CADH Art. 23</strong>; <strong>Carta Democrática Interamericana Arts. 3-4</strong>; <strong>UNDRIP Arts. 5, 18</strong>. Para cada dimensión (prensa, reunión, participación, justicia electoral), detecta violaciones potenciales y las clasifica por severidad (critical / high / moderate) y confianza (confirmed / mock). El nivel de confianza se hereda directamente del Agente 1.</p>
+    </div>
+
+    <div class="method-step">
+      <span class="method-step-num">4</span>
+      <span class="method-step-title">Índice de Riesgo Electoral (IRE) — Cálculo Ponderado</span>
+      <p>El IRE (0-100, donde 100 = riesgo máximo) integra 8 dimensiones normalizadas usando percentiles históricos de países latinoamericanos V-Dem 2000-2024:</p>
+    </div>
+
+    <div class="method-weight-grid">
+      ${[
+        ["Sufragio","15%"],["Marco Legal","15%"],["EMB Independencia","15%"],["Libertad de Prensa","10%"],
+        ["Financiamiento","10%"],["Ecosistema Digital","10%"],["Justicia Electoral","15%"],["Inclusividad","10%"],
+      ].map(([d,w]) => `<div class="method-weight-cell"><div class="method-weight-label">${d}</div><div class="method-weight-val">${w}</div></div>`).join("")}
+    </div>
+
+    <div class="method-step">
+      <span class="method-step-num">5</span>
+      <span class="method-step-title">Agente Generador — Síntesis y Estructuración del Informe</span>
+      <p>Integra los outputs de los tres agentes anteriores y genera los 10 capítulos estructurados del informe PEIRS: resumen ejecutivo, contexto político, administración electoral (EMB), inclusividad, financiamiento, ecosistema digital, jornada electoral, justicia, recomendaciones y regulación de IA. El informe en markdown se convierte a HTML interactivo para el dashboard y a PDF A4 para distribución institucional.</p>
+    </div>
+
+    <div class="limitation-box">
+      <p><strong>Limitaciones y advertencias metodológicas:</strong> (1) V-Dem 2024 es el año de medición más reciente disponible; eventos post-dic 2024 no están en el dataset base. (2) Los campos marcados como "mock" requieren verificación con fuentes primarias actualizadas antes de uso oficial. (3) El IRE es un índice comparativo y no predice con certeza resultados electorales específicos. (4) Los agentes IA pueden introducir sesgos interpretativos; se recomienda revisión experta para informes con impacto institucional. (5) Este informe no constituye validación oficial de ningún proceso electoral. Datos citados bajo CC-BY-4.0 y uso académico con atribución.</p>
+    </div>
+  </div>
+
+  <!-- APA Bibliography -->
+  <div class="section-header">
+    <div class="section-number">E</div>
+    <div class="section-title">Referencias Bibliográficas (APA 7.ª edición)</div>
+  </div>
+  <div class="apa-section">
+    <div class="apa-title">&#128218; Fuentes Primarias y Secundarias Citadas</div>
+
+    <p class="apa-ref">AIDESEP. (2021). <em>Informe de participación electoral de pueblos indígenas amazónicos en el proceso general 2021</em>. Asociación Interétnica de Desarrollo de la Selva Peruana.</p>
+
+    <p class="apa-ref">Anthropic. (2025). <em>Claude Sonnet 4.6</em> [Large language model]. Anthropic. <a href="https://www.anthropic.com/claude">https://www.anthropic.com/claude</a></p>
+
+    <p class="apa-ref">Comité de Derechos Humanos de la ONU. (2020). <em>Observación General No. 37: Artículo 21 (Derecho de reunión pacífica)</em> (CCPR/C/GC/37). Oficina del Alto Comisionado de las Naciones Unidas para los Derechos Humanos. <a href="https://www.ohchr.org/es/documents/general-comments-and-recommendations/general-comment-no-37">https://www.ohchr.org</a></p>
+
+    <p class="apa-ref">Coppedge, M., Gerring, J., Knutsen, C. H., Lindberg, S. I., Teorell, J., Altman, D., … Ziblatt, D. (2025). <em>V-Dem Dataset v15</em>. Varieties of Democracy (V-Dem) Project. <a href="https://doi.org/10.23696/vdemds25">https://doi.org/10.23696/vdemds25</a></p>
+
+    <p class="apa-ref">Coppedge, M., Gerring, J., Knutsen, C. H., Lindberg, S. I., Teorell, J., Altman, D., … Ziblatt, D. (2025). <em>V-Dem Codebook v15</em>. Varieties of Democracy (V-Dem) Project. <a href="https://www.v-dem.net/data/the-v-dem-dataset/">https://www.v-dem.net</a></p>
+
+    <p class="apa-ref">Freedom House. (2025). <em>Freedom in the World 2025: ${country.name}</em>. Freedom House. <a href="https://freedomhouse.org/country/${(country.name||"").toLowerCase().replace(/\s/g,"-")}/freedom-world/2025">https://freedomhouse.org</a></p>
+
+    <p class="apa-ref">Instituto de Democracia y Derechos Humanos de la PUCP. (2025). <em>Financiamiento ilícito y crimen organizado en campañas electorales 2026</em>. IDEHPUCP. <a href="https://idehpucp.pucp.edu.pe">https://idehpucp.pucp.edu.pe</a></p>
+
+    <p class="apa-ref">International IDEA. (2024). <em>The Global State of Democracy 2024</em>. International Institute for Democracy and Electoral Assistance. <a href="https://www.idea.int/democracytracker">https://www.idea.int</a></p>
+
+    <p class="apa-ref">Jurado Nacional de Elecciones. (2025, 15 de agosto). <em>Resolución N° 0891-2025-JNE: Expediente sobre modalidades de voto en el exterior para el Proceso Electoral General 2026</em>. JNE. <a href="https://www.jne.gob.pe/transparencia/resoluciones/">https://www.jne.gob.pe</a></p>
+
+    <p class="apa-ref">LangChain Inc. (2025). <em>LangGraph: Multi-agent orchestration framework</em>. LangChain. <a href="https://langchain-ai.github.io/langgraph/">https://langchain-ai.github.io/langgraph/</a></p>
+
+    <p class="apa-ref">Naciones Unidas. (1966). <em>Pacto Internacional de Derechos Civiles y Políticos</em> (Resolución de la Asamblea General 2200A (XXI), 16 de diciembre de 1966). ONU. <a href="https://www.ohchr.org/es/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights">https://www.ohchr.org</a></p>
+
+    <p class="apa-ref">Norris, P., Frank, R. W., &amp; Martínez i Coma, F. (2024). <em>The expert survey of Perceptions of Electoral Integrity, Release 10 (PEI-10.0)</em>. Harvard Dataverse. <a href="https://doi.org/10.7910/DVN/IQKBK5">https://doi.org/10.7910/DVN/IQKBK5</a></p>
+
+    <p class="apa-ref">Oficina Nacional de Procesos Electorales. (2025). <em>Padrón electoral exterior — Proceso Electoral General 2026</em>. ONPE. <a href="https://www.onpe.gob.pe/modOGELEC/acVotoExterior/">https://www.onpe.gob.pe</a></p>
+
+    <p class="apa-ref">Organización de los Estados Americanos. (2023). <em>Carta Democrática Interamericana: Aplicación y seguimiento</em> (OEA/Ser.G CP/doc.5872/23). OEA. <a href="https://www.oas.org/es/sap/deco/cdi.asp">https://www.oas.org</a></p>
+
+    <p class="apa-ref">Registro Nacional de Identificación y Estado Civil. (2026, enero). <em>Informe de depuración del padrón electoral exterior N° 001-2026-SGEN/RENIEC</em>. RENIEC. <a href="https://www.reniec.gob.pe">https://www.reniec.gob.pe</a></p>
+
+    <p class="apa-ref">Reporters Without Borders. (2025). <em>World Press Freedom Index 2025</em>. RSF. <a href="https://rsf.org/en/index">https://rsf.org/en/index</a></p>
+
+    <p class="apa-ref">Transparencia Internacional Perú. (2023). <em>Índice de percepción de la corrupción 2023: Perú</em>. TI-Perú. <a href="https://www.transparencia.org.pe">https://www.transparencia.org.pe</a></p>
+  </div>
+
+  <div class="disclaimer" style="margin-bottom:32px">
+    <strong>Nota de uso:</strong> Este informe ha sido generado de manera automatizada por el sistema Democrac.IA / PEIRS v0.5.0 utilizando inteligencia artificial (Claude Sonnet 4.6, Anthropic, 2025) y datos de fuentes académicas de acceso abierto. No constituye validación oficial de ningún proceso electoral, ni posición institucional de ninguna organización. Para uso académico, analítico o de referencia con atribución obligatoria: <em>Democrac.IA. (${new Date().getFullYear()}). Informe PEIRS — ${country.name || "—"} [Análisis automatizado]. Run/${runId.slice(0,8).toUpperCase()}.</em>
   </div>
 
 </div><!-- /report-body -->
@@ -4236,21 +4367,21 @@ function PeruSituationRoom() {
                 {/* ── PIZARRA: Draw-my-life timeline ── */}
                 {(() => {
                   const TL = [
-                    { yr:"16", cx:50,  cy:132, r:10, col:"#3b82f6", bg:"#1e3a5f", tc:"#93c5fd", above:true,  hdr:"2016 🗳️", l1:"PPK presidente", l2:"FP domina Congreso", d:"1.0s" },
-                    { yr:"18", cx:145, cy:137, r:10, col:"#f59e0b", bg:"#1f1500", tc:"#fcd34d", above:false, hdr:"2018 ⚠️", l1:"PPK renuncia",    l2:"Vizcarra asume",    d:"1.3s" },
-                    { yr:"19", cx:240, cy:126, r:10, col:"#f97316", bg:"#1c1208", tc:"#fb923c", above:true,  hdr:"2019 💥", l1:"Congreso",         l2:"disuelto",          d:"1.6s" },
-                    { yr:"20", cx:330, cy:140, r:13, col:"#ef4444", bg:"#2d0808", tc:"#fca5a5", above:false, hdr:"2020 🔥", l1:"3 presidentes",   l2:"en 7 días",         d:"1.9s", big:true },
-                    { yr:"21", cx:420, cy:126, r:10, col:"#dc2626", bg:"#2d0808", tc:"#fca5a5", above:true,  hdr:"2021 🗳️", l1:"Castillo gana",   l2:"FH:71 · VDem:0.52", d:"2.1s" },
-                    { yr:"22", cx:510, cy:140, r:10, col:"#b91c1c", bg:"#2d0808", tc:"#fca5a5", above:false, hdr:"2022 ⚡", l1:"Castillo",         l2:"destituido",        d:"2.3s" },
-                    { yr:"23", cx:600, cy:120, r:13, col:"#991b1b", bg:"#3b0000", tc:"#fca5a5", above:true,  hdr:"2023 🚨 CRISIS", l1:"60+ muertes", l2:"CIDH cautelares",  d:"2.5s", crisis:true },
-                    { yr:"24", cx:685, cy:140, r:10, col:"#7f1d1d", bg:"#1a0808", tc:"#fca5a5", above:false, hdr:"2024 📉", l1:"Aprobación",       l2:"<10% histórico",    d:"2.7s" },
-                    { yr:"26", cx:770, cy:130, r:14, col:"#0d9488", bg:"#042f2e", tc:"#2dd4bf", above:true,  hdr:"2026 🗳️", l1:"Elecciones",       l2:"12 de abril ▶",     d:"2.9s", election:true },
+                    { yr:"16", cx:50,  cy:182, r:13, col:"#3b82f6", bg:"#1e3a5f", tc:"#93c5fd", above:true,  hdr:"2016 🗳️", l1:"PPK presidente", l2:"FP domina Congreso", d:"1.0s" },
+                    { yr:"18", cx:145, cy:187, r:13, col:"#f59e0b", bg:"#1f1500", tc:"#fcd34d", above:false, hdr:"2018 ⚠️", l1:"PPK renuncia",    l2:"Vizcarra asume",    d:"1.3s" },
+                    { yr:"19", cx:240, cy:176, r:13, col:"#f97316", bg:"#1c1208", tc:"#fb923c", above:true,  hdr:"2019 💥", l1:"Congreso",         l2:"disuelto",          d:"1.6s" },
+                    { yr:"20", cx:330, cy:190, r:17, col:"#ef4444", bg:"#2d0808", tc:"#fca5a5", above:false, hdr:"2020 🔥", l1:"3 presidentes",   l2:"en 7 días",         d:"1.9s", big:true },
+                    { yr:"21", cx:420, cy:176, r:13, col:"#dc2626", bg:"#2d0808", tc:"#fca5a5", above:true,  hdr:"2021 🗳️", l1:"Castillo gana",   l2:"FH:71 · V-Dem:0.52", d:"2.1s" },
+                    { yr:"22", cx:510, cy:190, r:13, col:"#b91c1c", bg:"#2d0808", tc:"#fca5a5", above:false, hdr:"2022 ⚡", l1:"Castillo",         l2:"destituido",        d:"2.3s" },
+                    { yr:"23", cx:600, cy:170, r:17, col:"#991b1b", bg:"#3b0000", tc:"#fca5a5", above:true,  hdr:"2023 🚨 CRISIS", l1:"60+ muertes", l2:"CIDH cautelares", d:"2.5s", crisis:true },
+                    { yr:"24", cx:685, cy:190, r:13, col:"#7f1d1d", bg:"#1a0808", tc:"#fca5a5", above:false, hdr:"2024 📉", l1:"Aprobación",       l2:"<10% histórico",   d:"2.7s" },
+                    { yr:"26", cx:770, cy:180, r:18, col:"#0d9488", bg:"#042f2e", tc:"#2dd4bf", above:true,  hdr:"2026 🗳️", l1:"Elecciones",       l2:"12 de abril ▶",    d:"2.9s", election:true },
                   ];
                   const VDEM = [
                     {cx:50,v:0.59},{cx:145,v:0.56},{cx:240,v:0.54},{cx:330,v:0.50},
                     {cx:420,v:0.52},{cx:510,v:0.47},{cx:600,v:0.44},{cx:685,v:0.42},{cx:770,v:0.40},
                   ];
-                  const CARD_W = 84; const CARD_H = 36;
+                  const CARD_W = 96; const CARD_H = 46;
                   return (
                     <div style={{ background:"linear-gradient(175deg,#080e1a 0%,#0d1424 100%)", borderRadius:10 }}>
                       {/* Title bar */}
@@ -4260,7 +4391,7 @@ function PeruSituationRoom() {
                         <div style={{ fontSize:9, color:"#334155", fontFamily:"monospace" }}>2016 → 2026</div>
                       </div>
 
-                      <svg viewBox="0 0 820 282" style={{ width:"100%", height:"auto", display:"block" }} xmlns="http://www.w3.org/2000/svg">
+                      <svg viewBox="0 0 820 348" style={{ width:"100%", height:"auto", display:"block" }} xmlns="http://www.w3.org/2000/svg">
                         <defs>
                           <style>{`
                             .ptl-line{stroke-dasharray:1050;stroke-dashoffset:1050;animation:ptl-draw 3.4s cubic-bezier(.4,0,.2,1) forwards .1s}
@@ -4287,24 +4418,24 @@ function PeruSituationRoom() {
                         </defs>
 
                         {/* Board grid */}
-                        <rect width="820" height="282" fill="url(#ptl-grid)"/>
+                        <rect width="820" height="348" fill="url(#ptl-grid)"/>
 
                         {/* Watermark */}
-                        <text x="410" y="156" textAnchor="middle" fontSize="32" fill="rgba(255,255,255,0.032)"
+                        <text x="410" y="205" textAnchor="middle" fontSize="42" fill="rgba(255,255,255,0.028)"
                           fontFamily="monospace" fontWeight="900" letterSpacing="5">CRISIS DEMOCRÁTICA</text>
 
                         {/* Chalk path */}
                         <path
                           className="ptl-line"
-                          d="M 50 132 C 98 120,122 148,145 137 C 170 125,215 116,240 126 C 268 138,305 152,330 140 C 356 128,398 113,420 126 C 446 142,483 155,510 140 C 536 125,573 106,600 120 C 626 136,658 152,685 140 C 710 128,745 117,770 130"
-                          stroke="rgba(248,250,252,0.48)" strokeWidth="2.2" fill="none"
+                          d="M 50 182 C 98 170,122 198,145 187 C 170 175,215 166,240 176 C 268 188,305 202,330 190 C 356 178,398 163,420 176 C 446 192,483 205,510 190 C 536 175,573 152,600 170 C 626 188,658 204,685 190 C 710 176,745 166,770 180"
+                          stroke="rgba(248,250,252,0.50)" strokeWidth="2.5" fill="none"
                           strokeLinecap="round" filter="url(#ptl-chalk)" markerEnd="url(#ptl-arr)"
                         />
 
                         {/* Events */}
                         {TL.map((n) => {
                           const connY1 = n.above ? n.cy - n.r     : n.cy + n.r;
-                          const connY2 = n.above ? n.cy - n.r - 20 : n.cy + n.r + 20;
+                          const connY2 = n.above ? n.cy - n.r - 28 : n.cy + n.r + 28;
                           const cardX  = Math.min(Math.max(n.cx - CARD_W / 2, 4), 820 - CARD_W - 4);
                           const cardY  = n.above ? connY2 - CARD_H : connY2;
                           return (
@@ -4320,40 +4451,41 @@ function PeruSituationRoom() {
                               {/* Node */}
                               <g className="ptl-n" style={{ animationDelay: n.d }}>
                                 <circle cx={n.cx} cy={n.cy} r={n.r} fill={n.col} filter="url(#ptl-glow)"/>
-                                <text x={n.cx} y={n.cy + 3.5} textAnchor="middle" fontSize="8.5" fill="white" fontWeight="800">{n.yr}</text>
+                                <text x={n.cx} y={n.cy + 4.5} textAnchor="middle" fontSize="10" fill="white" fontWeight="800">{n.yr}</text>
                               </g>
                               {/* Card */}
                               <g className="ptl-c" style={{ animationDelay: `calc(${n.d} + 0.18s)` }}>
-                                <rect x={cardX} y={cardY} width={CARD_W} height={CARD_H} rx="4"
-                                  fill={n.bg} stroke={n.col + (n.crisis || n.election ? "bb" : "66")} strokeWidth={n.crisis || n.election ? 1.5 : 1}/>
-                                <text x={cardX + CARD_W/2} y={cardY + 13} textAnchor="middle" fontSize="7.5" fill={n.tc} fontWeight="700">{n.hdr}</text>
-                                <text x={cardX + CARD_W/2} y={cardY + 24} textAnchor="middle" fontSize="7" fill="#94a3b8">{n.l1}</text>
-                                <text x={cardX + CARD_W/2} y={cardY + 33} textAnchor="middle" fontSize="6.5" fill="#475569">{n.l2}</text>
+                                <rect x={cardX} y={cardY} width={CARD_W} height={CARD_H} rx="5"
+                                  fill={n.bg} stroke={n.col + (n.crisis || n.election ? "bb" : "66")} strokeWidth={n.crisis || n.election ? 1.8 : 1.2}/>
+                                <text x={cardX + CARD_W/2} y={cardY + 15} textAnchor="middle" fontSize="9" fill={n.tc} fontWeight="700">{n.hdr}</text>
+                                <text x={cardX + CARD_W/2} y={cardY + 28} textAnchor="middle" fontSize="8" fill="#94a3b8">{n.l1}</text>
+                                <text x={cardX + CARD_W/2} y={cardY + 39} textAnchor="middle" fontSize="7.5" fill="#475569">{n.l2}</text>
                               </g>
                             </g>
                           );
                         })}
 
                         {/* V-Dem sparkline */}
-                        <line x1="36" y1="240" x2="36" y2="268" stroke="#1e293b" strokeWidth="1"/>
-                        <line x1="36" y1="268" x2="800" y2="268" stroke="#1e293b" strokeWidth="1"/>
-                        <text x="16" y="250" textAnchor="middle" fontSize="6.5" fill="#334155" fontFamily="monospace"
-                          transform="rotate(-90,16,250)">V-Dem</text>
+                        <text x="410" y="290" textAnchor="middle" fontSize="7" fill="#334155" fontFamily="monospace" letterSpacing="2">ÍNDICE V-DEM — DEMOCRACIA LIBERAL (v2x_libdem)</text>
+                        <line x1="36" y1="297" x2="36" y2="326" stroke="#1e293b" strokeWidth="1"/>
+                        <line x1="36" y1="326" x2="804" y2="326" stroke="#1e293b" strokeWidth="1.2"/>
+                        <text x="16" y="312" textAnchor="middle" fontSize="7" fill="#334155" fontFamily="monospace"
+                          transform="rotate(-90,16,312)">V-Dem</text>
                         {VDEM.map(({ cx, v }) => {
-                          const maxH = 28;
-                          const bH = Math.max(3, Math.round(((v - 0.35) / 0.30) * maxH));
-                          const bY = 268 - bH;
+                          const maxH = 30;
+                          const bH = Math.max(4, Math.round(((v - 0.35) / 0.30) * maxH));
+                          const bY = 326 - bH;
                           const col = v >= 0.55 ? "#3b82f6" : v >= 0.50 ? "#f59e0b" : v >= 0.45 ? "#f97316" : "#ef4444";
                           return (
                             <g key={cx}>
-                              <rect x={cx - 8} y={bY} width="16" height={bH} rx="2" fill={col} opacity="0.7"/>
-                              <text x={cx} y="277" textAnchor="middle" fontSize="6.5" fill="#475569" fontFamily="monospace">{v.toFixed(2)}</text>
+                              <rect x={cx - 9} y={bY} width="18" height={bH} rx="3" fill={col} opacity="0.75"/>
+                              <text x={cx} y="337" textAnchor="middle" fontSize="7.5" fill="#475569" fontFamily="monospace">{v.toFixed(2)}</text>
                             </g>
                           );
                         })}
-                        {/* Trend arrow between first and last V-Dem bar */}
-                        <line x1="50" y1="245" x2="770" y2="265" stroke="#ef444440" strokeWidth="1" strokeDasharray="5 3"/>
-                        <text x="720" y="243" fontSize="7" fill="#ef444488" fontFamily="monospace" fontStyle="italic">↘ -0.19</text>
+                        {/* Trend arrow */}
+                        <line x1="50" y1="302" x2="770" y2="323" stroke="#ef444445" strokeWidth="1.2" strokeDasharray="6 3"/>
+                        <text x="720" y="300" fontSize="8" fill="#ef444490" fontFamily="monospace" fontWeight="700">↘ −0.19</text>
                       </svg>
 
                       {/* Legend */}
