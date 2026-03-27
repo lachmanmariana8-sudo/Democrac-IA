@@ -99,6 +99,45 @@ except ImportError:
     def ooni_clear_cache(*a, **kw): pass
 
 
+# ── Migración: agents/ y chapters/ ─────────────────────────────────────────────
+# Importaciones condicionales hacia los nuevos módulos.
+# Las definiciones originales permanecen en app.py como fallback.
+# AGENTS_MODULE_AVAILABLE y CHAPTERS_MODULE_AVAILABLE indican si los módulos
+# están disponibles (útil para tests y diagnóstico).
+
+try:
+    from agents.pipeline import build_workflow as _bw_migrated, PEIRSState, peirs_pipeline as _pp_migrated  # noqa: F401
+    from agents.nodes import (
+        run_ingestion,          # noqa: F401
+        run_political_analyst,  # noqa: F401
+        run_legal_compliance,   # noqa: F401
+        run_dictamen_agent,     # noqa: F401
+        run_report_generator,   # noqa: F401
+    )
+    AGENTS_MODULE_AVAILABLE = True
+except ImportError:
+    AGENTS_MODULE_AVAILABLE = False
+
+try:
+    from chapters.generators import (
+        _generate_country_profile_section as _gcp_migrated,   # noqa: F401
+        _generate_executive_summary as _ges_migrated,         # noqa: F401
+        _generate_political_context as _gpc_migrated,         # noqa: F401
+        _generate_emb_chapter as _gemb_migrated,              # noqa: F401
+        _generate_inclusivity_chapter as _ginc_migrated,      # noqa: F401
+        _generate_campaign_chapter as _gcamp_migrated,        # noqa: F401
+        _generate_digital_chapter as _gdig_migrated,          # noqa: F401
+        _generate_voting_day_chapter as _gvd_migrated,        # noqa: F401
+        _generate_observation_chapter as _gobs_migrated,      # noqa: F401
+        _generate_justice_chapter as _gjust_migrated,         # noqa: F401
+        _generate_recommendations as _grec_migrated,          # noqa: F401
+        _generate_ai_regulation_chapter as _gai_migrated,     # noqa: F401
+    )
+    CHAPTERS_MODULE_AVAILABLE = True
+except ImportError:
+    CHAPTERS_MODULE_AVAILABLE = False
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. CONFIGURACIÓN
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1155,7 +1194,7 @@ def build_dynamic_osint_profile(code: str, fh_data, vdem_data) -> dict:
 
 # ─── AGENTE 1: OSINT Ingestion Agent ─────────────────────────────────────────
 
-def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
+def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:  # MIGRADO a agents/nodes.py (run_ingestion)
     agent_name = "OSINT_IngestionAgent"
     agent_log(state, agent_name, f"Iniciando ingesta para {state['country']} ({state['country_code']})")
 
@@ -1449,7 +1488,7 @@ def ingestion_agent(state: ElectionRiskState) -> ElectionRiskState:
 
 # ─── AGENTE 2: Political & Digital Analyst Agent ─────────────────────────────
 
-def political_analyst_agent(state: ElectionRiskState) -> ElectionRiskState:
+def political_analyst_agent(state: ElectionRiskState) -> ElectionRiskState:  # MIGRADO a agents/nodes.py (run_political_analyst)
     agent_name = "Political_DigitalAnalystAgent"
     agent_log(state, agent_name, f"Iniciando análisis político-digital para {state['country']}")
 
@@ -1694,7 +1733,7 @@ def _get_vdem_trend(df, country_code: str, current_year: int = 2024, years_back:
         return {"available": False, "error": str(e)}
 
 
-def electoral_dictamen_agent(state: ElectionRiskState) -> ElectionRiskState:
+def electoral_dictamen_agent(state: ElectionRiskState) -> ElectionRiskState:  # MIGRADO a agents/nodes.py (run_dictamen_agent)
     agent_name = "Electoral_DictamenAgent"
     agent_log(state, agent_name, f"Generando dictamen técnico para {state['country']}")
 
@@ -1905,7 +1944,7 @@ Solo prosa. Sin subtítulos. Sin viñetas. Tono técnico-institucional de alto n
 
 # ─── LLM Helper ──────────────────────────────────────────────────────────────
 
-def _llm_generate(prompt_system: str, prompt_user: str, fallback_fn, *args, **kwargs) -> str:
+def _llm_generate(prompt_system: str, prompt_user: str, fallback_fn, *args, **kwargs) -> str:  # MIGRADO a chapters/generators.py
     if llm is None:
         return fallback_fn(*args, **kwargs)
     try:
@@ -1920,7 +1959,7 @@ def _llm_generate(prompt_system: str, prompt_user: str, fallback_fn, *args, **kw
 
 # ─── AGENTE 3: Legal Compliance Agent ────────────────────────────────────────
 
-def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
+def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:  # MIGRADO a agents/nodes.py (run_legal_compliance)
     agent_name = "Legal_ComplianceAgent"
     agent_log(state, agent_name, f"Iniciando análisis legal para {state['country']}")
 
@@ -2193,7 +2232,7 @@ def _risk_level_from_score(score: float) -> str:
 
 # ─── AGENTE 4: VIP Report Generator Agent ────────────────────────────────────
 
-def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:
+def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:  # MIGRADO a agents/nodes.py (run_report_generator)
     agent_name = "VIP_ReportGeneratorAgent"
     agent_log(state, agent_name, f"Generando informe VIP para {state['country']}")
 
@@ -2241,7 +2280,7 @@ def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:
     return state
 
 
-def _generate_country_profile_section(state: "ElectionRiskState", country_code: str = "") -> str:
+def _generate_country_profile_section(state: "ElectionRiskState", country_code: str = "") -> str:  # MIGRADO a chapters/generators.py
     """Genera Sección 0 — Perfil del País, Datos Socioeconómicos y Padrón Electoral."""
 
     if country_code == "PER":
@@ -2363,7 +2402,7 @@ def _generate_country_profile_section(state: "ElectionRiskState", country_code: 
 """
 
 
-def _generate_executive_summary(state: ElectionRiskState) -> str:
+def _generate_executive_summary(state: ElectionRiskState) -> str:  # MIGRADO a chapters/generators.py
     legal = state.get("legal_analysis", {})
     violations = legal.get("violations", [])
     critical = [v for v in violations if v.get("severity") == "critical"]
@@ -2470,7 +2509,7 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:
         f"{dictamen_section}"
     )
 
-def _generate_political_context(context: dict, country_code: str = "") -> str:
+def _generate_political_context(context: dict, country_code: str = "") -> str:  # MIGRADO a chapters/generators.py
     legal_fw_raw = context.get("legal_framework", {})
     legal_fw = extract_value(legal_fw_raw) if isinstance(legal_fw_raw, dict) else legal_fw_raw
     legal_fw = legal_fw if isinstance(legal_fw, dict) else {}
@@ -2708,7 +2747,7 @@ El índice V-Dem registra deterioro sostenido (v2x_libdem: 0.59 en 2015 → 0.42
     return f"## 2. Contexto Político y Marco Legal\n\n{struct}\n\n{narrative}{peru_block}\n"
 
 
-def _generate_emb_chapter(context: dict, country_code: str = "") -> str:
+def _generate_emb_chapter(context: dict, country_code: str = "") -> str:  # MIGRADO a chapters/generators.py
     emb = extract_value(context.get("emb", {})) or {}
     registry = extract_value(context.get("voter_registry", {})) or {}
     obs = extract_value(context.get("international_observation", {})) or {}
@@ -2821,7 +2860,7 @@ def _generate_emb_chapter(context: dict, country_code: str = "") -> str:
 
     return f"## 3. Administracion Electoral (EMB)\n\n{struct}\n\n{narrative}\n{peru_emb_block}\n"
 
-def _generate_inclusivity_chapter(context: dict, country_code: str = "") -> str:
+def _generate_inclusivity_chapter(context: dict, country_code: str = "") -> str:  # MIGRADO a chapters/generators.py
     fh_raw = context.get("freedom_house", {})
     fh_data = extract_value(fh_raw) if isinstance(fh_raw, dict) else {}
     fh_score = fh_data.get("total_score", fh_data.get("score", 50)) if fh_data else 50
@@ -2952,7 +2991,7 @@ def _generate_inclusivity_chapter(context: dict, country_code: str = "") -> str:
     return f"## 4. Inclusividad y Derechos Humanos\n\n{struct}\n{narrative}\n{peru_gender_block}\n"
 
 
-def _generate_campaign_chapter(political: dict, context: dict = None) -> str:
+def _generate_campaign_chapter(political: dict, context: dict = None) -> str:  # MIGRADO a chapters/generators.py
     media = political.get("media_analysis", {})
     finance = political.get("campaign_finance", {})
     power = political.get("power_network", {})
@@ -3102,7 +3141,7 @@ def _generate_campaign_chapter(political: dict, context: dict = None) -> str:
     return f"## 5. Campaña, Redes de Poder y Financiamiento\n\n{struct}\n\n{narrative}\n"
 
 
-def _generate_digital_chapter(political: dict, context: dict = None, country_code: str = "") -> str:
+def _generate_digital_chapter(political: dict, context: dict = None, country_code: str = "") -> str:  # MIGRADO a chapters/generators.py
     digital = political.get("digital_ecosystem", {})
 
     # Extraer datos V-Dem digitales del context
@@ -3437,7 +3476,7 @@ def _generate_digital_chapter(political: dict, context: dict = None, country_cod
     return "\n".join(lines)
 
 
-def _generate_voting_day_chapter(voting_day_data: dict, state: "ElectionRiskState") -> str:
+def _generate_voting_day_chapter(voting_day_data: dict, state: "ElectionRiskState") -> str:  # MIGRADO a chapters/generators.py
     """Genera Cap. 7 — modo observación si hay sesión activa, modo votación si hay datos de campo, placeholder si nada."""
     country_code = state.get("country_code", "")
 
@@ -3647,7 +3686,7 @@ def _auto_rights(category: str, severity: str) -> List[str]:
     return []
 
 
-def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> str:
+def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> str:  # MIGRADO a chapters/generators.py
     """
     Genera Cap. 7 cuando hay un protocolo de observación activo.
     Cubre las 3 fases: pre-jornada, jornada electoral, post-electoral.
@@ -3835,7 +3874,7 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
     return "\n".join(lines)
 
 
-def _generate_justice_chapter(legal: dict) -> str:
+def _generate_justice_chapter(legal: dict) -> str:  # MIGRADO a chapters/generators.py
     violations = legal.get("violations", [])
 
     if not violations:
@@ -3891,7 +3930,7 @@ def _generate_justice_chapter(legal: dict) -> str:
         f"{narrative}\n"
     )
 
-def _generate_ai_regulation_chapter(state: "ElectionRiskState") -> str:
+def _generate_ai_regulation_chapter(state: "ElectionRiskState") -> str:  # MIGRADO a chapters/generators.py
     """Cap. 10 — IA Electoral: usos, riesgos regulatorios y normas de comunicacion (Perú 2026)."""
     # Datos estructurados Perú 2026
     PERU_AI_USES = [
@@ -4034,7 +4073,7 @@ def _generate_ai_regulation_chapter(state: "ElectionRiskState") -> str:
     return "\n".join(lines)
 
 
-def _generate_recommendations(state: ElectionRiskState) -> str:
+def _generate_recommendations(state: ElectionRiskState) -> str:  # MIGRADO a chapters/generators.py
     risk = state["risk_level"]
 
     if risk == "critical":
@@ -4068,7 +4107,7 @@ def _generate_recommendations(state: ElectionRiskState) -> str:
 # 5. CONSTRUCCIÓN DEL GRAFO (LangGraph Workflow)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def build_workflow() -> StateGraph:
+def build_workflow() -> StateGraph:  # MIGRADO a agents/pipeline.py
     workflow = StateGraph(ElectionRiskState)
 
     workflow.add_node("Ingestion", ingestion_agent)
