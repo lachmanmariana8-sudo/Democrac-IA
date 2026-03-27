@@ -33,7 +33,7 @@ def load_vdem_data() -> Optional[pd.DataFrame]:
         return None
     try:
         df = pd.read_csv(VDEM_CSV_PATH, usecols=VDEM_COLUMNS, low_memory=False)
-        print(f"[V-Dem] ✅ Dataset cargado: {len(df):,} filas, {len(df.columns)} columnas.")
+        print(f"[V-Dem] OK Dataset cargado: {len(df):,} filas, {len(df.columns)} columnas.")
         print(f"[V-Dem] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
         return df
     except Exception as e:
@@ -137,7 +137,7 @@ def load_freedom_house_data() -> Optional[pd.DataFrame]:
         df["Total"]   = pd.to_numeric(df["Total"],   errors="coerce")
         df["PR rating"] = pd.to_numeric(df["PR rating"], errors="coerce")
         df["CL rating"] = pd.to_numeric(df["CL rating"], errors="coerce")
-        print(f"[FH] ✅ Dataset cargado: {len(df):,} filas.")
+        print(f"[FH] OK Dataset cargado: {len(df):,} filas.")
         print(f"[FH] Ediciones disponibles: {int(df['Edition'].min())}–{int(df['Edition'].max())}")
         return df
     except Exception as e:
@@ -237,7 +237,7 @@ def load_rsf_data() -> Optional[pd.DataFrame]:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.replace(",", ".", regex=False)
                 df[col] = pd.to_numeric(df[col], errors="coerce")
-        print(f"[RSF] ✅ Dataset cargado: {len(df):,} países.")
+        print(f"[RSF] OK Dataset cargado: {len(df):,} países.")
         return df
     except Exception as e:
         print(f"[RSF] ERROR al cargar CSV: {e}")
@@ -288,7 +288,7 @@ def load_pei_data() -> Optional[pd.DataFrame]:
                     "VOTINGPROCESS", "VOTECOUNT", "VOTINGRESULTS", "ELECTIONAUTHORITIES"]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
-        print(f"[PEI] ✅ Dataset cargado: {len(df):,} elecciones.")
+        print(f"[PEI] OK Dataset cargado: {len(df):,} elecciones.")
         print(f"[PEI] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
         return df
     except Exception as e:

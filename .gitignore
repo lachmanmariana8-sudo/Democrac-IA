@@ -30,6 +30,10 @@ data/reports/
 
 # Base de datos SQLite (se regenera en startup desde los datos)
 data/democracia.db
+data/peirs.db
+data/*.db
+data/rag_index/
+data/architect_logs/
 
 # Logs y temporales
 *.log

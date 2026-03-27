@@ -10,9 +10,8 @@ from modules.data_loaders import (
 
 class TestVDem:
     def test_load_returns_none_when_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("VDEM_CSV_PATH", str(tmp_path / "nonexistent.csv"))
-        # Reload necesario para que tome el nuevo env var
-        import importlib, modules.data_loaders as dl
+        import modules.data_loaders as dl
+        monkeypatch.setattr(dl, "VDEM_CSV_PATH", str(tmp_path / "nonexistent.csv"))
         df = dl.load_vdem_data()
         assert df is None
 
@@ -21,15 +20,14 @@ class TestVDem:
         assert result is None
 
     def test_get_country_returns_none_for_missing_country(self):
-        # Con df None, debe retornar None
         result = get_vdem_country(None, "XYZ")
         assert result is None
 
 
 class TestFreedomHouse:
     def test_load_returns_none_when_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("FH_CSV_PATH", str(tmp_path / "nonexistent.csv"))
         import modules.data_loaders as dl
+        monkeypatch.setattr(dl, "FH_CSV_PATH", str(tmp_path / "nonexistent.csv"))
         df = dl.load_freedom_house_data()
         assert df is None
 
@@ -68,8 +66,8 @@ class TestFreedomHouse:
 
 class TestRSF:
     def test_load_returns_none_when_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("RSF_CSV_PATH", str(tmp_path / "nonexistent.csv"))
         import modules.data_loaders as dl
+        monkeypatch.setattr(dl, "RSF_CSV_PATH", str(tmp_path / "nonexistent.csv"))
         df = dl.load_rsf_data()
         assert df is None
 
@@ -80,8 +78,8 @@ class TestRSF:
 
 class TestPEI:
     def test_load_returns_none_when_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("PEI_CSV_PATH", str(tmp_path / "nonexistent.csv"))
         import modules.data_loaders as dl
+        monkeypatch.setattr(dl, "PEI_CSV_PATH", str(tmp_path / "nonexistent.csv"))
         df = dl.load_pei_data()
         assert df is None
 

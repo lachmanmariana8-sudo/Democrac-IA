@@ -36,13 +36,14 @@ class StartupReport:
         return [c for c in self.checks if not c.ok and c.critical]
 
     def print_summary(self) -> None:
-        print("\n" + "═" * 60)
-        print("  DEMOCRAC.IA — Startup Checks")
-        print("═" * 60)
+        sep = "=" * 60
+        print("\n" + sep)
+        print("  DEMOCRAC.IA -- Startup Checks")
+        print(sep)
         for c in self.checks:
-            icon = "✅" if c.ok else ("🔴" if c.critical else "⚠️ ")
+            icon = "[OK]" if c.ok else ("[!!]" if c.critical else "[--]")
             print(f"  {icon}  {c.name:<30} {c.message}")
-        print("═" * 60)
+        print(sep)
         failures = [c for c in self.checks if not c.ok]
         if not failures:
             print("  Sistema listo. Todos los checks pasaron.")
@@ -50,10 +51,10 @@ class StartupReport:
             crit = [c for c in failures if c.critical]
             warn = [c for c in failures if not c.critical]
             if crit:
-                print(f"  🔴 {len(crit)} checks críticos fallaron — sistema puede no funcionar")
+                print(f"  [!!] {len(crit)} checks criticos fallaron -- sistema puede no funcionar")
             if warn:
-                print(f"  ⚠️  {len(warn)} checks opcionales fallaron — funcionalidad reducida")
-        print("═" * 60 + "\n")
+                print(f"  [--] {len(warn)} checks opcionales fallaron -- funcionalidad reducida")
+        print(sep + "\n")
 
 
 # ── Checks individuales ───────────────────────────────────────────────────────
