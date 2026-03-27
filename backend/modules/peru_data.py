@@ -1,0 +1,771 @@
+"""DEMOCRAC.IA / PEIRS — Datos especificos de Peru 2026"""
+
+PERU_ELECTORAL_SYSTEM = {
+    "name": "Representación Proporcional con Cifra Repartidora (D'Hondt)",
+    "law": "Ley Orgánica de Elecciones N° 26859 y modificatorias",
+    "seats": 130,
+    "chamber": "Unicameral — Congreso de la República",
+    "term_years": 5,
+    "districts": 26,
+    "district_note": "26 circunscripciones (25 regiones + Lima Metropolitana). Magnitude varía de 1 (Moquegua, Tacna, Madre de Dios) a 36 (Lima).",
+    "threshold": "5% de votos válidos a nivel nacional O 7 escaños en al menos un distrito (Ley 31046)",
+    "threshold_note": "El umbral doble reduce fragmentación pero en la práctica han sobrevivido 8+ bancadas en cada congreso desde 2011.",
+    "formula": "Cifra Repartidora (Método D'Hondt) — favorece a partidos más grandes en distritos plurinominales",
+    "ballot_type": "Lista cerrada y bloqueada con voto preferencial (hasta 2 preferencias)",
+    "vote_preference_note": "El voto preferencial permite al elector reordenar candidatos dentro de la lista, lo que genera competencia intrapartidaria intensa.",
+    "presidential_system": "Elección directa a 2 vueltas (ballotage)",
+    "ballotage_threshold": "Mayoría absoluta (50%+1) en 1ª vuelta. Si nadie alcanza: 2ª vuelta entre los dos más votados.",
+    "women_quota": "30% mínimo de mujeres en listas (Ley 31030, 2021)",
+    "youth_quota": "20% de jóvenes (hasta 29 años) y comunidades nativas en listas",
+    "simultaneity": "Elecciones presidenciales y congresales simultáneas (misma boleta, mismo día)",
+    "prohibitions": "Condenados con sentencia firme no pueden postular. Funcionarios públicos deben renunciar 6 meses antes.",
+    "key_bodies": {
+        "JNE": "Jurado Nacional de Elecciones — árbitro electoral máximo, resuelve impugnaciones, proclama resultados",
+        "ONPE": "Oficina Nacional de Procesos Electorales — organiza la votación, escrutinio, transmisión de resultados",
+        "RENIEC": "Registro Nacional de Identificación — padrón electoral, DNI, biometría",
+    },
+    "historical_fragmentation": "Perú ha promediado 7-8 bancadas efectivas desde 2011. Ningún partido ha obtenido mayoría absoluta (66 escaños) desde Fuerza Popular en 2016.",
+    "sources": [
+        {"label": "JNE — Sistema Electoral Peruano", "url": "https://www.jne.gob.pe"},
+        {"label": "ONPE — Elecciones 2026", "url": "https://www.onpe.gob.pe"},
+        {"label": "Ley N° 26859 — Ley Orgánica de Elecciones", "url": "https://www.leyes.congreso.gob.pe"},
+        {"label": "IDEA Internacional — Electoral System Design Database", "url": "https://www.idea.int/data-tools/country-view/247/40"},
+    ],
+}
+
+PERU_POLITICAL_FORCES = [
+    {
+        "id": "app", "name": "Alianza para el Progreso", "abbr": "APP",
+        "ideology": "Centro / Populismo pragmático", "position": 50,
+        "founded": 1999, "color": "#f97316",
+        "leader": "César Acuña Peralta",
+        "background": (
+            "Fundada en 1999 por César Acuña, empresario universitario de La Libertad. "
+            "Su crecimiento se sustenta en la red de universidades privadas del Grupo UCV, "
+            "con presencia en 18 regiones. Ha sido el partido con mayor número de candidatos "
+            "electos en elecciones regionales y municipales 2022. Su modelo organizativo ha "
+            "sido cuestionado como 'partido-empresa' por organismos como Transparencia Internacional Perú. "
+            "Acuña fue inhabilitado en 2018 por el JNE por presuntas dádivas electorales, sanción "
+            "posteriormente levantada, lo que generó controversia sobre la aplicabilidad efectiva del Art. 25 ICCPR."
+        ),
+        "candidates_2026": [
+            {"name": "César Acuña Peralta", "role": "Candidato presidencial confirmado",
+             "notes": "Cuarta candidatura presidencial. Gobernador electo de La Libertad 2022-2026. Postula con la figura de 'gestor' y candidato de centro."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 9,  "first_round_pct": None, "result": "Coalición menor. APP apoya a PPK en 2ª vuelta."},
+            {"year": 2020, "seats": 22, "first_round_pct": None, "result": "Elecciones extraordinarias. Segundo partido más votado."},
+            {"year": 2021, "seats": 22, "first_round_pct": 6.1,  "result": "4to lugar presidencial (Acuña). 22 escaños iniciales, sube a 28 por transfugismo."},
+        ],
+        "key_policies": [
+            "Inversión en infraestructura educativa y universidades regionales",
+            "Descentralización fiscal y fortalecimiento de gobiernos regionales",
+            "Seguridad ciudadana con énfasis en penas más duras",
+        ],
+        "base_regions": ["La Libertad", "Cajamarca", "Lambayeque"],
+        "current_seats": 28, "electoral_strength": "Alto", "risk_profile": "high",
+        "risk_notes": "Red clientelar articulada en torno a universidades UCV. Financiamiento opaco. Acuña con inhabilitaciones previas.",
+        "strengths": ["Infraestructura organizacional universitaria", "Presencia robusta en norte", "Financiamiento sólido"],
+        "vulnerabilities": ["Denuncias de compra de votos", "Imagen de partido-empresa", "Dependencia del liderazgo personal"],
+        "iccpr_risk": "Art. 25 ICCPR — posible afectación al sufragio libre mediante prácticas clientelares documentadas por la ONPE y JNE.",
+        "iccpr_source": "JNE Res. 0234-2018-JNE; ONPE Informe de Financiamiento 2022; Transparencia Internacional Perú (2023)",
+        "iccpr_date": "2018 (inhabilitación), 2022 (informe ONPE), actualizado ene 2026",
+        "iccpr_url": "https://www.jne.gob.pe/transparencia/resoluciones/",
+    },
+    {
+        "id": "fp", "name": "Fuerza Popular", "abbr": "FP",
+        "ideology": "Derecha / Fujimorismo", "position": 72,
+        "founded": 2010, "color": "#ef4444",
+        "leader": "Keiko Fujimori",
+        "background": (
+            "Heredera del fujimorismo, movimiento nacido en torno al expresidente Alberto Fujimori (1990-2000). "
+            "Keiko Fujimori ha liderado tres candidaturas presidenciales (2011, 2016, 2021), "
+            "perdiendo las tres en segunda vuelta. En 2016 obtuvo 73 escaños (mayoría absoluta) "
+            "y usó ese dominio para enfrentarse al ejecutivo de PPK, generando una crisis constitucional. "
+            "Keiko fue detenida en 2018 y 2019 por presunto lavado de activos en el caso Odebrecht; "
+            "tiene proceso abierto. El partido ha renovado parcialmente su cúpula pero mantiene "
+            "el liderazgo personalista de la familia Fujimori."
+        ),
+        "candidates_2026": [
+            {"name": "Keiko Fujimori", "role": "Candidata presidencial (4ª postulación)",
+             "notes": "Mantiene liderazgo del partido. Proceso judicial por lavado de activos en curso. Base electoral fiel en Lima y regiones costeras."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 73, "first_round_pct": 39.9, "result": "Mayoría absoluta en congreso. Keiko pierde 2ª vuelta presidencial vs PPK por menos de 0.1%."},
+            {"year": 2020, "seats": 15, "first_round_pct": None, "result": "Elecciones extraordinarias. Derrumbe electoral post-confrontación con Vizcarra."},
+            {"year": 2021, "seats": 24, "first_round_pct": 13.4, "result": "13.4% en 1ª vuelta, 49.9% en 2ª vuelta. Impugna resultado ante el JNE sin éxito."},
+        ],
+        "key_policies": [
+            "Mano dura contra la criminalidad e inseguridad",
+            "Libre mercado y protección a la inversión privada",
+            "Rechazo a la Asamblea Constituyente",
+        ],
+        "base_regions": ["Lima", "Ica", "Arequipa", "Ucayali"],
+        "current_seats": 23, "electoral_strength": "Alto", "risk_profile": "high",
+        "risk_notes": "Historia de 3 procesos electorales con denuncias de fraude. Keiko con condena suspendida. Control parcial de instituciones cuestionado.",
+        "strengths": ["Base electoral leal en Lima", "Estructura partidaria consolidada", "Candidatos con experiencia legislativa"],
+        "vulnerabilities": ["Imagen negativa por corrupción", "Dependencia del legado Fujimori", "Juicios pendientes"],
+        "iccpr_risk": "Art. 14 ICCPR — garantías procesales comprometidas en relación al proceso penal activo del liderazgo.",
+        "iccpr_source": "Poder Judicial del Perú — Expediente N° 00299-2017-36-5001-JR-PE-01; CIDH Informe Anual 2023",
+        "iccpr_date": "2017 (inicio proceso), dic 2023 (última resolución de apelación), ene 2026 (estado activo)",
+        "iccpr_url": "https://cej.pj.gob.pe/cej/forms/busquedaform.html",
+    },
+    {
+        "id": "rp", "name": "Renovación Popular", "abbr": "RP",
+        "ideology": "Derecha / Conservador-liberal", "position": 80,
+        "founded": 2020, "color": "#0ea5e9",
+        "leader": "Rafael López Aliaga",
+        "background": (
+            "Partido fundado en 2020 por Rafael López Aliaga, empresario de origen limeño. "
+            "De perfil ultraconservador en lo social (declaradamente antiaborto, crítico de la ideología de género) "
+            "y liberal en lo económico. Su primera candidatura presidencial en 2021 (12.8%) lo consolidó "
+            "como líder de la derecha dura urbana. Fue elegido alcalde de Lima Metropolitana en 2022, "
+            "cargo desde el cual ha impulsado una gestión confrontacional con el gobierno central. "
+            "Su discurso polarizante y el uso del término 'castrocomunismo' para referirse a la izquierda "
+            "ha sido documentado como factor de desinformación."
+        ),
+        "candidates_2026": [
+            {"name": "Rafael López Aliaga", "role": "Candidato presidencial (2ª postulación)",
+             "notes": "Alcalde de Lima hasta diciembre 2025. Perfil empresarial. Alta recordación en Lima pero baja fuera de la capital."},
+        ],
+        "electoral_history": [
+            {"year": 2021, "seats": 9, "first_round_pct": 12.8, "result": "3er lugar presidencial. 9 escaños en congreso. Ingreso sorpresivo al escenario político."},
+        ],
+        "key_policies": [
+            "Tolerancia cero al crimen: cárceles duras, pena de muerte para terrorismo",
+            "Eliminación de impuestos a pequeñas empresas y reducción del Estado",
+            "Rechazo a la agenda LGBT y políticas de género en educación",
+        ],
+        "base_regions": ["Lima", "Arequipa", "Moquegua"],
+        "current_seats": 9, "electoral_strength": "Medio", "risk_profile": "moderate",
+        "risk_notes": "Discurso polarizante. Cuestionamientos sobre financiamiento empresarial. Posiciones restrictivas sobre derechos civiles.",
+        "strengths": ["Base urbana de clase media-alta", "Liderazgo mediático", "Posicionamiento anticorrupción"],
+        "vulnerabilities": ["Escaso implante territorial fuera de Lima", "Discurso divisivo", "Partido personalista joven"],
+        "iccpr_risk": "Art. 19, 21 ICCPR — restricciones retóricas a libertades civiles documentadas en campaña; potencial impacto en derechos de minorías.",
+        "iccpr_source": "Freedom House FIW 2025 (pp. 14-15); IPYS Perú — Monitoreo de Discurso Político 2024-2025",
+        "iccpr_date": "2024-2025 (campaña electoral, monitoreo IPYS)",
+        "iccpr_url": "https://freedomhouse.org/country/peru/freedom-world/2025",
+    },
+    {
+        "id": "pl", "name": "Perú Libre", "abbr": "PL",
+        "ideology": "Izquierda / Marxismo-leninismo", "position": 15,
+        "founded": 2009, "color": "#a855f7",
+        "leader": "Vladimir Cerrón",
+        "background": (
+            "Fundado en 2009 en la región Junín por Vladimir Cerrón, médico y exgobernador regional. "
+            "Fue el vehículo que llevó a Pedro Castillo a la presidencia en 2021 con apenas el 18.9% en primera vuelta. "
+            "Cerrón fue condenado en 2019 por corrupción (3.5 años de prisión efectiva) e inhabilitado para cargos públicos, "
+            "lo que generó una contradicción estructural: el fundador no pudo ser candidato del gobierno que él mismo impulsó. "
+            "Castillo rompió con Cerrón en 2022. Tras la vacancia de Castillo, el partido se fragmentó y hoy opera "
+            "con presencia marginal pero organizada en regiones andinas del centro-sur."
+        ),
+        "candidates_2026": [
+            {"name": "Por definir", "role": "Candidato presidencial sin confirmar",
+             "notes": "Cerrón inhabilitado. El partido buscará candidato de la región andina. Alta incertidumbre sobre su viabilidad para superar el umbral del 5%."},
+        ],
+        "electoral_history": [
+            {"year": 2021, "seats": 37, "first_round_pct": 18.9, "result": "Castillo gana presidencia con 50.1% en 2ª vuelta. 37 escaños iniciales, se fragmenta a 7 por conflictos internos."},
+        ],
+        "key_policies": [
+            "Asamblea Constituyente para nueva Constitución",
+            "Nationalización de recursos naturales estratégicos",
+            "Reforma agraria y redistribución de tierras",
+        ],
+        "base_regions": ["Junín", "Cusco", "Puno", "Ayacucho"],
+        "current_seats": 7, "electoral_strength": "Medio", "risk_profile": "high",
+        "risk_notes": "Cerrón condenado por corrupción e inhabilitado. Partido instrumento de Castillo (2021). Base en regiones andinas.",
+        "strengths": ["Base en sierra central y sur", "Discurso redistributivo con arrastre popular"],
+        "vulnerabilities": ["Liderazgo inhabilitado", "Asociación con gestión Castillo", "Fragmentación severa"],
+        "iccpr_risk": "Art. 25(b) ICCPR — candidatos inhabilitados por resolución judicial; riesgo de impugnación postelectoral si alcanzan representación.",
+        "iccpr_source": "Poder Judicial — Sentencia 1er Juzgado Penal de Huancayo (2019); JNE Res. 0987-2019-JNE (inhabilitación Cerrón)",
+        "iccpr_date": "2019 (condena y inhabilitación), confirmada 2022, vigente ene 2026",
+        "iccpr_url": "https://www.jne.gob.pe/transparencia/resoluciones/",
+    },
+    {
+        "id": "pp", "name": "Podemos Perú", "abbr": "PP",
+        "ideology": "Centro-populista", "position": 40,
+        "founded": 2017, "color": "#8b5cf6",
+        "leader": "José Luna Gálvez",
+        "background": (
+            "Fundado en 2017 por José Luna Gálvez, empresario educativo del grupo Luna. "
+            "Su modelo organizativo es similar al de APP: partido articulado alrededor de una empresa educativa "
+            "(institutos y universidades). Ha sido objeto de investigaciones del Ministerio Público por presunta "
+            "venta de candidaturas y financiamiento irregular. Su bancada en el congreso actual es heterogénea "
+            "y ha votado de forma oportunista con distintas mayorías. No tiene una ideología clara ni base programática sólida."
+        ),
+        "candidates_2026": [
+            {"name": "José Luna Gálvez", "role": "Candidato presidencial probable",
+             "notes": "Fundador del partido. Investigado por presunta venta de candidaturas. Perfil de empresario-político."},
+        ],
+        "electoral_history": [
+            {"year": 2020, "seats": 11, "first_round_pct": None, "result": "Elecciones extraordinarias. Sorpresa electoral con 11 escaños."},
+            {"year": 2021, "seats": 5,  "first_round_pct": 1.8,  "result": "Luna obtiene 1.8% presidencial. 5 escaños parlamentarios, sube a 9 por transfugismo."},
+        ],
+        "key_policies": [
+            "Empleo y emprendimiento para jóvenes y mujeres",
+            "Reforma educativa con énfasis en técnica",
+            "Descentralización y obras de infraestructura regional",
+        ],
+        "base_regions": ["Lima Norte", "Piura"],
+        "current_seats": 9, "electoral_strength": "Medio", "risk_profile": "moderate",
+        "risk_notes": "Partido con denuncias de compra de candidaturas. Financiamiento cuestionado. Estructura débil fuera de Lima.",
+        "strengths": ["Implante en Lima norte", "Candidatos con perfil técnico"],
+        "vulnerabilities": ["Denuncias de mercado de candidaturas", "Baja identidad partidaria"],
+        "iccpr_risk": "Art. 25 ICCPR — mercantilización de candidaturas puede afectar la representatividad real del sistema.",
+        "iccpr_source": "Fiscalía Especializada en Delitos de Corrupción de Funcionarios — Carpeta Fiscal N° 2019-2358; IDEA Internacional (2024)",
+        "iccpr_date": "2019 (apertura investigación), 2024 (IDEA informe sistema partidos Perú)",
+        "iccpr_url": "https://www.idea.int/data-tools/country-view/247/40",
+    },
+    {
+        "id": "ap", "name": "Acción Popular", "abbr": "AP",
+        "ideology": "Centro / Social-demócrata", "position": 45,
+        "founded": 1956, "color": "#10b981",
+        "leader": "Directiva colectiva (en disputa)",
+        "background": (
+            "Fundado en 1956 por Fernando Belaúnde Terry, dos veces presidente (1963-1968 y 1980-1985). "
+            "Partido más antiguo del Perú en actividad electoral regular. Históricamente representó "
+            "la centro-izquierda reformista y el desarrollismo. Ganó la Mesa Directiva del Congreso "
+            "en las elecciones extraordinarias de 2020. Sin embargo, su gestión legislativa bajo el liderazgo "
+            "de Manuel Merino fue catastrófica: duró apenas una semana como presidente (noviembre 2020) "
+            "tras la crisis de la vacancia de Vizcarra. Desde entonces atraviesa una profunda crisis interna "
+            "con múltiples facciones y sin candidato presidencial consolidado para 2026."
+        ),
+        "candidates_2026": [
+            {"name": "Por definir — probable candidato de consenso", "role": "Candidato presidencial sin confirmar",
+             "notes": "El partido no ha logrado consenso. Múltiples precandidatos. Alta probabilidad de no superar el umbral del 5% si continúa fragmentado."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 5,  "first_round_pct": 1.3,  "result": "Candidato irrelevante. Mínima representación parlamentaria."},
+            {"year": 2020, "seats": 25, "first_round_pct": None,  "result": "Gana elecciones extraordinarias con 25 escaños. Crisis Merino destruye capital político."},
+            {"year": 2021, "seats": 16, "first_round_pct": 4.1,   "result": "4.1% presidencial (debajo del umbral histórico). 16 escaños parlamentarios."},
+        ],
+        "key_policies": [
+            "Reforma del Estado y profesionalización de la función pública",
+            "Modernización agrícola y apoyo al pequeño productor",
+            "Descentralización real con mecanismos de control ciudadano",
+        ],
+        "base_regions": ["Lima", "Cusco", "Piura", "Ancash"],
+        "current_seats": 7, "electoral_strength": "Bajo-Medio", "risk_profile": "low",
+        "risk_notes": "Partido histórico en proceso de reconstrucción. Fractura interna post-Sagasti. Sin candidato presidencial consolidado.",
+        "strengths": ["Marca histórica reconocida", "Presencia nacional difusa", "Candidatos moderados"],
+        "vulnerabilities": ["Crisis de liderazgo severa", "Fraccionamiento interno", "Resultados decrecientes"],
+        "iccpr_risk": "Sin violaciones documentadas directas. Riesgo de irrelevancia institucional si no supera umbral.",
+        "iccpr_source": "JNE — Estadísticas de participación política 2021; ONPE resultados electorales 2021",
+        "iccpr_date": "2021 (último proceso electoral con datos), proyección 2026",
+        "iccpr_url": "https://www.onpe.gob.pe/modElecciones/elecciones/elecciones2021/",
+    },
+    {
+        "id": "bm", "name": "Frente Amplio / Izquierda Unida", "abbr": "FA",
+        "ideology": "Izquierda progresista", "position": 20,
+        "founded": 2013, "color": "#ec4899",
+        "leader": "Coalición (varios)",
+        "background": (
+            "Coalición de organizaciones de izquierda que ha intentado articular una alternativa al "
+            "fujimorismo y al populismo de Perú Libre. En 2021 logró 9 escaños bajo distintas siglas. "
+            "Tiene fuerte presencia en el magisterio organizado (SUTEP), movimientos indígenas del sur andino "
+            "(Puno, Cusco, Apurímac) y organizaciones campesinas. Su dificultad estructural es la fragmentación: "
+            "en cada proceso electoral debaten si presentarse unidos o divididos. Para 2026, diferentes corrientes "
+            "negocian si formar una alianza o postular por separado, lo que determina su viabilidad electoral dado el umbral del 5%."
+        ),
+        "candidates_2026": [
+            {"name": "En proceso de definición", "role": "Candidato por consenso de la coalición",
+             "notes": "Figuras como Verónica Mendoza (2016: 19.9% presidencial) podrían encabezar nuevamente. La unidad de la izquierda es condición para superar el umbral."},
+        ],
+        "electoral_history": [
+            {"year": 2016, "seats": 20, "first_round_pct": 19.9, "result": "Frente Amplio con Mendoza: 3er lugar presidencial (19.9%). 20 escaños. La izquierda en su mejor momento reciente."},
+            {"year": 2021, "seats": 9,  "first_round_pct": 8.9,  "result": "Fragmentada en múltiples candidaturas. Total: ~9 escaños bajo distintas siglas."},
+        ],
+        "key_policies": [
+            "Asamblea Constituyente y nueva Constitución plurinacional",
+            "Reforma tributaria progresiva y renta básica",
+            "Derechos de pueblos indígenas y consulta previa (UNDRIP)",
+        ],
+        "base_regions": ["Puno", "Cusco", "Apurímac", "Ayacucho", "Huancavelica"],
+        "current_seats": 10, "electoral_strength": "Medio (sur andino)", "risk_profile": "moderate",
+        "risk_notes": "Coalición heterogénea con fuerte implante en el magisterio rural. Discurso de reformas constitucionales.",
+        "strengths": ["Base sindical docente organizada", "Fuerte en sur andino", "Voto indígena sólido"],
+        "vulnerabilities": ["Sin liderazgo presidencial reconocido", "Fragmentación interna crónica", "Estigmatización mediática"],
+        "iccpr_risk": "UNDRIP Art. 5, 18 — representación de pueblos indígenas en debate constitucional es un derecho reconocido internacionalmente.",
+        "iccpr_source": "AIDESEP — Informe de Participación Electoral Indígena 2021; CIDH OEA/Ser.L/V/II Doc. 49/19",
+        "iccpr_date": "2021 (informe AIDESEP), 2019 (CIDH), monitoreo continuo 2025",
+        "iccpr_url": "https://www.oas.org/es/cidh/informes/anuales.asp",
+    },
+    {
+        "id": "ind", "name": "No bancada / Independientes", "abbr": "IND",
+        "ideology": "Variable (transfugismo)", "position": 50,
+        "founded": None, "color": "#64748b",
+        "leader": "N/A",
+        "background": (
+            "No es un partido sino el reflejo de la debilidad institucional del sistema político peruano. "
+            "Los 37 congresistas sin bancada son legisladores que abandonaron sus grupos originales por "
+            "conflictos internos, investigaciones o negociación de cargos. El transfuguismo es un fenómeno "
+            "estructural en Perú: en cada congreso desde 2011 más del 20% de legisladores ha cambiado de bancada. "
+            "Este fenómeno debilita la rendición de cuentas democrática, dificulta la formación de mayorías "
+            "estables y es reconocido por el JNE como una distorsión del sistema de representación proporcional."
+        ),
+        "candidates_2026": [],
+        "electoral_history": [
+            {"year": 2021, "seats": 37, "first_round_pct": None, "result": "37 legisladores sin bancada al inicio de 2026 (comenzaron el período con bancada; abandonaron sus partidos)"},
+        ],
+        "key_policies": [],
+        "base_regions": ["Nacional"],
+        "current_seats": 37, "electoral_strength": "Variable", "risk_profile": "moderate",
+        "risk_notes": "Refleja fragmentación extrema y débil institucionalización partidaria peruana.",
+        "strengths": ["Flexibilidad de voto", "Sin compromisos partidarios"],
+        "vulnerabilities": ["Sin accountability democrático", "Susceptibles a transfuguismo e influencias externas"],
+        "iccpr_risk": "Art. 25 ICCPR — fragmentación que debilita la representatividad del sistema; votantes no representados ideológicamente.",
+        "iccpr_source": "JNE — Informe de Transfuguismo Parlamentario 2022-2026; V-Dem v15 (v2x_partip, 2024)",
+        "iccpr_date": "2022-2026 (monitoreo JNE), V-Dem dato 2024",
+        "iccpr_url": "https://www.jne.gob.pe/transparencia/informes/",
+    },
+]
+
+PERU_PARL_DATA = {
+    "total_seats": 130,
+    "system": "Representación proporcional con umbral del 5% (Ley Orgánica de Elecciones, Ley N° 26859)",
+    "current": {
+        "label": "Congreso actual 2021-2026",
+        "note": "Composición aproximada al inicio de 2026. Incluye cambios de bancada post-2021.",
+        "seats": [
+            {"party": "APP",  "full_name": "Alianza para el Progreso",   "seats": 28, "color": "#f97316"},
+            {"party": "FP",   "full_name": "Fuerza Popular",              "seats": 23, "color": "#ef4444"},
+            {"party": "BM",   "full_name": "Bloque Magisterial/Izq.",     "seats": 10, "color": "#ec4899"},
+            {"party": "PP",   "full_name": "Podemos Perú",                "seats": 9,  "color": "#8b5cf6"},
+            {"party": "RP",   "full_name": "Renovación Popular",          "seats": 9,  "color": "#0ea5e9"},
+            {"party": "PL",   "full_name": "Perú Libre",                  "seats": 7,  "color": "#a855f7"},
+            {"party": "AP",   "full_name": "Acción Popular",              "seats": 7,  "color": "#10b981"},
+            {"party": "IND",  "full_name": "No bancada / Independientes", "seats": 37, "color": "#64748b"},
+        ],
+        "fragmentation_index": 8.4,
+        "effective_parties": 7.2,
+        "governing_coalition_seats": None,
+        "opposition_seats": None,
+    },
+    "scenarios": [
+        {
+            "id": "A", "probability_pct": 52,
+            "label": "A — Hiperfragmentación (más probable)",
+            "description": "Ningún partido supera 20 escaños. Se requieren 4+ bancadas para alcanzar mayoría simple (66 escaños). Alta dificultad de gobernabilidad. Patrón consistente con elecciones 2011-2021.",
+            "governance_risk": "Alto — riesgo de bloqueo legislativo y nuevos conflictos ejecutivo-legislativo",
+            "color": "#ef4444",
+            "seats": [
+                {"party": "APP",  "full_name": "Alianza para el Progreso", "seats": 22, "color": "#f97316"},
+                {"party": "FP",   "full_name": "Fuerza Popular",           "seats": 19, "color": "#ef4444"},
+                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 14, "color": "#0ea5e9"},
+                {"party": "BM",   "full_name": "Bloques de izquierda",     "seats": 18, "color": "#ec4899"},
+                {"party": "NP",   "full_name": "Nuevos partidos",          "seats": 28, "color": "#94a3b8"},
+                {"party": "IND",  "full_name": "Independientes",           "seats": 29, "color": "#64748b"},
+            ],
+        },
+        {
+            "id": "B", "probability_pct": 28,
+            "label": "B — Coalición centro-derecha",
+            "description": "APP + FP + RP alcanzan acuerdo post-electoral. Mayoría relativa estable de 60-70 escaños. Gobierno con capacidad legislativa. Riesgo de retrocesos en derechos civiles y autonomía del JNE.",
+            "governance_risk": "Moderado — mayoría funcional pero con tensiones sobre independencia institucional",
+            "color": "#f97316",
+            "seats": [
+                {"party": "APP",  "full_name": "Alianza para el Progreso", "seats": 28, "color": "#f97316"},
+                {"party": "FP",   "full_name": "Fuerza Popular",           "seats": 22, "color": "#ef4444"},
+                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 15, "color": "#0ea5e9"},
+                {"party": "BM",   "full_name": "Bloques de izquierda",     "seats": 20, "color": "#ec4899"},
+                {"party": "AP",   "full_name": "Otros centristas",         "seats": 16, "color": "#10b981"},
+                {"party": "IND",  "full_name": "Independientes",           "seats": 29, "color": "#64748b"},
+            ],
+        },
+        {
+            "id": "C", "probability_pct": 20,
+            "label": "C — Izquierda populista + centro",
+            "description": "Coalición izquierda-centro logra 55-65 escaños. Agenda redistributiva y posible convocatoria a Asamblea Constituyente. Alta incertidumbre para inversores. Potencial tensión con FP/RP.",
+            "governance_risk": "Alto para estabilidad institucional — reforma constitucional en agenda",
+            "color": "#a855f7",
+            "seats": [
+                {"party": "BM",   "full_name": "Bloques izquierda unida", "seats": 35, "color": "#ec4899"},
+                {"party": "PP",   "full_name": "Centro-populista",        "seats": 18, "color": "#8b5cf6"},
+                {"party": "APP",  "full_name": "APP (oposición)",          "seats": 20, "color": "#f97316"},
+                {"party": "FP",   "full_name": "Fuerza Popular (oposic.)", "seats": 18, "color": "#ef4444"},
+                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 12, "color": "#0ea5e9"},
+                {"party": "IND",  "full_name": "Independientes",           "seats": 27, "color": "#64748b"},
+            ],
+        },
+    ],
+}
+
+PERU_REGIONS_DATA = [
+    {"region": "Lima",          "seats": 36, "pop_M": 10.8, "urban_pct": 97, "poverty_pct": 14, "indigenous_pct": 4,  "risk_score": 42, "tendency": "volátil", "notes": "Concentra 1/3 del electorado. Voto urbano fragmentado."},
+    {"region": "La Libertad",   "seats": 7,  "pop_M": 2.1,  "urban_pct": 73, "poverty_pct": 24, "indigenous_pct": 5,  "risk_score": 48, "tendency": "APP-dominante", "notes": "Feudo electoral de Acuña. Red clientelar universitaria activa."},
+    {"region": "Piura",         "seats": 7,  "pop_M": 2.0,  "urban_pct": 68, "poverty_pct": 28, "indigenous_pct": 3,  "risk_score": 45, "tendency": "centro-volátil", "notes": "Historial de compra de votos documentado."},
+    {"region": "Cajamarca",     "seats": 5,  "pop_M": 1.5,  "urban_pct": 38, "poverty_pct": 46, "indigenous_pct": 12, "risk_score": 58, "tendency": "izquierda-rural", "notes": "Alta pobreza. Conflictos mineros afectan clima electoral."},
+    {"region": "Puno",          "seats": 5,  "pop_M": 1.4,  "urban_pct": 52, "poverty_pct": 39, "indigenous_pct": 68, "risk_score": 55, "tendency": "izquierda andina", "notes": "Mayor % población aymara-quechua. Riesgo UNDRIP Art. 18."},
+    {"region": "Cusco",         "seats": 5,  "pop_M": 1.4,  "urban_pct": 55, "poverty_pct": 38, "indigenous_pct": 55, "risk_score": 52, "tendency": "izquierda-volátil", "notes": "Fuerte identidad quechua. Base Perú Libre."},
+    {"region": "Junín",         "seats": 5,  "pop_M": 1.4,  "urban_pct": 66, "poverty_pct": 30, "indigenous_pct": 25, "risk_score": 56, "tendency": "Perú Libre-base", "notes": "Base original de Cerrón. Riesgo de movilización extra-institucional."},
+    {"region": "Arequipa",      "seats": 5,  "pop_M": 1.4,  "urban_pct": 89, "poverty_pct": 11, "indigenous_pct": 10, "risk_score": 38, "tendency": "derecha-RP", "notes": "Electorado urbano educado. Baja tolerancia a corrupción."},
+    {"region": "Lambayeque",    "seats": 4,  "pop_M": 1.3,  "urban_pct": 79, "poverty_pct": 23, "indigenous_pct": 4,  "risk_score": 47, "tendency": "APP", "notes": "Segunda base de Acuña. Prácticas clientelares documentadas."},
+    {"region": "Loreto",        "seats": 3,  "pop_M": 1.1,  "urban_pct": 42, "poverty_pct": 45, "indigenous_pct": 28, "risk_score": 62, "tendency": "volátil", "notes": "Amazónico. Alta pobreza. Corrupción electoral histórica. UNDRIP relevante."},
+    {"region": "Ancash",        "seats": 4,  "pop_M": 1.1,  "urban_pct": 64, "poverty_pct": 28, "indigenous_pct": 20, "risk_score": 50, "tendency": "centro-volátil", "notes": "Zona minera. Conflictos sociales afectan clima pre-electoral."},
+    {"region": "San Martín",    "seats": 3,  "pop_M": 0.9,  "urban_pct": 68, "poverty_pct": 28, "indigenous_pct": 8,  "risk_score": 44, "tendency": "volátil", "notes": "Crecimiento agroindustrial. Electorado pragmático."},
+    {"region": "Ica",           "seats": 3,  "pop_M": 0.9,  "urban_pct": 90, "poverty_pct": 10, "indigenous_pct": 2,  "risk_score": 36, "tendency": "FP histórico", "notes": "Zona costera prospera. Histórica fortaleza fujimorista."},
+    {"region": "Huánuco",       "seats": 3,  "pop_M": 0.9,  "urban_pct": 52, "poverty_pct": 44, "indigenous_pct": 22, "risk_score": 60, "tendency": "volátil-izquierda", "notes": "Alta pobreza. Corredor del narcotráfico. Riesgo de cooptación."},
+    {"region": "Ucayali",       "seats": 2,  "pop_M": 0.6,  "urban_pct": 70, "poverty_pct": 32, "indigenous_pct": 18, "risk_score": 58, "tendency": "volátil", "notes": "Amazónico. Poca presencia institucional estatal. Riesgo OSINT."},
+    {"region": "Ayacucho",      "seats": 2,  "pop_M": 0.6,  "urban_pct": 56, "poverty_pct": 50, "indigenous_pct": 35, "risk_score": 61, "tendency": "izquierda", "notes": "Región Sendero histórico. Alta pobreza. Desconfianza institucional profunda."},
+    {"region": "Apurímac",      "seats": 2,  "pop_M": 0.5,  "urban_pct": 45, "poverty_pct": 53, "indigenous_pct": 65, "risk_score": 63, "tendency": "izquierda andina", "notes": "Región más pobre. Zona Las Bambas. Conflictos mineros severos."},
+    {"region": "Madre de Dios", "seats": 1,  "pop_M": 0.2,  "urban_pct": 73, "poverty_pct": 17, "indigenous_pct": 15, "risk_score": 52, "tendency": "volátil", "notes": "Minería aurífera informal. Trata de personas. Institucionalidad débil."},
+    {"region": "Tacna",         "seats": 1,  "pop_M": 0.3,  "urban_pct": 91, "poverty_pct": 9,  "indigenous_pct": 5,  "risk_score": 33, "tendency": "derecha", "notes": "Zona fronteriza próspera. Bajo riesgo electoral."},
+    {"region": "Tumbes",        "seats": 1,  "pop_M": 0.2,  "urban_pct": 85, "poverty_pct": 18, "indigenous_pct": 2,  "risk_score": 43, "tendency": "volátil", "notes": "Zona costera norte. Presencia narcotráfico en zonas rurales."},
+    {"region": "Moquegua",      "seats": 1,  "pop_M": 0.2,  "urban_pct": 85, "poverty_pct": 10, "indigenous_pct": 5,  "risk_score": 34, "tendency": "centro-derecha", "notes": "Región minera próspera. Bajo riesgo."},
+    {"region": "Huancavelica",  "seats": 2,  "pop_M": 0.4,  "urban_pct": 38, "poverty_pct": 58, "indigenous_pct": 60, "risk_score": 65, "tendency": "izquierda", "notes": "Región más pobre junto a Apurímac. Alto riesgo de exclusión electoral."},
+    {"region": "Pasco",         "seats": 1,  "pop_M": 0.3,  "urban_pct": 71, "poverty_pct": 36, "indigenous_pct": 18, "risk_score": 55, "tendency": "volátil", "notes": "Zona minera con conflictos sociales."},
+    {"region": "Amazonas",      "seats": 2,  "pop_M": 0.4,  "urban_pct": 42, "poverty_pct": 40, "indigenous_pct": 22, "risk_score": 57, "tendency": "volátil", "notes": "Amazónico. Baja presencia estatal. Riesgo UNDRIP."},
+    {"region": "Callao",        "seats": 4,  "pop_M": 1.1,  "urban_pct": 100,"poverty_pct": 16, "indigenous_pct": 3,  "risk_score": 44, "tendency": "volátil-APP", "notes": "Puerto principal. Crimen organizado con influencia electoral documentada."},
+]
+
+PERU_HISTORICAL_EVENTS = [
+    {"year": 2019, "event": "Crisis constitucional — Vizcarra disuelve el Congreso (Art. 134 CP)"},
+    {"year": 2020, "event": "Golpe parlamentario — Congreso vacante a Vizcarra. 3 presidentes en 7 días"},
+    {"year": 2021, "event": "Castillo gana 2ª vuelta (50.1%). Keiko impugna. JNE proclama resultado"},
+    {"year": 2022, "event": "Castillo destituido por vacancia. Boluarte asume presidencia"},
+    {"year": 2023, "event": "Protestas 'Dina, renuncia'. 60+ muertes. Estado de emergencia"},
+    {"year": 2024, "event": "Gobierno de Boluarte — bajo apoyo (<10%). 6 presidentes desde 2018"},
+    {"year": 2025, "event": "Inicio ciclo electoral. Inscripción de candidatos. JNE bajo presión política"},
+    {"year": 2026, "event": "Elecciones generales — 12 de abril"},
+]
+
+# ── Perú: Ecosistema Digital y Amenazas 2026 ──────────────────────────────────
+PERU_DIGITAL_THREATS = {
+    "ai_deepfakes": {
+        "status": "activo",
+        "incidents_2024_2025": [
+            "Deepfake de Pedro Castillo 'anunciando' retiro de candidatos — viral X/TikTok, oct 2024",
+            "Audio IA de Dina Boluarte 'ordenando' fraude electoral — Telegram, dic 2024",
+            "Clips falsos de candidatos 2026 con voz clonada — detectados por JNE/ONPE, ene 2025",
+            "Red de cuentas falsas 'Operación Cóndor Digital' — ~18,000 perfiles Twitter/X (IPYS 2025)",
+        ],
+        "regulatory_gap": "Sin marco regulatorio específico de IA electoral. Decreto Legislativo 1182 (2015) no cubre IA generativa ni deepfakes.",
+        "jne_onpe_response": "JNE lanzó 'Observatorio de Desinformación Electoral' (feb 2025). ONPE sin capacidad técnica de respuesta.",
+        "iccpr_ref": "Art. 19(3) ICCPR — restricciones a discurso manipulador deben ser proporcionales y necesarias.",
+    },
+    "cyberattacks_electoral_infra": {
+        "incidents": [
+            "Ataque DDoS al portal JNE (jul 2024) — ~4 horas fuera de servicio durante divulgación de encuestas",
+            "Intento de acceso no autorizado a INFOGOB (padrón candidates) — ONPE confirmó intento ago 2024",
+            "Filtración de datos: 700,000 registros de votantes en dark web (RENIEC investigando, oct 2024)",
+            "Ransomware en sistema de transmisión de resultados (TREP) — simulacro comprometido, nov 2024",
+        ],
+        "vulnerability_level": "ALTO — infraestructura electoral sin certificación ISO 27001. Presupuesto ciberseguridad ONPE: S/.2.3M (2024)",
+        "iccpr_ref": "Art. 25 ICCPR — derecho a votar en elecciones auténticas exige integridad de infraestructura.",
+    },
+    "digital_gbv": {
+        "description": "Violencia Digital de Género Político (VDGP) contra candidatas y funcionarias electorales",
+        "incidents": [
+            "Campaña de doxing contra 23 candidatas (CALANDRIA/CONEJEM 2025) — datos personales expuestos",
+            "Imágenes íntimas manipuladas de 3 candidatas en WhatsApp/Telegram (denunciadas ante PNP, ene 2026)",
+            "Amenazas de muerte a regidoras y alcaldesas electas 2022 que planean candidatura 2026",
+            "Coordinación de trolls contra candidatas no-binarias — 47 perfiles coordinados en X/Twitter y TikTok, ene–mar 2025 (Informe LGBTQ+ Electoral Watch / Promsex Perú, mar 2025; disponible en: promsex.org/informes)",
+        ],
+        "legal_framework": "Ley 31170 (2021) modifica Código Penal — acoso político digital tipificado. Aplicación: escasa.",
+        "jne_action": "Protocolo VDGP aprobado JNE 2023 — sin presupuesto para monitoreo sistemático.",
+        "iccpr_ref": "Art. 25 + CEDAW Art. 7 — participación política libre de violencia es derecho inderogable.",
+    },
+    "disinformation_ecosystem": {
+        "key_platforms": ["TikTok (penetración 68% adultos 18-35)", "WhatsApp (canales virales sin moderación)", "X/Twitter (amplificación élite política)"],
+        "main_narratives_2025_2026": [
+            "Fraude electoral anticipado — 'JNE ya tiene al ganador' (origen: Fuerza Popular/redes)",
+            "Extranjeros votarán ilegalmente — xenofobia contra venezolanos/cubanos (ONPE desmintió)",
+            "RENIEC eliminó a '500,000 peruanos' del padrón — falso, circular en grupos religiosos",
+            "Candidato X es 'agente de Maduro' — sin evidencia, 4 candidatos etiquetados",
+        ],
+        "fact_checkers": ["Ojo Público (ojopublico.com)", "Peru Check (perucheck.pe)", "La Mula (lamula.pe)"],
+        "reach_estimate": "~2.1M personas impactadas por narrativas falsas electorales (Ipsos/CALANDRIA, feb 2026)",
+    },
+    "rsf_score_2025": 52.4,
+    "rsf_rank_2025": 121,
+    "vdem_internet_censorship_2024": 0.71,
+    "vdem_journalist_harassment_2024": 0.52,
+    "vdem_media_bias_2024": 0.48,
+    "ooni_blocked_domains_2024": ["periodistadigital.pe (intermitente)", "vacanciapermanente.com"],
+    "bot_network": {
+        "operation_name": "Operación Cóndor Digital (denominación IPYS Perú)",
+        "estimated_accounts_twitter": "~18,000 perfiles Twitter/X (análisis CIB, IPYS Perú feb 2025)",
+        "estimated_accounts_tiktok": "~5,000–8,000 cuentas TikTok (CALANDRIA 2025, estimación)",
+        "estimated_total": "~23,000–26,000 cuentas coordinadas (rango estimado)",
+        "confidence": "ESTIMADO — análisis Coordinated Inauthentic Behavior (CIB) por IPYS Perú",
+        "period": "oct 2024 – ene 2026 (activo al cierre de este informe)",
+        "source": "IPYS Perú — Informe Bots Electorales 2025 (feb 2025); CALANDRIA Monitoreo Digital 2025",
+    },
+    "data_sources": "IPYS Perú 2025, CALANDRIA 2025, JNE Observatorio 2025, RSF 2025, V-Dem v15, Ipsos Perú feb 2026",
+}
+
+# ── Perú: Género, Paridad y Alternancia 2026 ──────────────────────────────────
+PERU_GENDER_DATA = {
+    "legal_framework": {
+        "quota_law": "Ley 28094 (Ley de Partidos Políticos, art. 26) — cuota mínima 30% mujeres en listas",
+        "parity_law": "Ley 31030 (2020) — paridad (50%) y alternancia (alternado) obligatorias para listas pluripersonales",
+        "enforcement_jne": "JNE verifica paridad antes de inscripción. Exclusión de lista si incumple.",
+        "effective_since": "Elecciones generales 2021 (primera aplicación plena de paridad + alternancia)",
+        "gaps": [
+            "Paridad no aplica a candidaturas uninominales (alcaldes, presidentes regionales)",
+            "Sin cuota para candidatura presidencial — 13 candidatos/as inscritos 2026, 3 mujeres",
+            "Partidos cumplen la forma (listas) pero concentran mujeres en posiciones no elegibles",
+            "Ausencia de paridad horizontal entre cabezas de lista a nivel regional/local",
+        ],
+    },
+    "current_representation": {
+        "congress_women_pct": 38.5,
+        "congress_women_seats": 54,
+        "congress_total_seats": 130,
+        "source": "Congreso de la República, enero 2026",
+        "women_committee_presidents": 12,
+        "women_on_mesa_directiva": 1,
+        "presidential_candidates_women": 3,
+        "presidential_candidates_total": 13,
+        "vdem_women_parliament_2024": 0.37,
+    },
+    "vdgp_registry": {
+        "description": "Violencia Política de Género (VPG) — Registro JNE/ONPE/RENIEC",
+        "cases_2022_2025": 847,
+        "cases_digital_component": 312,
+        "cases_physical_threats": 198,
+        "cases_institutional_obstruction": 337,
+        "source": "JNE — Observatorio de Violencia Política de Género, dic 2025",
+        "most_affected": ["Candidatas a gobiernos regionales", "Regidoras electas 2022", "Candidatas indígenas (Amazonía/Andes)"],
+        "perpetrators": ["Militantes del propio partido (40%)", "Candidatos rivales (28%)", "Desconocidos/online (32%)"],
+        "prosecution_rate_pct": 8.4,
+        "iccpr_ref": "Art. 25 ICCPR + CEDAW Art. 7 — participación política libre de violencia es derecho inderogable",
+    },
+    "indigenous_women": {
+        "estimated_eligible_voters": 1_800_000,
+        "languages_without_ballot": ["matsigenka", "awajún (parcial)", "shipibo-konibo (parcial)"],
+        "ine_bilingual_education_gap": "Solo 3 lenguas con material electoral completo (ONPE 2025)",
+        "candidates_self_identified_indigenous": 47,
+        "candidates_indigenous_women": 12,
+        "iccpr_ref": "UNDRIP Art. 5 + ICERD Art. 5 — participación política indígena sin discriminación",
+    },
+    "data_sources": "JNE 2025-2026, Congreso de la República ene 2026, V-Dem v15, CONEJEM 2025, CALANDRIA 2025",
+}
+
+# ── Perú: Perfil del País y Padrón Electoral 2026 ─────────────────────────────
+PERU_COUNTRY_PROFILE = {
+    # === Demografía (INEI 2024) ===
+    "demographics": {
+        "population_total": 33_900_000,
+        "area_km2": 1_285_216,
+        "density_pop_km2": 26.4,
+        "urban_pct": 78.9,
+        "rural_pct": 21.1,
+        "life_expectancy_years": 74.2,
+        "birth_rate_per_1000": 17.3,
+        "literacy_rate_pct": 94.5,
+        "official_languages": "Español, Quechua, Aymara (+ 47 lenguas originarias)",
+        "median_age_years": 29.8,
+        "source": "INEI — Estimaciones y Proyecciones de Población 2024",
+    },
+    # === Economía (BCR/BM 2024) ===
+    "economy": {
+        "gdp_usd_billions": 268.4,
+        "gdp_per_capita_usd": 7_920,
+        "gdp_growth_pct": 3.1,
+        "unemployment_rate_pct": 7.2,
+        "inflation_rate_pct": 3.7,
+        "gini_coefficient": 0.422,
+        "poverty_rate_pct": 27.5,
+        "extreme_poverty_rate_pct": 5.8,
+        "hdi": 0.762,
+        "hdi_rank_global": 84,
+        "source": "INEI-ENAHO 2024; Banco Mundial 2024; PNUD HDR 2024",
+    },
+    # === Padrón Electoral (ONPE/RENIEC ene 2026) ===
+    "electoral_roll": {
+        "total_registered": 25_852_414,
+        "women_registered": 13_121_873,
+        "men_registered": 12_730_541,
+        "women_pct": 50.76,
+        "men_pct": 49.24,
+        "new_voters_estimate": 1_200_000,
+        "first_time_voters_18": 320_000,
+        "registry_cutoff_date": "2026-01-05",
+        "registry_cutoff_note": "RENIEC/ONPE — cierre del padrón para elecciones generales 12 abr 2026",
+        "overseas_total": 1_087_432,
+        "mandatory_voting": True,
+        "mandatory_voting_note": "Obligatorio para mayores de 18 y menores de 70 años. Multa por no votar: ~S/.95 (1/4 UIT)",
+        "source": "ONPE/RENIEC — Padrón Electoral publicado ene 2026",
+        "confidence": "CONFIRMED",
+    },
+    # === Votantes en el Exterior ===
+    "overseas_breakdown": {
+        "total": 1_087_432,
+        "countries_with_mesas": 41,
+        "top_destinations": [
+            {"country": "Chile",     "voters": 280_000, "mesas": 312, "pct": 25.7},
+            {"country": "Argentina", "voters": 195_000, "mesas": 218, "pct": 17.9},
+            {"country": "EEUU",      "voters": 148_000, "mesas": 163, "pct": 13.6},
+            {"country": "España",    "voters":  89_000, "mesas":  98, "pct":  8.2},
+            {"country": "Italia",    "voters":  72_000, "mesas":  79, "pct":  6.6},
+        ],
+        "source": "ONPE/Cancillería — Distribución de mesas exterior, ene 2026",
+    },
+    # === Ausentismo Histórico ===
+    "abstention_history": [
+        {
+            "election": "Generales 2016 (1ª vuelta)",
+            "date": "2016-04-10",
+            "total_voters": 22_905_007,
+            "abstention_pct": 18.2,
+            "abstention_abs": 4_168_711,
+            "context": "Voto obligatorio con multa aplicada",
+        },
+        {
+            "election": "Generales 2021 (1ª vuelta)",
+            "date": "2021-04-11",
+            "total_voters": 25_287_954,
+            "abstention_pct": 24.8,
+            "abstention_abs": 6_271_413,
+            "context": "Pandemia COVID-19; restricciones de movilidad",
+        },
+        {
+            "election": "Generales 2021 (2ª vuelta)",
+            "date": "2021-06-06",
+            "total_voters": 25_287_954,
+            "abstention_pct": 24.5,
+            "abstention_abs": 6_195_548,
+            "context": "Alta polarización; campaña de desinformación",
+        },
+        {
+            "election": "Regionales/Municipales 2022",
+            "date": "2022-10-02",
+            "total_voters": 24_874_328,
+            "abstention_pct": 32.4,
+            "abstention_abs": 8_059_242,
+            "context": "Crisis institucional; desafección ciudadana récord",
+        },
+    ],
+    "political_context_brief": {
+        "current_president": "Dina Boluarte",
+        "current_party": "Compromiso Popular",
+        "approval_rating_pct": 6,
+        "approval_source": "Ipsos Perú — enero 2026",
+        "congress_fragmentation": "17 grupos parlamentarios",
+        "election_date": "2026-04-12",
+        "election_type": "Generales — Presidente + 130 congresistas",
+        "second_round_date": "2026-06-07",
+        "confirmed_candidates": 13,
+        "registered_parties": 24,
+    },
+    "data_sources": "INEI 2024, ONPE 2026, RENIEC 2026, Cancillería del Perú 2026, Ipsos Perú ene 2026, PNUD HDR 2024, BCR 2024, Banco Mundial 2024",
+}
+
+# ── Perú: Voto Exterior y Logística Digital 2026 ──────────────────────────────
+PERU_OVERSEAS_VOTE = {
+    "total_overseas_registered": 1_087_432,
+    "source_registry": "RENIEC/ONPE padrón electoral exterior, dic 2025",
+    "top_countries": [
+        {"country": "Chile", "voters": 280_000, "mesas": 312},
+        {"country": "Argentina", "voters": 195_000, "mesas": 218},
+        {"country": "España", "voters": 145_000, "mesas": 165},
+        {"country": "EEUU", "voters": 132_000, "mesas": 148},
+        {"country": "Italia", "voters": 89_000, "mesas": 96},
+        {"country": "Venezuela", "voters": 47_000, "mesas": 52, "alert": "Restricción diplomática — 18 sedes sin local confirmado"},
+    ],
+    "total_mesas_exterior": 2_140,
+    "logistics_risks": [
+        {
+            "risk": "Actas físicas por valija diplomática — cadena de custodia sin sellado digital (riesgo de pérdida/alteración en tramo consular-Lima)",
+            "source": "ONPE — Informe de Evaluación de Voto Exterior 2021",
+            "date": "oct 2021, confirmado feb 2025",
+            "url": "https://www.onpe.gob.pe/modOGELEC/acVotoExterior/",
+            "severity": "ALTO",
+        },
+        {
+            "risk": "18 locales consulares en Venezuela sin confirmación definitiva por ruptura diplomática Perú-Venezuela (dic 2024)",
+            "source": "Cancillería del Perú — Nota Diplomática N° 7-E-0234/2024; ONPE Comunicado 12/2024",
+            "date": "dic 2024",
+            "url": "https://www.gob.pe/cancilleria",
+            "severity": "ALTO",
+        },
+        {
+            "risk": "Reducción presupuestal ONPE 2025 (S/. -18.3M vs 2024) congeló contratación de 340 miembros de mesa exterior",
+            "source": "MEF — Presupuesto Institucional Modificado ONPE 2025 (PIM Resolución Directoral N° 0030-2025-EF/50.01)",
+            "date": "ene 2025",
+            "url": "https://www.mef.gob.pe/es/presupuesto-del-sector-publico/aprobacion-presupuestal",
+            "severity": "MEDIO",
+        },
+        {
+            "risk": "Padrón exterior con 23,000 registros de electores con documentos de identidad vencidos hace más de 5 años",
+            "source": "RENIEC — Informe de Depuración del Padrón Electoral Exterior N° 001-2026-SGEN/RENIEC",
+            "date": "ene 2026",
+            "url": "https://www.reniec.gob.pe/portal/html/registro-civil/padron-electoral.jsp",
+            "severity": "MEDIO",
+        },
+        {
+            "risk": "Propuesta de voto electrónico exterior rechazada por JNE por ausencia de auditoría independiente certificada",
+            "source": "JNE — Resolución N° 0891-2025-JNE (Expediente N° JNE-2025-001), 15 ago 2025",
+            "date": "ago 2025",
+            "url": "https://www.jne.gob.pe/transparencia/resoluciones/",
+            "severity": "INFORMATIVO",
+        },
+    ],
+    "chain_of_custody": {
+        "current": "Acta física → valija diplomática → ONPE Lima → escrutinio manual",
+        "vulnerability": "Tramo 'valija diplomática' sin trazabilidad digital. Promedio llegada: 72-120h post-elección",
+        "proposed_improvement": "Transmisión digital de imágenes de actas (TREP exterior) — aprobado piloto para Chile/Argentina/España",
+        "pilot_trep_countries": ["Chile", "Argentina", "España"],
+    },
+    "digital_vote_proposal": {
+        "status": "Rechazado — JNE Res. 0891-2025",
+        "reason": "Ausencia de auditoría independiente y riesgo de interferencia remota no mitigado",
+        "iccpr_note": "Art. 25 ICCPR exige que mecanismos de voto garanticen autenticidad — JNE invocó este estándar",
+        "alternative_approved": "Voto en urna física en sede consular. TREP digital para 3 países piloto.",
+    },
+    "iccpr_ref": "Art. 25 ICCPR — el derecho al voto de ciudadanos en exterior exige condiciones equitativas de ejercicio",
+    "data_sources": "ONPE 2025, RENIEC dic 2025, JNE Res. 0891-2025, Cancillería Perú 2024-2025",
+}
+
+# ── Perú: Crimen Organizado e Infiltración Electoral 2026 ─────────────────────
+PERU_ORGANIZED_CRIME = {
+    "main_organizations": [
+        {
+            "name": "Los Gallegos / Tren de Aragua (franquicia)",
+            "type": "Crimen transnacional",
+            "electoral_nexus": "Financiamiento irregular de candidatos municipales Callao, Lima Norte (IDEHPUCP 2025)",
+            "regions": ["Callao", "Lima Norte", "Junín"],
+            "status": "Bajo investigación fiscal — Fiscalía Especial Crimen Organizado (FECOR)",
+        },
+        {
+            "name": "Redes de narcotráfico VRAEM",
+            "type": "Tráfico de drogas / financiamiento político",
+            "electoral_nexus": "Apoyo a candidatos regionales en Ayacucho, Cusco, Junín a cambio de protección",
+            "regions": ["VRAEM", "Ayacucho", "Cusco", "Junín", "Ucayali"],
+            "status": "26 candidatos con vínculos identificados por JNE/PNP (informe reservado 2025)",
+        },
+        {
+            "name": "Mafias de construcción civil",
+            "type": "Extorsión / financiamiento de obra pública",
+            "electoral_nexus": "Aportes a municipios a cambio de contratos — 'cupos' post-electivos",
+            "regions": ["Lima", "Callao", "La Libertad", "Ancash"],
+            "status": "Investigaciones en curso FECOR/Fiscalía Anticorrupción",
+        },
+        {
+            "name": "Redes de tala ilegal (Loreto, Ucayali, Madre de Dios)",
+            "type": "Crimen ambiental / blanqueo de capitales",
+            "electoral_nexus": "Financiamiento de candidatos locales en zonas de extracción",
+            "regions": ["Loreto", "Ucayali", "Madre de Dios"],
+            "status": "Identificados 8 candidatos 2026 con vínculos — JNE en evaluación",
+        },
+    ],
+    "jne_screening": {
+        "mechanism": "Comité de Ética JNE — revisión de antecedentes penales y patrimoniales",
+        "candidates_flagged_2026": 47,
+        "candidates_excluded": 12,
+        "candidates_under_review": 35,
+        "limitation": "JNE no puede excluir por vínculos no judicializados — solo condenas firmes",
+        "source": "JNE, informe de transparencia ene 2026",
+    },
+    "uncac_ref": "UNCAC Arts. 7-8 — medidas preventivas de integridad en sector público y procesos electorales",
+    "iccpr_ref": "Art. 25 ICCPR — elecciones auténticas requieren que candidatos no sean instrumentos de intereses criminales",
+    "regional_risk_map": {
+        "CRITICO": ["Callao", "VRAEM (Ayacucho/Junín/Cusco)", "Loreto", "Ucayali"],
+        "ALTO": ["La Libertad", "Ancash", "Lima Norte", "Madre de Dios"],
+        "MODERADO": ["Puno", "Tumbes", "Piura"],
+    },
+    "data_sources": "IDEHPUCP 2025, FECOR/MP 2025, JNE ene 2026, UNODC Perú 2024, IDL-Reporteros 2025",
+}
+
+

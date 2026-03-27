@@ -1,19 +1,29 @@
-# DEMOCRAC.IA (PEIRS) — Dependencies
-# Core
+# DEMOCRAC.IA (PEIRS) — Dependencies v0.3.0
+
+# ── Core LangGraph/LLM ───────────────────────────────────────────────────────
 langgraph>=0.2.0
 langchain-core>=0.3.0
 langchain-anthropic>=0.2.0
 
-# API
+# ── API ──────────────────────────────────────────────────────────────────────
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 pydantic>=2.0
 
-# Future integrations (uncomment as needed)
-# playwright              # OSINT scraping
-# neo4j                   # GraphOS power networks
-# pinecone-client         # Vector DB for RAG
-# qdrant-client           # Alternative Vector DB
-# scrapy                  # Advanced scraping
-# pandas                  # Data processing
-# httpx                   # Async HTTP client
+# ── Data ─────────────────────────────────────────────────────────────────────
+pandas>=2.0.0
+
+# ── RAG — Legal Knowledge Base ───────────────────────────────────────────────
+# ChromaDB: vector store local, sin servidor, cero costo infraestructura
+chromadb>=0.5.0
+# sentence-transformers: modelo de embeddings ~90MB, descarga en primer uso
+sentence-transformers>=3.0.0
+
+# ── HTTP Client (OSINT, OONI, scrapers) ──────────────────────────────────────
+httpx>=0.27.0
+
+# ── Future integrations (uncomment as needed) ────────────────────────────────
+# playwright              # OSINT scraping avanzado
+# neo4j                   # GraphOS redes de poder
+# tweepy                  # Twitter/X API para SMM
+# scrapy                  # Scraping estructurado JNE/ONPE

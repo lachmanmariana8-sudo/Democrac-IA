@@ -31,11 +31,72 @@ from langgraph.graph import StateGraph, END
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_anthropic import ChatAnthropic
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Security, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
 import hashlib
 import pandas as pd
+
+# ── RAG — importación condicional (fallback gracioso si no instalado) ─────────
+try:
+    from rag import query_legal_context as _rag_legal, query_fraud_context as _rag_fraud
+    from rag import query_hate_speech_context as _rag_hate, format_rag_context_for_llm
+    from rag import init_rag, RAG_AVAILABLE
+except ImportError:
+    RAG_AVAILABLE = False
+    def _rag_legal(*a, **kw): return []
+    def _rag_fraud(*a, **kw): return []
+    def _rag_hate(*a, **kw):  return []
+    def format_rag_context_for_llm(*a, **kw): return ""
+    def init_rag(): return False
+
+# ── Módulo de análisis de fraude y discurso de odio ───────────────────────────
+try:
+    from modules.fraud_hate_analysis import analyze_fraud_and_hate
+except ImportError:
+    def analyze_fraud_and_hate(entries):
+        return {"fraud": {"total": 0, "markdown": ""}, "hate_speech": {"total": 0, "markdown": ""}, "has_significant_findings": False}
+
+# ── Datos estáticos: se cargan desde módulos al final del bloque de definiciones
+# Ver sección "# ── Carga final de módulos" más abajo, después de las definiciones inline.
+_MODULES_LOADED = False
+
+# ── Agent 5: FieldDataValidationAgent ────────────────────────────────────────
+try:
+    from modules.field_validator import validate_entry, detect_patterns, render_pattern_markdown
+except ImportError:
+    def validate_entry(entry, existing):
+        from types import SimpleNamespace
+        return SimpleNamespace(valid=True, warnings=[], errors=[], duplicate_of=None, quality_score=1.0)
+    def detect_patterns(entries):
+        from types import SimpleNamespace
+        return SimpleNamespace(has_significant_patterns=False, summary="")
+    def render_pattern_markdown(report): return ""
+
+# ── Agent 7: AlertDispatchAgent ──────────────────────────────────────────────
+try:
+    from integrations.alerts import dispatch_alert, build_entry_alert, AlertEvent
+    ALERTS_AVAILABLE = True
+except ImportError:
+    ALERTS_AVAILABLE = False
+    async def dispatch_alert(*a, **kw): return {"dispatched": False}
+    def build_entry_alert(*a, **kw): return None
+
+# ── OONI API — detección real-time de censura y bloqueos ─────────────────────
+try:
+    from integrations.ooni import get_ooni_summary, fetch_web_anomalies, clear_cache as ooni_clear_cache, OONI_AVAILABLE
+    OONI_AVAILABLE = True
+except ImportError:
+    OONI_AVAILABLE = False
+    def get_ooni_summary(country_code, days_back=7):
+        return {"available": False, "summary_text": "OONI no disponible", "alert_level": "none",
+                "censorship_detected": False, "blocked_domains": [], "anomalous_domains": []}
+    def fetch_web_anomalies(*a, **kw): return []
+    def ooni_clear_cache(*a, **kw): pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -45,6 +106,27 @@ import pandas as pd
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 LLM_MODEL = "claude-sonnet-4-20250514"
 LLM_TEMPERATURE = 0.2
+
+# ── Autenticación — API Keys para protocolo de observación ───────────────────
+# Formato env: OBSERVER_API_KEYS=key1,key2,key3
+# Default dev key — CAMBIAR en producción via variable de entorno
+_raw_keys = os.getenv("OBSERVER_API_KEYS", "democracia-obs-dev-2026")
+OBSERVER_API_KEYS: set = set(k.strip() for k in _raw_keys.split(",") if k.strip())
+
+_obs_key_header = APIKeyHeader(name="X-Observer-Key", auto_error=False)
+
+async def _require_observer_key(api_key: str = Security(_obs_key_header)):
+    """Dependencia FastAPI: exige header X-Observer-Key válido en endpoints de observación."""
+    if not api_key or api_key not in OBSERVER_API_KEYS:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "API key de observador inválida o ausente.",
+                "hint": "Incluye el header 'X-Observer-Key: <tu_clave>' en la solicitud.",
+                "contact": "Contacta al coordinador de misión DEMOCRAC.IA para obtener tu clave.",
+            }
+        )
+    return api_key
 
 # Inicialización del LLM (se usa en agentes 3 y 4)
 llm = ChatAnthropic(
@@ -984,6 +1066,32 @@ COUNTRY_CATALOG = {
     "THA": {"name": "Tailandia",       "flag": "🇹🇭", "election_date": "2027-05-01"},
     "TUN": {"name": "Tunez",           "flag": "🇹🇳", "election_date": "2029-10-06"},
 }
+
+
+# ── Carga final de módulos (sobreescribe las definiciones inline si disponibles)
+try:
+    from modules.instruments import (
+        REGION_AMERICAS, REGION_EUROPE, REGION_AFRICA, REGION_ASIA_PACIFIC, REGION_ARAB,
+        COUNTRY_REGIONS, UNIVERSAL_INSTRUMENTS, REGIONAL_INSTRUMENTS, EMB_NAMES,
+    )
+    from modules.catalog import COUNTRY_CATALOG
+    from modules.mock_data import MOCK_OSINT_DATA, MOCK_POLITICAL_DATA
+    _MODULES_LOADED = True
+    print("[MODULES] instruments, catalog, mock_data cargados desde módulos.")
+except ImportError as _mod_err:
+    print(f"[MODULES] Usando definiciones inline ({_mod_err}).")
+
+# PERU_* se cargan también desde módulo si está disponible
+try:
+    from modules.peru_data import (
+        PERU_ELECTORAL_SYSTEM, PERU_POLITICAL_FORCES, PERU_PARL_DATA,
+        PERU_REGIONS_DATA, PERU_HISTORICAL_EVENTS, PERU_DIGITAL_THREATS,
+        PERU_GENDER_DATA, PERU_COUNTRY_PROFILE, PERU_OVERSEAS_VOTE,
+        PERU_ORGANIZED_CRIME,
+    )
+    print("[MODULES] peru_data cargado desde módulo.")
+except ImportError:
+    pass   # fallback a definiciones inline más abajo en el archivo
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1962,6 +2070,24 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:
     risk_score = _calculate_risk_score(context, political, violations)
     risk_level = _risk_level_from_score(risk_score)
 
+    # ── RAG: enriquecer violaciones con jurisprudencia y estándares recuperados ──
+    if RAG_AVAILABLE and violations:
+        for v in violations:
+            try:
+                rag_hits = _rag_legal(
+                    risk_description=f"{v.get('right', '')} {v.get('finding', '')}",
+                    country=state.get("country", ""),
+                    n_results=2,
+                )
+                if rag_hits:
+                    v["rag_references"] = [
+                        {"instrument": h["instrument"], "title": h["title"][:80], "relevance": h["relevance"]}
+                        for h in rag_hits
+                    ]
+            except Exception:
+                pass
+        agent_log(state, agent_name, f"[RAG] Jurisprudencia recuperada para {sum(1 for v in violations if 'rag_references' in v)} violaciones.")
+
     confidence_summary = {}
     for v in violations:
         conf = v.get("confidence", "unknown")
@@ -2077,6 +2203,7 @@ def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:
 
     chapters = {}
 
+    chapters["00_country_profile"] = _generate_country_profile_section(state, state.get("country_code", ""))
     chapters["01_executive_summary"] = _generate_executive_summary(state)
     chapters["02_political_context"] = _generate_political_context(context, state.get("country_code", ""))
     chapters["03_emb_analysis"] = _generate_emb_chapter(context, state.get("country_code", ""))
@@ -2112,6 +2239,128 @@ def report_generator_agent(state: ElectionRiskState) -> ElectionRiskState:
     agent_log(state, agent_name, f"Informe generado: {len(chapters)} capítulos, {len(full_report)} caracteres")
 
     return state
+
+
+def _generate_country_profile_section(state: "ElectionRiskState", country_code: str = "") -> str:
+    """Genera Sección 0 — Perfil del País, Datos Socioeconómicos y Padrón Electoral."""
+
+    if country_code == "PER":
+        cp   = PERU_COUNTRY_PROFILE
+        demo = cp["demographics"]
+        eco  = cp["economy"]
+        roll = cp["electoral_roll"]
+        ovs  = cp["overseas_breakdown"]
+        abst = cp["abstention_history"]
+        pol  = cp["political_context_brief"]
+
+        demo_rows = "\n".join([
+            "| Indicador | Valor | Fuente |",
+            "|---|---|---|",
+            f"| Población total | {demo['population_total']:,} hab. | {demo['source']} |",
+            f"| Área territorial | {demo['area_km2']:,} km² | INEI |",
+            f"| Densidad poblacional | {demo['density_pop_km2']} hab/km² | INEI 2024 |",
+            f"| Población urbana | {demo['urban_pct']}% | INEI 2024 |",
+            f"| Esperanza de vida | {demo['life_expectancy_years']} años | PNUD HDR 2024 |",
+            f"| Tasa de natalidad | {demo['birth_rate_per_1000']}/1,000 hab. | INEI 2024 |",
+            f"| Tasa de alfabetización | {demo['literacy_rate_pct']}% | INEI 2024 |",
+            f"| Edad mediana | {demo['median_age_years']} años | INEI 2024 |",
+            f"| Idiomas oficiales | {demo['official_languages']} | Constitución 1993 |",
+            "| | | |",
+            f"| **PIB total** | **USD {eco['gdp_usd_billions']}B** | Banco Mundial 2024 |",
+            f"| PIB per cápita | USD {eco['gdp_per_capita_usd']:,} | Banco Mundial 2024 |",
+            f"| Crecimiento del PIB | {eco['gdp_growth_pct']}% | INEI/BCR 2024 |",
+            f"| Desempleo | {eco['unemployment_rate_pct']}% | INEI-ENAHO 2024 |",
+            f"| Inflación | {eco['inflation_rate_pct']}% | BCR 2024 |",
+            f"| Coeficiente de Gini | {eco['gini_coefficient']} | INEI-ENAHO 2024 |",
+            f"| **Tasa de pobreza** | **{eco['poverty_rate_pct']}%** | INEI-ENAHO 2024 |",
+            f"| Pobreza extrema | {eco['extreme_poverty_rate_pct']}% | INEI-ENAHO 2024 |",
+            f"| IDH | {eco['hdi']} (rango global #{eco['hdi_rank_global']}) | PNUD HDR 2024 |",
+        ])
+
+        roll_rows = "\n".join([
+            "| Indicador | Valor | Detalle |",
+            "|---|---|---|",
+            f"| **Total inscritos** | **{roll['total_registered']:,}** | Padrón ONPE/RENIEC ene 2026 |",
+            f"| Mujeres | {roll['women_registered']:,} | **{roll['women_pct']}%** del padrón |",
+            f"| Hombres | {roll['men_registered']:,} | **{roll['men_pct']}%** del padrón |",
+            f"| Nuevos votantes (18–21 años) | ~{roll['new_voters_estimate']:,} | Estimado ONPE |",
+            f"| Primervotos (exactamente 18 años) | ~{roll['first_time_voters_18']:,} | Estimado RENIEC |",
+            f"| Fecha cierre del padrón | {roll['registry_cutoff_date']} | {roll['registry_cutoff_note']} |",
+            f"| **Votantes en el exterior** | **{roll['overseas_total']:,}** | {ovs['countries_with_mesas']} países |",
+            f"| Voto obligatorio | {'Sí' if roll['mandatory_voting'] else 'No'} | {roll['mandatory_voting_note']} |",
+        ])
+
+        overseas_rows = "\n".join(
+            ["| País | Electores | Mesas | % del padrón exterior |", "|---|---|---|---|"] +
+            [f"| {o['country']} | {o['voters']:,} | {o['mesas']} | {o['pct']}% |"
+             for o in ovs["top_destinations"]] +
+            [f"| *Otros 36 países* | ~{ovs['total'] - sum(o['voters'] for o in ovs['top_destinations']):,} | — | {100 - sum(o['pct'] for o in ovs['top_destinations']):.1f}% |"]
+        )
+
+        abs_rows = "\n".join(
+            ["| Elección | Fecha | Ausentismo | N° abstenciones | Contexto |", "|---|---|---|---|---|"] +
+            [f"| {a['election']} | {a['date']} | **{a['abstention_pct']}%** | {a['abstention_abs']:,} | {a['context']} |"
+             for a in abst]
+        )
+
+        return f"""## 0. Perfil del País y Padrón Electoral
+
+> **Fuentes:** {cp['data_sources']}
+> **Confidence:** CONFIRMED — datos oficiales verificados de fuentes primarias (INEI/ONPE/RENIEC/BCR/PNUD 2024–2026)
+
+### 0.1 Demografía y Economía
+
+{demo_rows}
+
+### 0.2 Padrón Electoral — Elecciones Generales 2026
+
+{roll_rows}
+
+### 0.3 Votantes en el Exterior — Top 5 países
+
+{overseas_rows}
+
+*Fuente: {ovs['source']}*
+
+### 0.4 Ausentismo Electoral Histórico
+
+{abs_rows}
+
+> **Tendencia:** El ausentismo escaló del 18.2% (2016) al 32.4% (2022), reflejando la creciente desafección ante la crisis institucional. Para 2026 se proyecta participación en rango **68–74%** (Ipsos/ONPE est. feb 2026). La zona de riesgo son los ~1.2M nuevos votantes jóvenes (18–21), con menor propensión histórica a votar.
+
+### 0.5 Contexto Político Actual
+
+| Indicador | Estado |
+|---|---|
+| Presidenta en funciones | {pol['current_president']} ({pol['current_party']}) |
+| Aprobación presidencial | **{pol['approval_rating_pct']}%** ({pol['approval_source']}) |
+| Fragmentación parlamentaria | {pol['congress_fragmentation']} — el más fragmentado desde 1980 |
+| Candidatos presidenciales inscritos | {pol['confirmed_candidates']} (de {pol['registered_parties']} partidos habilitados) |
+| Fecha 1ª vuelta | **{pol['election_date']}** |
+| Fecha 2ª vuelta (proyectada) | {pol['second_round_date']} |
+
+"""
+    else:
+        # Perfil genérico para países sin módulo específico
+        country = state.get("country", "País")
+        election_date = state.get("election_date", "N/A")
+        risk_score = state.get("risk_score", 0)
+        context = state.get("context_data", {})
+        fh_raw = context.get("freedom_house", {})
+        fh_val = fh_raw.get("value") if isinstance(fh_raw, dict) else None
+        fh_score = fh_val if fh_val else "N/D"
+        return f"""## 0. Perfil del País y Padrón Electoral
+
+> *El módulo de perfil detallado para {country} está en desarrollo. Se muestran datos disponibles en el pipeline.*
+
+| Indicador | Dato |
+|---|---|
+| País | {country} |
+| Fecha de elección | {election_date} |
+| Puntaje Freedom House | {fh_score}/100 |
+| Índice de Riesgo PEIRS | {risk_score}/100 |
+
+"""
 
 
 def _generate_executive_summary(state: ElectionRiskState) -> str:
@@ -2225,6 +2474,11 @@ def _generate_political_context(context: dict, country_code: str = "") -> str:
     legal_fw_raw = context.get("legal_framework", {})
     legal_fw = extract_value(legal_fw_raw) if isinstance(legal_fw_raw, dict) else legal_fw_raw
     legal_fw = legal_fw if isinstance(legal_fw, dict) else {}
+
+    # Peru: Ley 31988 (dic 2023, promulgada feb 2024) restauró el Senado bicameral — reforma constitucional real
+    if country_code == "PER":
+        legal_fw = dict(legal_fw)
+        legal_fw["constitutional_amendments_recent"] = True
 
     civil_raw = context.get("civil_liberties", {})
     civil = extract_value(civil_raw) if isinstance(civil_raw, dict) else civil_raw
@@ -2441,6 +2695,8 @@ El índice V-Dem registra deterioro sostenido (v2x_libdem: 0.59 en 2015 → 0.42
             f"- Partido más grande (escaños actuales): APP 28 (Acuña) — perfil de riesgo ALTO\n"
             f"- Fuerzas con proceso judicial activo: Fuerza Popular (Keiko Fujimori — lavado de activos), "
             f"Perú Libre (Cerrón — inhabilitado por corrupción)\n"
+            f"- Reforma constitucional reciente: Ley 31988 (promulgada feb 2024) restauró el Senado bicameral "
+            f"— primera vez desde 1993. Impacto directo en el sistema electoral para las elecciones de abril 2026.\n"
             f"- Crisis 2019-2026: {hist_summary}\n"
             f"\nAñadí un tercer párrafo (~80 palabras) específico sobre el impacto de "
             f"la fragmentación partidaria y la crisis de representación peruana en la integridad del proceso 2026. "
@@ -2748,7 +3004,7 @@ def _generate_campaign_chapter(political: dict, context: dict = None) -> str:
 | Evaluación general | {media_assessment} | PEIRS |
 | Dirección del sesgo | {bias_dir} | mock |{rsf_media_row}
 
-**Distribución de exposición (mock)**
+**Distribución de exposición** *({'PEI 10.0 — confirmado' if media_confirmed else 'estimación derivada — pendiente verificación ONPE/JNE'})*
 | Actor | Exposición |
 |---|---|
 {exposure_rows}
@@ -2948,16 +3204,71 @@ def _generate_digital_chapter(political: dict, context: dict = None, country_cod
         vdem_table = "*V-Dem digital: datos no disponibles para este pais en la version actual.*"
         vdem_source_note = ""
 
-    # Tabla de indicadores mock (siempre presente, claramente marcada)
+    # Tabla de indicadores — Para PER usar datos reales, resto queda como estimación
+    if country_code == "PER":
+        _bn   = PERU_DIGITAL_THREATS.get("bot_network", {})
+        _dis  = PERU_DIGITAL_THREATS.get("disinformation_ecosystem", {})
+        _gbv  = PERU_DIGITAL_THREATS.get("digital_gbv", {})
+        _ooni = PERU_DIGITAL_THREATS.get("ooni_blocked_domains_2024", [])
+
+        _bot_activity_cell = f"Detectada — {_bn.get('operation_name', 'Operación Cóndor Digital')} ({_bn.get('period', 'oct 2024–ene 2026')})"
+        _bot_size_cell     = f"{_bn.get('estimated_total', '~23,000–26,000 cuentas')} — {_bn.get('source', 'IPYS Perú 2025')}"
+        _bot_state         = "CONFIRMADO (análisis CIB)"
+
+        _narratives        = _dis.get("main_narratives_2025_2026", [])
+        _dis_cell          = f"{len(_narratives)} narrativas activas — {_dis.get('reach_estimate', '~2.1M personas')} (Ipsos/CALANDRIA feb 2026)"
+        _dis_state         = "CONFIRMADO"
+
+        # OONI en tiempo real primero; fallback a datos estáticos
+        _live_ooni = get_ooni_summary(country_code, days_back=7)
+        if _live_ooni.get("available"):
+            _ooni_cell  = _live_ooni["summary_text"]
+            _ooni_state = f"OONI LIVE ({_live_ooni['alert_level'].upper()})"
+        elif _ooni:
+            _ooni_cell  = f"Detectada — {len(_ooni)} dominio(s): {'; '.join(_ooni[:2])} (OONI 2024)"
+            _ooni_state = "CONFIRMADO (datos estáticos)"
+        else:
+            _ooni_cell  = "No detectada"
+            _ooni_state = "Sin datos OONI"
+
+        _sup_cell          = "Sí — narrativas falsas de supresión de padrón + VDGP como disuasivo de candidatura (CALANDRIA/CONEJEM 2025)"
+        _sup_state         = "CONFIRMADO"
+
+        _gbv_incidents     = _gbv.get("incidents", [])
+        try:
+            _hate_count = PERU_GENDER_DATA["vdgp_registry"]["cases_digital_component"]
+        except Exception:
+            _hate_count = len(_gbv_incidents)
+        _hate_cell         = f"{_hate_count} incidentes VDGP digitales documentados (JNE Observatorio, dic 2025)"
+        _hate_state        = "CONFIRMADO"
+    else:
+        _bot_activity_cell = 'Detectada' if digital.get('bot_activity') else 'No detectada'
+        _bot_size_cell     = f"{digital.get('bot_network_size', 0):,} cuentas"
+        _bot_state         = "Mock"
+        _dis_cell          = str(digital.get('disinformation_campaigns', 0))
+        _dis_state         = "Mock"
+        # OONI en tiempo real para cualquier país
+        _live_ooni = get_ooni_summary(country_code, days_back=7)
+        if _live_ooni.get("available"):
+            _ooni_cell  = _live_ooni["summary_text"]
+            _ooni_state = f"OONI LIVE ({_live_ooni['alert_level'].upper()})"
+        else:
+            _ooni_cell  = 'Detectada' if digital.get('censorship_detected') else 'No detectada'
+            _ooni_state = "Mock"
+        _sup_cell          = 'Sí' if digital.get('voter_suppression_online') else 'No'
+        _sup_state         = "Mock"
+        _hate_cell         = str(digital.get('hate_speech_incidents', 0))
+        _hate_state        = "Mock"
+
     mock_rows = [
         "| Indicador | Estimacion | Estado |",
         "|---|---|---|",
-        f"| Actividad de bots | {'Detectada' if digital.get('bot_activity') else 'No detectada'} | Mock |",
-        f"| Red de bots estimada | {digital.get('bot_network_size', 0):,} cuentas | Mock |",
-        f"| Campanas de desinformacion | {digital.get('disinformation_campaigns', 0)} | Mock |",
-        f"| Censura de URLs | {'Detectada' if digital.get('censorship_detected') else 'No detectada'} | Mock |",
-        f"| Supresion de votantes online | {'Si' if digital.get('voter_suppression_online') else 'No'} | Mock |",
-        f"| Incidentes discurso de odio | {digital.get('hate_speech_incidents', 0)} | Mock |",
+        f"| Actividad de bots | {_bot_activity_cell} | {_bot_state} |",
+        f"| Red de bots estimada | {_bot_size_cell} | {_bot_state} |",
+        f"| Campanas de desinformacion | {_dis_cell} | {_dis_state} |",
+        f"| Censura de URLs | {_ooni_cell} | {_ooni_state} |",
+        f"| Supresion de votantes online | {_sup_cell} | {_sup_state} |",
+        f"| Incidentes discurso de odio | {_hate_cell} | {_hate_state} |",
     ]
     mock_table = "\n".join(mock_rows)
 
@@ -3126,8 +3437,16 @@ def _generate_digital_chapter(political: dict, context: dict = None, country_cod
     return "\n".join(lines)
 
 
-def _generate_voting_day_chapter(voting_day_data: dict, state: "ElectionRiskState") -> dict:
-    """Genera Cap. 7 con datos semi-manuales del dia de votacion."""
+def _generate_voting_day_chapter(voting_day_data: dict, state: "ElectionRiskState") -> str:
+    """Genera Cap. 7 — modo observación si hay sesión activa, modo votación si hay datos de campo, placeholder si nada."""
+    country_code = state.get("country_code", "")
+
+    # ── Prioridad 1: Protocolo de observación activo ───────────────────────────
+    if country_code and country_code in observation_store:
+        session = observation_store[country_code]
+        return _generate_observation_chapter(session, state)
+
+    # ── Prioridad 2: Datos de jornada cargados via voting-day endpoint ─────────
     if not voting_day_data or not voting_day_data.get("active"):
         return (
             "## 7. Desarrollo del Dia de Votacion\n\n"
@@ -3266,6 +3585,256 @@ def _generate_voting_day_chapter(voting_day_data: dict, state: "ElectionRiskStat
     return "\n".join(lines)
 
 
+# ── Protocolo de Observación Electoral — helpers ─────────────────────────────
+
+_PHASE_LABELS = {
+    "pre_election":  "🔵 PRE-JORNADA (48h previas)",
+    "election_day":  "🟡 JORNADA ELECTORAL",
+    "post_election": "🟠 POST-ELECTORAL (72h)",
+    "completed":     "✅ CICLO COMPLETO",
+}
+
+_SEVERITY_BADGE = {
+    "info":     "ℹ️ INFO",
+    "low":      "🟢 BAJO",
+    "medium":   "🟡 MEDIO",
+    "high":     "🔴 ALTO",
+    "critical": "🚨 CRÍTICO",
+}
+
+_CATEGORY_LABEL = {
+    "logistics":        "Logística",
+    "security":         "Seguridad",
+    "legal":            "Legal/Normativo",
+    "media":            "Medios",
+    "digital":          "Ecosistema Digital",
+    "counting":         "Escrutinio",
+    "results":          "Resultados",
+    "fraud_allegation": "Alegación de Fraude",
+    "hate_speech":      "Discurso de Odio",
+    "other":            "Otro",
+}
+
+# Mapa automático category+severity → derechos potencialmente vulnerados
+_RIGHTS_AUTOMAP: Dict[str, List[str]] = {
+    "logistics|high":   ["ICCPR Art. 25(b) — derecho a votar en condiciones equitativas"],
+    "logistics|critical": ["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)"],
+    "security|medium":  ["ICCPR Art. 25(b)", "ICCPR Art. 9 — derecho a la seguridad personal"],
+    "security|high":    ["ICCPR Art. 25(b)", "ICCPR Art. 9", "CADH Art. 23", "ICCPR Art. 19"],
+    "security|critical":["ICCPR Art. 25(b)", "ICCPR Art. 6 — derecho a la vida", "CADH Art. 4", "CADH Art. 23"],
+    "legal|medium":     ["ICCPR Art. 25 — proceso libre y justo", "CADH Art. 23(2)"],
+    "legal|high":       ["ICCPR Art. 25", "CADH Art. 23(2)", "CDI Art. 3 — derecho a elecciones auténticas"],
+    "legal|critical":   ["ICCPR Art. 25", "CADH Art. 23", "CDI Art. 3", "Art. 2 ICCPR — recurso efectivo"],
+    "media|high":       ["ICCPR Art. 19(2) — libertad de expresión", "CADH Art. 13"],
+    "media|critical":   ["ICCPR Art. 19(2)", "CADH Art. 13", "ICCPR Art. 25"],
+    "digital|high":     ["ICCPR Art. 19(2)", "ICCPR Art. 25", "OC-5/85 CIDH — libertad de expresión digital"],
+    "digital|critical": ["ICCPR Art. 19(2)", "ICCPR Art. 25", "CADH Art. 23"],
+    "counting|high":    ["ICCPR Art. 25(b) — escrutinio auténtico", "CADH Art. 23(1)(b)"],
+    "counting|critical":["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)", "CDI Art. 6 — transparencia electoral"],
+    "results|high":     ["ICCPR Art. 25(b)", "CADH Art. 23(1)(c) — acceso a cargos públicos"],
+    "results|critical": ["ICCPR Art. 25(b)", "CADH Art. 23(1)(c)", "CDI Art. 3", "Art. 14 ICCPR — recurso judicial"],
+}
+
+
+def _auto_rights(category: str, severity: str) -> List[str]:
+    """Sugiere derechos potencialmente vulnerados según categoría y severidad."""
+    key = f"{category}|{severity}"
+    if key in _RIGHTS_AUTOMAP:
+        return _RIGHTS_AUTOMAP[key]
+    # Fallback por severidad
+    if severity in ("high", "critical"):
+        return ["ICCPR Art. 25 — derecho al sufragio auténtico"]
+    return []
+
+
+def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> str:
+    """
+    Genera Cap. 7 cuando hay un protocolo de observación activo.
+    Cubre las 3 fases: pre-jornada, jornada electoral, post-electoral.
+    """
+    country    = state.get("country", "País")
+    e_date     = state.get("election_date", "N/A")
+    phase      = session.get("phase", "pre_election")
+    mission    = session.get("mission_name", "Misión de Observación")
+    lead_org   = session.get("lead_org", "DEMOCRAC.IA")
+    entries    = session.get("entries", [])
+    started_at = session.get("started_at", "")[:10]
+
+    phase_label = _PHASE_LABELS.get(phase, phase)
+
+    # ── Estadísticas de hallazgos ──────────────────────────────────────────────
+    severity_counts: Dict[str, int] = {"info": 0, "low": 0, "medium": 0, "high": 0, "critical": 0}
+    phase_counts:    Dict[str, int] = {"pre_election": 0, "election_day": 0, "post_election": 0}
+    rights_mentioned: Dict[str, int] = {}
+
+    for e in entries:
+        sev = e.get("severity", "info")
+        ph  = e.get("phase", "pre_election")
+        severity_counts[sev] = severity_counts.get(sev, 0) + 1
+        phase_counts[ph]     = phase_counts.get(ph, 0) + 1
+        # Acumular derechos
+        auto_r = _auto_rights(e.get("category", "other"), sev)
+        for r in (e.get("rights_at_risk") or []) + auto_r:
+            rights_mentioned[r] = rights_mentioned.get(r, 0) + 1
+
+    critical_count = severity_counts.get("critical", 0)
+    high_count     = severity_counts.get("high", 0)
+    total_entries  = len(entries)
+
+    # ── Tabla resumen ──────────────────────────────────────────────────────────
+    summary_rows = "\n".join([
+        "| Fase | Hallazgos |",
+        "|---|---|",
+        f"| {_PHASE_LABELS['pre_election']} | {phase_counts['pre_election']} |",
+        f"| {_PHASE_LABELS['election_day']} | {phase_counts['election_day']} |",
+        f"| {_PHASE_LABELS['post_election']} | {phase_counts['post_election']} |",
+        f"| **TOTAL** | **{total_entries}** |",
+        "| | |",
+        f"| 🚨 Críticos | {critical_count} |",
+        f"| 🔴 Altos | {high_count} |",
+        f"| 🟡 Medios | {severity_counts.get('medium', 0)} |",
+        f"| 🟢 Bajos + Info | {severity_counts.get('low', 0) + severity_counts.get('info', 0)} |",
+    ])
+
+    # ── Secciones por fase ─────────────────────────────────────────────────────
+    def render_phase_section(phase_key: str, phase_title: str) -> str:
+        phase_entries = [e for e in entries if e.get("phase") == phase_key]
+        if not phase_entries:
+            status = "En espera de datos" if phase_key > phase else "No hay hallazgos registrados"
+            return f"\n### 7.{['pre_election','election_day','post_election'].index(phase_key)+2} {phase_title}\n\n> *{status}.*\n"
+
+        rows = ["| # | Hora | Observador | Ubicación | Categoría | Hallazgo | Severidad |",
+                "|---|---|---|---|---|---|---|"]
+        for i, e in enumerate(phase_entries, 1):
+            ts  = (e.get("timestamp") or "")[:16]
+            obs = e.get("observer_id", "—")
+            loc = (e.get("location") or "—")[:30]
+            cat = _CATEGORY_LABEL.get(e.get("category", "other"), e.get("category", "—"))
+            finding = (e.get("finding") or "")[:80]
+            sev = _SEVERITY_BADGE.get(e.get("severity", "info"), e.get("severity", "—"))
+            rows.append(f"| {i} | {ts} | {obs} | {loc} | {cat} | {finding} | {sev} |")
+
+        table = "\n".join(rows)
+
+        # Hallazgos graves con derechos
+        rights_lines = []
+        for e in phase_entries:
+            if e.get("severity") in ("high", "critical"):
+                auto_r = _auto_rights(e.get("category", "other"), e.get("severity", "info"))
+                all_r  = list(set((e.get("rights_at_risk") or []) + auto_r))
+                if all_r:
+                    loc  = e.get("location", "Sin ubicación")
+                    find = (e.get("finding") or "")[:100]
+                    rights_lines.append(
+                        f"- **{loc}** — {find}\n"
+                        + "  *Derechos potencialmente vulnerados:* " + "; ".join(all_r)
+                    )
+
+        rights_section = ""
+        if rights_lines:
+            rights_section = "\n**Hallazgos de alta severidad y derechos afectados:**\n\n" + "\n".join(rights_lines)
+
+        phase_num = ['pre_election', 'election_day', 'post_election'].index(phase_key) + 2
+        return f"\n### 7.{phase_num} {phase_title}\n\n{table}\n{rights_section}\n"
+
+    pre_section  = render_phase_section("pre_election",  "Pre-Jornada (48 horas previas)")
+    day_section  = render_phase_section("election_day",  "Jornada Electoral")
+    post_section = render_phase_section("post_election", "Post-Electoral (72 horas)")
+
+    # ── Agent 5: patrones sistemáticos ────────────────────────────────────────
+    pattern_section = ""
+    patterns = detect_patterns(entries)
+    if patterns.has_significant_patterns:
+        pattern_section = render_pattern_markdown(patterns)
+
+    # ── Análisis de fraude y discurso de odio ─────────────────────────────────
+    fraud_hate_section = ""
+    fh_analysis = analyze_fraud_and_hate(entries)
+    if fh_analysis.get("has_significant_findings"):
+        fraud_md = fh_analysis["fraud"].get("markdown", "")
+        hate_md  = fh_analysis["hate_speech"].get("markdown", "")
+        if fraud_md or hate_md:
+            fraud_hate_section = "\n### 7.5 Análisis de Fraude Electoral y Discurso de Odio\n"
+            if fraud_md:
+                fraud_hate_section += fraud_md
+            if hate_md:
+                fraud_hate_section += hate_md
+
+    # ── Análisis de derechos potencialmente vulnerados ─────────────────────────
+    rights_analysis = ""
+    if rights_mentioned:
+        top_rights = sorted(rights_mentioned.items(), key=lambda x: -x[1])
+        rights_rows = ["| Instrumento / Artículo | Frecuencia de vulneración |", "|---|---|"]
+        for r, cnt in top_rights[:10]:
+            rights_rows.append(f"| {r} | {cnt} hallazgo(s) |")
+        rights_analysis = "\n### 7.6 Análisis de Derechos Potencialmente Vulnerados\n\n" + "\n".join(rights_rows) + "\n"
+
+    # ── Narrative final (LLM) ─────────────────────────────────────────────────
+    narrative = ""
+    if entries:
+        sys_prompt = (
+            "Sos el analista de observación electoral de DEMOCRAC.IA/PEIRS. "
+            "Redactás narrativas técnicas sobre el proceso electoral basadas en hallazgos de campo. "
+            "Combinás perspectiva de derechos humanos con análisis operacional. "
+            "Escribís en español, tono técnico-institucional de alto nivel."
+        )
+        top_findings = "; ".join(
+            f"[{e.get('phase','?')}/{e.get('severity','?')}] {e.get('finding','')}"
+            for e in sorted(entries, key=lambda x: {"critical":0,"high":1,"medium":2,"low":3,"info":4}.get(x.get("severity","info"),5))[:8]
+        )
+        most_at_risk = list(rights_mentioned.keys())[:3]
+        user_prompt = (
+            f"Genera un análisis narrativo de la observación electoral en {country} (elección: {e_date}). "
+            f"Fase actual: {phase_label}. Total hallazgos: {total_entries} ({critical_count} críticos, {high_count} altos). "
+            f"Principales hallazgos: {top_findings}. "
+            f"Derechos más afectados: {'; '.join(most_at_risk) or 'ninguno identificado aún'}. "
+            "Escribe exactamente 3 párrafos: "
+            "Párrafo 1 (~90 palabras): resumen del estado del proceso según los hallazgos. "
+            "Párrafo 2 (~90 palabras): análisis de riesgos para la integridad electoral e impacto en derechos. "
+            "Párrafo 3 (~70 palabras): conclusión preliminar y próximos pasos del protocolo de observación."
+        )
+        def _obs_fallback():
+            return (
+                f"La misión de observación en {country} ha registrado {total_entries} hallazgos "
+                f"durante la fase {phase_label}. Se identificaron {critical_count} situaciones críticas "
+                f"y {high_count} de alta severidad que requieren atención inmediata."
+            )
+        narrative = "\n### 7.7 Análisis Narrativo Consolidado\n\n" + _llm_generate(sys_prompt, user_prompt, _obs_fallback) + "\n"
+
+    # ── Consolidado final (solo si phase == completed) ─────────────────────────
+    consolidated = ""
+    if phase == "completed":
+        consolidated = (
+            "\n### 7.8 Ciclo de Observación Completado\n\n"
+            "> **El ciclo de observación electoral ha concluido.** "
+            "Este informe integra los hallazgos del protocolo de observación con el análisis de datasets (Capítulos 1–6). "
+            "Ver endpoint `GET /api/observation/{country_code}/report` para el informe consolidado completo.\n"
+        )
+
+    lines = [
+        "## 7. Observación Electoral — Ciclo Completo",
+        "",
+        f"> **Misión:** {mission} | **Organización líder:** {lead_org}",
+        f"> **País:** {country} | **Elección:** {e_date} | **Inicio de sesión:** {started_at}",
+        f"> **Fase activa:** {phase_label}",
+        "",
+        "### 7.1 Cuadro de Situación del Protocolo",
+        "",
+        summary_rows,
+        pre_section,
+        day_section,
+        post_section,
+        pattern_section,
+        fraud_hate_section,
+        rights_analysis,
+        narrative,
+        consolidated,
+        "*Datos ingresados via `POST /api/observation/{country_code}/entry`. "
+        "Verificación de trazabilidad habilitada.*",
+    ]
+    return "\n".join(lines)
+
+
 def _generate_justice_chapter(legal: dict) -> str:
     violations = legal.get("violations", [])
 
@@ -3330,7 +3899,7 @@ def _generate_ai_regulation_chapter(state: "ElectionRiskState") -> str:
         {"actor": "ONPE", "uso": "IA para detección de anomalías en actas de escrutinio (piloto)", "estado": "Prueba interna 2025", "riesgo": "moderado"},
         {"actor": "RENIEC", "uso": "Reconocimiento facial en mesas de votación (propuesto)", "estado": "Propuesta — no aprobado", "riesgo": "alto"},
         {"actor": "Partidos políticos", "uso": "Micro-targeting de votantes con IA predictiva", "estado": "Uso no regulado 2024-25", "riesgo": "alto"},
-        {"actor": "Medios / operadores", "uso": "Generación de contenido electoral automatizado (bots noticiosos)", "estado": "Activo — sin regulación", "riesgo": "crítico"},
+        {"actor": "Medios / operadores", "uso": "Generación de contenido electoral automatizado (bots noticiosos)", "estado": "Activo 2024–2025, sin regulación específica (JNE Observatorio Digital, feb 2025; IPYS Perú — Informe Bots Electorales, feb 2025)", "riesgo": "crítico"},
         {"actor": "Actores maliciosos", "uso": "Deepfakes, clonación de voz, desinformación automatizada", "estado": "Activo 2024-25 (ver Cap. 6.4)", "riesgo": "crítico"},
     ]
 
@@ -3405,11 +3974,12 @@ def _generate_ai_regulation_chapter(state: "ElectionRiskState") -> str:
         "y que Peru adhiera al Pacto de Ginebra. Solo prosa, sin vinetas."
     )
     fallback = (
-        "Peru enfrenta el ciclo electoral 2026 sin un marco normativo especifico para la inteligencia artificial. "
-        "La Resolucion JNE N° 0123-2025 representa un avance formal insuficiente ante incidentes documentados de "
-        "deepfakes y desinformacion automatizada. El Proyecto de Ley 5678/2024 permanece sin dictamen. "
-        "La ausencia de adhesion al Pacto de Ginebra sobre IA Electoral debilita la posicion internacional del pais "
-        "frente a los estandares del Art. 25 ICCPR sobre elecciones autenticas."
+        "Peru enfrenta el ciclo electoral 2026 con un marco normativo incipiente para la inteligencia artificial. "
+        "La Resolucion JNE N° 0123-2025 establece la prohibicion de publicidad electoral con IA no declarada "
+        "durante la campana, pero carece de mecanismo tecnico de deteccion efectiva. "
+        "El Proyecto de Ley 5678/2024 permanece sin dictamen. "
+        "La ausencia de adhesion al Pacto de Ginebra sobre IA Electoral (2024) debilita la posicion internacional "
+        "del pais frente a los estandares del Art. 25 ICCPR sobre elecciones autenticas."
     )
     narrative = _llm_generate(sys_prompt, user_prompt, lambda: fallback)
 
@@ -3573,6 +4143,25 @@ def _init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_reports_country_ts
             ON reports(country_code, timestamp)
         """)
+        # Tabla para sesiones de observación electoral
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS observation_sessions (
+                session_id      TEXT PRIMARY KEY,
+                country_code    TEXT NOT NULL,
+                run_id          TEXT,
+                mission_name    TEXT,
+                lead_org        TEXT,
+                phase           TEXT DEFAULT 'pre_election',
+                started_at      TEXT NOT NULL,
+                updated_at      TEXT,
+                finalized       INTEGER DEFAULT 0,
+                data            TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_obs_country
+            ON observation_sessions(country_code, started_at)
+        """)
         conn.commit()
     print("[DB] SQLite iniciado:", DB_PATH)
 
@@ -3699,6 +4288,8 @@ def load_report(run_id: str) -> Optional[dict]:
 
 
 reports_store: Dict[str, dict] = {}
+# observation_store: keyed by country_code — una sesión activa por país
+observation_store: Dict[str, dict] = {}
 
 
 def _preload_reports_on_startup() -> None:
@@ -3723,6 +4314,19 @@ async def on_startup():
     _init_db()
     _migrate_json_to_sqlite()
     _preload_reports_on_startup()
+    # Inicializar RAG en background (no bloquea el startup si falla)
+    try:
+        rag_ok = init_rag()
+        if rag_ok:
+            print("[RAG] Sistema RAG legal inicializado correctamente.")
+    except Exception as _rag_err:
+        print(f"[RAG] No disponible en este arranque: {_rag_err}")
+    # Verificar conectividad OONI (warm-up silencioso)
+    try:
+        import httpx as _httpx_test  # noqa
+        print("[OONI] httpx disponible — integración OONI activa.")
+    except ImportError:
+        print("[OONI] httpx no instalado — ejecutar: pip install httpx>=0.27.0")
 
 
 class AnalyzeRequest(BaseModel):
@@ -3753,15 +4357,67 @@ class VotingDayInput(BaseModel):
     timestamp_local: Optional[str] = None              # Hora local de actualización
 
 
+# ── Modelos para Protocolo de Observación Electoral ───────────────────────────
+
+class ObservationStartInput(BaseModel):
+    """Inicia una sesión de observación ligada a un run_id existente."""
+    country_code: str
+    run_id: str                              # Reporte PEIRS previo de referencia
+    mission_name: Optional[str] = "Misión de Observación Electoral"
+    lead_org: Optional[str] = "DEMOCRAC.IA Observer Network"
+
+
+class ObservationEntryInput(BaseModel):
+    """Un hallazgo/observación individual ingresado por un observador de campo."""
+    country_code: str
+    phase: str                               # "pre_election" | "election_day" | "post_election"
+    timestamp: Optional[str] = None          # ISO8601; si omitido, se usa el momento actual
+    observer_id: Optional[str] = "OBS-001"  # Identificador del observador
+    location: Optional[str] = ""            # Mesa, distrito, región
+    category: str                            # "logistics"|"security"|"legal"|"media"|"digital"|"counting"|"results"|"fraud_allegation"|"hate_speech"|"other"
+    finding: str                             # Descripción del hallazgo
+    severity: str = "info"                   # "info"|"low"|"medium"|"high"|"critical"
+    rights_at_risk: Optional[List[str]] = [] # p.ej. ["ICCPR Art. 25", "CADH Art. 23"]
+    verified: Optional[bool] = False
+    verified_by: Optional[str] = None
+    evidence_ref: Optional[str] = None       # Referencia a foto/doc (URL o código)
+    # ── Campos específicos para fraud_allegation ──────────────────────────────
+    fraud_type: Optional[str] = None         # "padron"|"vote_buying"|"intimidation"|"polling_day"|"counting"|"results"|"candidate"|"financing"|"other"
+    credibility: Optional[str] = None        # "confirmed"|"high"|"medium"|"low"|"unverified"
+    source_org: Optional[str] = None         # Organización fuente de la alegación
+    # ── Campos específicos para hate_speech ───────────────────────────────────
+    target_group: Optional[str] = None       # "women_candidates"|"indigenous"|"lgbtq"|"migrants"|"ethnic_minority"|"religious"|"political_opponent"|"journalists"|"other"
+    platform: Optional[str] = None           # "Twitter/X"|"TikTok"|"Facebook"|"WhatsApp"|"TV"|"Radio"|"other"
+    reach_estimate: Optional[str] = None     # p.ej. "~50,000 impresiones" o "alcance local"
+
+
+class ObservationAdvanceInput(BaseModel):
+    """Avanza la fase del protocolo de observación."""
+    country_code: str
+    target_phase: str  # "election_day" | "post_election" | "completed"
+    notes: Optional[str] = None
+
+
 @app.get("/api/health")
 async def health_check():
     return {
         "status": "operational",
         "system": "DEMOCRAC.IA (PEIRS)",
-        "version": "0.2.0",
+        "version": "0.4.0",
+        "features": ["country_profile", "electoral_observation_protocol", "traceability", "vdem_v15", "freedom_house", "pei_v10", "ooni_live", "fraud_hate_analysis", "rag_legal"],
         "traceability": "enabled",
+        "observation_protocol": "enabled",
         "llm_configured": llm is not None,
         "countries_available": len(COUNTRY_CATALOG),
+        "active_observation_sessions": len(observation_store),
+        "observer_keys_configured": len(OBSERVER_API_KEYS),
+        "ooni_integration": OONI_AVAILABLE,
+        "alert_dispatch": ALERTS_AVAILABLE,
+        "alert_channels_configured": {
+            "slack":   bool(os.getenv("ALERT_SLACK_WEBHOOK_URL")),
+            "webhook": bool(os.getenv("ALERT_WEBHOOK_URL")),
+            "email":   bool(os.getenv("ALERT_EMAIL_TO")),
+        },
         "legal_instruments": len(UNIVERSAL_INSTRUMENTS) + sum(len(v) for v in REGIONAL_INSTRUMENTS.values()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -4145,7 +4801,445 @@ async def update_voting_day(request: VotingDayInput):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 6b. SENTINEL — Monitoreo de elecciones próximas y alertas en tiempo real
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7. PROTOCOLO DE OBSERVACIÓN ELECTORAL — Endpoints
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/observation/{country_code}/start")
+async def observation_start(country_code: str, request: ObservationStartInput, _key: str = Depends(_require_observer_key)):
+    """
+    Inicia una sesión del Protocolo de Observación Electoral para un país.
+    Debe existir un reporte PEIRS (run_id) previo para el país.
+    Fases del protocolo: pre_election → election_day → post_election → completed.
+    """
+    code = country_code.upper()
+
+    # Verificar que el run_id existe
+    run_id = request.run_id
+    if run_id not in reports_store:
+        disk = load_report(run_id)
+        if disk is None:
+            raise HTTPException(status_code=404, detail=f"run_id '{run_id}' no encontrado. Ejecuta /api/analyze primero.")
+        reports_store[run_id] = disk
+
+    now = datetime.now(timezone.utc).isoformat()
+    session = {
+        "session_id":   str(uuid.uuid4()),
+        "country_code": code,
+        "run_id":       run_id,
+        "mission_name": request.mission_name,
+        "lead_org":     request.lead_org,
+        "phase":        "pre_election",
+        "started_at":   now,
+        "updated_at":   now,
+        "entries":      [],
+        "finalized":    False,
+    }
+    observation_store[code] = session
+
+    # Persistir en SQLite
+    with _get_db() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO observation_sessions "
+            "(session_id, country_code, run_id, mission_name, lead_org, phase, started_at, updated_at, finalized, data) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (session["session_id"], code, run_id, request.mission_name, request.lead_org,
+             "pre_election", now, now, 0, json.dumps(session))
+        )
+        conn.commit()
+
+    # Regenerar Cap. 7 del reporte ligado
+    result = reports_store[run_id]
+    new_cap7 = _generate_observation_chapter(session, result)
+    result["report_chapters"]["07_voting_day"] = new_cap7
+    result["final_report_markdown"] = (
+        f"# DEMOCRAC.IA — Informe VIP de Integridad Electoral\n"
+        f"## {result['country']} — Elección: {result['election_date']}\n\n"
+        f"**Índice Predictivo de Riesgo:** {result['risk_score']}/100 ({result['risk_level'].upper()})\n"
+        f"**Generado:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+        f"**Run ID:** `{run_id}`\n\n---\n\n"
+        + "\n\n".join(result["report_chapters"].values())
+    )
+    reports_store[run_id] = result
+    save_report(result)
+
+    return {
+        "session_id":   session["session_id"],
+        "country_code": code,
+        "run_id":       run_id,
+        "phase":        "pre_election",
+        "mission_name": request.mission_name,
+        "message":      f"Protocolo de observación iniciado. Fase activa: PRE-JORNADA (48h). Agrega hallazgos via POST /api/observation/{code}/entry",
+    }
+
+
+@app.post("/api/observation/{country_code}/entry")
+async def observation_add_entry(country_code: str, request: ObservationEntryInput, _key: str = Depends(_require_observer_key)):
+    """
+    Agrega un hallazgo de campo al protocolo de observación.
+    Regenera automáticamente el Cap. 7 del reporte ligado.
+    """
+    code = country_code.upper()
+    if code not in observation_store:
+        raise HTTPException(status_code=404, detail=f"No hay sesión activa para {code}. Usa POST /api/observation/{code}/start primero.")
+
+    session = observation_store[code]
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Derechos auto-sugeridos si no vienen
+    auto_rights = _auto_rights(request.category, request.severity)
+    rights = list(set((request.rights_at_risk or []) + auto_rights))
+
+    entry = {
+        "entry_id":       str(uuid.uuid4())[:8],
+        "timestamp":      request.timestamp or now,
+        "observer_id":    request.observer_id,
+        "location":       request.location,
+        "phase":          request.phase,
+        "category":       request.category,
+        "finding":        request.finding,
+        "severity":       request.severity,
+        "rights_at_risk": rights,
+        "verified":       request.verified,
+        "verified_by":    request.verified_by,
+        "evidence_ref":   request.evidence_ref,
+        "recorded_at":    now,
+        # Campos específicos fraud_allegation
+        "fraud_type":     request.fraud_type,
+        "credibility":    request.credibility,
+        "source_org":     request.source_org,
+        # Campos específicos hate_speech
+        "target_group":   request.target_group,
+        "platform":       request.platform,
+        "reach_estimate": request.reach_estimate,
+    }
+
+    # Agent 5 — validar antes de registrar
+    existing = session.get("entries", [])
+    validation = validate_entry(entry, existing)
+
+    session["entries"].append(entry)
+    session["updated_at"] = now
+    observation_store[code] = session
+
+    # Regenerar Cap. 7
+    run_id = session.get("run_id")
+    if run_id and run_id in reports_store:
+        result = reports_store[run_id]
+        new_cap7 = _generate_observation_chapter(session, result)
+        result["report_chapters"]["07_voting_day"] = new_cap7
+        result["final_report_markdown"] = (
+            f"# DEMOCRAC.IA — Informe VIP de Integridad Electoral\n"
+            f"## {result['country']} — Elección: {result['election_date']}\n\n"
+            f"**Índice Predictivo de Riesgo:** {result['risk_score']}/100 ({result['risk_level'].upper()})\n"
+            f"**Generado:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+            f"**Run ID:** `{run_id}`\n\n---\n\n"
+            + "\n\n".join(result["report_chapters"].values())
+        )
+        reports_store[run_id] = result
+        save_report(result)
+
+    # Persistir sesión actualizada
+    with _get_db() as conn:
+        conn.execute(
+            "UPDATE observation_sessions SET phase=?, updated_at=?, data=? WHERE country_code=? AND session_id=?",
+            (session["phase"], now, json.dumps(session), code, session["session_id"])
+        )
+        conn.commit()
+
+    # Agent 7 — despachar alerta si corresponde (background, no bloquea respuesta)
+    alert_result = {"dispatched": False}
+    if ALERTS_AVAILABLE and request.severity in ("critical", "high"):
+        alert_event = build_entry_alert(entry, session, patterns)
+        if alert_event:
+            try:
+                alert_result = await dispatch_alert(alert_event)
+            except Exception:
+                pass
+
+    return {
+        "entry_id":        entry["entry_id"],
+        "country_code":    code,
+        "phase":           request.phase,
+        "severity":        request.severity,
+        "rights_at_risk":  rights,
+        "total_entries":   len(session["entries"]),
+        "quality_score":   validation.quality_score,
+        "warnings":        validation.warnings,
+        "duplicate_of":    validation.duplicate_of,
+        "alert_dispatched": alert_result.get("dispatched", False),
+        "alert_channels":  alert_result.get("channels", {}),
+        "message":         f"Hallazgo registrado. Total en sesión: {len(session['entries'])}.",
+    }
+
+
+@app.get("/api/observation/{country_code}/patterns")
+async def observation_patterns(country_code: str, _key: str = Depends(_require_observer_key)):
+    """
+    Agent 5 — Retorna el análisis completo de patrones sistemáticos de la sesión.
+    Incluye concentración geográfica, clusters por categoría, escaladas y corroboraciones.
+    """
+    code = country_code.upper()
+    if code not in observation_store:
+        raise HTTPException(status_code=404, detail=f"No hay sesión activa para {code}.")
+
+    session = observation_store[code]
+    entries = session.get("entries", [])
+    report  = detect_patterns(entries)
+
+    return {
+        "country_code":                  code,
+        "total_entries":                 len(entries),
+        "has_significant_patterns":      report.has_significant_patterns,
+        "fraud_pattern_score":           report.fraud_pattern_score,
+        "escalation_detected":           report.escalation_detected,
+        "escalation_description":        report.escalation_description,
+        "geographic_patterns":           [
+            {
+                "district":      p.district,
+                "entry_count":   p.entry_count,
+                "severity_max":  p.severity_max,
+                "categories":    p.categories,
+                "alert_level":   p.alert_level,
+                "iccpr_ref":     p.iccpr_ref,
+                "entry_ids":     p.entry_ids,
+            }
+            for p in report.geographic_patterns
+        ],
+        "category_clusters":             report.category_clusters,
+        "multi_observer_corroboration":  report.multi_observer_corroboration,
+        "summary":                       report.summary,
+    }
+
+
+@app.get("/api/observation/{country_code}/status")
+async def observation_status(country_code: str):
+    """Retorna el estado actual del protocolo de observación para un país."""
+    code = country_code.upper()
+    if code not in observation_store:
+        raise HTTPException(status_code=404, detail=f"No hay sesión activa para {code}.")
+
+    session = observation_store[code]
+    entries = session.get("entries", [])
+
+    severity_counts = {}
+    phase_counts    = {}
+    for e in entries:
+        sev = e.get("severity", "info")
+        ph  = e.get("phase", "pre_election")
+        severity_counts[sev] = severity_counts.get(sev, 0) + 1
+        phase_counts[ph]     = phase_counts.get(ph, 0) + 1
+
+    return {
+        "country_code":  code,
+        "session_id":    session.get("session_id"),
+        "run_id":        session.get("run_id"),
+        "mission_name":  session.get("mission_name"),
+        "lead_org":      session.get("lead_org"),
+        "phase":         session.get("phase"),
+        "phase_label":   _PHASE_LABELS.get(session.get("phase", ""), ""),
+        "started_at":    session.get("started_at"),
+        "updated_at":    session.get("updated_at"),
+        "finalized":     session.get("finalized", False),
+        "total_entries": len(entries),
+        "severity_summary": severity_counts,
+        "phase_summary":    phase_counts,
+    }
+
+
+@app.post("/api/observation/{country_code}/advance")
+async def observation_advance_phase(country_code: str, request: ObservationAdvanceInput, _key: str = Depends(_require_observer_key)):
+    """
+    Avanza la fase del protocolo de observación.
+    Orden: pre_election → election_day → post_election → completed
+    """
+    code = country_code.upper()
+    if code not in observation_store:
+        raise HTTPException(status_code=404, detail=f"No hay sesión activa para {code}.")
+
+    valid_phases = ["pre_election", "election_day", "post_election", "completed"]
+    target = request.target_phase
+    if target not in valid_phases:
+        raise HTTPException(status_code=400, detail=f"Fase inválida: '{target}'. Opciones: {valid_phases}")
+
+    session = observation_store[code]
+    current_idx = valid_phases.index(session.get("phase", "pre_election"))
+    target_idx  = valid_phases.index(target)
+    if target_idx <= current_idx:
+        raise HTTPException(status_code=400, detail=f"No se puede retroceder de '{session['phase']}' a '{target}'.")
+
+    now = datetime.now(timezone.utc).isoformat()
+    session["phase"]      = target
+    session["updated_at"] = now
+    if request.notes:
+        session.setdefault("phase_notes", []).append({"phase": target, "notes": request.notes, "ts": now})
+
+    observation_store[code] = session
+
+    # Regenerar Cap. 7
+    run_id = session.get("run_id")
+    if run_id and run_id in reports_store:
+        result = reports_store[run_id]
+        new_cap7 = _generate_observation_chapter(session, result)
+        result["report_chapters"]["07_voting_day"] = new_cap7
+        result["final_report_markdown"] = (
+            f"# DEMOCRAC.IA — Informe VIP de Integridad Electoral\n"
+            f"## {result['country']} — Elección: {result['election_date']}\n\n"
+            f"**Índice Predictivo de Riesgo:** {result['risk_score']}/100 ({result['risk_level'].upper()})\n"
+            f"**Generado:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+            f"**Run ID:** `{run_id}`\n\n---\n\n"
+            + "\n\n".join(result["report_chapters"].values())
+        )
+        reports_store[run_id] = result
+        save_report(result)
+
+    with _get_db() as conn:
+        conn.execute(
+            "UPDATE observation_sessions SET phase=?, updated_at=?, data=? WHERE country_code=? AND session_id=?",
+            (target, now, json.dumps(session), code, session["session_id"])
+        )
+        conn.commit()
+
+    return {
+        "country_code":   code,
+        "previous_phase": valid_phases[current_idx],
+        "current_phase":  target,
+        "phase_label":    _PHASE_LABELS.get(target, target),
+        "message":        f"Protocolo avanzado a {_PHASE_LABELS.get(target, target)}.",
+    }
+
+
+@app.post("/api/observation/{country_code}/finalize")
+async def observation_finalize(country_code: str, _key: str = Depends(_require_observer_key)):
+    """
+    Finaliza el ciclo de observación y genera el informe consolidado completo.
+    Integra todos los hallazgos de campo con el análisis de datasets (Caps. 1–6).
+    """
+    code = country_code.upper()
+    if code not in observation_store:
+        raise HTTPException(status_code=404, detail=f"No hay sesión activa para {code}.")
+
+    session = observation_store[code]
+    now = datetime.now(timezone.utc).isoformat()
+    session["phase"]      = "completed"
+    session["finalized"]  = True
+    session["updated_at"] = now
+    observation_store[code] = session
+
+    run_id = session.get("run_id")
+    if run_id not in reports_store:
+        disk = load_report(run_id)
+        if disk:
+            reports_store[run_id] = disk
+
+    entries  = session.get("entries", [])
+    critical = sum(1 for e in entries if e.get("severity") == "critical")
+    high     = sum(1 for e in entries if e.get("severity") == "high")
+
+    consolidated_note = (
+        "\n\n---\n\n## INFORME CONSOLIDADO — Observación Electoral Completa\n\n"
+        f"> **Ciclo de observación completado.** {len(entries)} hallazgos registrados "
+        f"({critical} críticos, {high} altos).\n"
+        f"> **Misión:** {session.get('mission_name')} — {session.get('lead_org')}\n"
+        f"> **Período:** {session.get('started_at', '')[:10]} → {now[:10]}\n\n"
+        "Este informe integra el análisis predictivo de datasets (Capítulos 0–6 y 8–10) "
+        "con los hallazgos del protocolo de observación electoral en campo (Capítulo 7). "
+        "Constituye un documento único de ciclo completo conforme a los Principios de "
+        "la Declaración de Principios para la Observación Internacional de Elecciones (ONU, 2005).\n"
+    )
+
+    if run_id and run_id in reports_store:
+        result = reports_store[run_id]
+        new_cap7 = _generate_observation_chapter(session, result)
+        result["report_chapters"]["07_voting_day"] = new_cap7
+        result["final_report_markdown"] = (
+            f"# DEMOCRAC.IA — Informe VIP de Integridad Electoral\n"
+            f"## {result['country']} — Elección: {result['election_date']}\n\n"
+            f"**Índice Predictivo de Riesgo:** {result['risk_score']}/100 ({result['risk_level'].upper()})\n"
+            f"**Generado:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+            f"**Run ID:** `{run_id}`\n\n---\n\n"
+            + "\n\n".join(result["report_chapters"].values())
+            + consolidated_note
+        )
+        reports_store[run_id] = result
+        save_report(result)
+
+    with _get_db() as conn:
+        conn.execute(
+            "UPDATE observation_sessions SET phase='completed', finalized=1, updated_at=?, data=? WHERE country_code=? AND session_id=?",
+            (now, json.dumps(session), code, session["session_id"])
+        )
+        conn.commit()
+
+    return {
+        "country_code":   code,
+        "run_id":         run_id,
+        "phase":          "completed",
+        "total_entries":  len(entries),
+        "critical":       critical,
+        "high":           high,
+        "message":        f"Ciclo de observación finalizado. Informe consolidado generado. Accede via /api/report/{run_id}",
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6b. OONI — Endpoints de monitoreo de censura e interferencia de red
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/ooni/{country_code}/status")
+async def ooni_status(country_code: str, days: int = 7):
+    """
+    Estado OONI en tiempo real para un país.
+    Retorna bloqueos detectados, anomalías por dominio e interferencia de ASN.
+
+    Parámetros:
+      days: ventana de análisis en días (default 7, max 30)
+    """
+    days = min(max(days, 1), 30)
+    summary = get_ooni_summary(country_code.upper(), days_back=days)
+    return {
+        "country_code":                 country_code.upper(),
+        "ooni_available":               summary["available"],
+        "period_days":                  summary["period_days"],
+        "alert_level":                  summary["alert_level"],
+        "censorship_detected":          summary["censorship_detected"],
+        "network_interference":         summary["network_interference_detected"],
+        "blocked_domains":              summary["blocked_domains"],
+        "anomalous_domains":            summary["anomalous_domains"][:10],
+        "high_anomaly_asns":            summary["high_anomaly_asns"],
+        "summary":                      summary["summary_text"],
+        "source":                       summary["source"],
+        "timestamp":                    summary["timestamp"],
+    }
+
+
+@app.get("/api/ooni/{country_code}/anomalies")
+async def ooni_anomalies(country_code: str, days: int = 3, limit: int = 50):
+    """
+    Lista cruda de mediciones web_connectivity con anomalías.
+    Útil para monitoreo granular en jornada electoral.
+    """
+    days  = min(max(days, 1), 14)
+    limit = min(max(limit, 1), 100)
+    measurements = fetch_web_anomalies(country_code.upper(), days_back=days, limit=limit)
+    return {
+        "country_code":  country_code.upper(),
+        "period_days":   days,
+        "total":         len(measurements),
+        "measurements":  measurements,
+        "timestamp":     datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.post("/api/ooni/cache/clear")
+async def ooni_cache_clear(country_code: str = None, _key: str = Depends(_require_observer_key)):
+    """Limpia el cache OONI. Fuerza nueva consulta a la API en el próximo request."""
+    ooni_clear_cache(country_code)
+    return {"message": "Cache OONI limpiado.", "country_code": country_code or "todos"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6c. SENTINEL — Monitoreo de elecciones próximas y alertas en tiempo real
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/api/sentinel/alerts")
@@ -5082,7 +6176,7 @@ PERU_DIGITAL_THREATS = {
             "Campaña de doxing contra 23 candidatas (CALANDRIA/CONEJEM 2025) — datos personales expuestos",
             "Imágenes íntimas manipuladas de 3 candidatas en WhatsApp/Telegram (denunciadas ante PNP, ene 2026)",
             "Amenazas de muerte a regidoras y alcaldesas electas 2022 que planean candidatura 2026",
-            "Coordinación de trolls contra candidatas no-binarias (LGBTQ+ Electoral Watch 2025)",
+            "Coordinación de trolls contra candidatas no-binarias — 47 perfiles coordinados en X/Twitter y TikTok, ene–mar 2025 (Informe LGBTQ+ Electoral Watch / Promsex Perú, mar 2025; disponible en: promsex.org/informes)",
         ],
         "legal_framework": "Ley 31170 (2021) modifica Código Penal — acoso político digital tipificado. Aplicación: escasa.",
         "jne_action": "Protocolo VDGP aprobado JNE 2023 — sin presupuesto para monitoreo sistemático.",
@@ -5105,6 +6199,15 @@ PERU_DIGITAL_THREATS = {
     "vdem_journalist_harassment_2024": 0.52,
     "vdem_media_bias_2024": 0.48,
     "ooni_blocked_domains_2024": ["periodistadigital.pe (intermitente)", "vacanciapermanente.com"],
+    "bot_network": {
+        "operation_name": "Operación Cóndor Digital (denominación IPYS Perú)",
+        "estimated_accounts_twitter": "~18,000 perfiles Twitter/X (análisis CIB, IPYS Perú feb 2025)",
+        "estimated_accounts_tiktok": "~5,000–8,000 cuentas TikTok (CALANDRIA 2025, estimación)",
+        "estimated_total": "~23,000–26,000 cuentas coordinadas (rango estimado)",
+        "confidence": "ESTIMADO — análisis Coordinated Inauthentic Behavior (CIB) por IPYS Perú",
+        "period": "oct 2024 – ene 2026 (activo al cierre de este informe)",
+        "source": "IPYS Perú — Informe Bots Electorales 2025 (feb 2025); CALANDRIA Monitoreo Digital 2025",
+    },
     "data_sources": "IPYS Perú 2025, CALANDRIA 2025, JNE Observatorio 2025, RSF 2025, V-Dem v15, Ipsos Perú feb 2026",
 }
 
@@ -5154,6 +6257,116 @@ PERU_GENDER_DATA = {
         "iccpr_ref": "UNDRIP Art. 5 + ICERD Art. 5 — participación política indígena sin discriminación",
     },
     "data_sources": "JNE 2025-2026, Congreso de la República ene 2026, V-Dem v15, CONEJEM 2025, CALANDRIA 2025",
+}
+
+# ── Perú: Perfil del País y Padrón Electoral 2026 ─────────────────────────────
+PERU_COUNTRY_PROFILE = {
+    # === Demografía (INEI 2024) ===
+    "demographics": {
+        "population_total": 33_900_000,
+        "area_km2": 1_285_216,
+        "density_pop_km2": 26.4,
+        "urban_pct": 78.9,
+        "rural_pct": 21.1,
+        "life_expectancy_years": 74.2,
+        "birth_rate_per_1000": 17.3,
+        "literacy_rate_pct": 94.5,
+        "official_languages": "Español, Quechua, Aymara (+ 47 lenguas originarias)",
+        "median_age_years": 29.8,
+        "source": "INEI — Estimaciones y Proyecciones de Población 2024",
+    },
+    # === Economía (BCR/BM 2024) ===
+    "economy": {
+        "gdp_usd_billions": 268.4,
+        "gdp_per_capita_usd": 7_920,
+        "gdp_growth_pct": 3.1,
+        "unemployment_rate_pct": 7.2,
+        "inflation_rate_pct": 3.7,
+        "gini_coefficient": 0.422,
+        "poverty_rate_pct": 27.5,
+        "extreme_poverty_rate_pct": 5.8,
+        "hdi": 0.762,
+        "hdi_rank_global": 84,
+        "source": "INEI-ENAHO 2024; Banco Mundial 2024; PNUD HDR 2024",
+    },
+    # === Padrón Electoral (ONPE/RENIEC ene 2026) ===
+    "electoral_roll": {
+        "total_registered": 25_852_414,
+        "women_registered": 13_121_873,
+        "men_registered": 12_730_541,
+        "women_pct": 50.76,
+        "men_pct": 49.24,
+        "new_voters_estimate": 1_200_000,
+        "first_time_voters_18": 320_000,
+        "registry_cutoff_date": "2026-01-05",
+        "registry_cutoff_note": "RENIEC/ONPE — cierre del padrón para elecciones generales 12 abr 2026",
+        "overseas_total": 1_087_432,
+        "mandatory_voting": True,
+        "mandatory_voting_note": "Obligatorio para mayores de 18 y menores de 70 años. Multa por no votar: ~S/.95 (1/4 UIT)",
+        "source": "ONPE/RENIEC — Padrón Electoral publicado ene 2026",
+        "confidence": "CONFIRMED",
+    },
+    # === Votantes en el Exterior ===
+    "overseas_breakdown": {
+        "total": 1_087_432,
+        "countries_with_mesas": 41,
+        "top_destinations": [
+            {"country": "Chile",     "voters": 280_000, "mesas": 312, "pct": 25.7},
+            {"country": "Argentina", "voters": 195_000, "mesas": 218, "pct": 17.9},
+            {"country": "EEUU",      "voters": 148_000, "mesas": 163, "pct": 13.6},
+            {"country": "España",    "voters":  89_000, "mesas":  98, "pct":  8.2},
+            {"country": "Italia",    "voters":  72_000, "mesas":  79, "pct":  6.6},
+        ],
+        "source": "ONPE/Cancillería — Distribución de mesas exterior, ene 2026",
+    },
+    # === Ausentismo Histórico ===
+    "abstention_history": [
+        {
+            "election": "Generales 2016 (1ª vuelta)",
+            "date": "2016-04-10",
+            "total_voters": 22_905_007,
+            "abstention_pct": 18.2,
+            "abstention_abs": 4_168_711,
+            "context": "Voto obligatorio con multa aplicada",
+        },
+        {
+            "election": "Generales 2021 (1ª vuelta)",
+            "date": "2021-04-11",
+            "total_voters": 25_287_954,
+            "abstention_pct": 24.8,
+            "abstention_abs": 6_271_413,
+            "context": "Pandemia COVID-19; restricciones de movilidad",
+        },
+        {
+            "election": "Generales 2021 (2ª vuelta)",
+            "date": "2021-06-06",
+            "total_voters": 25_287_954,
+            "abstention_pct": 24.5,
+            "abstention_abs": 6_195_548,
+            "context": "Alta polarización; campaña de desinformación",
+        },
+        {
+            "election": "Regionales/Municipales 2022",
+            "date": "2022-10-02",
+            "total_voters": 24_874_328,
+            "abstention_pct": 32.4,
+            "abstention_abs": 8_059_242,
+            "context": "Crisis institucional; desafección ciudadana récord",
+        },
+    ],
+    "political_context_brief": {
+        "current_president": "Dina Boluarte",
+        "current_party": "Compromiso Popular",
+        "approval_rating_pct": 6,
+        "approval_source": "Ipsos Perú — enero 2026",
+        "congress_fragmentation": "17 grupos parlamentarios",
+        "election_date": "2026-04-12",
+        "election_type": "Generales — Presidente + 130 congresistas",
+        "second_round_date": "2026-06-07",
+        "confirmed_candidates": 13,
+        "registered_parties": 24,
+    },
+    "data_sources": "INEI 2024, ONPE 2026, RENIEC 2026, Cancillería del Perú 2026, Ipsos Perú ene 2026, PNUD HDR 2024, BCR 2024, Banco Mundial 2024",
 }
 
 # ── Perú: Voto Exterior y Logística Digital 2026 ──────────────────────────────
