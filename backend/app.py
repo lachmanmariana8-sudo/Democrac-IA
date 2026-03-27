@@ -98,6 +98,43 @@ except ImportError:
     def fetch_web_anomalies(*a, **kw): return []
     def ooni_clear_cache(*a, **kw): pass
 
+# ── Persistencia SQLite (db/) ─────────────────────────────────────────────────
+try:
+    from db import (
+        init_db as _db_init_db,
+        create_run as _db_create_run,
+        complete_run as _db_complete_run,
+        save_report as _db_save_report,
+        create_session as _db_create_session,
+        close_session as _db_close_session,
+        save_entry as _db_save_entry,
+        save_alert as _db_save_alert,
+        get_report as _db_get_report,
+        get_latest_report as _db_get_latest_report,
+        get_db_stats as _db_get_stats,
+    )
+    DB_AVAILABLE = True
+except ImportError:
+    DB_AVAILABLE = False
+    def _db_init_db(): pass
+    def _db_create_run(*a, **kw): pass
+    def _db_complete_run(*a, **kw): pass
+    def _db_save_report(*a, **kw): return None
+    def _db_create_session(*a, **kw): pass
+    def _db_close_session(*a, **kw): pass
+    def _db_save_entry(*a, **kw): pass
+    def _db_save_alert(*a, **kw): pass
+    def _db_get_report(*a, **kw): return None
+    def _db_get_latest_report(*a, **kw): return None
+    def _db_get_stats(): return {}
+
+# ── Startup checks ────────────────────────────────────────────────────────────
+try:
+    from startup_checks import run_startup_checks as _run_startup_checks
+    STARTUP_CHECKS_AVAILABLE = True
+except ImportError:
+    STARTUP_CHECKS_AVAILABLE = False
+
 
 # ── Migración: agents/ y chapters/ ─────────────────────────────────────────────
 # Importaciones condicionales hacia los nuevos módulos.
@@ -4366,6 +4403,18 @@ async def on_startup():
         print("[OONI] httpx disponible — integración OONI activa.")
     except ImportError:
         print("[OONI] httpx no instalado — ejecutar: pip install httpx>=0.27.0")
+    # Inicializar db/ (capa de persistencia extendida)
+    if DB_AVAILABLE:
+        try:
+            _db_init_db()
+        except Exception as _db_err:
+            print(f"[DB] AVISO: No se pudo inicializar SQLite extendido: {_db_err}")
+    # Startup checks
+    if STARTUP_CHECKS_AVAILABLE:
+        try:
+            _run_startup_checks(raise_on_critical=False)
+        except Exception as _sc_err:
+            print(f"[STARTUP] Error en checks: {_sc_err}")
 
 
 class AnalyzeRequest(BaseModel):
@@ -4462,6 +4511,17 @@ async def health_check():
     }
 
 
+@app.get("/api/stats")
+async def get_system_stats():
+    """Estadísticas del sistema: runs, reportes, observaciones."""
+    stats = _db_get_stats() if DB_AVAILABLE else {}
+    return {
+        "db_available": DB_AVAILABLE,
+        "rag_available": RAG_AVAILABLE,
+        "stats": stats,
+    }
+
+
 @app.get("/api/countries")
 async def list_countries():
     return {
@@ -4496,9 +4556,23 @@ async def analyze_election(request: AnalyzeRequest):
         election_date=election_date,
     )
 
+    if DB_AVAILABLE:
+        _db_create_run(initial_state["run_id"], code, election_date)
+
     result = peirs_pipeline.invoke(initial_state)
     reports_store[result["run_id"]] = result
     save_report(result)
+
+    if DB_AVAILABLE:
+        try:
+            _db_complete_run(result["run_id"],
+                             risk_score=result.get("risk_score", 0),
+                             risk_level=result.get("risk_level", "unknown"))
+            _db_save_report(result["run_id"], code,
+                            report_md=result.get("final_report_markdown", ""),
+                            report_json=result)
+        except Exception as _db_persist_err:
+            print(f"[DB] AVISO: No se pudo guardar reporte en db/: {_db_persist_err}")
 
     return AnalyzeResponse(
         run_id=result["run_id"],
