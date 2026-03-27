@@ -13,14 +13,20 @@ Estado de migración:
   ✅ modules/fraud_hate_analysis.py — FraudAllegationAnalysis, HateSpeechAnalysis
   ✅ modules/field_validator.py     — Agent 5: FieldDataValidationAgent
 
+  ✅ modules/config.py        — Configuración (env vars, LLM, constants)
+  ✅ modules/data_loaders.py  — V-Dem, FH, RSF, PEI loaders + helpers
+
   ⏳ Pendiente:
-     modules/config.py        — Configuración (env vars, LLM, constants)
-     modules/data_loaders.py  — V-Dem, FH, RSF, PEI loaders + helpers
      chapters/                — Generadores de capítulos (Cap 0–10)
      agents/                  — Los 4 agentes LangGraph
      db/                      — SQLite helpers + migration
 
 Patrón de importación en app.py:
+  from modules.config import ANTHROPIC_API_KEY, LLM_MODEL, LLM_TEMPERATURE, OBSERVER_API_KEYS
+  from modules.data_loaders import load_vdem_data, get_vdem_country
+  from modules.data_loaders import load_freedom_house_data, get_freedom_house_country, derive_civil_liberties_from_fh
+  from modules.data_loaders import load_rsf_data, get_rsf_country
+  from modules.data_loaders import load_pei_data, get_pei_country
   from modules.instruments import UNIVERSAL_INSTRUMENTS, REGIONAL_INSTRUMENTS, EMB_NAMES
   from modules.catalog import COUNTRY_CATALOG
   from modules.mock_data import MOCK_OSINT_DATA, MOCK_POLITICAL_DATA
