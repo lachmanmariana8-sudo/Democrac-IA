@@ -149,6 +149,15 @@ try:
 except ImportError:
     STARTUP_CHECKS_AVAILABLE = False
 
+# ── Agente Auditor ────────────────────────────────────────────────────────────
+try:
+    from agents.auditor import AuditAgent as _AuditAgent
+    _auditor = _AuditAgent()
+    AUDITOR_AVAILABLE = True
+except ImportError:
+    AUDITOR_AVAILABLE = False
+    _auditor = None
+
 
 # ── Migración: agents/ y chapters/ ─────────────────────────────────────────────
 # Importaciones condicionales hacia los nuevos módulos.
@@ -6765,6 +6774,51 @@ async def get_country_chart_data(country_code: str):
         "fh":  fh_data,
         "rsf": rsf_data,
         "pei": pei_data,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUDITOR — Endpoints de auditoría de integridad de sesión
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/audit/{country_code}/session")
+async def audit_session(country_code: str):
+    """
+    Audita la sesión activa de observación de un país.
+    Detecta inundación de entries, concentración de observadores,
+    alegaciones sin evidencia, silencios temporales y otras anomalías.
+    """
+    if not AUDITOR_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Agente Auditor no disponible.")
+    code = country_code.upper()
+    if code not in observation_store:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay sesión activa para {code}."
+        )
+    result = _auditor.audit_session(observation_store[code], country_code=code)
+    return result.to_dict()
+
+
+@app.get("/api/audit/{country_code}/status")
+async def audit_status(country_code: str):
+    """
+    Resumen rápido del estado de auditoría — para el health check operativo.
+    """
+    if not AUDITOR_AVAILABLE:
+        return {"auditor_available": False}
+    code = country_code.upper()
+    if code not in observation_store:
+        return {"auditor_available": True, "session_active": False, "country_code": code}
+    result = _auditor.audit_session(observation_store[code], country_code=code)
+    return {
+        "auditor_available": True,
+        "session_active": True,
+        "country_code": code,
+        "audit_score": result.audit_score,
+        "has_critical": result.has_critical,
+        "findings_count": len(result.findings),
+        "summary": result.summary,
     }
 
 

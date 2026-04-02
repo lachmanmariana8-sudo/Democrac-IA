@@ -19,7 +19,9 @@ OBSERVER_API_KEYS: set = set(k.strip() for k in _raw_keys.split(",") if k.strip(
 obs_key_header = APIKeyHeader(name="X-Observer-Key", auto_error=False)
 
 # ── Rutas a datasets ─────────────────────────────────────────────────────────
+# V-Dem v16 disponible desde marzo 2026 — setear VDEM_CSV_PATH para usar la nueva versión
 VDEM_CSV_PATH: str = os.getenv("VDEM_CSV_PATH", "../data/V-Dem-CY-Full+Others-v15.csv")
+# FH FIW 2026 disponible desde marzo 2026 — setear FH_CSV_PATH para usar la nueva versión
 FH_CSV_PATH: str   = os.getenv("FH_CSV_PATH",   "../data/All_data_FIW_2013-2025 - Index.csv")
 RSF_CSV_PATH: str  = os.getenv("RSF_CSV_PATH",  "../data/RSF/2025 - 2025.csv")
 PEI_CSV_PATH: str  = os.getenv("PEI_CSV_PATH",  "../data/PEI/PEI_10 Election External.csv")
@@ -34,20 +36,22 @@ VDEM_COLUMNS = [
     "v2smgovdom", "v2smgovfilcap", "v2smregcap",
     "v2psbars", "v2psoppaut", "v2jureview",
 ]
-VDEM_LAST_YEAR = 2024
-VDEM_VERSION   = "v15"
+# V-Dem v16 cubre hasta 2025 — actualizar a v16 cuando el CSV esté disponible localmente
+VDEM_LAST_YEAR = int(os.getenv("VDEM_LAST_YEAR", "2024"))
+VDEM_VERSION   = os.getenv("VDEM_VERSION", "v15")
 VDEM_CITATION  = (
-    "Coppedge et al. 2025. 'V-Dem Country-Year Dataset v15' "
-    "Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds25"
+    f"Coppedge et al. 2026. 'V-Dem Country-Year Dataset {VDEM_VERSION}' "
+    f"Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds25"
 )
 VDEM_SOURCE_URL = "https://v-dem.net/data/the-v-dem-dataset/"
 
 # ── Freedom House ────────────────────────────────────────────────────────────
-FH_LAST_EDITION = 2025
-FH_VERSION      = "FIW_2025"
+# FIW 2026 "Growing Shadow of Autocracy" disponible desde marzo 2026
+FH_LAST_EDITION = int(os.getenv("FH_LAST_EDITION", "2025"))
+FH_VERSION      = os.getenv("FH_VERSION", "FIW_2025")
 FH_CITATION     = (
-    "Freedom House. 2025. 'Freedom in the World 2025: The Uphill Battle to Safeguard Rights.' "
-    "Washington, DC: Freedom House. https://freedomhouse.org/report/freedom-world"
+    f"Freedom House. {FH_LAST_EDITION}. 'Freedom in the World {FH_LAST_EDITION}.' "
+    f"Washington, DC: Freedom House. https://freedomhouse.org/report/freedom-world"
 )
 FH_SOURCE_URL = "https://freedomhouse.org/report/freedom-world"
 
