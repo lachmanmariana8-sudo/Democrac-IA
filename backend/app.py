@@ -1177,7 +1177,7 @@ try:
         PERU_ELECTORAL_SYSTEM, PERU_POLITICAL_FORCES, PERU_PARL_DATA,
         PERU_REGIONS_DATA, PERU_HISTORICAL_EVENTS, PERU_DIGITAL_THREATS,
         PERU_GENDER_DATA, PERU_COUNTRY_PROFILE, PERU_OVERSEAS_VOTE,
-        PERU_ORGANIZED_CRIME,
+        PERU_ORGANIZED_CRIME, PERU_VDEM_STATIC,
     )
     print("[MODULES] peru_data cargado desde módulo.")
 except ImportError:
@@ -6601,6 +6601,24 @@ async def get_country_chart_data(country_code: str):
     media_series = _vdem_multi_series(
         ["v2mebias", "v2meharjrn", "v2mecenefi"], 2010, 2024
     )
+
+    # ── Fallback estático para Perú cuando el CSV V-Dem no está disponible ──────
+    # PERU_VDEM_STATIC contiene datos reales extraídos del CSV V-Dem v15 (384MB)
+    try:
+        _peru_static = PERU_VDEM_STATIC
+    except NameError:
+        _peru_static = {}
+    if code == "PER" and _peru_static:
+        if not libdem_series:
+            libdem_series = _peru_static.get("libdem_series", [])
+        if not frefair_series:
+            frefair_series = _peru_static.get("frefair_series", [])
+        if not emb_series:
+            emb_series = _peru_static.get("emb_series", [])
+        if not media_series:
+            media_series = _peru_static.get("media_series", [])
+        if not alert_series:
+            alert_series = _peru_static.get("alert_series", [])
 
     # ── Chart 4: Comparación regional (últimos datos disponibles) ─────────────
     regional = []
