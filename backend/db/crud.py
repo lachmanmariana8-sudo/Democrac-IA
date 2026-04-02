@@ -5,6 +5,7 @@ Operaciones de base de datos para análisis, reportes, observaciones y alertas.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -14,7 +15,14 @@ from typing import Any, Dict, List, Optional
 from db.schema import SCHEMA_SQL, SCHEMA_VERSION
 
 # ── Ruta de la base de datos ──────────────────────────────────────────────────
-_DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "data" / "peirs.db"
+# DEMOCRACIA_DB_PATH unifica ambas capas (app.py inline + db/crud.py) en la misma DB.
+# Si no está seteada, cae al default histórico peirs.db para no romper tests existentes.
+_DEFAULT_DB_PATH = Path(
+    os.environ.get(
+        "DEMOCRACIA_DB_PATH",
+        str(Path(__file__).parent.parent.parent / "data" / "peirs.db")
+    )
+)
 
 
 def _utcnow() -> str:
@@ -24,8 +32,12 @@ def _utcnow() -> str:
 # ── Conexión ──────────────────────────────────────────────────────────────────
 
 def get_db_path() -> Path:
-    import os
-    return Path(os.getenv("PEIRS_DB_PATH", str(_DEFAULT_DB_PATH)))
+    # Prioridad: PEIRS_DB_PATH (tests) > DEMOCRACIA_DB_PATH (producción) > default
+    return Path(
+        os.getenv("PEIRS_DB_PATH") or
+        os.getenv("DEMOCRACIA_DB_PATH") or
+        str(_DEFAULT_DB_PATH)
+    )
 
 
 @contextmanager

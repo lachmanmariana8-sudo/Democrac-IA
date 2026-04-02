@@ -4724,6 +4724,87 @@ def _preload_sessions_on_startup() -> None:
         print(f"[Startup] No se pudieron rehidratar sesiones de observacion: {e}")
 
 
+# ── Hunter Scheduler ─────────────────────────────────────────────────────────
+# Corre el Hunter automáticamente para todos los países con sesión activa.
+# Intervalo configurable via HUNTER_INTERVAL_MINUTES (default: 30).
+# Se desactiva si HUNTER_INTERVAL_MINUTES=0 o si el Hunter no está disponible.
+
+_hunter_scheduler_task: Optional[asyncio.Task] = None
+
+
+async def _hunter_scheduler_loop() -> None:
+    """Background loop que dispara el Hunter cada N minutos para sesiones activas."""
+    interval_min = int(os.getenv("HUNTER_INTERVAL_MINUTES", "0"))
+    if interval_min <= 0:
+        print("[Hunter] Scheduler desactivado (HUNTER_INTERVAL_MINUTES=0 o no seteado).")
+        return
+
+    print(f"[Hunter] Scheduler activo — intervalo: {interval_min} min.")
+    await asyncio.sleep(60)  # warm-up: esperar 1 min antes del primer ciclo
+
+    while True:
+        try:
+            if HUNTER_AVAILABLE and llm and observation_store:
+                for cc, session in list(observation_store.items()):
+                    if session.get("finalized"):
+                        continue
+                    run_id = session.get("run_id")
+                    if not run_id:
+                        continue
+                    phase = session.get("phase", "campaign")
+                    phase_norm = _PHASE_ALIAS.get(phase, phase)
+                    phase_label = _PHASE_LABELS.get(phase_norm, phase_norm)
+                    try:
+                        from agents.hunter import HunterAgent, hunter_entry_to_observation
+                        hunter = HunterAgent(
+                            llm=llm,
+                            ooni_available=OONI_AVAILABLE,
+                            ooni_get_summary=get_ooni_summary if OONI_AVAILABLE else None,
+                        )
+                        result = await hunter.run(
+                            country_code=cc,
+                            phase=phase_norm,
+                            phase_label=phase_label,
+                            dry_run=False,
+                            max_items_per_source=10,
+                        )
+                        registered = 0
+                        for entry in result.get("entries", []):
+                            if not entry.get("relevant"):
+                                continue
+                            try:
+                                obs = hunter_entry_to_observation(entry, phase_norm, cc)
+                                existing = session.get("entries", [])
+                                val = validate_entry(obs, existing)
+                                if val.duplicate_of:
+                                    continue
+                                obs["severity"] = _auto_escalate_severity(
+                                    obs["severity"], obs["category"], obs["finding"]
+                                )
+                                obs["rights_at_risk"] = list(
+                                    set(obs.get("rights_at_risk", []) + _auto_rights(obs["category"], obs["severity"]))
+                                )
+                                session["entries"].append(obs)
+                                registered += 1
+                                if ALERTS_AVAILABLE and obs["severity"] in ("critical", "high"):
+                                    try:
+                                        dispatch_alert(build_entry_alert(obs, cc))
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                continue
+                        if registered > 0:
+                            session["updated_at"] = datetime.now(timezone.utc).isoformat()
+                            observation_store[cc] = session
+                            print(f"[Hunter][{cc}] Scheduler: {registered} nuevos hallazgos registrados.")
+                    except Exception as _he:
+                        print(f"[Hunter][{cc}] Error en scheduler: {_he}")
+        except Exception as _loop_err:
+            print(f"[Hunter] Error en loop del scheduler: {_loop_err}")
+
+        await asyncio.sleep(interval_min * 60)
+
+
 @app.on_event("startup")
 async def on_startup():
     _init_db()
@@ -4755,6 +4836,9 @@ async def on_startup():
             _run_startup_checks(raise_on_critical=False)
         except Exception as _sc_err:
             print(f"[STARTUP] Error en checks: {_sc_err}")
+    # Arrancar Hunter scheduler en background
+    global _hunter_scheduler_task
+    _hunter_scheduler_task = asyncio.create_task(_hunter_scheduler_loop())
 
 
 class AnalyzeRequest(BaseModel):
