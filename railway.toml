@@ -1,0 +1,16 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pip install -r backend/requirements.txt"
+
+[deploy]
+startCommand = "cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[environments.production]
+# Variables de entorno — configurar en el panel de Railway:
+# ANTHROPIC_API_KEY=sk-ant-...
+# OBSERVER_API_KEYS=key1,key2,key3
+# VDEM_CSV_PATH=/data/V-Dem-CY-Full+Others-v15.csv

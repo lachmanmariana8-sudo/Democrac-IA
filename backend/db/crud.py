@@ -63,7 +63,7 @@ def init_db(db_path: Optional[Path] = None) -> None:
             "INSERT OR REPLACE INTO _schema_meta VALUES ('version', ?)",
             (str(SCHEMA_VERSION),)
         )
-    print(f"[DB] ✅ SQLite inicializado en {get_db_path()}")
+    print(f"[DB] OK: SQLite inicializado en {get_db_path()}")
 
 
 # ── Analysis Runs ─────────────────────────────────────────────────────────────

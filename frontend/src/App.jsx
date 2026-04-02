@@ -109,7 +109,7 @@ const ChartMethodologyBtn = ({ chartKey }) => {
 };
 
 import React, { useState, useEffect } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area, ReferenceLine } from "recharts";
 
 const COLORS = {
   bg: "#0a0e17",
@@ -129,6 +129,9 @@ const COLORS = {
   infoDim: "#3b82f633",
   purple: "#a855f7",
   purpleDim: "#a855f733",
+  textPrimary: "#e2e8f0",
+  textSecondary: "#94a3b8",
+  cardBg: "#0f1929",
 };
 
 const RISK_LEVELS = {
@@ -138,7 +141,7 @@ const RISK_LEVELS = {
   low: { color: COLORS.accent, label: "BAJO", bg: COLORS.accentDim },
 };
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8001";
 
 const DIMENSION_LABELS = {
   suffrage: "Sufragio Universal",
@@ -327,7 +330,21 @@ const ErrorScreen = ({ error, onRetry }) => (
   </div>
 );
 
-const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, generatedAt }) => (
+const SystemHealth = ({ health }) => {
+  if (!health) return null;
+  const db = health.db_available;
+  const rag = health.rag_available;
+  const runs = health.stats?.analysis_runs ?? 0;
+  return (
+    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: COLORS.textDim, display: "flex", alignItems: "center", gap: 6 }}>
+      <span>DB <span style={{ color: db ? COLORS.accent : COLORS.danger }}>●</span></span>
+      <span>RAG <span style={{ color: rag ? COLORS.accent : COLORS.danger }}>●</span></span>
+      <span>{runs} runs</span>
+    </span>
+  );
+};
+
+const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, generatedAt, systemHealth }) => (
   <nav style={{
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "14px 28px",
@@ -357,6 +374,7 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
         { id: "detail", label: "Análisis País" },
         { id: "sentinel", label: "🔴 Sentinel" },
         { id: "peru", label: "🇵🇪 Perú 2026" },
+        { id: "observer", label: "📡 Observación" },
         { id: "methodology", label: "Metodología" },
       ].map(tab => (
         <button key={tab.id} onClick={() => setActiveView(tab.id)} style={{
@@ -371,6 +389,7 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
       ))}
     </div>
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <SystemHealth health={systemHealth} />
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <GlowDot color={apiStatus === "connected" ? COLORS.accent : COLORS.danger} size={6} />
         <span style={{ fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
@@ -1878,7 +1897,7 @@ const renderMarkdownWithTooltips = (md) => {
 
 
 // ── GENERADOR HTML DESCARGABLE ────────────────────────────────────────────────
-const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => {
+const generateHtmlReport = (markdown, country, runId, timestamp, reportData, chartData = null, actorsData = null, scenariosData = null, moeBrief = null) => {
   // ── Colores por nivel de riesgo ───────────────────────────────────────────
   const riskPalette = {
     critical: { hex: "#b91c1c", light: "#fef2f2", mid: "#fca5a5", label: "CRÍTICO" },
@@ -1945,6 +1964,240 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
 </div>`;
   }).join("");
 
+  // ── SVG Charts V-Dem inline ───────────────────────────────────────────────
+  const _svgLine = (series, { w = 660, h = 160, padL = 44, padR = 20, padT = 22, padB = 32,
+                               color = "#0f766e", minY = null, maxY = null, milestones = [],
+                               yTicks = null, yFmt = v => v.toFixed(2) } = {}) => {
+    if (!series || !series.length) return '<p class="no-data">Datos no disponibles.</p>';
+    const xs = series.map(d => d.year || d.x);
+    const ys = series.map(d => typeof d.value === "number" ? d.value : d.y);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMin = minY !== null ? minY : Math.min(...ys) * 0.95;
+    const yMax = maxY !== null ? maxY : Math.max(...ys) * 1.05;
+    const cx = x => padL + ((x - xMin) / (xMax - xMin || 1)) * (w - padL - padR);
+    const cy = y => h - padB - ((y - yMin) / (yMax - yMin || 1)) * (h - padT - padB);
+    const linePts = series.map(d => `${cx(d.year||d.x)},${cy(typeof d.value==="number"?d.value:d.y)}`);
+    const areaPath = `M ${cx(xMin)},${cy(yMin)} L ${linePts.join(" L ")} L ${cx(xMax)},${cy(yMin)} Z`;
+    const linePath = `M ${linePts.join(" L ")}`;
+    const xTickYears = Array.from(new Set([xMin, ...Array.from({length: 7}, (_, i) => Math.round(xMin + i * (xMax - xMin) / 6)), xMax])).filter(y => y >= xMin && y <= xMax).sort((a,b)=>a-b);
+    const yTickVals = yTicks || [0, 0.25, 0.5, 0.75, 1.0].map(f => yMin + f * (yMax - yMin));
+    const gradId = `g${Math.random().toString(36).slice(2,8)}`;
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;max-width:${w}px" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.25"/><stop offset="100%" stop-color="${color}" stop-opacity="0.02"/></linearGradient></defs>
+  ${yTickVals.map(v=>`<line x1="${padL}" y1="${cy(v)}" x2="${w-padR}" y2="${cy(v)}" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="3,3"/>`).join("")}
+  ${milestones.map(m=>`<line x1="${cx(m.year)}" y1="${padT}" x2="${cx(m.year)}" y2="${h-padB}" stroke="#b45309" stroke-width="1" stroke-dasharray="4,3" opacity="0.7"/>
+  <text x="${cx(m.year)}" y="${padT-4}" text-anchor="middle" font-size="7" fill="#b45309" font-family="monospace">${m.year}</text>`).join("")}
+  <path d="${areaPath}" fill="url(#${gradId})"/>
+  <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="#cbd5e1" stroke-width="1"/>
+  ${xTickYears.map(y=>`<line x1="${cx(y)}" y1="${h-padB}" x2="${cx(y)}" y2="${h-padB+4}" stroke="#94a3b8" stroke-width="1"/><text x="${cx(y)}" y="${h-padB+14}" text-anchor="middle" font-size="8" fill="#94a3b8" font-family="monospace">${y}</text>`).join("")}
+  ${yTickVals.map(v=>`<text x="${padL-5}" y="${cy(v)+3}" text-anchor="end" font-size="8" fill="#94a3b8" font-family="monospace">${yFmt(v)}</text>`).join("")}
+  ${series.length?`<circle cx="${cx(xs[xs.length-1])}" cy="${cy(ys[ys.length-1])}" r="4" fill="${color}" stroke="white" stroke-width="1.5"/>`:``}
+</svg>`;
+  };
+
+  const _svgGroupedBars = (series, key1, key2, { w = 660, h = 160, padL = 44, padR = 16, padT = 16, padB = 32,
+                                                    c1 = "#0f766e", c2 = "#7c3aed", label1 = "A", label2 = "B",
+                                                    maxY = 1 } = {}) => {
+    if (!series || !series.length) return '<p class="no-data">Datos no disponibles.</p>';
+    const n = series.length;
+    const slotW = (w - padL - padR) / n;
+    const bW = slotW * 0.35;
+    const cy = v => h - padB - (v / maxY) * (h - padT - padB);
+    const yTicks = [0, 0.25, 0.5, 0.75, 1.0].map(f => f * maxY);
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;max-width:${w}px" xmlns="http://www.w3.org/2000/svg">
+  ${yTicks.map(v=>`<line x1="${padL}" y1="${cy(v)}" x2="${w-padR}" y2="${cy(v)}" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="3,3"/><text x="${padL-5}" y="${cy(v)+3}" text-anchor="end" font-size="8" fill="#94a3b8" font-family="monospace">${v.toFixed(2)}</text>`).join("")}
+  <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="#cbd5e1" stroke-width="1"/>
+  ${series.map((d, i) => {
+    const x = padL + i * slotW + slotW / 2;
+    const v1 = Math.max(0, Math.min(maxY, d[key1] || 0));
+    const v2 = Math.max(0, Math.min(maxY, d[key2] || 0));
+    const bh1 = (v1/maxY)*(h-padT-padB);
+    const bh2 = (v2/maxY)*(h-padT-padB);
+    return `<rect x="${x-bW-1}" y="${cy(v1)}" width="${bW}" height="${bh1}" fill="${c1}" rx="2"/>
+    <rect x="${x+1}" y="${cy(v2)}" width="${bW}" height="${bh2}" fill="${c2}" rx="2"/>
+    <text x="${x}" y="${h-padB+14}" text-anchor="middle" font-size="8" fill="#94a3b8" font-family="monospace">${d.year||d.x||""}</text>`;
+  }).join("")}
+  <rect x="${padL+8}" y="${padT}" width="10" height="8" fill="${c1}" rx="1"/>
+  <text x="${padL+22}" y="${padT+7}" font-size="9" fill="#475569" font-family="sans-serif">${label1}</text>
+  <rect x="${padL+90}" y="${padT}" width="10" height="8" fill="${c2}" rx="1"/>
+  <text x="${padL+104}" y="${padT+7}" font-size="9" fill="#475569" font-family="sans-serif">${label2}</text>
+</svg>`;
+  };
+
+  const _svgHBar = (items, { w = 660, h = null, padL = 180, padR = 60, padT = 14, padB = 14,
+                              color = "#0f766e", highlightCode = null, maxX = 100 } = {}) => {
+    if (!items || !items.length) return '<p class="no-data">Datos no disponibles.</p>';
+    const rowH = 26, totalH = h || (items.length * rowH + padT + padB);
+    const bW = w - padL - padR;
+    return `<svg viewBox="0 0 ${w} ${totalH}" width="100%" style="display:block;max-width:${w}px" xmlns="http://www.w3.org/2000/svg">
+  ${items.map((item, i) => {
+    const y = padT + i * rowH;
+    const val = Math.max(0, Math.min(maxX, item.value || item.score || 0));
+    const barW = (val / maxX) * bW;
+    const isHL = item.code === highlightCode;
+    const col = isHL ? "#b45309" : color;
+    return `<rect x="${padL}" y="${y+3}" width="${barW}" height="${rowH-8}" fill="${col}" rx="2" opacity="${isHL?1:0.75}"/>
+    <text x="${padL-6}" y="${y+rowH/2+4}" text-anchor="end" font-size="9" fill="${isHL?"#1e293b":"#475569"}" font-family="sans-serif" font-weight="${isHL?700:400}">${item.name||item.country||item.code}</text>
+    <text x="${padL+barW+5}" y="${y+rowH/2+4}" font-size="9" fill="${col}" font-family="monospace" font-weight="600">${Math.round(val)}</text>`;
+  }).join("")}
+  <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${totalH-padB}" stroke="#cbd5e1" stroke-width="1"/>
+</svg>`;
+  };
+
+  // Build chart SVGs from chartData
+  const vdemCharts = (() => {
+    if (!chartData) return null;
+    const c = chartData.charts || {};
+    const libdem = c.libdem_series || [];
+    const milestones = chartData.milestones || [];
+    const emb = (c.emb_series || []).map(d => ({
+      year: d.year,
+      emb_autonomy: d.v2elembaut,
+      emb_capacity: d.v2elembcap,
+    }));
+    // Media: use v2mebias as primary signal (inverted: higher=more free), fallback v2meharjrn
+    const media = (c.media_series || []).map(d => ({
+      year: d.year,
+      value: typeof d.v2mebias === "number" ? d.v2mebias
+           : typeof d.v2meharjrn === "number" ? d.v2meharjrn : null,
+    })).filter(d => d.value !== null);
+    const regional = (c.regional || []).map(r => ({
+      ...r,
+      value: Math.round((r.libdem || 0) * 100),
+      name: r.name || r.country_name || r.country_code,
+      code: r.country_code,
+    })).sort((a,b) => b.value - a.value);
+    const frefair = (c.frefair_series || []);
+    const alertSeries = (c.alert_series || []);
+    const year = libdem.length > 0
+      ? String(libdem[libdem.length - 1].year)
+      : (chartData.generated_at ? new Date(chartData.generated_at).getFullYear().toString() : "2024");
+    return { libdem, milestones, emb, media, regional, frefair, alertSeries, year };
+  })();
+
+  const vdemSectionHtml = vdemCharts ? `
+  <!-- ════ SECCIÓN F: DATOS V-Dem ════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-number">F</div>
+    <div class="section-title">Datos Históricos V-Dem — Perú ${vdemCharts.year}</div>
+  </div>
+  <div class="vdem-charts-section">
+
+    <div class="chart-block">
+      <div class="chart-title">Índice de Democracia Liberal — Perú 1990–${vdemCharts.year}</div>
+      <div class="chart-subtitle">Evolución histórica del índice <code>v2x_libdem</code> (escala 0–1, donde 1 = máxima democracia liberal). Las líneas verticales marcan elecciones presidenciales.</div>
+      ${_svgLine(vdemCharts.libdem, { color: "#0f766e", minY: 0, maxY: 1, milestones: vdemCharts.milestones, yFmt: v => v.toFixed(2) })}
+      <div class="chart-source">Fuente: Coppedge, M., et al. (2025). <em>V-Dem Dataset v15</em>. Variable: <code>v2x_libdem</code>. Varieties of Democracy Project. DOI: <a href="https://doi.org/10.23696/vdemds25">10.23696/vdemds25</a></div>
+    </div>
+
+    <div class="chart-block">
+      <div class="chart-title">JNE — Autonomía e Independencia Institucional 2014–${vdemCharts.year}</div>
+      <div class="chart-subtitle">Comparación anual entre la autonomía (<code>v2elembaut</code>) y la capacidad institucional (<code>v2elembcap</code>) del Jurado Nacional de Elecciones. Ambas escalas 0–1.</div>
+      ${_svgGroupedBars(vdemCharts.emb, "emb_autonomy", "emb_capacity", { label1: "Autonomía (v2elembaut)", label2: "Capacidad (v2elembcap)", c1: "#0f766e", c2: "#7c3aed", maxY: 1 })}
+      <div class="chart-source">Fuente: Coppedge, M., et al. (2025). <em>V-Dem Dataset v15</em>. Variables: <code>v2elembaut</code>, <code>v2elembcap</code>. Varieties of Democracy Project. DOI: <a href="https://doi.org/10.23696/vdemds25">10.23696/vdemds25</a></div>
+    </div>
+
+    <div class="chart-block">
+      <div class="chart-title">Ecosistema Mediático — Perú 2010–${vdemCharts.year}</div>
+      <div class="chart-subtitle">Sesgo mediático favorable al gobierno (<code>v2mebias</code>, invertido: mayor = más libre) + acoso a periodistas (<code>v2meharjrn</code>) y censura de noticias (<code>v2mecenefi</code>). Escala 0–1.</div>
+      ${_svgLine(vdemCharts.media, { color: "#7c3aed", minY: 0, maxY: 1, yFmt: v => v.toFixed(2) })}
+      <div class="chart-source">Fuente: Coppedge, M., et al. (2025). <em>V-Dem Dataset v15</em>. Variables: <code>v2mebias</code>, <code>v2meharjrn</code>, <code>v2mecenefi</code>. Varieties of Democracy Project. DOI: <a href="https://doi.org/10.23696/vdemds25">10.23696/vdemds25</a></div>
+    </div>
+
+    ${vdemCharts.regional.length > 0 ? `
+    <div class="chart-block">
+      <div class="chart-title">Perú en Perspectiva Regional — Democracia Liberal (V-Dem ${vdemCharts.year})</div>
+      <div class="chart-subtitle">Índice <code>v2x_libdem</code> × 100 para países de América Latina monitoreados por PEIRS. <strong>Perú resaltado en naranja.</strong> Mayor valor = mayor democracia liberal.</div>
+      ${_svgHBar(vdemCharts.regional, { padL: 140, highlightCode: "PER", maxX: 100, color: "#0f766e" })}
+      <div class="chart-source">Fuente: Coppedge, M., et al. (2025). <em>V-Dem Dataset v15</em>. Variable: <code>v2x_libdem</code>. Varieties of Democracy Project. DOI: <a href="https://doi.org/10.23696/vdemds25">10.23696/vdemds25</a></div>
+    </div>` : ""}
+
+    ${vdemCharts.frefair && vdemCharts.frefair.length > 0 ? `
+    <div class="chart-block">
+      <div class="chart-title">Elecciones Libres y Justas — Perú 1990–${vdemCharts.year}</div>
+      <div class="chart-subtitle">Variable <code>v2xel_frefair</code>: mide si las elecciones son libres y justas según expertos. Escala 0–1 (1 = plenamente libres y justas). Es la variable V-Dem más directamente vinculada a integridad electoral — distinta de <code>v2x_libdem</code> que mide democracia estructural.</div>
+      ${_svgLine(vdemCharts.frefair, { color: "#0369a1", minY: 0, maxY: 1, milestones: vdemCharts.milestones, yFmt: v => v.toFixed(2) })}
+      <div class="chart-source">Fuente: Coppedge, M., et al. (2025). <em>V-Dem Dataset v15</em>. Variable: <code>v2xel_frefair</code>. Varieties of Democracy Project. DOI: <a href="https://doi.org/10.23696/vdemds25">10.23696/vdemds25</a></div>
+    </div>` : ""}
+
+    ${vdemCharts.alertSeries && vdemCharts.alertSeries.length > 0 ? `
+    <div class="chart-block">
+      <div class="chart-title">Indicadores de Alerta Temprana — Irregularidades e Intimidación Electoral 2000–${vdemCharts.year}</div>
+      <div class="chart-subtitle"><code>v2elirreg</code>: irregularidades electorales (0 = irregularidades sistemáticas; 1 = proceso limpio). <code>v2elintim</code>: intimidación electoral a votantes y candidatos (0 = intimidación severa; 1 = sin intimidación). Valores bajos en años electorales predicen incidentes en jornada.</div>
+      ${_svgGroupedBars(vdemCharts.alertSeries, "v2elirreg", "v2elintim", { label1: "Irregularidades (v2elirreg)", label2: "Intimidación (v2elintim)", c1: "#dc2626", c2: "#d97706", maxY: 1 })}
+      <div class="chart-source">Fuente: Coppedge, M., et al. (2025). <em>V-Dem Dataset v15</em>. Variables: <code>v2elirreg</code>, <code>v2elintim</code>. Varieties of Democracy Project. DOI: <a href="https://doi.org/10.23696/vdemds25">10.23696/vdemds25</a></div>
+    </div>` : ""}
+
+  </div>` : "";
+
+  // ── Glosario Técnico ──────────────────────────────────────────────────────
+  const GLOSSARY = [
+    ["APA", "American Psychological Association", "Estilo de cita académica que utilizamos en este informe para asegurar trazabilidad completa de todas las fuentes citadas."],
+    ["CADH", "Convención Americana sobre Derechos Humanos (Pacto de San José)", "Tratado interamericano de 1969. Su Art. 23 garantiza los derechos políticos: votar, ser elegido y acceder a funciones públicas en condiciones de igualdad."],
+    ["CEDAW", "Convention on the Elimination of All Forms of Discrimination against Women", "Tratado de la ONU (1979) que obliga a los Estados a garantizar la participación electoral de las mujeres en igualdad de condiciones."],
+    ["CDI", "Carta Democrática Interamericana", "Documento adoptado por la OEA en 2001. Define los elementos esenciales de la democracia representativa (Arts. 3–4) y habilita mecanismos colectivos de respuesta ante rupturas democráticas."],
+    ["CIDH", "Comisión Interamericana de Derechos Humanos", "Órgano autónomo de la OEA que monitorea, promueve y protege los derechos humanos en América. Emite medidas cautelares y lleva casos ante la Corte IDH."],
+    ["CRPD", "Convention on the Rights of Persons with Disabilities", "Tratado de la ONU (2006). Sus Arts. 12 y 29 garantizan la participación electoral de personas con discapacidad en condiciones de igualdad efectiva."],
+    ["EMB", "Electoral Management Body", "Organismo de gestión electoral (OGE). En Perú: el JNE (adjudica/controla), la ONPE (organiza el voto) y el RENIEC (administra el registro civil y padrón). El sistema peruano es tripartito."],
+    ["FH / FIW", "Freedom House — Freedom in the World", "Índice anual (1972–presente) que clasifica 195 países según libertades políticas (PR) y civiles (CL), en una escala de 0 a 100. Fuente utilizada: FIW 2025."],
+    ["FH CL", "Freedom House — Civil Liberties", "Subíndice de Freedom in the World que evalúa libertad de expresión, de asociación, estado de derecho e igualdad ante la ley. Escala 0–16 (interna), convertida a 0–100 en PEIRS."],
+    ["FH PR", "Freedom House — Political Rights", "Subíndice de Freedom in the World que evalúa proceso electoral, pluralismo, funcionamiento del gobierno. Escala 0–40 (interna), convertida a 0–100 en PEIRS."],
+    ["ICCPR", "International Covenant on Civil and Political Rights (Pacto Internacional de Derechos Civiles y Políticos)", "Tratado fundamental de la ONU (1966, vigente 1976). El Art. 25 garantiza el derecho a votar y ser elegido en elecciones auténticas con sufragio universal e igual. Ratificado por Perú en 1978."],
+    ["ICERD", "International Convention on the Elimination of All Forms of Racial Discrimination", "Tratado de la ONU (1965). Su Art. 5(c) prohíbe la discriminación racial en el ejercicio de los derechos políticos y electorales."],
+    ["IRE", "Índice de Riesgo Electoral", "Índice sintético de PEIRS (0–100, donde 100 = riesgo máximo) que agrega 8 dimensiones: sufragio, marco legal, independencia EMB, libertad de prensa, financiamiento, ecosistema digital, justicia electoral, inclusividad."],
+    ["IPRE", "Índice Predictivo de Riesgo Electoral", "Nombre alternativo del IRE. Enfatiza su naturaleza predictiva: anticipa condiciones de riesgo antes de la jornada electoral usando datos históricos y estructurales."],
+    ["JNE", "Jurado Nacional de Elecciones", "Organismo autónomo de Perú que dirime controversias electorales, administra la justicia electoral y fiscaliza el cumplimiento de la ley. Equivale a un tribunal electoral."],
+    ["MOE", "Misión de Observación Electoral", "Conjunto de observadores internacionales desplegados para evaluar un proceso electoral. Las MOE de la UE, OEA y OSCE/ODIHR publican metodologías estándar que PEIRS utiliza como referencia."],
+    ["ODIE / ODIHR", "Office for Democratic Institutions and Human Rights (OSCE)", "Oficina de la OSCE especializada en observación electoral en la región europea/euro-asiática. Sus metodologías de MOE son estándar de referencia global."],
+    ["OEA", "Organización de los Estados Americanos", "Organismo regional hemisférico. Emite la Carta Democrática Interamericana y coordina MOEs en América Latina y el Caribe."],
+    ["OGE", "Organismo de Gestión Electoral", "Traducción al español de EMB. En contextos de PEIRS se usa indistintamente."],
+    ["ONPE", "Oficina Nacional de Procesos Electorales", "Organismo técnico de Perú responsable de la organización y ejecución de los procesos electorales: diseño de cédula, cómputo de votos, formación de mesas."],
+    ["OONI", "Open Observatory of Network Interference", "Organización que monitorea en tiempo real la censura y bloqueo de internet en 200+ países. PEIRS integra OONI API para el indicador de ecosistema digital."],
+    ["ONU", "Organización de las Naciones Unidas", "Organismo internacional que adopta los tratados de DDHH que fundamentan los estándares electorales (ICCPR, CEDAW, CRPD, ICERD, UNDRIP)."],
+    ["PEI", "Perceptions of Electoral Integrity Dataset", "Encuesta académica de Pippa Norris et al. (Harvard Dataverse). Versión 10.0 (2024) cubre 586 elecciones en 166 países. Evalúa 11 dimensiones (marco legal, padrón, medios, campaña, votación, escrutinio, etc.) con expertos electorales."],
+    ["PEIRS", "Predictive Electoral Integrity & Risk System", "Sistema DEMOCRAC.IA de análisis y predicción de riesgos de integridad electoral. Combina 4 datasets estructurados (V-Dem, FH, PEI, RSF) con agentes de IA (Claude + LangGraph) para producir informes automatizados con trazabilidad."],
+    ["RENIEC", "Registro Nacional de Identificación y Estado Civil", "Organismo peruano que administra el DNI, el registro civil y el padrón electoral. La calidad del padrón impacta directamente en el derecho al voto (Art. 25 ICCPR)."],
+    ["RSF", "Reporters Sans Frontières — World Press Freedom Index", "Índice anual de libertad de prensa de Reporteros Sin Fronteras. Evalúa 180 países en 5 dimensiones: entorno político, legal, económico, sociocultural y seguridad. Escala 0–100 (100 = total libertad). Fuente: RSF 2025."],
+    ["UNDRIP", "United Nations Declaration on the Rights of Indigenous Peoples", "Declaración de la ONU (2007). Arts. 5 y 18 garantizan el derecho de los pueblos indígenas a mantener instituciones políticas propias y a participar en procesos electorales nacionales."],
+    ["V-Dem", "Varieties of Democracy Project", "Dataset académico elaborado por el Instituto V-Dem (Universidad de Gotemburgo). La versión 15 (2025) cubre 202 países y 1789–2024 con 900+ variables. Incluye índices de democracia liberal, electoral, participativa, deliberativa e igualitaria. Referencia principal de PEIRS para series históricas."],
+    ["v2elembaut", "V-Dem: EMB Autonomy (Autonomía del Organismo Electoral)", "Variable V-Dem (escala 0–1) que mide en qué grado el organismo electoral actúa con independencia del gobierno. En Perú, aplica principalmente al JNE."],
+    ["v2elembcap", "V-Dem: EMB Capacity (Capacidad del Organismo Electoral)", "Variable V-Dem (escala 0–1) que mide la capacidad técnica e institucional del organismo electoral para administrar elecciones. Considera recursos humanos, financiamiento y autonomía operativa."],
+    ["v2mecenefi", "V-Dem: Government censorship effort — media (Censura gubernamental a medios)", "Variable V-Dem (escala 0–1) que mide cuánto esfuerzo hace el gobierno por censurar o controlar los medios de comunicación. 0 = censura sistemática; 1 = sin censura."],
+    ["v2mebias", "V-Dem: Media bias in favor of the governing party (Sesgo mediático progubernamental)", "Variable V-Dem (escala 0–1) que captura si los medios cubren las actividades del gobierno de manera más favorable que las de la oposición. PEIRS lo invierte: mayor score = mayor libertad."],
+    ["v2meharjrn", "V-Dem: Harassment of journalists (Acoso a periodistas)", "Variable V-Dem (escala 0–1) que mide si el gobierno, o agentes que actúan en su nombre, hostigan, intimidan o agreden a periodistas. 0 = acoso sistemático; 1 = sin acoso."],
+    ["v2x_libdem", "V-Dem: Liberal Democracy Index (Índice de Democracia Liberal)", "Índice compuesto V-Dem (escala 0–1) que agrega: democracia electoral (v2x_polyarchy) + estado de derecho + protección de libertades civiles. Principal indicador de calidad democrática en PEIRS."],
+    ["v2x_polyarchy", "V-Dem: Electoral Democracy Index (Índice de Democracia Electoral)", "Índice V-Dem (escala 0–1) basado en el modelo de Robert Dahl (poliarquía). Evalúa sufragio, elecciones limpias, libertad de expresión y asociación. Componente del v2x_libdem."],
+  ];
+
+  // Calcular la letra de sección dinámica para el glosario
+  const glossarySectionLetter = (() => {
+    let idx = 70; // "F"
+    if (vdemCharts) idx++;    // G si hay V-Dem
+    if (moeBrief) idx++;      // +1 si hay MOE brief
+    if (actorsData) idx++;    // +1 si hay actores
+    if (scenariosData) idx++; // +1 si hay escenarios
+    return String.fromCharCode(idx);
+  })();
+
+  const glossaryHtml = `
+  <!-- ════ SECCIÓN ${glossarySectionLetter}: GLOSARIO TÉCNICO ═══════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-number">${glossarySectionLetter}</div>
+    <div class="section-title">Glosario Técnico y Acrónimos</div>
+  </div>
+  <div class="glossary-section">
+    <div class="glossary-intro">Los siguientes términos, acrónimos y variables de dataset aparecen en este informe. Los identificadores de variables V-Dem (<code>v2…</code>) están en escala estandarizada 0–1 salvo indicación contraria.</div>
+    <table>
+      <thead><tr><th style="width:14%">Acrónimo / Variable</th><th style="width:28%">Nombre completo</th><th>Descripción y relevancia en PEIRS</th></tr></thead>
+      <tbody>
+        ${GLOSSARY.map(([acr, full, desc]) => `<tr><td><code>${acr}</code></td><td><strong>${full}</strong></td><td>${desc}</td></tr>`).join("")}
+      </tbody>
+    </table>
+  </div>`;
+
   // ── Convertidor Markdown → HTML completo ─────────────────────────────────
   const mdToHtml = (md) => {
     if (!md) return "";
@@ -2004,6 +2257,153 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
     return md;
   };
 
+  // ── Pizarra Crisis Democrática — SVG estático para el informe ────────────
+  const pizarraSvgHtml = `
+<section class="chapter" style="page-break-inside:avoid;">
+  <h2 style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 10px;letter-spacing:1px;text-transform:uppercase;">
+    Línea de Tiempo — Crisis Democrática 2016–2026
+  </h2>
+  <p style="font-size:10px;color:#475569;margin:0 0 12px;line-height:1.6;">
+    Fuentes: V-Dem v15 (v2x_libdem), Freedom House FIW 2025, registros parlamentarios JNE.
+    El índice V-Dem de democracia liberal pasó de 0.59 (2016) a 0.40 (proyección 2026), una caída de −0.19 puntos en una década.
+  </p>
+  <div style="background:linear-gradient(175deg,#080e1a 0%,#0d1424 100%);border-radius:10px;padding:12px 16px 10px;border:1px solid #1e293b;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="font-size:9px;font-weight:700;letter-spacing:3px;color:#475569;font-family:monospace;text-transform:uppercase;">Pizarra — Crisis Democrática</span>
+      <div style="flex:1;height:1px;background:#1e293b;"></div>
+      <span style="font-size:9px;color:#334155;font-family:monospace;">2016 → 2026</span>
+    </div>
+    <svg viewBox="0 0 820 348" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="rpt-ptl-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+          <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(255,255,255,0.022)" stroke-width=".6"/>
+        </pattern>
+        <filter id="rpt-ptl-chalk" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="4" result="n"/>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+        <filter id="rpt-ptl-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="3.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <marker id="rpt-ptl-arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="rgba(248,250,252,0.45)" filter="url(#rpt-ptl-chalk)"/>
+        </marker>
+      </defs>
+      <rect width="820" height="348" fill="url(#rpt-ptl-grid)"/>
+      <text x="410" y="205" text-anchor="middle" font-size="42" fill="rgba(255,255,255,0.028)" font-family="monospace" font-weight="900" letter-spacing="5">CRISIS DEMOCRÁTICA</text>
+      <path d="M 50 182 C 98 170,122 198,145 187 C 170 175,215 166,240 176 C 268 188,305 202,330 190 C 356 178,398 163,420 176 C 446 192,483 205,510 190 C 536 175,573 152,600 170 C 626 188,658 204,685 190 C 710 176,745 166,770 180"
+        stroke="rgba(248,250,252,0.50)" stroke-width="2.5" fill="none" stroke-linecap="round" filter="url(#rpt-ptl-chalk)" marker-end="url(#rpt-ptl-arr)"/>
+      <!-- 2016 -->
+      <line x1="50" y1="169" x2="50" y2="141" stroke="#3b82f660" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="50" cy="182" r="13" fill="#3b82f6" filter="url(#rpt-ptl-glow)"/>
+      <text x="50" y="186" text-anchor="middle" font-size="10" fill="white" font-weight="800">16</text>
+      <rect x="4" y="95" width="96" height="46" rx="5" fill="#1e3a5f" stroke="#3b82f666" stroke-width="1.2"/>
+      <text x="52" y="110" text-anchor="middle" font-size="9" fill="#93c5fd" font-weight="700">2016 PPK</text>
+      <text x="52" y="123" text-anchor="middle" font-size="8" fill="#94a3b8">PPK presidente</text>
+      <text x="52" y="134" text-anchor="middle" font-size="7.5" fill="#475569">FP domina Congreso</text>
+      <!-- 2018 -->
+      <line x1="145" y1="200" x2="145" y2="228" stroke="#f59e0b60" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="145" cy="187" r="13" fill="#f59e0b" filter="url(#rpt-ptl-glow)"/>
+      <text x="145" y="191" text-anchor="middle" font-size="10" fill="white" font-weight="800">18</text>
+      <rect x="97" y="228" width="96" height="46" rx="5" fill="#1f1500" stroke="#f59e0b66" stroke-width="1.2"/>
+      <text x="145" y="243" text-anchor="middle" font-size="9" fill="#fcd34d" font-weight="700">2018 PPK renuncia</text>
+      <text x="145" y="256" text-anchor="middle" font-size="8" fill="#94a3b8">PPK renuncia</text>
+      <text x="145" y="267" text-anchor="middle" font-size="7.5" fill="#475569">Vizcarra asume</text>
+      <!-- 2019 -->
+      <line x1="240" y1="163" x2="240" y2="135" stroke="#f9731660" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="240" cy="176" r="13" fill="#f97316" filter="url(#rpt-ptl-glow)"/>
+      <text x="240" y="180" text-anchor="middle" font-size="10" fill="white" font-weight="800">19</text>
+      <rect x="192" y="89" width="96" height="46" rx="5" fill="#1c1208" stroke="#f9731666" stroke-width="1.2"/>
+      <text x="240" y="104" text-anchor="middle" font-size="9" fill="#fb923c" font-weight="700">2019 Congreso</text>
+      <text x="240" y="117" text-anchor="middle" font-size="8" fill="#94a3b8">Congreso disuelto</text>
+      <text x="240" y="128" text-anchor="middle" font-size="7.5" fill="#475569">Elecciones extraordinarias</text>
+      <!-- 2020 (crisis) -->
+      <circle cx="330" cy="190" r="26" fill="none" stroke="#ef4444" stroke-width="1.2" opacity="0.3" stroke-dasharray="4 3"/>
+      <line x1="330" y1="207" x2="330" y2="235" stroke="#ef444460" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="330" cy="190" r="17" fill="#ef4444" filter="url(#rpt-ptl-glow)"/>
+      <text x="330" y="194" text-anchor="middle" font-size="10" fill="white" font-weight="800">20</text>
+      <rect x="282" y="235" width="96" height="46" rx="5" fill="#2d0808" stroke="#ef4444bb" stroke-width="1.8"/>
+      <text x="330" y="250" text-anchor="middle" font-size="9" fill="#fca5a5" font-weight="700">2020 CRISIS</text>
+      <text x="330" y="263" text-anchor="middle" font-size="8" fill="#94a3b8">3 presidentes</text>
+      <text x="330" y="274" text-anchor="middle" font-size="7.5" fill="#475569">en 7 días</text>
+      <!-- 2021 -->
+      <line x1="420" y1="163" x2="420" y2="135" stroke="#dc262660" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="420" cy="176" r="13" fill="#dc2626" filter="url(#rpt-ptl-glow)"/>
+      <text x="420" y="180" text-anchor="middle" font-size="10" fill="white" font-weight="800">21</text>
+      <rect x="372" y="89" width="96" height="46" rx="5" fill="#2d0808" stroke="#dc262666" stroke-width="1.2"/>
+      <text x="420" y="104" text-anchor="middle" font-size="9" fill="#fca5a5" font-weight="700">2021 Castillo</text>
+      <text x="420" y="117" text-anchor="middle" font-size="8" fill="#94a3b8">Castillo gana</text>
+      <text x="420" y="128" text-anchor="middle" font-size="7.5" fill="#475569">FH:71 · V-Dem:0.52</text>
+      <!-- 2022 -->
+      <line x1="510" y1="203" x2="510" y2="231" stroke="#b91c1c60" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="510" cy="190" r="13" fill="#b91c1c" filter="url(#rpt-ptl-glow)"/>
+      <text x="510" y="194" text-anchor="middle" font-size="10" fill="white" font-weight="800">22</text>
+      <rect x="462" y="231" width="96" height="46" rx="5" fill="#2d0808" stroke="#b91c1c66" stroke-width="1.2"/>
+      <text x="510" y="246" text-anchor="middle" font-size="9" fill="#fca5a5" font-weight="700">2022 Castillo</text>
+      <text x="510" y="259" text-anchor="middle" font-size="8" fill="#94a3b8">Castillo destituido</text>
+      <text x="510" y="270" text-anchor="middle" font-size="7.5" fill="#475569">Boluarte asume</text>
+      <!-- 2023 crisis -->
+      <circle cx="600" cy="170" r="26" fill="none" stroke="#991b1b" stroke-width="1.2" opacity="0.3" stroke-dasharray="4 3"/>
+      <line x1="600" y1="157" x2="600" y2="129" stroke="#991b1b60" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="600" cy="170" r="17" fill="#991b1b" filter="url(#rpt-ptl-glow)"/>
+      <text x="600" y="174" text-anchor="middle" font-size="10" fill="white" font-weight="800">23</text>
+      <rect x="552" y="83" width="96" height="46" rx="5" fill="#3b0000" stroke="#991b1bbb" stroke-width="1.8"/>
+      <text x="600" y="98" text-anchor="middle" font-size="9" fill="#fca5a5" font-weight="700">2023 CRISIS</text>
+      <text x="600" y="111" text-anchor="middle" font-size="8" fill="#94a3b8">60+ muertes</text>
+      <text x="600" y="122" text-anchor="middle" font-size="7.5" fill="#475569">CIDH cautelares</text>
+      <!-- 2024 -->
+      <line x1="685" y1="203" x2="685" y2="231" stroke="#7f1d1d60" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="685" cy="190" r="13" fill="#7f1d1d" filter="url(#rpt-ptl-glow)"/>
+      <text x="685" y="194" text-anchor="middle" font-size="10" fill="white" font-weight="800">24</text>
+      <rect x="637" y="231" width="96" height="46" rx="5" fill="#1a0808" stroke="#7f1d1d66" stroke-width="1.2"/>
+      <text x="685" y="246" text-anchor="middle" font-size="9" fill="#fca5a5" font-weight="700">2024 Boluarte</text>
+      <text x="685" y="259" text-anchor="middle" font-size="8" fill="#94a3b8">Aprobación</text>
+      <text x="685" y="270" text-anchor="middle" font-size="7.5" fill="#475569">&lt;10% histórico</text>
+      <!-- 2026 election -->
+      <circle cx="770" cy="180" r="27" fill="none" stroke="#0d9488" stroke-width="1.2" opacity="0.3" stroke-dasharray="4 3"/>
+      <line x1="770" y1="162" x2="770" y2="134" stroke="#0d948860" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="770" cy="180" r="18" fill="#0d9488" filter="url(#rpt-ptl-glow)"/>
+      <text x="770" y="184" text-anchor="middle" font-size="10" fill="white" font-weight="800">26</text>
+      <rect x="722" y="88" width="96" height="46" rx="5" fill="#042f2e" stroke="#0d9488bb" stroke-width="1.8"/>
+      <text x="770" y="103" text-anchor="middle" font-size="9" fill="#2dd4bf" font-weight="700">2026 ELECCIONES</text>
+      <text x="770" y="116" text-anchor="middle" font-size="8" fill="#94a3b8">12 de abril</text>
+      <text x="770" y="127" text-anchor="middle" font-size="7.5" fill="#475569">PEIRS activo</text>
+      <!-- V-Dem sparkline -->
+      <text x="410" y="290" text-anchor="middle" font-size="7" fill="#334155" font-family="monospace" letter-spacing="2">ÍNDICE V-DEM — DEMOCRACIA LIBERAL (v2x_libdem)</text>
+      <line x1="36" y1="297" x2="36" y2="326" stroke="#1e293b" stroke-width="1"/>
+      <line x1="36" y1="326" x2="804" y2="326" stroke="#1e293b" stroke-width="1.2"/>
+      <text x="16" y="312" text-anchor="middle" font-size="7" fill="#334155" font-family="monospace" transform="rotate(-90,16,312)">V-Dem</text>
+      <rect x="41" y="309" width="18" height="17" rx="3" fill="#3b82f6" opacity="0.75"/>
+      <text x="50" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.59</text>
+      <rect x="136" y="311" width="18" height="15" rx="3" fill="#3b82f6" opacity="0.75"/>
+      <text x="145" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.56</text>
+      <rect x="231" y="313" width="18" height="13" rx="3" fill="#f59e0b" opacity="0.75"/>
+      <text x="240" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.54</text>
+      <rect x="321" y="316" width="18" height="10" rx="3" fill="#f97316" opacity="0.75"/>
+      <text x="330" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.50</text>
+      <rect x="411" y="314" width="18" height="12" rx="3" fill="#f59e0b" opacity="0.75"/>
+      <text x="420" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.52</text>
+      <rect x="501" y="317" width="18" height="9" rx="3" fill="#f97316" opacity="0.75"/>
+      <text x="510" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.47</text>
+      <rect x="591" y="319" width="18" height="7" rx="3" fill="#ef4444" opacity="0.75"/>
+      <text x="600" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.44</text>
+      <rect x="676" y="320" width="18" height="6" rx="3" fill="#ef4444" opacity="0.75"/>
+      <text x="685" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.42</text>
+      <rect x="761" y="322" width="18" height="4" rx="3" fill="#ef4444" opacity="0.75"/>
+      <text x="770" y="337" text-anchor="middle" font-size="7.5" fill="#475569" font-family="monospace">0.40</text>
+      <line x1="50" y1="302" x2="770" y2="323" stroke="#ef444445" stroke-width="1.2" stroke-dasharray="6 3"/>
+      <text x="720" y="300" font-size="8" fill="#ef444490" font-family="monospace" font-weight="700">↘ −0.19</text>
+    </svg>
+    <div style="display:flex;gap:14px;padding:5px 0 2px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:7px;height:7px;border-radius:50%;background:#3b82f6;"></div><span style="font-size:9px;color:#475569;font-family:monospace;">Estabilidad relativa</span></div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:7px;height:7px;border-radius:50%;background:#f59e0b;"></div><span style="font-size:9px;color:#475569;font-family:monospace;">Transición</span></div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:7px;height:7px;border-radius:50%;background:#ef4444;"></div><span style="font-size:9px;color:#475569;font-family:monospace;">Crisis aguda</span></div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:7px;height:7px;border-radius:50%;background:#0d9488;"></div><span style="font-size:9px;color:#475569;font-family:monospace;">2026 Electoral</span></div>
+    </div>
+  </div>
+</section>`;
+
   // ── Capítulos en HTML ─────────────────────────────────────────────────────
   const chapOrder = [
     "01_executive_summary","02_political_context","03_emb_analysis",
@@ -2012,18 +2412,24 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
   ];
   const chapHtml = chapOrder
     .filter(k => chapters[k])
-    .map(k => `<section class="chapter">${mdToHtml(chapters[k])}</section>`)
+    .map(k => {
+      const sec = `<section class="chapter">${mdToHtml(chapters[k])}</section>`;
+      // Insertar Pizarra inmediatamente después del cap. 02 (contexto político)
+      if (k === "02_political_context") return sec + "\n" + pizarraSvgHtml;
+      return sec;
+    })
     .join("\n");
 
   // ── Violaciones ───────────────────────────────────────────────────────────
   const violHtml = violations.length > 0 ? `
 <table>
-  <thead><tr><th>Artículo</th><th>Derecho</th><th>Severidad</th><th>Confianza</th></tr></thead>
+  <thead><tr><th>Artículo</th><th>Derecho</th><th>Hallazgo</th><th>Severidad</th><th>Confianza</th></tr></thead>
   <tbody>
     ${violations.map(v => `
     <tr>
       <td><code>${v.article || "—"}</code></td>
       <td>${v.right || v.description || "—"}</td>
+      <td style="font-size:10px;color:#475569">${(v.finding || "—").substring(0, 150)}${(v.finding || "").length > 150 ? "…" : ""}</td>
       <td class="${v.severity === "critical" ? "risk-critical" : v.severity === "high" ? "risk-high" : ""}">${(v.severity || "—").toUpperCase()}</td>
       <td class="${v.confidence === "confirmed" ? "conf-ok" : "conf-pend"}">${v.confidence === "confirmed" ? "&#10003; Verificado" : "&#9888; Pendiente"}</td>
     </tr>`).join("")}
@@ -2044,6 +2450,251 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
   <td>${s.val}</td>
   <td class="${s.status === "confirmed" ? "conf-ok" : "conf-pend"}">${s.status === "confirmed" ? "&#10003; Verificado" : "&#9888; Pendiente"}</td>
 </tr>`).join("");
+
+  // ── Sección G: MOE Brief ──────────────────────────────────────────────────
+  const moeBriefSectionHtml = moeBrief ? (() => {
+    const rc = moeBrief.blocks && moeBrief.blocks.risk_context ? moeBrief.blocks.risk_context : {};
+    const lf = moeBrief.blocks && moeBrief.blocks.legal_framework ? moeBrief.blocks.legal_framework : {};
+    const pa = moeBrief.blocks && moeBrief.blocks.priority_areas ? moeBrief.blocks.priority_areas : {};
+    const proto = moeBrief.blocks && moeBrief.blocks.protocol ? moeBrief.blocks.protocol : {};
+    const areas = pa.priority_areas || [];
+    const protoData = proto.protocol || {};
+    const observers = proto.recommended_observers || [];
+
+    const alertColors = {
+      RED: { bg: "#fef2f2", border: "#fca5a5", text: "#991b1b" },
+      ORANGE: { bg: "#fff7ed", border: "#fdba74", text: "#c2410c" },
+      AMBER: { bg: "#fffbeb", border: "#fcd34d", text: "#92400e" },
+      GREEN: { bg: "#f0fdf4", border: "#86efac", text: "#065f46" },
+    };
+    const ac = alertColors[moeBrief.alert_level] || alertColors.AMBER;
+
+    const ki = rc.key_indicators || {};
+    const critViol = rc.critical_violations || [];
+    const riskFactors = rc.risk_factors || [];
+
+    const riskBadgeColor = (r) => {
+      if (r === "critical") return "background:#fef2f2;color:#991b1b;border:1px solid #fca5a5";
+      if (r === "high") return "background:#fff7ed;color:#c2410c;border:1px solid #fdba74";
+      if (r === "moderate") return "background:#fffbeb;color:#b45309;border:1px solid #fcd34d";
+      return "background:#f0fdf4;color:#065f46;border:1px solid #86efac";
+    };
+
+    return `
+  <!-- ════ SECCIÓN G: MOE BRIEF ════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-number">G</div>
+    <div class="section-title">MOE Brief — Misión de Observación Electoral</div>
+  </div>
+  <div class="moe-brief-section">
+
+    <div class="alert-banner" style="background:${ac.bg};border:1px solid ${ac.border}">
+      <div style="font-size:22px;font-weight:900;color:${ac.text};font-family:'DM Mono',monospace;min-width:80px">${moeBrief.alert_level || "—"}</div>
+      <div>
+        <div class="alert-level-text" style="color:${ac.text}">${moeBrief.alert_label || "—"}</div>
+        <div class="alert-label-text">Fase actual: ${moeBrief.current_phase_label || "—"} · ${moeBrief.days_to_election >= 0 ? moeBrief.days_to_election + " días para la elección" : "Proceso post-electoral"} · Generado: ${moeBrief.generated_at ? new Date(moeBrief.generated_at).toLocaleDateString("es-AR") : "—"}</div>
+      </div>
+    </div>
+
+    ${rc.risk_score !== undefined ? `
+    <h3 style="margin-bottom:10px;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:1px">Indicadores Clave de Riesgo</h3>
+    <table>
+      <thead><tr><th>Indicador</th><th>Valor</th><th>Nota</th></tr></thead>
+      <tbody>
+        <tr><td><strong>PEIRS Risk Score</strong></td><td><code>${rc.risk_score}/100</code></td><td>${rc.risk_level ? rc.risk_level.toUpperCase() : "—"}</td></tr>
+        ${ki.freedom_house ? `<tr><td>Freedom House FIW</td><td><code>${ki.freedom_house}</code></td><td>Libertades políticas y civiles</td></tr>` : ""}
+        ${ki.vdem_liberal_democracy !== undefined ? `<tr><td>V-Dem Liberal Democracy</td><td><code>${ki.vdem_liberal_democracy}</code></td><td>V-Dem v15 — escala 0–1</td></tr>` : ""}
+        ${ki.emb_independence ? `<tr><td>Independencia EMB (JNE/ONPE)</td><td><code>${ki.emb_independence.toUpperCase()}</code></td><td>Nivel de autonomía institucional</td></tr>` : ""}
+        ${ki.active_violations !== undefined ? `<tr><td>Violaciones activas detectadas</td><td><code>${ki.active_violations}</code></td><td>ICCPR/CADH/CDI</td></tr>` : ""}
+        ${rc.current_phase ? `<tr><td>Fase electoral actual</td><td><code>${rc.current_phase}</code></td><td>Elección: ${moeBrief.election_date || "—"}</td></tr>` : ""}
+      </tbody>
+    </table>` : ""}
+
+    ${critViol.length > 0 ? `
+    <h3 style="margin:16px 0 10px;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:1px">Violaciones Críticas Detectadas</h3>
+    <table>
+      <thead><tr><th>Tratado / Artículo</th><th>Hallazgo</th><th>Severidad</th></tr></thead>
+      <tbody>
+        ${critViol.map(v => `<tr>
+          <td><code>${v.treaty || "—"} ${v.article || ""}</code></td>
+          <td>${v.finding || "—"}</td>
+          <td style="font-size:10px;font-weight:700;${riskBadgeColor(v.severity)};padding:2px 6px;border-radius:4px">${(v.severity || "—").toUpperCase()}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>` : ""}
+
+    ${areas.length > 0 ? `
+    <h3 style="margin:16px 0 10px;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:1px">Áreas Prioritarias de Observación</h3>
+    <table>
+      <thead><tr><th>#</th><th>Área</th><th>Riesgo</th><th>Hallazgos</th><th>Estándar EOS</th></tr></thead>
+      <tbody>
+        ${areas.map(a => `<tr>
+          <td>${a.priority}</td>
+          <td><strong>${a.area}</strong></td>
+          <td><span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace;text-transform:uppercase;${riskBadgeColor(a.risk)}">${(a.risk || "—").toUpperCase()}</span></td>
+          <td>${(a.findings || []).join("; ")}</td>
+          <td style="font-size:10px;color:#64748b">${a.eos_standard || "—"}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>` : ""}
+
+    ${protoData.type ? `
+    <h3 style="margin:16px 0 10px;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:1px">Protocolo de Observación Recomendado</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+      <div style="background:var(--paper-2);border:1px solid var(--border);padding:12px;border-radius:4px">
+        <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Tipo de Misión</div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">${protoData.label || protoData.type}</div>
+      </div>
+      <div style="background:var(--paper-2);border:1px solid var(--border);padding:12px;border-radius:4px">
+        <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Duración LTO</div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">${protoData.lto_duration || "—"}</div>
+      </div>
+      <div style="background:var(--paper-2);border:1px solid var(--border);padding:12px;border-radius:4px">
+        <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Observadores STO</div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">${protoData.sto_count || "—"}</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#475569;margin-bottom:12px">${protoData.description || ""}</p>
+    ${observers.length > 0 ? `<div style="font-size:11px;color:#475569"><strong>Organizaciones recomendadas:</strong> ${observers.map(o => `${o.org} (${o.role})`).join(" · ")}</div>` : ""}` : ""}
+
+  </div>`;
+  })() : "";
+
+  // ── Sección H: Actores Políticos ──────────────────────────────────────────
+  const actorsSectionHtml = actorsData ? (() => {
+    const actors = actorsData.actors || [];
+    const riskBadgeStyle = (rp) => {
+      const styles = {
+        critical: "background:#fef2f2;color:#991b1b;border:1px solid #fca5a5",
+        high: "background:#fff7ed;color:#c2410c;border:1px solid #fdba74",
+        moderate: "background:#fffbeb;color:#b45309;border:1px solid #fcd34d",
+        low: "background:#f0fdf4;color:#065f46;border:1px solid #86efac",
+      };
+      return styles[rp] || styles.moderate;
+    };
+
+    const typeOrder = ["party", "person", "institution"];
+    const grouped = {};
+    actors.forEach(a => {
+      const t = a.type || "party";
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(a);
+    });
+
+    const typeLabels = { party: "Partidos Políticos", person: "Candidatos y Figuras Clave", institution: "Instituciones" };
+
+    const rows = actors.map(a => {
+      const keyIssues = (a.key_policies || a.key_issues || []).slice(0, 2).join("; ");
+      const seatsInfo = a.current_seats != null ? ` · ${a.current_seats} escaños` : "";
+      return `<tr>
+        <td><strong>${a.abbr || a.id || "—"}</strong><br><span style="font-size:10px;color:#475569">${a.name}</span>${seatsInfo ? `<br><span style="font-size:10px;color:#94a3b8">${seatsInfo}</span>` : ""}</td>
+        <td style="font-size:10px">${a.ideology || a.type || "—"}</td>
+        <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace;text-transform:uppercase;${riskBadgeStyle(a.risk_profile)}">${(a.risk_profile || "—").toUpperCase()}</span></td>
+        <td style="font-size:10px">${keyIssues || "—"}</td>
+        <td style="font-size:10px;color:#475569">${(a.risk_notes || a.description || "").substring(0, 130)}${(a.risk_notes || a.description || "").length > 130 ? "…" : ""}</td>
+      </tr>`;
+    }).join("");
+
+    return `
+  <!-- ════ SECCIÓN H: ACTORES ════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-number">H</div>
+    <div class="section-title">Mapa de Actores — Perú 2026</div>
+  </div>
+  <div class="actors-section">
+    <p style="font-size:11px;color:#475569;margin-bottom:14px">
+      Fuerzas políticas con representación parlamentaria actual y candidaturas confirmadas para las elecciones del 12 de abril de 2026.
+      Total: <strong>${actorsData.total_actors || actors.length} actores</strong> · Sistema: ${actorsData.electoral_system && actorsData.electoral_system.name ? actorsData.electoral_system.name : "Representación Proporcional D'Hondt"} · 130 escaños unicamerales.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:14%">Partido / Actor</th>
+          <th style="width:14%">Ideología</th>
+          <th style="width:10%">Perfil de Riesgo</th>
+          <th style="width:28%">Temas Clave</th>
+          <th>Nota de Riesgo PEIRS</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:10px;font-size:10px;color:#94a3b8">
+      Fuentes: JNE — Estadísticas electorales; ONPE — Resultados 2021; Transparencia Internacional Perú (2023); V-Dem v15. Datos actualizados a enero 2026.
+    </div>
+  </div>`;
+  })() : "";
+
+  // ── Sección I: Parlamento y Escenarios ────────────────────────────────────
+  const parliamentSectionHtml = scenariosData ? (() => {
+    const current = scenariosData.current || {};
+    const seats = current.seats || [];
+    const scenarios = scenariosData.scenarios || [];
+    const totalSeats = scenariosData.total_seats || 130;
+
+    // SVG barras horizontales de escaños actuales
+    const maxSeats = Math.max(...seats.map(s => s.seats), 1);
+    const rowH = 24, barW = 400, labelW = 180, valW = 40;
+    const svgH = seats.length * rowH + 20;
+    const seatsSvg = seats.length > 0 ? `
+<svg viewBox="0 0 ${labelW + barW + valW + 10} ${svgH}" width="100%" style="display:block;max-width:680px;margin-bottom:10px" xmlns="http://www.w3.org/2000/svg">
+  ${seats.map((s, i) => {
+    const y = 10 + i * rowH;
+    const bw = Math.max(2, (s.seats / maxSeats) * barW);
+    const col = s.color || "#94a3b8";
+    return `<rect x="${labelW}" y="${y+3}" width="${bw}" height="${rowH-8}" fill="${col}" rx="2" opacity="0.85"/>
+    <text x="${labelW-6}" y="${y+rowH/2+4}" text-anchor="end" font-size="9" fill="#475569" font-family="sans-serif">${s.full_name || s.party}</text>
+    <text x="${labelW+bw+5}" y="${y+rowH/2+4}" font-size="9" fill="${col}" font-family="monospace" font-weight="700">${s.seats}</text>`;
+  }).join("")}
+  <line x1="${labelW}" y1="10" x2="${labelW}" y2="${svgH-10}" stroke="#cbd5e1" stroke-width="1"/>
+</svg>` : "";
+
+    const scenarioCards = scenarios.map(sc => {
+      const sColor = sc.color || "#94a3b8";
+      const scSeats = (sc.seats || []).map(s =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9;font-size:10px">
+          <span style="color:#475569">${s.full_name || s.party}</span>
+          <span style="font-weight:700;color:${s.color || "#475569"};font-family:monospace">${s.seats}</span>
+        </div>`
+      ).join("");
+      return `<div class="scenario-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div class="scenario-name" style="color:${sColor}">${sc.label || sc.id}</div>
+          <div class="scenario-prob" style="color:${sColor}">${sc.probability_pct}%</div>
+        </div>
+        <div style="font-size:10px;color:#475569;margin-bottom:8px">${sc.description || ""}</div>
+        <div style="font-size:10px;font-weight:600;color:${sColor};margin-bottom:6px">Riesgo: ${sc.governance_risk || "—"}</div>
+        ${scSeats}
+      </div>`;
+    }).join("");
+
+    return `
+  <!-- ════ SECCIÓN I: PARLAMENTO ════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-number">I</div>
+    <div class="section-title">Parlamento y Escenarios Post-Electoral — Perú 2026</div>
+  </div>
+  <div class="parliament-section">
+
+    <h3 style="font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">${current.label || "Composición Actual"}</h3>
+    <p style="font-size:11px;color:#475569;margin-bottom:12px">${current.note || ""} Total: ${totalSeats} escaños. Sistema: ${scenariosData.electoral_system || "Representación proporcional D'Hondt"}.</p>
+    ${seatsSvg}
+
+    <h3 style="font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:1px;margin:20px 0 12px">Escenarios Proyectados — Congreso 2026-2031</h3>
+    <p style="font-size:11px;color:#475569;margin-bottom:14px">Modelos estructurales basados en tendencias electorales 2011-2021 y datos V-Dem. No constituyen predicción electoral.</p>
+    <div class="scenarios-grid">${scenarioCards}</div>
+
+    ${scenariosData.historical_context && scenariosData.historical_context.length > 0 ? `
+    <h3 style="font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">Contexto Histórico Reciente</h3>
+    <table>
+      <thead><tr><th style="width:8%">Año</th><th>Evento</th></tr></thead>
+      <tbody>${(scenariosData.historical_context || []).map(e => `<tr><td><code>${e.year}</code></td><td>${e.event}</td></tr>`).join("")}</tbody>
+    </table>` : ""}
+
+    <div style="margin-top:10px;font-size:10px;color:#94a3b8">
+      Fuentes: JNE — Sistema Electoral Peruano; ONPE — Resultados electorales 2021; V-Dem v15. Composición de bancadas aproximada a enero 2026.
+    </div>
+  </div>`;
+  })() : "";
 
   // ── Fecha ─────────────────────────────────────────────────────────────────
   const genDate = new Date(timestamp || Date.now());
@@ -2287,24 +2938,266 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
   /* ── Static timeline in print ── */
   .timeline-print { margin: 20px 0; background: #0a0f1a; border-radius: 8px; padding: 4px 0; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-  /* ── Print ── */
+  /* ── V-Dem Charts ── */
+  .vdem-charts-section { margin: 0 0 24px; }
+  .chart-block {
+    background: var(--paper-2); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px; margin-bottom: 24px;
+    page-break-inside: avoid; break-inside: avoid;
+  }
+  .chart-title {
+    font-size: 12px; font-weight: 700; color: var(--ink);
+    margin-bottom: 5px; font-family: 'DM Mono', monospace; letter-spacing: 0.3px;
+  }
+  .chart-subtitle {
+    font-size: 11px; color: var(--ink-light); line-height: 1.5; margin-bottom: 14px;
+  }
+  .chart-source {
+    font-size: 9.5px; color: var(--ink-dim); margin-top: 10px; font-style: italic;
+    padding-top: 8px; border-top: 1px dashed var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+  .chart-source a { color: var(--accent); text-decoration: none; }
+  .chart-source code { font-size: 9px; font-style: normal; }
+
+  /* ── Actores ── */
+  .actors-section { margin-bottom: 24px; }
+  .risk-badge { display:inline-block; padding: 1px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; text-transform: uppercase; }
+  .risk-badge.critical { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+  .risk-badge.high { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
+  .risk-badge.moderate { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+  .risk-badge.low { background: #f0fdf4; color: #065f46; border: 1px solid #86efac; }
+
+  /* ── MOE Brief ── */
+  .moe-brief-section { margin-bottom: 24px; }
+  .alert-banner { padding: 12px 20px; margin-bottom: 16px; border-radius: 4px; display: flex; align-items: center; gap: 12px; }
+  .alert-banner .alert-level-text { font-size: 13px; font-weight: 800; font-family: 'DM Mono', monospace; }
+  .alert-banner .alert-label-text { font-size: 11px; color: var(--ink-light); }
+
+  /* ── Parlamento ── */
+  .parliament-section { margin-bottom: 24px; }
+  .scenarios-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .scenario-card { border: 1px solid var(--border); padding: 14px; background: var(--paper-2); border-radius: 4px; }
+  .scenario-name { font-size: 11px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .scenario-prob { font-size: 18px; font-weight: 800; color: var(--accent); font-family: 'DM Mono', monospace; }
+
+  /* ── Glossary ── */
+  .glossary-section { margin-bottom: 32px; }
+  .glossary-intro {
+    font-size: 12px; color: var(--ink-light); margin-bottom: 16px;
+    background: var(--accent-bg); border: 1px solid #a7f3d0; border-left: 3px solid var(--accent);
+    padding: 10px 16px; border-radius: 0 4px 4px 0;
+  }
+  .glossary-section table { font-size: 11px; }
+  .glossary-section tbody td:first-child { white-space: nowrap; }
+
+  /* ── Print / A4 ── */
   @media print {
-    body { font-size: 11px; max-width: none; }
-    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .kpi-strip, .charts-grid, .trace-section, .methodology, .timeline-print { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    blockquote { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .chapter { page-break-inside: avoid; }
-    h2, h3 { page-break-after: avoid; }
-    table { page-break-inside: avoid; }
-    .apa-section { page-break-before: always; }
-    .methodology { page-break-inside: avoid; }
-    @page { margin: 18mm 15mm; size: A4; }
-    .report-footer { display: flex; }
+    /* ── Página A4 con márgenes institucionales ── */
+    @page {
+      size: A4 portrait;
+      margin: 20mm 18mm 24mm 18mm;
+    }
+    @page :first {
+      margin: 0;
+    }
+    @page {
+      @bottom-center {
+        content: counter(page) " / " counter(pages);
+        font-family: 'DM Mono', monospace;
+        font-size: 8pt;
+        color: #94a3b8;
+      }
+      @bottom-left {
+        content: "Democrac.IA — PEIRS — Uso analítico restringido";
+        font-family: 'DM Mono', monospace;
+        font-size: 7pt;
+        color: #cbd5e1;
+      }
+      @bottom-right {
+        content: string(chapterTitle);
+        font-family: 'DM Mono', monospace;
+        font-size: 7pt;
+        color: #94a3b8;
+      }
+    }
+
+    /* ── Reset base para impresión ── */
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      font-size: 10.5pt;
+      line-height: 1.6;
+      max-width: none;
+      width: 100%;
+      background: #fff !important;
+      color: #1e293b !important;
+    }
+
+    /* ── Portada: página completa sin márgenes ── */
+    .cover {
+      page-break-after: always;
+      min-height: 100vh;
+      padding: 52pt 56pt 44pt;
+      background: linear-gradient(160deg, #0f172a 0%, #1e293b 55%, #0f766e11 100%) !important;
+    }
+    .cover .country-name { font-size: 36pt !important; }
+    .cover .risk-score   { font-size: 32pt !important; }
+
+    /* ── KPI strip: siempre junto, nunca cortado ── */
+    .kpi-strip {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      border-top: 3pt solid var(--risk-hex) !important;
+    }
+    .kpi-value { font-size: 20pt !important; }
+
+    /* ── Gráficos ── */
+    .charts-grid {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* ── Headings: nunca quedan solos al pie de página ── */
+    h1 {
+      font-size: 16pt;
+      page-break-after: avoid;
+      break-after: avoid;
+      margin-top: 20pt;
+    }
+    h2 {
+      font-size: 8.5pt;
+      page-break-after: avoid;
+      break-after: avoid;
+      margin-top: 18pt;
+      background: #f1f5f9 !important;
+      border-left: 3pt solid var(--accent) !important;
+      padding: 6pt 10pt !important;
+    }
+    h3 {
+      font-size: 11pt;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    h4 { font-size: 9pt; page-break-after: avoid; break-after: avoid; }
+
+    /* ── Capítulos: cada capítulo mayor empieza en página nueva ── */
+    .chapter {
+      page-break-before: auto;
+      break-before: auto;
+    }
+    .chapter:first-child { page-break-before: avoid; }
+    section.chapter > h1:first-child {
+      page-break-before: always;
+      break-before: page;
+      padding-top: 8pt;
+    }
+
+    /* ── Párrafos y texto ── */
+    p { font-size: 10.5pt; margin-bottom: 8pt; orphans: 3; widows: 3; }
+    li { font-size: 10pt; }
+
+    /* ── Tablas: nunca cortadas en medio de fila ── */
+    table {
+      page-break-inside: auto;
+      font-size: 9.5pt;
+      border-collapse: collapse;
+    }
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    thead {
+      display: table-header-group; /* repite header en cada página */
+    }
+    tfoot { display: table-footer-group; }
+    th, td { padding: 6pt 8pt !important; }
+    thead th { font-size: 8pt !important; }
+    tbody tr:hover td { background: transparent !important; }
+
+    /* ── Blockquotes, cajas especiales ── */
+    blockquote {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      border-left: 3pt solid var(--risk-hex) !important;
+      background: var(--risk-bg) !important;
+      padding: 8pt 12pt !important;
+      font-size: 10pt;
+    }
+    .trace-section,
+    .methodology,
+    .disclaimer,
+    .limitation-box,
+    .chart-block {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .chart-subtitle, .chart-source { font-size: 8.5pt; }
+    .glossary-section table { font-size: 8.5pt; }
+    .vdem-charts-section { page-break-before: always; break-before: page; }
+    .glossary-section { page-break-before: always; break-before: page; }
+
+    /* ── Bibliografía: siempre nueva página ── */
+    .apa-section {
+      page-break-before: always;
+      break-before: page;
+    }
+    .apa-ref { font-size: 9pt; margin-bottom: 6pt; }
+
+    /* ── Footer del documento ── */
+    .report-footer {
+      display: flex !important;
+      page-break-inside: avoid;
+      margin-top: 24pt;
+      padding: 12pt 0 0;
+      border-top: 1.5pt solid #e2e8f0 !important;
+      font-size: 8pt;
+    }
+
+    /* ── Ocultar elementos no imprimibles ── */
+    .no-print,
+    a[href^="http"]::after { display: none !important; }
+
+    /* ── Código inline ── */
+    code {
+      font-size: 9pt;
+      background: #f1f5f9 !important;
+      border: 0.5pt solid #e2e8f0 !important;
+    }
+
+    /* ── Timeline ── */
+    .timeline-print {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      background: #0a0f1a !important;
+    }
+
+    /* ── Colores de riesgo ── */
+    tr.risk-critical td { background: #fef2f2 !important; }
+    tr.risk-high td { background: #fff7ed !important; }
+    td.conf-ok { color: #065f46 !important; }
+    td.conf-pend { color: #92400e !important; }
+    .no-data { background: #f8fafc !important; border: 0.5pt solid #e2e8f0 !important; }
   }
 </style>
 </head>
 <body>
+
+<!-- ══ BARRA DE IMPRESIÓN (sólo pantalla, oculta al imprimir) ════════════════ -->
+<div class="no-print" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e293b;border-bottom:2px solid #0f766e;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;color:#94a3b8;box-shadow:0 2px 12px rgba(0,0,0,0.5)">
+  <span style="color:#e2e8f0;font-weight:600">Democrac<span style="color:#2dd4bf">.IA</span> — Informe PEIRS — ${country.name}</span>
+  <div style="display:flex;gap:12px;align-items:center">
+    <span style="color:#64748b">Imprimir → A4 · Portrait · Incluir gráficos de fondo</span>
+    <button onclick="window.print()" style="background:#0f766e;color:#fff;border:none;padding:7px 18px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.5px">
+      ⎙ Imprimir / PDF A4
+    </button>
+  </div>
+</div>
+<div class="no-print" style="height:44px"></div>
 
 <!-- ══ PORTADA ════════════════════════════════════════════════════════════════ -->
 <div class="cover">
@@ -2523,6 +3416,12 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData) => 
 
     <p class="apa-ref">Transparencia Internacional Perú. (2023). <em>Índice de percepción de la corrupción 2023: Perú</em>. TI-Perú. <a href="https://www.transparencia.org.pe">https://www.transparencia.org.pe</a></p>
   </div>
+
+  ${vdemSectionHtml}
+  ${moeBriefSectionHtml}
+  ${actorsSectionHtml}
+  ${parliamentSectionHtml}
+  ${glossaryHtml}
 
   <div class="disclaimer" style="margin-bottom:32px">
     <strong>Nota de uso:</strong> Este informe ha sido generado de manera automatizada por el sistema Democrac.IA / PEIRS v0.5.0 utilizando inteligencia artificial (Claude Sonnet 4.6, Anthropic, 2025) y datos de fuentes académicas de acceso abierto. No constituye validación oficial de ningún proceso electoral, ni posición institucional de ninguna organización. Para uso académico, analítico o de referencia con atribución obligatoria: <em>Democrac.IA. (${new Date().getFullYear()}). Informe PEIRS — ${country.name || "—"} [Análisis automatizado]. Run/${runId.slice(0,8).toUpperCase()}.</em>
@@ -2884,8 +3783,12 @@ const SourceBadge = ({ label, value, confidence, year, color }) => (
 
 // ── ReportViewer Elite ────────────────────────────────────────────────────────
 const ReportViewer = ({ runId, country }) => {
-  const [fetchState, setFetchState] = useState({ data: null, loading: false, error: null });
+  const [fetchState, setFetchState] = useState({ data: null, loading: true, error: null });
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [rvChartData, setRvChartData] = useState(null);
+  const [rvActors, setRvActors] = useState(null);
+  const [rvScenarios, setRvScenarios] = useState(null);
+  const [rvMoeBrief, setRvMoeBrief] = useState(null);
   const { data: reportData, loading, error } = fetchState;
 
   useEffect(() => {
@@ -2897,17 +3800,41 @@ const ReportViewer = ({ runId, country }) => {
     return () => setFetchState({ data: null, loading: true, error: null });
   }, [runId]);
 
+  useEffect(() => {
+    const cc = country?.id?.toUpperCase() || country?.country_code;
+    if (!cc) return;
+    fetch(`${API_BASE}/api/country/${cc}/chartdata`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setRvChartData(d))
+      .catch(() => {});
+  }, [country?.id]);
+
+  useEffect(() => {
+    if (country?.id !== "per") return;
+    fetch(`${API_BASE}/api/peru/actors`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setRvActors(d))
+      .catch(() => {});
+    fetch(`${API_BASE}/api/peru/scenarios`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setRvScenarios(d))
+      .catch(() => {});
+    fetch(`${API_BASE}/api/moe/brief/PER`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setRvMoeBrief(d))
+      .catch(() => {});
+  }, [country?.id]);
+
   const handleDownload = () => {
     if (!reportData || !country) return;
     const md = reportData.final_report_markdown || "";
-    const htmlContent = generateHtmlReport(md, country, runId, reportData.timestamp, reportData);
+    const htmlContent = generateHtmlReport(md, country, runId, reportData.timestamp, reportData, rvChartData, rvActors, rvScenarios, rvMoeBrief);
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `PEIRS_${country.name}_${runId.slice(0,8)}_${new Date().toISOString().split("T")[0]}.html`;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
+    const win = window.open(url, "_blank");
+    if (win) win.focus();
+    // Revoke after a delay to allow the new tab to load
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
   if (loading) return (
@@ -3002,7 +3929,7 @@ const ReportViewer = ({ runId, country }) => {
             border: "1px solid #3b82f644",
             background: "#3b82f618", color: "#3b82f6",
             fontSize: 12, fontWeight: 600, cursor: "pointer",
-          }}>⬇ HTML</button>
+          }}>⎙ Abrir e Imprimir</button>
         </div>
       </div>
 
@@ -3889,6 +4816,8 @@ const PERU_INNER_TABS = [
   { id: "parlamento",   label: "Parlamento",     icon: "🏛" },
   { id: "brief",        label: "MOE Brief",      icon: "📋" },
   { id: "jornada",      label: "Jornada",        icon: "🗳" },
+  { id: "datos",        label: "Datos V-Dem",    icon: "📈" },
+  { id: "evaluacion",   label: "Evaluación",     icon: "📝" },
   { id: "informe",      label: "Informe",        icon: "📄" },
 ];
 
@@ -3928,6 +4857,19 @@ function PeruSituationRoom() {
   const [journeySubmitting, setJourneySubmitting] = useState(false);
   const [showElectoralSystem, setShowElectoralSystem] = useState(false);
   const [expandedActors, setExpandedActors]   = useState({});
+  const [reportRunId, setReportRunId]         = useState(null);
+  const [reportGenerating, setReportGenerating] = useState(false);
+  const [reportGenResult, setReportGenResult] = useState(null);
+  const [chartData, setChartData]             = useState(null);
+  const [chartLoading, setChartLoading]       = useState(false);
+  const [chartError, setChartError]           = useState(false);
+  const [evalQuestionnaire, setEvalQuestionnaire] = useState(null);
+  const [evalLoading, setEvalLoading]         = useState(false);
+  const [evalAnswers, setEvalAnswers]         = useState({});
+  const [evalSection, setEvalSection]         = useState(0);
+  const [evalComparison, setEvalComparison]   = useState(null);
+  const [evalComparing, setEvalComparing]     = useState(false);
+  const [evalSaving, setEvalSaving]           = useState(false);
 
   const ELECTION_TS = new Date("2026-04-12T08:00:00-05:00");
 
@@ -3970,6 +4912,32 @@ function PeruSituationRoom() {
         .then(r => r.json())
         .then(d => { setScenarios(d); setScenariosLoading(false); })
         .catch(() => setScenariosLoading(false));
+    }
+    if (innerTab === "datos" && !chartData && !chartLoading && !chartError) {
+      setChartLoading(true);
+      setChartError(false);
+      fetch(`${API_BASE}/api/country/PER/chartdata`)
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        .then(d => { setChartData(d); setChartLoading(false); })
+        .catch(() => { setChartLoading(false); setChartError(true); });
+    }
+    if (innerTab === "evaluacion" && !evalQuestionnaire && !evalLoading) {
+      setEvalLoading(true);
+      fetch(`${API_BASE}/api/evaluation/PER/questionnaire`)
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        .then(d => {
+          setEvalQuestionnaire(d);
+          // Restore saved answers if any
+          const restored = {};
+          (d.questionnaire || []).forEach(q => {
+            if (q.observer_answer !== null && q.observer_answer !== undefined) {
+              restored[q.id] = q.observer_answer;
+            }
+          });
+          if (Object.keys(restored).length > 0) setEvalAnswers(restored);
+          setEvalLoading(false);
+        })
+        .catch(() => setEvalLoading(false));
     }
   }, [innerTab]);
 
@@ -4146,7 +5114,7 @@ function PeruSituationRoom() {
       `}</style>
 
       {/* STICKY: Zone 1 command strip + inner navigation */}
-      <div style={{ position: "sticky", top: 0, zIndex: 90 }}>
+      <div style={{ position: "sticky", top: 65, zIndex: 90 }}>
         <div style={{
           background: "linear-gradient(135deg, #0d1220 0%, #0f172a 100%)",
           borderBottom: `1px solid ${alertColor}33`,
@@ -5432,22 +6400,582 @@ function PeruSituationRoom() {
           </div>
         )}
 
-        {/* ══ TAB: INFORME ══ */}
-        {innerTab === "informe" && (
+        {/* ══ TAB: DATOS V-DEM ══ */}
+        {innerTab === "datos" && (
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 16, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-              Informe de Fondo — Análisis Completo PEIRS (9 Capítulos)
+              Datos V-Dem — Series Históricas Perú 2026
               <span style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+              {chartData && <span style={{ fontSize: 9, color: COLORS.textDim, fontWeight: 400 }}>Fuente: V-Dem v15 · FH 2025 · RSF 2025 · PEI v10.0</span>}
             </div>
-            {country?.run_id ? (
-              <ReportViewer runId={country.run_id} country={country} />
-            ) : (
-              <div style={{ padding: 32, textAlign: "center", color: COLORS.textDim, fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
-                Sin reporte disponible. Ejecutá /api/analyze con country_code=PER primero.
+
+            {chartLoading && (
+              <div style={{ padding: 40, textAlign: "center", color: COLORS.textDim, fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
+                Cargando datos V-Dem...
               </div>
             )}
+
+            {!chartLoading && chartError && (
+              <div style={{ padding: 40, textAlign: "center", color: COLORS.danger, fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
+                Error al cargar datos. Verificá que el backend esté activo.
+              </div>
+            )}
+
+            {chartData && (() => {
+              const { charts, milestones, fh, rsf, pei } = chartData;
+
+              /* ── KPI badges ── */
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+                  {/* KPI row */}
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    {[
+                      { label: "V-Dem libdem 2024", value: (charts.libdem_series.at(-1)?.value ?? "—").toFixed ? (charts.libdem_series.at(-1).value).toFixed(3) : "—", color: COLORS.accent, sub: "Democracia Liberal" },
+                      { label: "Freedom House 2025", value: `${fh?.total_score ?? "—"}/100`, color: fh?.total_score >= 60 ? COLORS.accent : fh?.total_score >= 40 ? COLORS.warning : COLORS.danger, sub: fh?.status ?? "—" },
+                      { label: "RSF Press Freedom", value: `${rsf?.score?.toFixed(1) ?? "—"}/100`, color: rsf?.score >= 50 ? COLORS.warning : COLORS.danger, sub: `Rank #${rsf?.rank ?? "—"} mundial` },
+                      { label: "PEI Integridad", value: `${pei?.overall_integrity ?? "—"}/100`, color: pei?.overall_integrity >= 70 ? COLORS.accent : COLORS.warning, sub: `Elecciones ${pei?.year ?? "—"}` },
+                    ].map(k => (
+                      <div key={k.label} style={{ flex: "1 1 140px", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "12px 16px" }}>
+                        <div style={{ fontSize: 9, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 2, marginBottom: 4 }}>{k.label}</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: k.color, fontFamily: "'DM Mono', monospace" }}>{k.value}</div>
+                        <div style={{ fontSize: 10, color: COLORS.textMuted, marginTop: 2 }}>{k.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── CHART 1: Liberal Democracy AreaChart ── */}
+                  <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "20px 16px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>Índice de Democracia Liberal — Perú 1990–2024</div>
+                    <div style={{ fontSize: 9, color: COLORS.textDim, marginBottom: 16 }}>V-Dem v15 · v2x_libdem · escala 0–1</div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={charts.libdem_series} margin={{ top: 8, right: 20, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="libdemGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={COLORS.accent} stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={COLORS.accent} stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                        <XAxis dataKey="year" tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} />
+                        <YAxis domain={[0, 1]} tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} width={32} />
+                        <Tooltip
+                          contentStyle={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 6, fontSize: 11 }}
+                          formatter={(v) => [v.toFixed(3), "Democracia Liberal"]}
+                        />
+                        {milestones.map(m => (
+                          <ReferenceLine key={m.year} x={m.year}
+                            stroke={m.type === "crisis" ? COLORS.danger : m.type === "upcoming" ? COLORS.warning : COLORS.accent}
+                            strokeDasharray="4 2" strokeOpacity={0.6}
+                            label={{ value: m.label, position: "top", fontSize: 7, fill: COLORS.textDim, offset: 4 }}
+                          />
+                        ))}
+                        <Area type="monotone" dataKey="value" stroke={COLORS.accent} strokeWidth={2} fill="url(#libdemGrad)" dot={false} activeDot={{ r: 4 }} />
+                        <ReferenceLine y={0.5} stroke={COLORS.warning} strokeDasharray="6 3" strokeOpacity={0.5} label={{ value: "umbral 0.5", position: "right", fontSize: 8, fill: COLORS.warning }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* ── CHART 3: OGE Autonomía + Capacidad ── */}
+                  <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "20px 16px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>JNE — Autonomía e Independencia Institucional 2010–2024</div>
+                    <div style={{ fontSize: 9, color: COLORS.textDim, marginBottom: 16 }}>V-Dem v15 · v2elembaut (autonomía) + v2elembcap (capacidad) · escala −4 a +4</div>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={charts.emb_series} margin={{ top: 4, right: 20, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                        <XAxis dataKey="year" tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} width={36} />
+                        <Tooltip
+                          contentStyle={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 6, fontSize: 11 }}
+                          formatter={(v, name) => [v.toFixed(3), name === "v2elembaut" ? "Autonomía OGE" : "Capacidad OGE"]}
+                        />
+                        <Legend formatter={(v) => v === "v2elembaut" ? "Autonomía" : "Capacidad"} wrapperStyle={{ fontSize: 10 }} />
+                        <Bar dataKey="v2elembaut" fill={COLORS.accent} radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="v2elembcap" fill="#10b981" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* ── CHART 5: Libertad de Prensa ── */}
+                  <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "20px 16px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>Ecosistema Mediático — Perú 2010–2024</div>
+                    <div style={{ fontSize: 9, color: COLORS.textDim, marginBottom: 16 }}>V-Dem v15 · v2mebias (sesgo) · v2meharjrn (acoso periodistas) · v2mecenefi (censura) · escala −4 a +4 · RSF 2025: {rsf?.score?.toFixed(1)}/100</div>
+                    <ResponsiveContainer width="100%" height={210}>
+                      <LineChart data={charts.media_series} margin={{ top: 4, right: 20, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                        <XAxis dataKey="year" tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} width={36} />
+                        <Tooltip
+                          contentStyle={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 6, fontSize: 11 }}
+                          formatter={(v, name) => [v.toFixed(3), name === "v2mebias" ? "Sesgo mediático" : name === "v2meharjrn" ? "Acoso periodistas" : "Censura ejecución"]}
+                        />
+                        <Legend formatter={(v) => v === "v2mebias" ? "Sesgo mediático" : v === "v2meharjrn" ? "Acoso periodistas" : "Censura ejecución"} wrapperStyle={{ fontSize: 10 }} />
+                        <Line type="monotone" dataKey="v2mebias" stroke={COLORS.danger} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                        <Line type="monotone" dataKey="v2meharjrn" stroke={COLORS.warning} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                        <Line type="monotone" dataKey="v2mecenefi" stroke={COLORS.accent} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                        <ReferenceLine y={1.0} stroke={COLORS.warning} strokeDasharray="5 3" strokeOpacity={0.4} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* ── CHART 4: Comparación Regional ── */}
+                  <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "20px 16px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>Perú en Perspectiva Regional — Democracia Liberal 2024</div>
+                    <div style={{ fontSize: 9, color: COLORS.textDim, marginBottom: 16 }}>V-Dem v15 · v2x_libdem · ordenado de mayor a menor · Perú resaltado</div>
+                    <ResponsiveContainer width="100%" height={320}>
+                      <BarChart data={[...charts.regional].sort((a, b) => b.libdem - a.libdem)} layout="vertical" margin={{ top: 0, right: 40, left: 4, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} horizontal={false} />
+                        <XAxis type="number" domain={[0, 1]} tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: COLORS.textDim }} tickLine={false} width={72} />
+                        <Tooltip
+                          contentStyle={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 6, fontSize: 11 }}
+                          formatter={(v) => [v.toFixed(3), "Democracia Liberal"]}
+                        />
+                        <Bar dataKey="libdem" radius={[0, 4, 4, 0]}>
+                          {[...charts.regional].sort((a, b) => b.libdem - a.libdem).map((entry) => (
+                            <Cell key={entry.country_code} fill={entry.highlight ? COLORS.warning : COLORS.accent} fillOpacity={entry.highlight ? 1 : 0.6} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div style={{ marginTop: 8, fontSize: 9, color: COLORS.textDim, textAlign: "center" }}>
+                      <span style={{ color: COLORS.warning, marginRight: 4 }}>●</span>Perú 2026 — próximas elecciones 12 abril
+                    </div>
+                  </div>
+
+                  {/* ── PEI Detail ── */}
+                  {pei && (
+                    <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "20px 16px" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>PEI v10.0 — Integridad Electoral Perú {pei.year}</div>
+                      <div style={{ fontSize: 9, color: COLORS.textDim, marginBottom: 16 }}>Perceptions of Electoral Integrity · {pei.office} · Electoral Integrity Project</div>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart
+                          data={[
+                            { name: "Marco Legal", v: pei.legal_framework },
+                            { name: "Procedimientos", v: pei.procedures },
+                            { name: "Reg. Votantes", v: pei.voter_registration },
+                            { name: "Cobertura Media", v: pei.media_coverage },
+                            { name: "Financiamiento", v: pei.campaign_finance },
+                            { name: "Voto", v: pei.voting_process },
+                            { name: "Conteo", v: pei.vote_count },
+                            { name: "Resultados", v: pei.voting_results },
+                            { name: "EMBs", v: pei.emb_score },
+                          ].filter(d => d.v !== null)}
+                          margin={{ top: 4, right: 20, left: 0, bottom: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                          <XAxis dataKey="name" tick={{ fontSize: 8, fill: COLORS.textDim }} tickLine={false} angle={-30} textAnchor="end" />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: COLORS.textDim }} tickLine={false} width={28} />
+                          <Tooltip contentStyle={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 6, fontSize: 11 }} formatter={(v) => [`${v}/100`, "Score PEI"]} />
+                          <ReferenceLine y={pei.overall_integrity} stroke={COLORS.accent} strokeDasharray="5 3" label={{ value: `Media ${pei.overall_integrity}`, position: "right", fontSize: 8, fill: COLORS.accent }} />
+                          <Bar dataKey="v" radius={[3, 3, 0, 0]}>
+                            {[pei.legal_framework, pei.procedures, pei.voter_registration, pei.media_coverage, pei.campaign_finance, pei.voting_process, pei.vote_count, pei.voting_results, pei.emb_score].filter(v => v !== null).map((v, i) => (
+                              <Cell key={i} fill={v < 50 ? COLORS.danger : v < 70 ? COLORS.warning : COLORS.accent} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                      <div style={{ marginTop: 8, fontSize: 9, color: COLORS.textDim, textAlign: "right" }}>
+                        Integridad Global: <span style={{ color: COLORS.accent, fontWeight: 700 }}>{pei.overall_integrity}/100</span>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              );
+            })()}
           </div>
         )}
+
+        {/* ══ TAB: EVALUACIÓN ══ */}
+        {innerTab === "evaluacion" && (() => {
+          const SCALE_LABELS = {
+            0: { label: "Sin información", color: "#475569" },
+            1: { label: "Muy deficiente", color: "#ef4444" },
+            2: { label: "Deficiente",     color: "#f97316" },
+            3: { label: "Regular",        color: "#eab308" },
+            4: { label: "Satisfactorio",  color: "#22c55e" },
+            5: { label: "Excelente",      color: "#00d4ff" },
+          };
+          const YESNO_LABELS = {
+            0: { label: "Sin información", color: "#475569" },
+            1: { label: "No",              color: "#ef4444" },
+            2: { label: "Parcialmente",    color: "#f97316" },
+            3: { label: "Mayormente sí",   color: "#22c55e" },
+            4: { label: "Sí, plenamente",  color: "#00d4ff" },
+          };
+
+          const qList = evalQuestionnaire?.questionnaire || [];
+          const sectionsMeta = evalQuestionnaire?.sections || [];
+          const currentSection = sectionsMeta[evalSection] || {};
+          const sectionQs = qList.filter(q => q.section === currentSection.title);
+          const totalAnswered = Object.keys(evalAnswers).length;
+          const totalQs = qList.length;
+          const sectionAnswered = sectionQs.filter(q => evalAnswers[q.id] !== undefined).length;
+
+          const handleAnswer = async (qId, value) => {
+            const newAnswers = { ...evalAnswers, [qId]: value };
+            setEvalAnswers(newAnswers);
+            setEvalSaving(true);
+            try {
+              await fetch(`${API_BASE}/api/evaluation/PER/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ answers: newAnswers }),
+              });
+            } catch (e) { /* ignore */ }
+            finally { setEvalSaving(false); }
+          };
+
+          const handleCompare = async () => {
+            setEvalComparing(true);
+            setEvalComparison(null);
+            try {
+              const res = await fetch(`${API_BASE}/api/evaluation/PER/compare`);
+              const data = await res.json();
+              setEvalComparison(data);
+            } catch (e) { /* ignore */ }
+            finally { setEvalComparing(false); }
+          };
+
+          const renderScaleBtn = (q, val, labels) => {
+            const isSelected = evalAnswers[q.id] === val;
+            const meta = labels[val] || {};
+            return (
+              <button
+                key={val}
+                onClick={() => handleAnswer(q.id, val)}
+                style={{
+                  padding: "5px 10px", borderRadius: 6, fontSize: 10, fontWeight: 600,
+                  border: `1px solid ${isSelected ? meta.color : COLORS.border}`,
+                  background: isSelected ? meta.color + "33" : "transparent",
+                  color: isSelected ? meta.color : COLORS.textDim,
+                  cursor: "pointer", transition: "all 0.15s",
+                  fontFamily: "'DM Mono', monospace",
+                }}
+              >
+                {val === 0 ? "—" : val} {meta.label}
+              </button>
+            );
+          };
+
+          return (
+            <div>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingBottom: 10, borderBottom: `1px solid ${COLORS.border}` }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase" }}>
+                    Formulario de Evaluación — Perú 2026
+                  </div>
+                  <div style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 4 }}>
+                    {totalAnswered}/{totalQs} preguntas respondidas
+                    {evalSaving && <span style={{ marginLeft: 8, color: COLORS.accent, fontSize: 10 }}>guardando…</span>}
+                  </div>
+                </div>
+                <button
+                  onClick={handleCompare}
+                  disabled={evalComparing || totalAnswered === 0}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                    background: totalAnswered > 0 ? COLORS.accent + "22" : "transparent",
+                    border: `1px solid ${totalAnswered > 0 ? COLORS.accent : COLORS.border}`,
+                    color: totalAnswered > 0 ? COLORS.accent : COLORS.textDim,
+                    cursor: totalAnswered > 0 ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {evalComparing ? "Calculando…" : "📊 Ver Comparación"}
+                </button>
+              </div>
+
+              {evalLoading && (
+                <div style={{ textAlign: "center", padding: 40, color: COLORS.textDim, fontSize: 12 }}>
+                  Cargando cuestionario con datos de plataforma…
+                </div>
+              )}
+
+              {!evalLoading && evalQuestionnaire && !evalComparison && (
+                <div>
+                  {/* Progress bar */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ height: 4, background: COLORS.border, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${totalQs > 0 ? (totalAnswered / totalQs) * 100 : 0}%`, background: COLORS.accent, borderRadius: 2, transition: "width 0.3s" }} />
+                    </div>
+                  </div>
+
+                  {/* Section navigation */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+                    {sectionsMeta.map((s, i) => {
+                      const sq = qList.filter(q => q.section === s.title);
+                      const sa = sq.filter(q => evalAnswers[q.id] !== undefined).length;
+                      const isActive = i === evalSection;
+                      const isComplete = sa === sq.length && sq.length > 0;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setEvalSection(i)}
+                          style={{
+                            padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 600,
+                            border: `1px solid ${isActive ? COLORS.accent : isComplete ? "#22c55e44" : COLORS.border}`,
+                            background: isActive ? COLORS.accent + "22" : isComplete ? "#22c55e11" : "transparent",
+                            color: isActive ? COLORS.accent : isComplete ? "#22c55e" : COLORS.textDim,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {isComplete ? "✓" : (i + 1)} {s.title?.replace(/^S\d+\s*[—–-]\s*/, "") || s.id}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Current section */}
+                  <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: COLORS.textPrimary, marginBottom: 4 }}>
+                        {currentSection.title || `Sección ${evalSection + 1}`}
+                      </div>
+                      {currentSection.description && (
+                        <div style={{ fontSize: 11, color: COLORS.textSecondary, lineHeight: 1.5 }}>
+                          {currentSection.description}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 10, color: COLORS.textDim, marginTop: 4 }}>
+                        {sectionAnswered}/{sectionQs.length} respondidas en esta sección
+                      </div>
+                    </div>
+
+                    {sectionQs.map((q, qi) => {
+                      const isYesNo = q.scale === "yesno" || q.scale === "presence";
+                      const labels = isYesNo ? YESNO_LABELS : SCALE_LABELS;
+                      const scaleVals = isYesNo ? [0, 1, 2, 3, 4] : [0, 1, 2, 3, 4, 5];
+                      const answered = evalAnswers[q.id] !== undefined;
+                      const platScore = q.platform_score;
+
+                      return (
+                        <div key={q.id} style={{
+                          marginBottom: 20, paddingBottom: 20,
+                          borderBottom: qi < sectionQs.length - 1 ? `1px solid ${COLORS.border}44` : "none",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                            <div style={{
+                              minWidth: 22, height: 22, borderRadius: 4,
+                              background: answered ? COLORS.accent + "22" : COLORS.border + "44",
+                              border: `1px solid ${answered ? COLORS.accent : COLORS.border}`,
+                              color: answered ? COLORS.accent : COLORS.textDim,
+                              fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center",
+                            }}>
+                              {answered ? "✓" : qi + 1}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 12, color: COLORS.textPrimary, lineHeight: 1.5, marginBottom: 6 }}>
+                                {q.text}
+                              </div>
+                              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 6 }}>
+                                {q.iccpr_ref && (
+                                  <span style={{ fontSize: 9, color: "#a855f7", background: "#a855f711", padding: "1px 6px", borderRadius: 4, border: "1px solid #a855f722" }}>
+                                    {q.iccpr_ref}
+                                  </span>
+                                )}
+                                {q.dataset_source && (
+                                  <span style={{ fontSize: 9, color: COLORS.textDim, background: COLORS.border + "33", padding: "1px 6px", borderRadius: 4, border: `1px solid ${COLORS.border}` }}>
+                                    {q.dataset_source}
+                                    {q.dataset_var && ` · ${q.dataset_var}`}
+                                  </span>
+                                )}
+                                {platScore !== null && platScore !== undefined && (
+                                  <span style={{ fontSize: 9, color: "#00d4aa", background: "#00d4aa11", padding: "1px 6px", borderRadius: 4, border: "1px solid #00d4aa22" }}>
+                                    Plataforma: {Math.round(platScore)}/100
+                                  </span>
+                                )}
+                              </div>
+                              {q.note && (
+                                <div style={{ fontSize: 10, color: COLORS.textDim, fontStyle: "italic", marginBottom: 8, lineHeight: 1.4 }}>
+                                  {q.note}
+                                </div>
+                              )}
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {scaleVals.map(v => renderScaleBtn(q, v, labels))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Prev / Next */}
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <button
+                      onClick={() => setEvalSection(s => Math.max(0, s - 1))}
+                      disabled={evalSection === 0}
+                      style={{
+                        padding: "8px 16px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                        background: "transparent", border: `1px solid ${COLORS.border}`,
+                        color: evalSection === 0 ? COLORS.textDim : COLORS.textSecondary,
+                        cursor: evalSection === 0 ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      ← Anterior
+                    </button>
+                    <button
+                      onClick={() => setEvalSection(s => Math.min(sectionsMeta.length - 1, s + 1))}
+                      disabled={evalSection >= sectionsMeta.length - 1}
+                      style={{
+                        padding: "8px 16px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                        background: "transparent", border: `1px solid ${COLORS.border}`,
+                        color: evalSection >= sectionsMeta.length - 1 ? COLORS.textDim : COLORS.accent,
+                        cursor: evalSection >= sectionsMeta.length - 1 ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Comparison view */}
+              {evalComparison && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: COLORS.textPrimary }}>
+                      Resultado de Comparación — Perú 2026
+                    </div>
+                    <button
+                      onClick={() => setEvalComparison(null)}
+                      style={{
+                        padding: "4px 12px", borderRadius: 6, fontSize: 10, fontWeight: 600,
+                        background: "transparent", border: `1px solid ${COLORS.border}`,
+                        color: COLORS.textDim, cursor: "pointer",
+                      }}
+                    >
+                      ← Volver al formulario
+                    </button>
+                  </div>
+
+                  {/* Global convergence */}
+                  <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
+                      <div style={{ fontSize: 36, fontWeight: 900, color: evalComparison.global_convergence >= 70 ? "#22c55e" : evalComparison.global_convergence >= 40 ? "#eab308" : "#ef4444" }}>
+                        {evalComparison.global_convergence !== undefined ? `${Math.round(evalComparison.global_convergence)}%` : "—"}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary }}>Convergencia Global</div>
+                        <div style={{ fontSize: 10, color: COLORS.textDim }}>Observador de campo vs. plataforma PEIRS</div>
+                        <div style={{ fontSize: 10, color: COLORS.textDim }}>Basado en {evalComparison.questions_compared} preguntas comparadas de {evalComparison.questions_answered} respondidas</div>
+                      </div>
+                    </div>
+                    <div style={{ height: 6, background: COLORS.border, borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${evalComparison.global_convergence || 0}%`, background: evalComparison.global_convergence >= 70 ? "#22c55e" : evalComparison.global_convergence >= 40 ? "#eab308" : "#ef4444", borderRadius: 3 }} />
+                    </div>
+                  </div>
+
+                  {/* Per-section table */}
+                  <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.border}`, borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+                    <div style={{ padding: "10px 16px", borderBottom: `1px solid ${COLORS.border}`, fontSize: 10, fontWeight: 700, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 2 }}>
+                      Convergencia por Sección
+                    </div>
+                    {(evalComparison.sections || []).map((sec, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: i < evalComparison.sections.length - 1 ? `1px solid ${COLORS.border}44` : "none" }}>
+                        <div style={{ minWidth: 130, fontSize: 11, color: COLORS.textPrimary, fontWeight: 600 }}>{sec.section}</div>
+                        <div style={{ flex: 1, height: 6, background: COLORS.border, borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${sec.convergence || 0}%`, background: sec.convergence >= 70 ? "#22c55e" : sec.convergence >= 40 ? "#eab308" : "#ef4444", borderRadius: 3 }} />
+                        </div>
+                        <div style={{ minWidth: 40, textAlign: "right", fontSize: 11, fontWeight: 700, color: sec.convergence >= 70 ? "#22c55e" : sec.convergence >= 40 ? "#eab308" : "#ef4444" }}>
+                          {sec.convergence !== null ? `${Math.round(sec.convergence)}%` : "—"}
+                        </div>
+                        <div style={{ minWidth: 60, fontSize: 9, color: COLORS.textDim, textAlign: "right" }}>
+                          {sec.answered}/{sec.total} resp.
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Divergence highlights */}
+                  {evalComparison.divergences && evalComparison.divergences.length > 0 && (
+                    <div style={{ background: "#ef444411", border: "1px solid #ef444433", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+                        Principales Divergencias
+                      </div>
+                      {evalComparison.divergences.map((d, i) => (
+                        <div key={i} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: i < evalComparison.divergences.length - 1 ? "1px solid #ef444422" : "none" }}>
+                          <div style={{ fontSize: 11, color: COLORS.textPrimary, marginBottom: 3 }}>{d.question}</div>
+                          <div style={{ display: "flex", gap: 16, fontSize: 10, color: COLORS.textDim }}>
+                            <span>Observador: <span style={{ color: "#f97316", fontWeight: 700 }}>{d.observer_score}/100</span></span>
+                            <span>Plataforma: <span style={{ color: COLORS.accent, fontWeight: 700 }}>{d.platform_score}/100</span></span>
+                            <span>Diferencia: <span style={{ color: "#ef4444", fontWeight: 700 }}>{d.gap} pts</span></span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: 10, color: COLORS.textDim, lineHeight: 1.6 }}>
+                    <strong>Nota metodológica:</strong> La convergencia se calcula como <code>max(0, 100 − |obs − plat|)</code> donde los puntajes del observador (escala Likert 1-5) se convierten a escala 0-100 (×20). Respuestas "Sin información" (valor 0) se excluyen de la comparación. Preguntas sin dato de plataforma disponible tampoco se comparan.
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ══ TAB: INFORME ══ */}
+        {innerTab === "informe" && (() => {
+          const activeRunId = reportRunId || country?.run_id;
+          const handleGenerateReport = async () => {
+            setReportGenerating(true);
+            setReportGenResult(null);
+            try {
+              const res = await fetch(`${API_BASE}/api/analyze`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ country_code: "PER", force_refresh: true }),
+              });
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              const data = await res.json();
+              setReportRunId(data.run_id || null);
+              setReportGenResult({ ok: true, run_id: data.run_id });
+            } catch (err) {
+              setReportGenResult({ ok: false, error: err.message });
+            } finally {
+              setReportGenerating(false);
+            }
+          };
+          return (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 16, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                Informe de Fondo — Análisis Completo PEIRS (9 Capítulos)
+                <span style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+              </div>
+              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={handleGenerateReport} disabled={reportGenerating} style={{
+                  padding: "8px 18px", borderRadius: 8, border: `1px solid ${COLORS.accent}55`,
+                  background: reportGenerating ? COLORS.surface : COLORS.accentDim,
+                  color: reportGenerating ? COLORS.textDim : COLORS.accent,
+                  fontSize: 12, fontWeight: 700, cursor: reportGenerating ? "not-allowed" : "pointer",
+                  fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, transition: "all 0.2s ease",
+                }}>
+                  {reportGenerating ? "Analizando... (puede demorar 30-60s)" : "↻ Generar Nuevo Análisis"}
+                </button>
+                {reportGenResult && reportGenResult.ok && (
+                  <span style={{ fontSize: 11, color: COLORS.accent, fontFamily: "'DM Mono', monospace" }}>
+                    Análisis generado — run_id: {reportGenResult.run_id}
+                  </span>
+                )}
+                {reportGenResult && !reportGenResult.ok && (
+                  <span style={{ fontSize: 11, color: COLORS.danger, fontFamily: "'DM Mono', monospace" }}>
+                    Error: {reportGenResult.error}
+                  </span>
+                )}
+              </div>
+              {activeRunId ? (
+                <ReportViewer runId={activeRunId} country={country} />
+              ) : (
+                <div style={{ padding: 32, textAlign: "center", color: COLORS.textDim, fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
+                  Sin reporte disponible. Presioná "Generar Nuevo Análisis" para iniciar.
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
       </div>
     </div>
@@ -5455,6 +6983,267 @@ function PeruSituationRoom() {
 }
 
 
+
+// R4: Fases del ciclo electoral completo
+const OBS_PHASES = [
+  { id: "preparatory",         label: "📋 Preparatorio" },
+  { id: "pre_campaign",        label: "📣 Pre-Campaña" },
+  { id: "campaign",            label: "🗣️ Campaña Electoral" },
+  { id: "electoral_silence",   label: "🤫 Veda Electoral" },
+  { id: "election_day",        label: "🗳️ Jornada Electoral" },
+  { id: "counting_tabulation", label: "🔢 Escrutinio y Cómputo" },
+  { id: "post_election",       label: "📊 Post-Electoral" },
+  { id: "dispute_resolution",  label: "⚖️ Resolución de Disputas" },
+  { id: "completed",           label: "✅ Ciclo Completo" },
+];
+
+// R5: Categorías de observación ampliadas
+const OBS_CATEGORIES = [
+  { id: "voter_intimidation",  label: "Intimidación de votantes" },
+  { id: "voter_suppression",   label: "Supresión del voto" },
+  { id: "ballot_tampering",    label: "Manipulación de boletas" },
+  { id: "campaign_violation",  label: "Infracción de campaña" },
+  { id: "disinformation",      label: "Desinformación electoral" },
+  { id: "gender_violence",     label: "Violencia política de género" },
+  { id: "media_restriction",   label: "Restricción de medios" },
+  { id: "fraud_allegation",    label: "Alegación de fraude" },
+  { id: "irregular_procedure", label: "Procedimiento irregular" },
+  { id: "accessibility",       label: "Accesibilidad electoral" },
+  { id: "security",            label: "Seguridad" },
+  { id: "logistics",           label: "Logística" },
+  { id: "legal",               label: "Legal/Normativo" },
+  { id: "counting",            label: "Escrutinio" },
+  { id: "results",             label: "Resultados" },
+  { id: "digital",             label: "Ecosistema digital" },
+  { id: "hate_speech",         label: "Discurso de odio" },
+  { id: "other",               label: "Otro" },
+];
+const OBS_SEVERITIES = [
+  { id: "info", label: "Info" },
+  { id: "low", label: "Bajo" },
+  { id: "medium", label: "Medio" },
+  { id: "high", label: "Alto" },
+  { id: "critical", label: "Crítico" },
+];
+const OBS_CONFIDENCE = [
+  { id: "confirmed", label: "Confirmado" },
+  { id: "probable", label: "Probable" },
+  { id: "unverified", label: "Sin verificar" },
+];
+
+function ObserverView() {
+  const [phase, setPhase] = useState("election_day");
+  const [category, setCategory] = useState("other");
+  const [severity, setSeverity] = useState("medium");
+  const [finding, setFinding] = useState("");
+  const [location, setLocation] = useState("");
+  const [confidence, setConfidence] = useState("unverified");
+  const [hasEvidence, setHasEvidence] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState(null);
+  const [entries, setEntries] = useState([]);
+
+  const selectStyle = {
+    width: "100%", padding: "8px 10px", borderRadius: 6,
+    border: `1px solid ${COLORS.border}`, background: COLORS.surface,
+    color: COLORS.text, fontSize: 12, fontFamily: "'DM Mono', monospace",
+    outline: "none",
+  };
+  const labelStyle = {
+    fontSize: 10, fontWeight: 700, letterSpacing: 2,
+    color: COLORS.textDim, textTransform: "uppercase", marginBottom: 4, display: "block",
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!finding.trim()) return;
+    setSubmitting(true);
+    setResult(null);
+    const body = {
+      country_code: "PER",
+      phase,
+      category,
+      severity,
+      finding,
+      location,
+      timestamp: new Date().toISOString(),
+      confidence,
+      has_evidence: hasEvidence,
+      credibility_source: "observer_field",
+    };
+    try {
+      const res = await fetch(`${API_BASE}/api/observation/PER/entry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setResult({ ok: true, data });
+      setEntries(prev => [{ ...body, response: data }, ...prev].slice(0, 20));
+      setFinding("");
+      setLocation("");
+      setHasEvidence(false);
+    } catch (err) {
+      setResult({ ok: false, error: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const severityColor = (s) => ({
+    critical: COLORS.danger, high: COLORS.danger, medium: COLORS.warning,
+    low: COLORS.info, info: COLORS.textMuted,
+  }[s] || COLORS.textMuted);
+
+  return (
+    <div style={{ padding: "24px 28px", maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 4 }}>
+          Protocolo de Observación Electoral
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: COLORS.text }}>
+          📡 Observación de Campo — <span style={{ color: COLORS.accent }}>Perú 2026</span>
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        {/* Left: Form */}
+        <Card>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 16, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>
+            Registrar Observación
+          </div>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={labelStyle}>Fase Electoral</label>
+              <select value={phase} onChange={e => setPhase(e.target.value)} style={selectStyle}>
+                {OBS_PHASES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Categoría</label>
+              <select value={category} onChange={e => setCategory(e.target.value)} style={selectStyle}>
+                {OBS_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Severidad</label>
+                <select value={severity} onChange={e => setSeverity(e.target.value)} style={selectStyle}>
+                  {OBS_SEVERITIES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Confianza</label>
+                <select value={confidence} onChange={e => setConfidence(e.target.value)} style={selectStyle}>
+                  {OBS_CONFIDENCE.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={labelStyle}>Hallazgo *</label>
+              <textarea
+                value={finding} onChange={e => setFinding(e.target.value)}
+                placeholder="Descripción detallada del hallazgo observado..."
+                rows={5} required
+                style={{ ...selectStyle, resize: "vertical", lineHeight: 1.5 }}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Ubicación</label>
+              <input
+                type="text" value={location} onChange={e => setLocation(e.target.value)}
+                placeholder="Distrito, provincia, mesa..."
+                style={selectStyle}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input
+                type="checkbox" id="hasEvidence" checked={hasEvidence}
+                onChange={e => setHasEvidence(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: "pointer" }}
+              />
+              <label htmlFor="hasEvidence" style={{ fontSize: 12, color: COLORS.textMuted, cursor: "pointer" }}>
+                Tiene evidencia adjunta (foto, video, documento)
+              </label>
+            </div>
+            <button type="submit" disabled={submitting || !finding.trim()} style={{
+              padding: "10px 20px", borderRadius: 8, border: `1px solid ${COLORS.accent}55`,
+              background: submitting ? COLORS.surface : COLORS.accentDim,
+              color: submitting ? COLORS.textDim : COLORS.accent,
+              fontSize: 13, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer",
+              fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, transition: "all 0.2s ease",
+            }}>
+              {submitting ? "Enviando..." : "Enviar Observación"}
+            </button>
+            {result && result.ok && (
+              <div style={{ padding: 12, borderRadius: 8, background: COLORS.accent + "15", border: `1px solid ${COLORS.accent}44`, fontSize: 12, color: COLORS.accent, fontFamily: "'DM Mono', monospace" }}>
+                Registrado correctamente
+                {result.data?.warnings?.length > 0 && (
+                  <div style={{ marginTop: 6, color: COLORS.warning }}>
+                    Advertencias: {result.data.warnings.join(", ")}
+                  </div>
+                )}
+              </div>
+            )}
+            {result && !result.ok && (
+              <div style={{ padding: 12, borderRadius: 8, background: COLORS.danger + "15", border: `1px solid ${COLORS.danger}44`, fontSize: 12, color: COLORS.danger, fontFamily: "'DM Mono', monospace" }}>
+                Error: {result.error}
+              </div>
+            )}
+          </form>
+        </Card>
+
+        {/* Right: Entries */}
+        <Card>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 16, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>
+            Observaciones Recientes ({entries.length})
+          </div>
+          {entries.length === 0 ? (
+            <div style={{ padding: 32, textAlign: "center", color: COLORS.textDim, fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
+              Aún no hay observaciones en esta sesión.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 520, overflowY: "auto" }}>
+              {entries.map((entry, i) => (
+                <div key={entry.entry_id || i} style={{
+                  padding: 12, borderRadius: 8,
+                  background: COLORS.bg, border: `1px solid ${COLORS.border}`,
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: severityColor(entry.severity), fontFamily: "'DM Mono', monospace", textTransform: "uppercase", letterSpacing: 1 }}>
+                      {entry.severity} · {OBS_CATEGORIES.find(c => c.id === entry.category)?.label || entry.category}
+                    </span>
+                    <span style={{ fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                      {new Date(entry.timestamp).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: COLORS.text, marginBottom: 4, lineHeight: 1.4 }}>
+                    {entry.finding}
+                  </div>
+                  {entry.location && (
+                    <div style={{ fontSize: 10, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace" }}>
+                      📍 {entry.location}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: COLORS.surface, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                      {OBS_CONFIDENCE.find(c => c.id === entry.confidence)?.label || entry.confidence}
+                    </span>
+                    {entry.has_evidence && (
+                      <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: COLORS.info + "22", color: COLORS.info, fontFamily: "'DM Mono', monospace" }}>
+                        CON EVIDENCIA
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 function CountrySelector({ countries, selectedCountry, onSelect }) {
   const [search, setSearch] = useState("");
@@ -5541,6 +7330,19 @@ export default function DemocracIADashboard() {
   const [apiStatus, setApiStatus] = useState("connecting");
   const [generatedAt, setGeneratedAt] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [systemHealth, setSystemHealth] = useState(null);
+
+  useEffect(() => {
+    const fetchHealth = () => {
+      fetch(`${API_BASE}/api/stats`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setSystemHealth(data); })
+        .catch(() => {});
+    };
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchDashboardData = async (forceRefresh = false) => {
     if (forceRefresh) setRefreshing(true);
@@ -5593,7 +7395,8 @@ export default function DemocracIADashboard() {
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
       <Navbar activeView={activeView} setActiveView={setActiveView} apiStatus={apiStatus}
-        onRefresh={() => fetchDashboardData(true)} refreshing={refreshing} generatedAt={generatedAt} />
+        onRefresh={() => fetchDashboardData(true)} refreshing={refreshing} generatedAt={generatedAt}
+        systemHealth={systemHealth} />
 
       {activeView === "detail" && (
         <CountrySelector
@@ -5607,6 +7410,7 @@ export default function DemocracIADashboard() {
       {activeView === "detail" && country && <DetailView country={country} />}
       {activeView === "sentinel" && <SentinelView />}
       {activeView === "peru" && <PeruSituationRoom />}
+      {activeView === "observer" && <ObserverView />}
       {activeView === "methodology" && <MethodologyView />}
 
       <footer style={{

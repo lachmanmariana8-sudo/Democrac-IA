@@ -21,7 +21,21 @@ Endpoints:
 from __future__ import annotations
 
 import os
+import sys
 import json
+
+# Forzar UTF-8 en stdout/stderr — evita crashes con emojis en Windows (cp1252)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+# Cargar .env antes de leer variables de entorno
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 import uuid
 import asyncio
 from datetime import datetime, timezone
@@ -264,7 +278,7 @@ def load_vdem_data() -> Optional[pd.DataFrame]:
         return None
     try:
         df = pd.read_csv(VDEM_CSV_PATH, usecols=VDEM_COLUMNS, low_memory=False)
-        print(f"[V-Dem] ✅ Dataset cargado: {len(df):,} filas, {len(df.columns)} columnas.")
+        print(f"[V-Dem] OK: Dataset cargado: {len(df):,} filas, {len(df.columns)} columnas.")
         print(f"[V-Dem] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
         return df
     except Exception as e:
@@ -387,7 +401,7 @@ def load_freedom_house_data() -> Optional[pd.DataFrame]:
         df["Total"] = pd.to_numeric(df["Total"], errors="coerce")
         df["PR rating"] = pd.to_numeric(df["PR rating"], errors="coerce")
         df["CL rating"] = pd.to_numeric(df["CL rating"], errors="coerce")
-        print(f"[FH] ✅ Dataset cargado: {len(df):,} filas.")
+        print(f"[FH] OK: Dataset cargado: {len(df):,} filas.")
         print(f"[FH] Ediciones disponibles: {int(df['Edition'].min())}–{int(df['Edition'].max())}")
         return df
     except Exception as e:
@@ -508,7 +522,7 @@ def load_rsf_data() -> Optional[pd.DataFrame]:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.replace(",", ".", regex=False)
                 df[col] = pd.to_numeric(df[col], errors="coerce")
-        print(f"[RSF] ✅ Dataset cargado: {len(df):,} países.")
+        print(f"[RSF] OK: Dataset cargado: {len(df):,} países.")
         return df
     except Exception as e:
         print(f"[RSF] ERROR al cargar CSV: {e}")
@@ -585,7 +599,7 @@ def load_pei_data() -> Optional[pd.DataFrame]:
                     "VOTINGPROCESS","VOTECOUNT","VOTINGRESULTS","ELECTIONAUTHORITIES"]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
-        print(f"[PEI] ✅ Dataset cargado: {len(df):,} elecciones.")
+        print(f"[PEI] OK: Dataset cargado: {len(df):,} elecciones.")
         print(f"[PEI] Años disponibles: {int(df['year'].min())}–{int(df['year'].max())}")
         return df
     except Exception as e:
@@ -1664,6 +1678,71 @@ def _assess_capture_risk(network: dict) -> str:
     return "low_capture"
 
 
+# Palabras clave que indican escala masiva — activan escalación de severidad
+_SCALE_KEYWORDS = [
+    r"\b(\d[\d.,]+)\s*(electores?|votantes?|personas?|registros?|casos?|ciudadanos?)",  # número + afectados
+    r"\b(miles|decenas de miles|cientos de miles|millones)\b",
+    r"\b(masivo|masiva|sistémico|sistémica|generalizado|generalizada|padrón|registro electoral)\b",
+    r"\b(todo el país|todo el territorio|a nivel nacional|nacional)\b",
+]
+# Categorías donde el alcance masivo escala la severidad
+_SCALE_SENSITIVE_CATEGORIES = {
+    "voter_suppression", "voter_intimidation", "ballot_tampering",
+    "fraud_allegation", "irregular_procedure", "voter_registration",
+    "disinformation",
+}
+# Umbral numérico: si el hallazgo menciona más de N afectados, escalar
+_SCALE_THRESHOLD = 1_000
+
+
+def _auto_escalate_severity(severity: str, category: str, finding: str) -> str:
+    """
+    Escala automáticamente la severidad si el hallazgo describe afectación masiva.
+    Reglas basadas en estándares ICCPR Art. 25(b) — restricciones irrazonables al sufragio.
+
+    - voter_suppression / voter_intimidation / ballot_tampering con escala ≥1,000 personas → HIGH mínimo
+    - Cualquier hallazgo con escala ≥10,000 afectados → HIGH mínimo
+    - Hallazgo "sistémico" o "a nivel nacional" en categoría sensible → HIGH mínimo
+    - No baja severidades: solo puede subir, nunca bajar.
+    """
+    import re as _re
+
+    _SEV_ORDER = ["info", "low", "medium", "high", "critical"]
+    current_idx = _SEV_ORDER.index(severity) if severity in _SEV_ORDER else 0
+    escalated = severity
+
+    # 1. Detectar número de afectados en el texto
+    num_matches = _re.findall(r"[\d.,]+", finding)
+    max_num = 0
+    for m in num_matches:
+        try:
+            val = float(m.replace(",", "").replace(".", ""))
+            if val > max_num:
+                max_num = val
+        except ValueError:
+            pass
+
+    # 2. Detectar palabras de escala masiva
+    finding_lower = finding.lower()
+    has_scale_word = any(
+        _re.search(p, finding_lower) for p in _SCALE_KEYWORDS
+    )
+
+    # 3. Aplicar reglas de escalación
+    if category in _SCALE_SENSITIVE_CATEGORIES:
+        if max_num >= _SCALE_THRESHOLD or has_scale_word:
+            # ≥1,000 afectados en categoría sensible → mínimo HIGH
+            target_idx = _SEV_ORDER.index("high")
+            if current_idx < target_idx:
+                escalated = "high"
+
+    # 4. Escala ≥10,000 en cualquier categoría → mínimo HIGH
+    if max_num >= 10_000 and current_idx < _SEV_ORDER.index("high"):
+        escalated = "high"
+
+    return escalated
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # AGENTE 5: Electoral Dictamen Agent
@@ -1990,7 +2069,7 @@ def _llm_generate(prompt_system: str, prompt_user: str, fallback_fn, *args, **kw
         response = llm.invoke(messages)
         return response.content.strip()
     except Exception as e:
-        print(f"[LLM] ⚠️ Error: {e}. Usando fallback.")
+        print(f"[LLM] WARN: Error: {e}. Usando fallback.")
         return fallback_fn(*args, **kwargs)
 
 
@@ -3033,6 +3112,31 @@ def _generate_campaign_chapter(political: dict, context: dict = None) -> str:  #
     finance = political.get("campaign_finance", {})
     power = political.get("power_network", {})
 
+    # ── Extraer variables V-Dem reales para Red de Poder ──────────────────────
+    vdem_ctx_cap5 = {}
+    vdem_year_cap5 = "2024"
+    vdem_confirmed_power = False
+    if context:
+        vdem_raw_p = context.get("vdem", {})
+        if isinstance(vdem_raw_p, dict) and "_trace" in vdem_raw_p:
+            vdem_ctx_cap5 = vdem_raw_p.get("value", {}) or {}
+            vdem_confirmed_power = vdem_raw_p["_trace"].get("confidence") == "confirmed"
+            vdem_year_cap5 = str(vdem_ctx_cap5.get("year", "2024"))
+    # Proxies V-Dem para captura de poder (0=bajo riesgo, 1=alto riesgo)
+    vdem_media_bias_risk   = vdem_ctx_cap5.get("media_bias_vdem")        # norm_inverted(v2mebias)
+    vdem_opp_capture_risk  = 1.0 - vdem_ctx_cap5.get("opposition_autonomy", 0.5) if vdem_ctx_cap5.get("opposition_autonomy") is not None else None
+    vdem_irregularity_risk = vdem_ctx_cap5.get("electoral_irregularities") # norm_inverted(v2elirreg)
+    vdem_harjrn_risk       = vdem_ctx_cap5.get("journalist_harassment")    # norm_inverted(v2meharjrn)
+
+    def _risk_label(score):
+        if score is None: return "N/D"
+        if score >= 0.70: return "🔴 ALTO"
+        if score >= 0.45: return "🟡 MODERADO"
+        return "🟢 BAJO"
+
+    power_source_label = f"V-Dem v15 ({vdem_year_cap5}) — proxy estructural" if vdem_confirmed_power else "estimado"
+    power_data_available = vdem_confirmed_power and vdem_media_bias_risk is not None
+
     # RSF: datos reales de libertad de prensa (complementa análisis de medios)
     rsf_data_cap5 = {}
     rsf_confirmed_cap5 = False
@@ -3093,11 +3197,16 @@ def _generate_campaign_chapter(political: dict, context: dict = None) -> str:  #
 | Abuso de recursos estatales | {state_abuse} | mock |
 | Donaciones corporativas divulgadas | {'Sí' if donations_disclosed else 'No'} | mock |
 
-**Red de Poder** *(datos mock — pendiente de integración OpenCorporates)*
-- Vínculos candidato-medios: {power.get('media_ownership_links', 0)}
-- Vínculos con empresas estatales: {power.get('state_enterprise_links', 0)}
-- Vínculos militares-políticos: {'Sí' if power.get('military_links') else 'No'}
-- Riesgo de captura: {power.get('capture_risk', 'N/D')}"""
+**Red de Poder** *({power_source_label} · verificación OpenCorporates/registros nacionales pendiente)*
+| Indicador | Score | Riesgo | Fuente |
+|---|---|---|---|
+| Sesgo mediático estructural (v2mebias) | {f"{vdem_media_bias_risk:.3f}" if vdem_media_bias_risk is not None else "N/D"} | {_risk_label(vdem_media_bias_risk)} | {power_source_label} |
+| Autonomía de la oposición (v2psoppaut) | {f"{vdem_opp_capture_risk:.3f}" if vdem_opp_capture_risk is not None else "N/D"} | {_risk_label(vdem_opp_capture_risk)} | {power_source_label} |
+| Irregularidades electorales (v2elirreg) | {f"{vdem_irregularity_risk:.3f}" if vdem_irregularity_risk is not None else "N/D"} | {_risk_label(vdem_irregularity_risk)} | {power_source_label} |
+| Acoso a periodistas (v2meharjrn) | {f"{vdem_harjrn_risk:.3f}" if vdem_harjrn_risk is not None else "N/D"} | {_risk_label(vdem_harjrn_risk)} | {power_source_label} |
+| Riesgo de captura institucional | — | {_risk_label(vdem_opp_capture_risk)} | PEIRS (derivado V-Dem) |
+
+> *Nota metodológica: Las variables V-Dem son proxies estructurales del estado del ecosistema democrático. Los vínculos específicos candidato-medios y empresa-partido requieren integración con OpenCorporates o fuentes registrales nacionales (pendiente).*"""
 
     # Solo LLM para datos reales — media y/o finance PEI o RSF
     if not media_confirmed and not finance_confirmed and not rsf_confirmed_cap5:
@@ -3663,11 +3772,38 @@ def _generate_voting_day_chapter(voting_day_data: dict, state: "ElectionRiskStat
 
 # ── Protocolo de Observación Electoral — helpers ─────────────────────────────
 
+# R4: Modelo de fase unificado — 9 fases del ciclo electoral completo
+# Cubre desde período preparatorio hasta resolución de disputas
 _PHASE_LABELS = {
-    "pre_election":  "🔵 PRE-JORNADA (48h previas)",
-    "election_day":  "🟡 JORNADA ELECTORAL",
-    "post_election": "🟠 POST-ELECTORAL (72h)",
-    "completed":     "✅ CICLO COMPLETO",
+    "preparatory":         "📋 PREPARATORIO",
+    "pre_campaign":        "📣 PRE-CAMPAÑA",
+    "campaign":            "🗣️ CAMPAÑA ELECTORAL",
+    "electoral_silence":   "🤫 VEDA ELECTORAL",
+    "election_day":        "🗳️ JORNADA ELECTORAL",
+    "counting_tabulation": "🔢 ESCRUTINIO Y CÓMPUTO",
+    "post_election":       "📊 POST-ELECTORAL",
+    "dispute_resolution":  "⚖️ RESOLUCIÓN DE DISPUTAS",
+    "completed":           "✅ CICLO COMPLETO",
+    # Aliases de compatibilidad (mapeados a las fases canónicas para render)
+    "pre_election":        "🔵 PRE-JORNADA (48h previas)",  # legacy → electoral_silence
+}
+
+# Orden canónico de fases (para validación de coherencia temporal)
+_PHASE_ORDER: List[str] = [
+    "preparatory",
+    "pre_campaign",
+    "campaign",
+    "electoral_silence",
+    "election_day",
+    "counting_tabulation",
+    "post_election",
+    "dispute_resolution",
+    "completed",
+]
+
+# Alias inverso para backward-compat (fase legada → fase canónica)
+_PHASE_ALIAS: Dict[str, str] = {
+    "pre_election": "electoral_silence",
 }
 
 _SEVERITY_BADGE = {
@@ -3679,16 +3815,26 @@ _SEVERITY_BADGE = {
 }
 
 _CATEGORY_LABEL = {
-    "logistics":        "Logística",
-    "security":         "Seguridad",
-    "legal":            "Legal/Normativo",
-    "media":            "Medios",
-    "digital":          "Ecosistema Digital",
-    "counting":         "Escrutinio",
-    "results":          "Resultados",
-    "fraud_allegation": "Alegación de Fraude",
-    "hate_speech":      "Discurso de Odio",
-    "other":            "Otro",
+    "logistics":          "Logística",
+    "security":           "Seguridad",
+    "legal":              "Legal/Normativo",
+    "media":              "Medios",
+    "digital":            "Ecosistema Digital",
+    "counting":           "Escrutinio",
+    "results":            "Resultados",
+    "fraud_allegation":   "Alegación de Fraude",
+    "hate_speech":        "Discurso de Odio",
+    # R5: Categorías de observación faltantes
+    "campaign_violation": "Infracción de Campaña",
+    "voter_suppression":  "Supresión del Voto",
+    "accessibility":      "Accesibilidad Electoral",
+    "gender_violence":    "Violencia Política de Género",
+    "disinformation":     "Desinformación Electoral",
+    "voter_intimidation": "Intimidación de Votantes",
+    "ballot_tampering":   "Manipulación de Votos",
+    "media_restriction":  "Restricción de Medios",
+    "irregular_procedure":"Procedimiento Irregular",
+    "other":              "Otro",
 }
 
 # Mapa automático category+severity → derechos potencialmente vulnerados
@@ -3709,6 +3855,30 @@ _RIGHTS_AUTOMAP: Dict[str, List[str]] = {
     "counting|critical":["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)", "CDI Art. 6 — transparencia electoral"],
     "results|high":     ["ICCPR Art. 25(b)", "CADH Art. 23(1)(c) — acceso a cargos públicos"],
     "results|critical": ["ICCPR Art. 25(b)", "CADH Art. 23(1)(c)", "CDI Art. 3", "Art. 14 ICCPR — recurso judicial"],
+    # R5: Nuevas categorías de observación
+    "campaign_violation|medium":  ["ICCPR Art. 25 — campaña equitativa", "CADH Art. 23"],
+    "campaign_violation|high":    ["ICCPR Art. 25", "CADH Art. 23", "ICCPR Art. 22 — libertad de asociación"],
+    "campaign_violation|critical":["ICCPR Art. 25", "CADH Art. 23", "ICCPR Art. 22", "CADH Art. 16"],
+    "voter_suppression|medium":   ["ICCPR Art. 25(b) — derecho al voto sin restricciones indebidas"],
+    "voter_suppression|high":     ["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)", "ICERD Art. 5(c)"],
+    "voter_suppression|critical": ["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)", "ICERD Art. 5(c)", "ICCPR Art. 2"],
+    "accessibility|medium":       ["CRPD Art. 29 — participación en la vida política", "CADH Art. 23"],
+    "accessibility|high":         ["CRPD Art. 29", "CADH Art. 23", "ICCPR Art. 25"],
+    "accessibility|critical":     ["CRPD Art. 29", "ICCPR Art. 25", "CADH Art. 23", "ICCPR Art. 26 — igualdad"],
+    "gender_violence|medium":     ["CEDAW Art. 7 — participación política de la mujer", "CADH Art. 23"],
+    "gender_violence|high":       ["CEDAW Art. 7", "CADH Art. 23", "ICCPR Art. 3 — igualdad entre géneros"],
+    "gender_violence|critical":   ["CEDAW Art. 7", "CADH Art. 23", "ICCPR Art. 3", "ICCPR Art. 7 — no tortura"],
+    "disinformation|medium":      ["ICCPR Art. 19(2) — libertad de información veraz", "CADH Art. 13"],
+    "disinformation|high":        ["ICCPR Art. 19(2)", "CADH Art. 13", "ICCPR Art. 25"],
+    "disinformation|critical":    ["ICCPR Art. 19(2)", "CADH Art. 13", "ICCPR Art. 25", "ICCPR Art. 20 — no propaganda de odio"],
+    "voter_intimidation|high":    ["ICCPR Art. 25(b)", "ICCPR Art. 9 — seguridad personal", "CADH Art. 23"],
+    "voter_intimidation|critical":["ICCPR Art. 25(b)", "ICCPR Art. 9", "CADH Art. 23", "ICCPR Art. 7"],
+    "ballot_tampering|high":      ["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)", "CDI Art. 6"],
+    "ballot_tampering|critical":  ["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)", "CDI Art. 3", "CDI Art. 6"],
+    "media_restriction|high":     ["ICCPR Art. 19(2)", "CADH Art. 13", "ICCPR Art. 25"],
+    "media_restriction|critical": ["ICCPR Art. 19(2)", "CADH Art. 13", "ICCPR Art. 25", "ICCPR Art. 19(3)"],
+    "irregular_procedure|high":   ["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)"],
+    "irregular_procedure|critical":["ICCPR Art. 25(b)", "CADH Art. 23(1)(b)", "CDI Art. 3"],
 }
 
 
@@ -3736,19 +3906,22 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
     entries    = session.get("entries", [])
     started_at = session.get("started_at", "")[:10]
 
-    phase_label = _PHASE_LABELS.get(phase, phase)
+    # R4: Normalizar fase (alias legacy → canónica)
+    phase_norm  = _PHASE_ALIAS.get(phase, phase)
+    phase_label = _PHASE_LABELS.get(phase, _PHASE_LABELS.get(phase_norm, phase_norm))
 
     # ── Estadísticas de hallazgos ──────────────────────────────────────────────
     severity_counts: Dict[str, int] = {"info": 0, "low": 0, "medium": 0, "high": 0, "critical": 0}
-    phase_counts:    Dict[str, int] = {"pre_election": 0, "election_day": 0, "post_election": 0}
+    phase_counts:    Dict[str, int] = {}   # R4: dinámica, cualquier fase
     rights_mentioned: Dict[str, int] = {}
 
     for e in entries:
         sev = e.get("severity", "info")
-        ph  = e.get("phase", "pre_election")
+        # R4: normalizar fase de entrada
+        raw_ph = e.get("phase", "electoral_silence")
+        ph = _PHASE_ALIAS.get(raw_ph, raw_ph)
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
         phase_counts[ph]     = phase_counts.get(ph, 0) + 1
-        # Acumular derechos
         auto_r = _auto_rights(e.get("category", "other"), sev)
         for r in (e.get("rights_at_risk") or []) + auto_r:
             rights_mentioned[r] = rights_mentioned.get(r, 0) + 1
@@ -3757,42 +3930,66 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
     high_count     = severity_counts.get("high", 0)
     total_entries  = len(entries)
 
-    # ── Tabla resumen ──────────────────────────────────────────────────────────
-    summary_rows = "\n".join([
-        "| Fase | Hallazgos |",
-        "|---|---|",
-        f"| {_PHASE_LABELS['pre_election']} | {phase_counts['pre_election']} |",
-        f"| {_PHASE_LABELS['election_day']} | {phase_counts['election_day']} |",
-        f"| {_PHASE_LABELS['post_election']} | {phase_counts['post_election']} |",
-        f"| **TOTAL** | **{total_entries}** |",
-        "| | |",
-        f"| 🚨 Críticos | {critical_count} |",
-        f"| 🔴 Altos | {high_count} |",
-        f"| 🟡 Medios | {severity_counts.get('medium', 0)} |",
-        f"| 🟢 Bajos + Info | {severity_counts.get('low', 0) + severity_counts.get('info', 0)} |",
-    ])
+    # ── Tabla resumen — R4: muestra TODAS las 9 fases con estado ──────────────
+    active_phase_idx = _PHASE_ORDER.index(phase_norm) if phase_norm in _PHASE_ORDER else 0
+    relevant_phases  = [p for p in _PHASE_ORDER[:active_phase_idx + 1]]
+    phase_summary_rows = ["| Fase | Hallazgos | Estado |", "|---|---|---|"]
+    for i, p in enumerate(_PHASE_ORDER):
+        label = _PHASE_LABELS.get(p, p)
+        count = phase_counts.get(p, 0)
+        if i < active_phase_idx:
+            status = "✅ Completada" if count > 0 else "✅ Sin incidencias"
+        elif i == active_phase_idx:
+            status = "🔴 **ACTIVA**"
+        else:
+            status = "⏳ Pendiente"
+        phase_summary_rows.append(f"| {label} | {count} | {status} |")
+    phase_summary_rows += [
+        "| | | |",
+        f"| **TOTAL** | **{total_entries}** | |",
+        "| | | |",
+        f"| 🚨 Críticos | {critical_count} | |",
+        f"| 🔴 Altos | {high_count} | |",
+        f"| 🟡 Medios | {severity_counts.get('medium', 0)} | |",
+        f"| 🟢 Bajos + Info | {severity_counts.get('low', 0) + severity_counts.get('info', 0)} | |",
+    ]
+    summary_rows = "\n".join(phase_summary_rows)
 
     # ── Secciones por fase ─────────────────────────────────────────────────────
-    def render_phase_section(phase_key: str, phase_title: str) -> str:
-        phase_entries = [e for e in entries if e.get("phase") == phase_key]
+    def render_phase_section(phase_key: str, section_num: int) -> str:
+        phase_title = _PHASE_LABELS.get(phase_key, phase_key)
+        # Incluir entradas con alias normalizado
+        phase_entries = [
+            e for e in entries
+            if _PHASE_ALIAS.get(e.get("phase", ""), e.get("phase", "")) == phase_key
+        ]
         if not phase_entries:
-            status = "En espera de datos" if phase_key > phase else "No hay hallazgos registrados"
-            return f"\n### 7.{['pre_election','election_day','post_election'].index(phase_key)+2} {phase_title}\n\n> *{status}.*\n"
+            p_idx = _PHASE_ORDER.index(phase_key) if phase_key in _PHASE_ORDER else 0
+            status = "En espera de datos" if p_idx > active_phase_idx else "No hay hallazgos registrados"
+            return f"\n### 7.{section_num} {phase_title}\n\n> *{status}.*\n"
 
-        rows = ["| # | Hora | Observador | Ubicación | Categoría | Hallazgo | Severidad |",
-                "|---|---|---|---|---|---|---|"]
+        rows = ["| # | ID | Hora | Observador | Ubicación | Categoría | Hallazgo | Severidad | Evidencia |",
+                "|---|---|---|---|---|---|---|---|---|"]
         for i, e in enumerate(phase_entries, 1):
-            ts  = (e.get("timestamp") or "")[:16]
-            obs = e.get("observer_id", "—")
-            loc = (e.get("location") or "—")[:30]
-            cat = _CATEGORY_LABEL.get(e.get("category", "other"), e.get("category", "—"))
+            ts      = (e.get("timestamp") or "")[:16]
+            obs     = e.get("observer_id", "—")
+            loc     = (e.get("location") or "—")[:30]
+            cat     = _CATEGORY_LABEL.get(e.get("category", "other"), e.get("category", "—"))
             finding = (e.get("finding") or "")[:80]
-            sev = _SEVERITY_BADGE.get(e.get("severity", "info"), e.get("severity", "—"))
-            rows.append(f"| {i} | {ts} | {obs} | {loc} | {cat} | {finding} | {sev} |")
+            sev     = _SEVERITY_BADGE.get(e.get("severity", "info"), e.get("severity", "—"))
+            eid     = e.get("entry_id", "—")
+            ev_raw  = e.get("evidence_ref") or ""
+            # Renderizar evidencia: URL → link clickeable; texto → como está; vacío → —
+            if ev_raw.startswith("http://") or ev_raw.startswith("https://"):
+                evidence = f"[Ver fuente]({ev_raw})"
+            elif ev_raw:
+                evidence = ev_raw[:60]
+            else:
+                evidence = "—"
+            rows.append(f"| {i} | `{eid}` | {ts} | {obs} | {loc} | {cat} | {finding} | {sev} | {evidence} |")
 
         table = "\n".join(rows)
 
-        # Hallazgos graves con derechos
         rights_lines = []
         for e in phase_entries:
             if e.get("severity") in ("high", "critical"):
@@ -3810,12 +4007,13 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
         if rights_lines:
             rights_section = "\n**Hallazgos de alta severidad y derechos afectados:**\n\n" + "\n".join(rights_lines)
 
-        phase_num = ['pre_election', 'election_day', 'post_election'].index(phase_key) + 2
-        return f"\n### 7.{phase_num} {phase_title}\n\n{table}\n{rights_section}\n"
+        return f"\n### 7.{section_num} {phase_title}\n\n{table}\n{rights_section}\n"
 
-    pre_section  = render_phase_section("pre_election",  "Pre-Jornada (48 horas previas)")
-    day_section  = render_phase_section("election_day",  "Jornada Electoral")
-    post_section = render_phase_section("post_election", "Post-Electoral (72 horas)")
+    # R4: Renderizar solo las fases relevantes (hasta la fase activa inclusive)
+    phase_sections = "\n".join(
+        render_phase_section(p, i + 2)
+        for i, p in enumerate(relevant_phases)
+    )
 
     # ── Agent 5: patrones sistemáticos ────────────────────────────────────────
     pattern_section = ""
@@ -3837,13 +4035,30 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
                 fraud_hate_section += hate_md
 
     # ── Análisis de derechos potencialmente vulnerados ─────────────────────────
-    rights_analysis = ""
+    rights_analysis = "\n### 7.6 Análisis de Derechos Potencialmente Vulnerados\n\n"
     if rights_mentioned:
         top_rights = sorted(rights_mentioned.items(), key=lambda x: -x[1])
-        rights_rows = ["| Instrumento / Artículo | Frecuencia de vulneración |", "|---|---|"]
+        rights_rows = ["| Instrumento / Artículo | Frecuencia de vulneración | Enlace |", "|---|---|---|"]
         for r, cnt in top_rights[:10]:
-            rights_rows.append(f"| {r} | {cnt} hallazgo(s) |")
-        rights_analysis = "\n### 7.6 Análisis de Derechos Potencialmente Vulnerados\n\n" + "\n".join(rights_rows) + "\n"
+            # Generar link de referencia al instrumento
+            instr_links = {
+                "ICCPR": "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights",
+                "CADH":  "https://www.oas.org/dil/esp/tratados_B-32_Convencion_Americana_sobre_Derechos_Humanos.htm",
+                "CEDAW": "https://www.un.org/womenwatch/daw/cedaw/",
+                "CRPD":  "https://www.un.org/disabilities/documents/convention/convoptprot-e.pdf",
+                "CDI":   "https://www.oas.org/charter/docs_es/resolucion1_es.htm",
+                "ICERD": "https://www.ohchr.org/en/instruments-mechanisms/instruments/international-convention-elimination-all-forms-racial",
+            }
+            link = next((f"[Ver]({url})" for prefix, url in instr_links.items() if r.startswith(prefix)), "—")
+            rights_rows.append(f"| {r} | {cnt} hallazgo(s) | {link} |")
+        rights_analysis += "\n".join(rights_rows) + "\n"
+    else:
+        rights_analysis += (
+            "> *Sin hallazgos con derechos afectados registrados en esta fase. "
+            "Esta sección se completa automáticamente al registrar observaciones de campo "
+            "via `POST /api/observation/{country_code}/entry`. "
+            "Cada hallazgo activa el mapeo automático de artículos ICCPR/CADH/CEDAW/CRPD.*\n"
+        )
 
     # ── Narrative final (LLM) ─────────────────────────────────────────────────
     narrative = ""
@@ -3879,7 +4094,7 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
 
     # ── Consolidado final (solo si phase == completed) ─────────────────────────
     consolidated = ""
-    if phase == "completed":
+    if phase_norm == "completed":
         consolidated = (
             "\n### 7.8 Ciclo de Observación Completado\n\n"
             "> **El ciclo de observación electoral ha concluido.** "
@@ -3897,9 +4112,7 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
         "### 7.1 Cuadro de Situación del Protocolo",
         "",
         summary_rows,
-        pre_section,
-        day_section,
-        post_section,
+        phase_sections,   # R4: reemplaza pre/day/post_section fijos
         pattern_section,
         fraud_hate_section,
         rights_analysis,
@@ -4111,33 +4324,122 @@ def _generate_ai_regulation_chapter(state: "ElectionRiskState") -> str:  # MIGRA
 
 
 def _generate_recommendations(state: ElectionRiskState) -> str:  # MIGRADO a chapters/generators.py
+    """Cap. 9 — Matriz accionable de recomendaciones con tabla estructurada por actor, plazo y base legal."""
     risk = state["risk_level"]
+    risk_score = state.get("risk_score", 50)
+    country_code = state.get("country_code", "")
+    legal = state.get("legal_analysis", {})
+    violations = legal.get("violations", [])
+    viol_summary = "; ".join(
+        f"{v.get('article','?')} ({v.get('severity','?')})"
+        for v in violations[:5]
+    ) if violations else "Ninguna documentada"
 
     if risk == "critical":
         outlook = "**ALERTA MÁXIMA** — Condiciones electorales severamente comprometidas. Alto riesgo de resultados no representativos."
-        investor_impact = "Riesgo elevado de inestabilidad post-electoral, sanciones internacionales y volatilidad macroeconómica."
+        urgency_note = "Todas las recomendaciones marcadas 🔴 URGENTE deben implementarse de forma inmediata."
     elif risk == "high":
         outlook = "**PRECAUCIÓN** — Irregularidades significativas detectadas. Proceso electoral con deficiencias estructurales."
-        investor_impact = "Riesgo moderado-alto de disputas prolongadas y cambios regulatorios abruptos."
+        urgency_note = "Las recomendaciones 🔴 URGENTE deben implementarse antes de la jornada electoral."
     elif risk == "moderate":
         outlook = "**MONITOREO** — Proceso con deficiencias puntuales pero dentro de márgenes manejables."
-        investor_impact = "Riesgo moderado. Recomendable monitoreo continuo de indicadores clave."
+        urgency_note = "Implementar recomendaciones durante el período de campaña activa."
     else:
         outlook = "**ESTABLE** — Proceso electoral dentro de estándares internacionales aceptables."
-        investor_impact = "Bajo riesgo político. Entorno institucional favorable para operaciones."
+        urgency_note = "Mantener monitoreo rutinario y aplicar recomendaciones de mejora continua."
 
-    return f"""## 9. Matriz de Recomendaciones VIP
+    # ── Fallback hardcoded para Perú con riesgo ALTO ───────────────────────────
+    PERU_HIGH_FALLBACK = """| # | Actor | Recomendación | Plazo | Base Legal | Prioridad |
+|---|---|---|---|---|---|
+| 1 | **JNE** | Emitir resolución de precedente vinculante sobre procedimiento de resolución de controversias en segunda vuelta, con plazos máximos y criterios objetivos, antes del inicio del período de silencio electoral | Antes del 09/04/2026 | ICCPR Art. 25(b); CDI Art. 3 | 🔴 URGENTE |
+| 2 | **JNE** | Publicar en tiempo real el padrón de observadores acreditados (nacional e internacional) con acceso irrestricto a recintos electorales, actas y transmisión TREP | Antes del 12/04/2026 | CADH Art. 23; CDI Art. 4 | 🔴 URGENTE |
+| 3 | **JNE** | Establecer protocolo especial para impugnaciones electrónicas ante el Sistema de Voto Electrónico No Presencial (VOTO EXTERIOR) con plazos diferenciados para los 900,000+ peruanos en el exterior | Antes del 01/04/2026 | ICCPR Art. 25(b); CADH Art. 23 | 🟠 ALTA |
+| 4 | **ONPE** | Completar al 100% la capacitación de personeros y miembros de mesa en los 26 distritos electorales con foco especial en regiones de mayor riesgo: Loreto, Huancavelica, Apurímac | Antes del 05/04/2026 | ICCPR Art. 25; CDI Art. 3 | 🔴 URGENTE |
+| 5 | **ONPE** | Auditar y certificar públicamente el sistema de transmisión de resultados TREP y el Sistema de Cómputo Electoral (SICE) con participación de observadores técnicos independientes (NDI/IFES) | Antes del 10/04/2026 | ICCPR Art. 25(b); CDI Art. 6 | 🔴 URGENTE |
+| 6 | **RENIEC** | Concluir la campaña de depuración y actualización del padrón electoral en comunidades amazónicas y andinas donde se detectaron irregularidades en 2021 (Loreto, Ucayali, Huánuco) | Antes del 31/03/2026 | ICCPR Art. 25(b); UNDRIP Art. 18 | 🔴 URGENTE |
+| 7 | **RENIEC** | Desplegar brigadas móviles de documentación para garantizar DNI y acceso al padrón a comunidades indígenas en zonas de difícil acceso geográfico (mínimo 15 comunidades en Puno, Cusco, Loreto) | Antes del 15/03/2026 | UNDRIP Art. 5, 18; ICCPR Art. 25(b) | 🟠 ALTA |
+| 8 | **Congreso / Partidos** | Presentar y publicar informes de financiamiento de campaña ante la ONPE según lo establece la Ley 31046 con apertura de cuentas bancarias exclusivas y transparencia total de aportes desde el primer día | Inmediato (vigente) | UNCAC Art. 7; CADH Art. 23 | 🔴 URGENTE |
+| 9 | **Congreso / Partidos** | Garantizar acceso equitativo a medios de comunicación para todos los partidos con inscripción vigente, con monitoreo cuantitativo independiente de cobertura mediática por CONCORTV | Hasta el 10/04/2026 | ICCPR Art. 19, 25; CADH Art. 13 | 🟠 ALTA |
+| 10 | **Observadores internacionales** | Acreditar misiones de largo plazo (LTO) con mínimo 3 meses de despliegue previo a la jornada para las organizaciones OEA/DECO, Centro Carter, NDI, con acceso pleno a todas las fases del proceso | Antes del 15/01/2026 | CDI Art. 23; OSCE/ODIHR Guidelines | 🟠 ALTA |
+| 11 | **Observadores internacionales** | Acordar con el JNE protocolo estandarizado de reporte de incidentes con clasificación por tipo (fraude, violencia, presión institucional), nivel geográfico y tiempo máximo de respuesta (24h) | Antes del 01/04/2026 | CDI Art. 4, 6; OSCE/ODIHR EOM Handbook | 🟠 ALTA |
+| 12 | **Comunidad internacional** | La OEA y la UE deben activar mecanismos de monitoreo continuo del proceso post-electoral incluyendo segunda vuelta, con presencia sostenida hasta la proclamación definitiva del JNE | Hasta proclamación (jun 2026) | CDI Arts. 17-20; ICCPR Art. 25 | 🟡 MEDIA |"""
 
-**Proyección:** {outlook}
+    # ── LLM: personalizar según violaciones detectadas ─────────────────────────
+    sys_prompt = (
+        "Sos un experto en derecho electoral internacional y observación de elecciones para DEMOCRAC.IA/PEIRS. "
+        "Generas matrices de recomendaciones accionables en formato markdown tabla estructurada. "
+        "Español preciso, sin emojis salvo los indicados en el formato. Sin texto fuera de la tabla."
+    )
+    user_prompt = (
+        f"Genera una tabla markdown de exactamente 12 recomendaciones electorales accionables para Perú 2026.\n\n"
+        f"CONTEXTO DEL ANÁLISIS:\n"
+        f"- Riesgo PEIRS: {risk_score}/100 ({risk.upper()})\n"
+        f"- Violaciones detectadas: {viol_summary}\n"
+        f"- Elección: 12 de abril 2026 (presidencial + congreso, unicameral 130 escaños)\n"
+        f"- Sistema tripartito: JNE (árbitro) + ONPE (organización) + RENIEC (padrón)\n\n"
+        f"DISTRIBUCIÓN REQUERIDA:\n"
+        f"- JNE: 3 recomendaciones (resolución controversias, transparencia, padrón exterior)\n"
+        f"- ONPE: 2 recomendaciones (capacitación, transmisión TREP)\n"
+        f"- RENIEC: 2 recomendaciones (depuración padrón, documentación comunidades)\n"
+        f"- Congreso/Partidos: 2 recomendaciones (financiamiento, acceso medios)\n"
+        f"- Observadores internacionales: 2 recomendaciones (acreditación, protocolo incidentes)\n"
+        f"- Comunidad internacional: 1 recomendación (monitoreo)\n\n"
+        f"FORMATO OBLIGATORIO (tabla markdown):\n"
+        f"| # | Actor | Recomendación | Plazo | Base Legal | Prioridad |\n"
+        f"|---|---|---|---|---|---|\n"
+        f"Prioridad: 🔴 URGENTE / 🟠 ALTA / 🟡 MEDIA\n"
+        f"Plazos: fechas concretas antes del 12/04/2026 o 'Inmediato'\n"
+        f"Base legal: ICCPR/CADH/CDI/UNDRIP/UNCAC con artículo específico\n"
+        f"Solo la tabla, sin texto adicional."
+    )
 
-**Impacto para Inversores y Analistas:** {investor_impact}
+    # Usar fallback Perú si no se puede generar con LLM
+    if country_code == "PER":
+        rec_table = _llm_generate(sys_prompt, user_prompt, lambda: PERU_HIGH_FALLBACK)
+    else:
+        generic_fallback = (
+            "| 1 | **Organismo Electoral** | Garantizar independencia e imparcialidad en todas las fases del proceso | Inmediato | ICCPR Art. 25; CDI Art. 3 | 🔴 URGENTE |\n"
+            "| 2 | **Autoridades Electorales** | Publicar cronograma electoral detallado con plazos verificables | Inmediato | ICCPR Art. 25(b); CADH Art. 23 | 🔴 URGENTE |\n"
+            "| 3 | **Observadores** | Acreditar misiones internacionales con acceso pleno | 30 días antes | CDI Art. 23 | 🟠 ALTA |"
+        )
+        rec_table = _llm_generate(sys_prompt, user_prompt, lambda: generic_fallback)
 
-**Índice Predictivo Final:** {state['risk_score']}/100 ({state['risk_level'].upper()})
+    lines = [
+        "## 9. Matriz de Recomendaciones — Acción Electoral",
+        "",
+        f"> **Proyección PEIRS:** {outlook}",
+        f"> {urgency_note}",
+        "",
+        f"**Índice Predictivo Final:** {risk_score}/100 ({risk.upper()}) | "
+        f"**Violaciones activas:** {len(violations)} | "
+        f"**Fecha de análisis:** marzo 2026",
+        "",
+        "### 9.1 Tabla de Recomendaciones por Actor",
+        "",
+        "| # | Actor | Recomendación | Plazo | Base Legal | Prioridad |",
+        "|---|---|---|---|---|---|",
+    ]
 
----
-*Informe generado por DEMOCRAC.IA (PEIRS) v0.1.0 — Sistema de Inteligencia Electoral OSINT*
-*Los datos presentados son para fines analíticos y predictivos. PEIRS no valida ni legitima resultados electorales.*
-"""
+    # Extraer solo las filas de la tabla si el LLM devuelve la tabla completa
+    for line in rec_table.strip().split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("|") and not stripped.startswith("| #") and not stripped.startswith("|---"):
+            lines.append(stripped)
+
+    lines += [
+        "",
+        "### 9.2 Notas Metodológicas",
+        "",
+        "- Las recomendaciones se derivan del análisis PEIRS integrado de 4 datasets (V-Dem v15, FH FIW 2025, PEI 10.0, RSF 2025) y el análisis de conformidad legal con estándares internacionales.",
+        "- Los plazos son calculados respecto a la jornada electoral del **12 de abril de 2026**.",
+        "- Base legal: **ICCPR** = Pacto Internacional de Derechos Civiles y Políticos (ONU, 1966); **CADH** = Convención Americana sobre Derechos Humanos (1969); **CDI** = Carta Democrática Interamericana (OEA, 2001); **UNDRIP** = Declaración de Derechos de Pueblos Indígenas (ONU, 2007); **UNCAC** = Convención de la ONU contra la Corrupción.",
+        "- Prioridades: 🔴 **URGENTE** = riesgo de impacto directo en integridad del proceso si no se implementa; 🟠 **ALTA** = déficit estructural con ventana de corrección; 🟡 **MEDIA** = mejora significativa posible a mediano plazo.",
+        "",
+        "---",
+        "*Informe generado por DEMOCRAC.IA (PEIRS) v0.4.0 — Sistema de Inteligencia Electoral OSINT*",
+        "*Los datos presentados son para fines analíticos y predictivos. PEIRS no valida ni legitima resultados electorales.*",
+    ]
+    return "\n".join(lines)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -4385,11 +4687,40 @@ def _preload_reports_on_startup() -> None:
     print(f"[Startup] Pre-cargados {loaded} reportes desde SQLite.")
 
 
+def _preload_sessions_on_startup() -> None:
+    """R2: Rehidrata observation_store desde SQLite al arrancar.
+    Sin esto, reiniciar el servidor borra todas las sesiones de observación activas.
+    """
+    try:
+        with _get_db() as conn:
+            rows = conn.execute(
+                "SELECT country_code, data FROM observation_sessions "
+                "WHERE finalized = 0 ORDER BY updated_at DESC"
+            ).fetchall()
+        loaded = 0
+        seen_codes: set = set()
+        for country_code, data_json in rows:
+            if country_code in seen_codes:
+                continue  # Solo la sesión más reciente por país
+            try:
+                session = json.loads(data_json)
+                observation_store[country_code] = session
+                seen_codes.add(country_code)
+                loaded += 1
+            except Exception:
+                pass
+        if loaded:
+            print(f"[Startup] Sesiones de observacion rehidratadas: {loaded} pais(es) activos.")
+    except Exception as e:
+        print(f"[Startup] No se pudieron rehidratar sesiones de observacion: {e}")
+
+
 @app.on_event("startup")
 async def on_startup():
     _init_db()
     _migrate_json_to_sqlite()
     _preload_reports_on_startup()
+    _preload_sessions_on_startup()  # R2: rehidrata sesiones de observacion activas
     # Inicializar RAG en background (no bloquea el startup si falla)
     try:
         rag_ok = init_rag()
@@ -4453,16 +4784,18 @@ class ObservationStartInput(BaseModel):
     run_id: str                              # Reporte PEIRS previo de referencia
     mission_name: Optional[str] = "Misión de Observación Electoral"
     lead_org: Optional[str] = "DEMOCRAC.IA Observer Network"
+    # R6: Multi-sesión — True = archiva sesión activa y crea una nueva (ej. segunda vuelta)
+    allow_override: Optional[bool] = False
 
 
 class ObservationEntryInput(BaseModel):
     """Un hallazgo/observación individual ingresado por un observador de campo."""
     country_code: str
-    phase: str                               # "pre_election" | "election_day" | "post_election"
+    phase: str                               # R4: cualquiera de _PHASE_ORDER o alias legacy "pre_election"
     timestamp: Optional[str] = None          # ISO8601; si omitido, se usa el momento actual
     observer_id: Optional[str] = "OBS-001"  # Identificador del observador
     location: Optional[str] = ""            # Mesa, distrito, región
-    category: str                            # "logistics"|"security"|"legal"|"media"|"digital"|"counting"|"results"|"fraud_allegation"|"hate_speech"|"other"
+    category: str                            # R5: "logistics"|"security"|"legal"|"media"|"digital"|"counting"|"results"|"fraud_allegation"|"hate_speech"|"campaign_violation"|"voter_suppression"|"accessibility"|"gender_violence"|"disinformation"|"voter_intimidation"|"ballot_tampering"|"media_restriction"|"irregular_procedure"|"other"
     finding: str                             # Descripción del hallazgo
     severity: str = "info"                   # "info"|"low"|"medium"|"high"|"critical"
     rights_at_risk: Optional[List[str]] = [] # p.ej. ["ICCPR Art. 25", "CADH Art. 23"]
@@ -4482,7 +4815,7 @@ class ObservationEntryInput(BaseModel):
 class ObservationAdvanceInput(BaseModel):
     """Avanza la fase del protocolo de observación."""
     country_code: str
-    target_phase: str  # "election_day" | "post_election" | "completed"
+    target_phase: str  # R4: cualquiera de _PHASE_ORDER (p.ej. "campaign", "electoral_silence", "election_day", "counting_tabulation", "post_election", "dispute_resolution", "completed")
     notes: Optional[str] = None
 
 
@@ -4844,7 +5177,7 @@ async def get_dashboard_data(force_refresh: bool = False):
             "region": COUNTRY_REGIONS.get(code, "unknown"),
         })
 
-    print(f"[Dashboard] ✅ {cached_count} desde caché, {generated_count} regenerados.")
+    print(f"[Dashboard] OK: {cached_count} desde cache, {generated_count} regenerados.")
     return {"countries": dashboard_countries, "generated_at": datetime.now(timezone.utc).isoformat()}
 
 
@@ -4923,9 +5256,42 @@ async def observation_start(country_code: str, request: ObservationStartInput, _
     """
     Inicia una sesión del Protocolo de Observación Electoral para un país.
     Debe existir un reporte PEIRS (run_id) previo para el país.
-    Fases del protocolo: pre_election → election_day → post_election → completed.
+    Fases del protocolo: preparatory → ... → completed.
+
+    R6 — Multi-sesión: si ya existe una sesión activa para el país:
+    - allow_override=False (default): retorna 409 con datos de la sesión existente
+    - allow_override=True: archiva la sesión activa (marca finalized=True) y crea una nueva.
+      Útil para segunda vuelta o nueva ronda de observación sin perder hallazgos anteriores.
     """
     code = country_code.upper()
+
+    # R6: Verificar sesión existente
+    if code in observation_store and not observation_store[code].get("finalized", False):
+        existing = observation_store[code]
+        if not request.allow_override:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": f"Ya existe una sesión activa para {code}.",
+                    "session_id":   existing.get("session_id"),
+                    "mission_name": existing.get("mission_name"),
+                    "phase":        existing.get("phase"),
+                    "entries":      len(existing.get("entries", [])),
+                    "hint": "Usa allow_override=true para archivar esta sesión e iniciar una nueva (ej. segunda vuelta).",
+                }
+            )
+        # allow_override=True → archivar sesión previa en SQLite como finalizada
+        now_archive = datetime.now(timezone.utc).isoformat()
+        existing["finalized"]  = True
+        existing["phase"]      = existing.get("phase", "completed")
+        existing["updated_at"] = now_archive
+        existing.setdefault("archive_reason", f"Archivada por nueva sesión ({request.mission_name})")
+        with _get_db() as conn:
+            conn.execute(
+                "UPDATE observation_sessions SET finalized=1, updated_at=?, data=? WHERE country_code=? AND session_id=?",
+                (now_archive, json.dumps(existing), code, existing["session_id"])
+            )
+            conn.commit()
 
     # Verificar que el run_id existe
     run_id = request.run_id
@@ -4942,7 +5308,7 @@ async def observation_start(country_code: str, request: ObservationStartInput, _
         "run_id":       run_id,
         "mission_name": request.mission_name,
         "lead_org":     request.lead_org,
-        "phase":        "pre_election",
+        "phase":        "preparatory",   # R4: fase inicial canónica
         "started_at":   now,
         "updated_at":   now,
         "entries":      [],
@@ -4957,7 +5323,7 @@ async def observation_start(country_code: str, request: ObservationStartInput, _
             "(session_id, country_code, run_id, mission_name, lead_org, phase, started_at, updated_at, finalized, data) "
             "VALUES (?,?,?,?,?,?,?,?,?,?)",
             (session["session_id"], code, run_id, request.mission_name, request.lead_org,
-             "pre_election", now, now, 0, json.dumps(session))
+             "preparatory", now, now, 0, json.dumps(session))
         )
         conn.commit()
 
@@ -4980,9 +5346,11 @@ async def observation_start(country_code: str, request: ObservationStartInput, _
         "session_id":   session["session_id"],
         "country_code": code,
         "run_id":       run_id,
-        "phase":        "pre_election",
+        "phase":        "preparatory",
+        "phase_label":  _PHASE_LABELS["preparatory"],
         "mission_name": request.mission_name,
-        "message":      f"Protocolo de observación iniciado. Fase activa: PRE-JORNADA (48h). Agrega hallazgos via POST /api/observation/{code}/entry",
+        "available_phases": _PHASE_ORDER,
+        "message":      f"Protocolo de observación iniciado. Fase activa: PREPARATORIO. Avanza fases via POST /api/observation/{code}/advance. Agrega hallazgos via POST /api/observation/{code}/entry",
     }
 
 
@@ -4999,6 +5367,23 @@ async def observation_add_entry(country_code: str, request: ObservationEntryInpu
     session = observation_store[code]
     now = datetime.now(timezone.utc).isoformat()
 
+    # R3+R4: Validar coherencia temporal de la phase enviada (usa _PHASE_ORDER global + aliases)
+    active_phase = session.get("phase", "electoral_silence")
+    # Normalizar alias legacy (p.ej. "pre_election" → "electoral_silence")
+    raw_phase   = request.phase or active_phase
+    entry_phase = _PHASE_ALIAS.get(raw_phase, raw_phase)
+    active_phase_norm = _PHASE_ALIAS.get(active_phase, active_phase)
+    active_idx = _PHASE_ORDER.index(active_phase_norm) if active_phase_norm in _PHASE_ORDER else 0
+    entry_idx  = _PHASE_ORDER.index(entry_phase)       if entry_phase       in _PHASE_ORDER else 0
+    phase_warning = None
+    if entry_idx > active_idx:
+        # Fase futura: normalizar a la activa y advertir
+        entry_phase   = active_phase
+        phase_warning = (
+            f"Phase '{request.phase}' is ahead of active session phase '{active_phase}'. "
+            f"Entry registered under '{active_phase}'."
+        )
+
     # Derechos auto-sugeridos si no vienen
     auto_rights = _auto_rights(request.category, request.severity)
     rights = list(set((request.rights_at_risk or []) + auto_rights))
@@ -5008,10 +5393,10 @@ async def observation_add_entry(country_code: str, request: ObservationEntryInpu
         "timestamp":      request.timestamp or now,
         "observer_id":    request.observer_id,
         "location":       request.location,
-        "phase":          request.phase,
+        "phase":          entry_phase,  # R3: ya validada y normalizada
         "category":       request.category,
         "finding":        request.finding,
-        "severity":       request.severity,
+        "severity":       _auto_escalate_severity(request.severity, request.category, request.finding),
         "rights_at_risk": rights,
         "verified":       request.verified,
         "verified_by":    request.verified_by,
@@ -5060,9 +5445,10 @@ async def observation_add_entry(country_code: str, request: ObservationEntryInpu
         )
         conn.commit()
 
-    # Agent 7 — despachar alerta si corresponde (background, no bloquea respuesta)
+    # Agent 7 — despachar alerta si corresponde (usa severidad final escalada)
     alert_result = {"dispatched": False}
-    if ALERTS_AVAILABLE and request.severity in ("critical", "high"):
+    if ALERTS_AVAILABLE and entry["severity"] in ("critical", "high"):
+        patterns = detect_patterns(session.get("entries", []))
         alert_event = build_entry_alert(entry, session, patterns)
         if alert_event:
             try:
@@ -5070,15 +5456,29 @@ async def observation_add_entry(country_code: str, request: ObservationEntryInpu
             except Exception:
                 pass
 
+    warnings_out = list(validation.warnings)
+    if phase_warning:
+        warnings_out.insert(0, phase_warning)
+
+    escalation_note = (
+        f"Severidad escalada automáticamente: {request.severity} → {entry['severity']} "
+        f"(escala detectada en hallazgo — estándar ICCPR Art. 25(b))"
+        if entry["severity"] != request.severity else None
+    )
+    if escalation_note:
+        warnings_out.insert(0, escalation_note)
+
     return {
         "entry_id":        entry["entry_id"],
         "country_code":    code,
-        "phase":           request.phase,
-        "severity":        request.severity,
+        "phase":           entry_phase,
+        "severity":        entry["severity"],          # severidad final (puede ser escalada)
+        "severity_original": request.severity,         # lo que ingresó el observador
+        "severity_escalated": entry["severity"] != request.severity,
         "rights_at_risk":  rights,
         "total_entries":   len(session["entries"]),
         "quality_score":   validation.quality_score,
-        "warnings":        validation.warnings,
+        "warnings":        warnings_out,
         "duplicate_of":    validation.duplicate_of,
         "alert_dispatched": alert_result.get("dispatched", False),
         "alert_channels":  alert_result.get("channels", {}),
@@ -5138,19 +5538,24 @@ async def observation_status(country_code: str):
     severity_counts = {}
     phase_counts    = {}
     for e in entries:
-        sev = e.get("severity", "info")
-        ph  = e.get("phase", "pre_election")
+        sev    = e.get("severity", "info")
+        raw_ph = e.get("phase", "electoral_silence")
+        ph     = _PHASE_ALIAS.get(raw_ph, raw_ph)   # R4: normalizar alias
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
         phase_counts[ph]     = phase_counts.get(ph, 0) + 1
 
+    current_phase = session.get("phase", "preparatory")
+    current_norm  = _PHASE_ALIAS.get(current_phase, current_phase)
     return {
         "country_code":  code,
         "session_id":    session.get("session_id"),
         "run_id":        session.get("run_id"),
         "mission_name":  session.get("mission_name"),
         "lead_org":      session.get("lead_org"),
-        "phase":         session.get("phase"),
-        "phase_label":   _PHASE_LABELS.get(session.get("phase", ""), ""),
+        "phase":         current_phase,
+        "phase_canonical": current_norm,
+        "phase_label":   _PHASE_LABELS.get(current_phase, _PHASE_LABELS.get(current_norm, current_norm)),
+        "available_phases": _PHASE_ORDER,
         "started_at":    session.get("started_at"),
         "updated_at":    session.get("updated_at"),
         "finalized":     session.get("finalized", False),
@@ -5160,24 +5565,165 @@ async def observation_status(country_code: str):
     }
 
 
+@app.get("/api/observation/{country_code}/sessions")
+async def observation_list_sessions(country_code: str, include_entries: bool = False):
+    """
+    R6 — Lista todas las sesiones de observación para un país (activas + archivadas).
+    Permite ver el historial completo de misiones: primera vuelta, segunda vuelta, etc.
+    include_entries=true devuelve los hallazgos de cada sesión (puede ser grande).
+    """
+    code = country_code.upper()
+    try:
+        with _get_db() as conn:
+            rows = conn.execute(
+                "SELECT session_id, run_id, mission_name, lead_org, phase, "
+                "started_at, updated_at, finalized, data "
+                "FROM observation_sessions WHERE country_code=? "
+                "ORDER BY started_at ASC",
+                (code,)
+            ).fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar sesiones: {e}")
+
+    sessions_out = []
+    for row in rows:
+        session_id, run_id, mission_name, lead_org, phase, started_at, updated_at, finalized, data_json = row
+        try:
+            data = json.loads(data_json) if data_json else {}
+        except Exception:
+            data = {}
+        entries = data.get("entries", [])
+        item = {
+            "session_id":    session_id,
+            "run_id":        run_id,
+            "mission_name":  mission_name,
+            "lead_org":      lead_org,
+            "phase":         phase,
+            "started_at":    started_at,
+            "updated_at":    updated_at,
+            "finalized":     bool(finalized),
+            "total_entries": len(entries),
+            "severity_summary": {
+                sev: sum(1 for e in entries if e.get("severity") == sev)
+                for sev in ("critical", "high", "medium", "low", "info")
+                if any(e.get("severity") == sev for e in entries)
+            },
+        }
+        if include_entries:
+            item["entries"] = entries
+        sessions_out.append(item)
+
+    active = next((s for s in sessions_out if not s["finalized"]), None)
+    return {
+        "country_code":    code,
+        "total_sessions":  len(sessions_out),
+        "active_session":  active,
+        "sessions":        sessions_out,
+    }
+
+
+@app.get("/api/observation/{country_code}/entries")
+async def observation_get_entries(
+    country_code: str,
+    phase:      Optional[str] = None,
+    severity:   Optional[str] = None,
+    category:   Optional[str] = None,
+    observer_id: Optional[str] = None,
+    verified:   Optional[bool] = None,
+    limit:      int = 100,
+    offset:     int = 0,
+    session_id: Optional[str] = None,
+):
+    """
+    R7 — Retorna los hallazgos de observación con filtros opcionales.
+
+    Filtros disponibles:
+    - phase:       fase del protocolo (ej. "campaign", "election_day")
+    - severity:    "info" | "low" | "medium" | "high" | "critical"
+    - category:    categoría de hallazgo (ej. "logistics", "fraud_allegation")
+    - observer_id: filtrar por observador específico
+    - verified:    true = solo verificados, false = solo no verificados
+    - session_id:  filtrar por sesión específica (default: sesión activa)
+    - limit/offset: paginación (default limit=100)
+    """
+    code = country_code.upper()
+
+    # Obtener sesión: por session_id específico, o la activa
+    if session_id:
+        try:
+            with _get_db() as conn:
+                row = conn.execute(
+                    "SELECT data FROM observation_sessions WHERE country_code=? AND session_id=?",
+                    (code, session_id)
+                ).fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Sesión '{session_id}' no encontrada para {code}.")
+            session = json.loads(row[0])
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    elif code in observation_store:
+        session = observation_store[code]
+    else:
+        raise HTTPException(status_code=404, detail=f"No hay sesión activa para {code}. Usa session_id= para consultar sesiones archivadas.")
+
+    entries = session.get("entries", [])
+
+    # Aplicar filtros
+    if phase:
+        phase_norm = _PHASE_ALIAS.get(phase, phase)
+        entries = [e for e in entries if _PHASE_ALIAS.get(e.get("phase", ""), e.get("phase", "")) == phase_norm]
+    if severity:
+        entries = [e for e in entries if e.get("severity") == severity]
+    if category:
+        entries = [e for e in entries if e.get("category") == category]
+    if observer_id:
+        entries = [e for e in entries if e.get("observer_id") == observer_id]
+    if verified is not None:
+        entries = [e for e in entries if bool(e.get("verified", False)) == verified]
+
+    total = len(entries)
+    page  = entries[offset: offset + limit]
+
+    return {
+        "country_code":  code,
+        "session_id":    session.get("session_id"),
+        "mission_name":  session.get("mission_name"),
+        "phase_active":  session.get("phase"),
+        "filters_applied": {k: v for k, v in {
+            "phase": phase, "severity": severity, "category": category,
+            "observer_id": observer_id, "verified": verified,
+        }.items() if v is not None},
+        "total_matching": total,
+        "offset":         offset,
+        "limit":          limit,
+        "entries":        page,
+    }
+
+
 @app.post("/api/observation/{country_code}/advance")
 async def observation_advance_phase(country_code: str, request: ObservationAdvanceInput, _key: str = Depends(_require_observer_key)):
     """
     Avanza la fase del protocolo de observación.
-    Orden: pre_election → election_day → post_election → completed
+    R4: Orden completo: preparatory → pre_campaign → campaign → electoral_silence →
+        election_day → counting_tabulation → post_election → dispute_resolution → completed
     """
     code = country_code.upper()
     if code not in observation_store:
         raise HTTPException(status_code=404, detail=f"No hay sesión activa para {code}.")
 
-    valid_phases = ["pre_election", "election_day", "post_election", "completed"]
-    target = request.target_phase
-    if target not in valid_phases:
-        raise HTTPException(status_code=400, detail=f"Fase inválida: '{target}'. Opciones: {valid_phases}")
+    # R4: Usar _PHASE_ORDER global; aceptar aliases legacy
+    target_raw = request.target_phase
+    target = _PHASE_ALIAS.get(target_raw, target_raw)
+    if target not in _PHASE_ORDER:
+        raise HTTPException(status_code=400, detail=f"Fase inválida: '{target_raw}'. Opciones: {_PHASE_ORDER}")
 
     session = observation_store[code]
-    current_idx = valid_phases.index(session.get("phase", "pre_election"))
-    target_idx  = valid_phases.index(target)
+    current_raw = session.get("phase", "electoral_silence")
+    current = _PHASE_ALIAS.get(current_raw, current_raw)
+    current_idx = _PHASE_ORDER.index(current) if current in _PHASE_ORDER else 0
+    target_idx  = _PHASE_ORDER.index(target)
     if target_idx <= current_idx:
         raise HTTPException(status_code=400, detail=f"No se puede retroceder de '{session['phase']}' a '{target}'.")
 
@@ -5215,7 +5761,7 @@ async def observation_advance_phase(country_code: str, request: ObservationAdvan
 
     return {
         "country_code":   code,
-        "previous_phase": valid_phases[current_idx],
+        "previous_phase": _PHASE_ORDER[current_idx],
         "current_phase":  target,
         "phase_label":    _PHASE_LABELS.get(target, target),
         "message":        f"Protocolo avanzado a {_PHASE_LABELS.get(target, target)}.",
@@ -5295,6 +5841,211 @@ async def observation_finalize(country_code: str, _key: str = Depends(_require_o
     }
 
 
+@app.get("/api/observation/{country_code}/report")
+async def observation_report(country_code: str):
+    """
+    R1: Retorna el Capítulo 7 (Observación Electoral) como documento standalone.
+    Incluye el markdown del capítulo + resumen JSON de la sesión.
+    Referenciado en el informe generado — anteriormente daba 404.
+    """
+    code = country_code.upper()
+
+    # Buscar sesión activa en memoria
+    session = observation_store.get(code)
+
+    # Si no está en memoria, intentar desde SQLite
+    if not session:
+        try:
+            with _get_db() as conn:
+                row = conn.execute(
+                    "SELECT data FROM observation_sessions "
+                    "WHERE country_code=? ORDER BY updated_at DESC LIMIT 1",
+                    (code,)
+                ).fetchone()
+            if row:
+                session = json.loads(row[0])
+        except Exception:
+            pass
+
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay sesión de observación para {code}. Inicia una con POST /api/observation/{code}/start"
+        )
+
+    run_id  = session.get("run_id")
+    entries = session.get("entries", [])
+
+    # Obtener resultado del pipeline para contexto (sin usar cap7 cacheado)
+    result = {}
+    if run_id:
+        if run_id not in reports_store:
+            disk = load_report(run_id)
+            if disk:
+                reports_store[run_id] = disk
+        result = reports_store.get(run_id, {})
+
+    # Siempre regenerar el Cap. 7 en tiempo real para reflejar entradas actuales
+    cap7_markdown = _generate_observation_chapter(session, result)
+
+    # Resumen por fase y severidad (R4: todas las fases canónicas)
+    phase_counts = {p: 0 for p in _PHASE_ORDER}
+    sev_counts   = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+    for e in entries:
+        raw_ph = e.get("phase", "preparatory")
+        ph = _PHASE_ALIAS.get(raw_ph, raw_ph)
+        if ph in phase_counts:
+            phase_counts[ph] += 1
+        sv = e.get("severity", "info")
+        if sv in sev_counts:
+            sev_counts[sv] += 1
+
+    return {
+        "country_code":   code,
+        "run_id":         run_id,
+        "session_id":     session.get("session_id"),
+        "mission_name":   session.get("mission_name"),
+        "lead_org":       session.get("lead_org"),
+        "phase":          session.get("phase"),
+        "phase_label":    _PHASE_LABELS.get(session.get("phase", ""), ""),
+        "finalized":      session.get("finalized", False),
+        "started_at":     session.get("started_at"),
+        "updated_at":     session.get("updated_at"),
+        "total_entries":  len(entries),
+        "entries_by_phase":    phase_counts,
+        "entries_by_severity": sev_counts,
+        "chapter_07_markdown": cap7_markdown,
+        "full_report_url":     f"/api/report/{run_id}" if run_id else None,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6c. EVALUACIÓN DE CICLO ELECTORAL — Cuestionario observador vs. plataforma
+# ═══════════════════════════════════════════════════════════════════════════════
+
+try:
+    from modules.evaluation_form import (
+        QUESTIONNAIRE, SECTIONS, TOTAL_QUESTIONS,
+        build_questionnaire_with_platform_scores, compute_comparison,
+    )
+    EVALUATION_AVAILABLE = True
+except ImportError as _e:
+    EVALUATION_AVAILABLE = False
+    print(f"[EVAL] evaluation_form no disponible: {_e}")
+
+# Store en memoria para respuestas parciales (antes del submit final a SQLite)
+evaluation_store: Dict[str, dict] = {}  # keyed by country_code
+
+
+@app.get("/api/evaluation/{country_code}/questionnaire")
+async def get_evaluation_questionnaire(country_code: str):
+    """
+    Retorna el cuestionario de evaluación de ciclo con los scores de la plataforma pre-cargados.
+    71 preguntas, 10 secciones, mapeo completo a V-Dem / PEI / FH / RSF.
+    """
+    if not EVALUATION_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Módulo de evaluación no disponible.")
+    code = country_code.upper()
+    vdem  = get_vdem_country(VDEM_DF, code)
+    pei   = get_pei_country(PEI_DF, code)
+    fh    = get_freedom_house_country(FH_DF, code)
+    rsf   = get_rsf_country(RSF_DF, code)
+    questionnaire = build_questionnaire_with_platform_scores(vdem, pei, fh, rsf)
+
+    # Cargar respuestas parciales si existen
+    saved = evaluation_store.get(code, {})
+    if saved.get("answers"):
+        for q_item in questionnaire:
+            qid = q_item["id"]
+            if qid in saved["answers"]:
+                q_item["observer_answer"] = saved["answers"][qid]
+
+    return {
+        "country_code": code,
+        "country_name": FH_COUNTRY_NAMES.get(code, code),
+        "total_questions": TOTAL_QUESTIONS,
+        "sections": SECTIONS,
+        "questionnaire": questionnaire,
+        "platform_data": {
+            "vdem_year": vdem.get("year") if vdem else None,
+            "fh_score": fh.get("total_score") if fh else None,
+            "rsf_score": rsf.get("score") if rsf else None,
+            "pei_year": pei.get("year") if pei else None,
+            "pei_overall": pei.get("overall_integrity") if pei else None,
+        },
+        "answers_saved": len(saved.get("answers", {})),
+        "instructions": (
+            "Escala 1-5: 5=Cumple plenamente, 4=Observaciones menores, 3=Cumplimiento parcial, "
+            "2=Incumplimiento significativo, 1=Incumplimiento grave. 0=Sin información."
+        ),
+    }
+
+
+@app.post("/api/evaluation/{country_code}/save")
+async def save_evaluation_answers(country_code: str, payload: dict):
+    """
+    Guarda respuestas parciales del observador (puede llamarse múltiples veces).
+    Body: {"answers": {"S1_Q1": 4, "S1_Q2": 3, ...}}
+    Respuestas 0 = "Sin información" (no se incluyen en la comparación).
+    """
+    if not EVALUATION_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Módulo de evaluación no disponible.")
+    code = country_code.upper()
+    answers = payload.get("answers", {})
+    if not isinstance(answers, dict):
+        raise HTTPException(status_code=422, detail="'answers' debe ser un dict {question_id: value}.")
+
+    # Validar valores
+    invalid = {k: v for k, v in answers.items() if not isinstance(v, (int, float)) or v < 0 or v > 5}
+    if invalid:
+        raise HTTPException(status_code=422, detail=f"Valores inválidos (deben ser 0-5): {list(invalid.keys())}")
+
+    existing = evaluation_store.get(code, {"country_code": code, "answers": {}, "updated_at": None})
+    existing["answers"].update(answers)
+    existing["updated_at"] = datetime.now(timezone.utc).isoformat()
+    evaluation_store[code] = existing
+
+    return {
+        "country_code": code,
+        "answers_saved": len(existing["answers"]),
+        "message": f"{len(answers)} respuesta(s) guardadas. Total: {len(existing['answers'])}/{TOTAL_QUESTIONS}.",
+    }
+
+
+@app.get("/api/evaluation/{country_code}/compare")
+async def compare_evaluation(country_code: str):
+    """
+    Genera el informe de comparación: observador vs. plataforma.
+    Requiere al menos 10 respuestas guardadas para producir resultados significativos.
+    """
+    if not EVALUATION_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Módulo de evaluación no disponible.")
+    code = country_code.upper()
+    saved = evaluation_store.get(code)
+    if not saved or len(saved.get("answers", {})) < 5:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Se necesitan al menos 5 respuestas guardadas. Actuales: {len(saved.get('answers', {})) if saved else 0}."
+        )
+
+    vdem = get_vdem_country(VDEM_DF, code)
+    pei  = get_pei_country(PEI_DF, code)
+    fh   = get_freedom_house_country(FH_DF, code)
+    rsf  = get_rsf_country(RSF_DF, code)
+    questionnaire = build_questionnaire_with_platform_scores(vdem, pei, fh, rsf)
+    comparison = compute_comparison(saved["answers"], questionnaire)
+
+    return {
+        "country_code": code,
+        "country_name": FH_COUNTRY_NAMES.get(code, code),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "observer_answers_total": len(saved["answers"]),
+        "observer_answers_scored": comparison["questions_answered"],
+        "observer_answers_no_info": len(saved["answers"]) - comparison["questions_answered"],
+        **comparison,
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 6b. OONI — Endpoints de monitoreo de censura e interferencia de red
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5349,6 +6100,190 @@ async def ooni_cache_clear(country_code: str = None, _key: str = Depends(_requir
     """Limpia el cache OONI. Fuerza nueva consulta a la API en el próximo request."""
     ooni_clear_cache(country_code)
     return {"message": "Cache OONI limpiado.", "country_code": country_code or "todos"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6c-bis. HUNTER — Recolección OSINT automatizada en tiempo real
+# ═══════════════════════════════════════════════════════════════════════════════
+
+try:
+    from agents.hunter import HunterAgent, hunter_entry_to_observation
+    HUNTER_AVAILABLE = True
+except ImportError as _hunter_err:
+    HUNTER_AVAILABLE = False
+    print(f"[Hunter] No disponible: {_hunter_err}")
+
+
+class HunterRunInput(BaseModel):
+    """Input para disparar el Hunter en un país y fase."""
+    run_id: str                              # run_id del reporte PEIRS activo
+    phase: Optional[str] = None             # Si None, usa la fase activa de la sesión
+    dry_run: bool = False                    # True = clasifica pero no registra
+    max_items_per_source: int = 15           # Máximo ítems RSS por fuente
+    sources: Optional[List[str]] = None     # None = todas las fuentes de la fase
+
+
+@app.post("/api/hunter/{country_code}/run")
+async def hunter_run(country_code: str, request: HunterRunInput):
+    """
+    Dispara el Hunter Agent para un país y fase electoral.
+    Fetches RSS de JNE, ONPE, prensa + OONI, clasifica con Claude,
+    y registra hallazgos relevantes en el protocolo de observación.
+
+    Requiere:
+    - Sesión de observación activa (POST /api/observation/{cc}/start previo)
+    - run_id válido del reporte PEIRS
+    """
+    if not HUNTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Hunter Agent no disponible.")
+    if not llm:
+        raise HTTPException(status_code=503, detail="LLM no configurado (falta ANTHROPIC_API_KEY).")
+
+    code = country_code.upper()
+
+    # Verificar sesión activa
+    if code not in observation_store:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay sesión de observación activa para {code}. "
+                   f"Usá POST /api/observation/{code}/start primero."
+        )
+    session = observation_store[code]
+
+    # Verificar run_id
+    if request.run_id not in reports_store:
+        disk = load_report(request.run_id)
+        if disk is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"run_id '{request.run_id}' no encontrado."
+            )
+        reports_store[request.run_id] = disk
+
+    # Determinar fase activa
+    phase = request.phase or session.get("phase", "campaign")
+    phase_norm = _PHASE_ALIAS.get(phase, phase)
+    phase_label = _PHASE_LABELS.get(phase_norm, phase_norm)
+
+    # Instanciar Hunter
+    hunter = HunterAgent(
+        llm=llm,
+        ooni_available=OONI_AVAILABLE,
+        ooni_get_summary=get_ooni_summary if OONI_AVAILABLE else None,
+    )
+
+    # Correr el Hunter
+    hunter_result = await hunter.run(
+        country_code=code,
+        phase=phase_norm,
+        phase_label=phase_label,
+        dry_run=request.dry_run,
+        max_items_per_source=request.max_items_per_source,
+    )
+
+    # Si dry_run, devolver resultados sin registrar
+    if request.dry_run:
+        return {
+            "dry_run": True,
+            "phase": phase_norm,
+            "phase_label": phase_label,
+            "items_fetched": hunter_result["items_fetched"],
+            "items_classified": hunter_result["items_classified"],
+            "relevant_entries": hunter_result["items_registered"],
+            "ooni_entries": hunter_result["ooni_entries"],
+            "sources": hunter_result["sources_fetched"],
+            "errors": hunter_result["errors"],
+            "entries_preview": hunter_result["entries"][:5],
+        }
+
+    # Registrar hallazgos en el protocolo de observación
+    registered = 0
+    skipped    = 0
+    result_entry_ids = []
+
+    for hunter_entry in hunter_result.get("entries", []):
+        if not hunter_entry.get("relevant"):
+            skipped += 1
+            continue
+        try:
+            obs_entry = hunter_entry_to_observation(hunter_entry, phase_norm, code)
+
+            # Validar con Agent 5 antes de registrar
+            existing = session.get("entries", [])
+            validation = validate_entry(obs_entry, existing)
+            if validation.duplicate_of:
+                skipped += 1
+                continue
+
+            # Escalar severidad si aplica
+            obs_entry["severity"] = _auto_escalate_severity(
+                obs_entry["severity"],
+                obs_entry["category"],
+                obs_entry["finding"],
+            )
+
+            # Auto-derechos
+            auto_r = _auto_rights(obs_entry["category"], obs_entry["severity"])
+            obs_entry["rights_at_risk"] = list(
+                set(obs_entry.get("rights_at_risk", []) + auto_r)
+            )
+
+            session["entries"].append(obs_entry)
+            result_entry_ids.append(obs_entry["entry_id"])
+            registered += 1
+
+            # Alertas para hallazgos críticos/altos
+            if ALERTS_AVAILABLE and obs_entry["severity"] in ("critical", "high"):
+                try:
+                    alert_evt = build_entry_alert(obs_entry, code)
+                    dispatch_alert(alert_evt)
+                except Exception:
+                    pass
+
+        except Exception:
+            skipped += 1
+            continue
+
+    # Actualizar sesión y regenerar Cap. 7
+    if registered > 0:
+        now_ts = datetime.now(timezone.utc).isoformat()
+        session["updated_at"] = now_ts
+        observation_store[code] = session
+
+        result_report = reports_store[request.run_id]
+        new_cap7 = _generate_observation_chapter(session, result_report)
+        result_report["report_chapters"]["07_voting_day"] = new_cap7
+        result_report["final_report_markdown"] = (
+            f"# DEMOCRAC.IA — Informe VIP de Integridad Electoral\n"
+            f"## {result_report['country']} — Elección: {result_report['election_date']}\n\n"
+            f"**Índice Predictivo de Riesgo:** {result_report['risk_score']}/100 "
+            f"({result_report['risk_level'].upper()})\n"
+            f"**Generado:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+            f"**Run ID:** `{request.run_id}`\n\n---\n\n"
+            + "\n\n".join(result_report["report_chapters"].values())
+        )
+        reports_store[request.run_id] = result_report
+        save_report(result_report)
+
+    return {
+        "phase": phase_norm,
+        "phase_label": phase_label,
+        "country_code": code,
+        "run_id": request.run_id,
+        "sources_fetched": hunter_result["sources_fetched"],
+        "items_fetched": hunter_result["items_fetched"],
+        "items_classified": hunter_result["items_classified"],
+        "entries_registered": registered,
+        "entries_skipped": skipped,
+        "ooni_entries": hunter_result["ooni_entries"],
+        "entry_ids": result_entry_ids,
+        "errors": hunter_result["errors"],
+        "cap7_updated": registered > 0,
+        "message": (
+            f"Hunter completado. {registered} hallazgos registrados en Cap. 7. "
+            f"Fuentes: {', '.join(hunter_result['sources_fetched']) or 'ninguna'}."
+        ),
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5589,6 +6524,136 @@ async def get_country_data(country_code: str, force_refresh: bool = False):
         "agentLogs": result.get("agent_logs", []),
         "region": COUNTRY_REGIONS.get(code, "unknown"),
         "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/country/{country_code}/chartdata")
+async def get_country_chart_data(country_code: str):
+    """
+    Datos procesados para gráficos del informe.
+    Incluye series históricas V-Dem + comparación regional + datos puntuales.
+    """
+    code = country_code.upper()
+    if code not in COUNTRY_CATALOG:
+        raise HTTPException(status_code=404, detail=f"País '{code}' no encontrado")
+
+    def _vdem_series(variable: str, year_from: int = 1990, year_to: int = 2024) -> list:
+        """Extrae serie histórica de una variable V-Dem para el país."""
+        if VDEM_DF is None:
+            return []
+        try:
+            rows = VDEM_DF[
+                (VDEM_DF["country_text_id"] == code) &
+                (VDEM_DF["year"] >= year_from) &
+                (VDEM_DF["year"] <= year_to) &
+                (VDEM_DF[variable].notna())
+            ].sort_values("year")
+            return [{"year": int(r["year"]), "value": round(float(r[variable]), 4)}
+                    for _, r in rows.iterrows()]
+        except Exception:
+            return []
+
+    def _vdem_multi_series(variables: list, year_from: int, year_to: int) -> list:
+        """Extrae múltiples variables V-Dem por año en una sola pasada."""
+        if VDEM_DF is None:
+            return []
+        try:
+            cols = ["year"] + [v for v in variables if v in VDEM_DF.columns]
+            rows = VDEM_DF[
+                (VDEM_DF["country_text_id"] == code) &
+                (VDEM_DF["year"] >= year_from) &
+                (VDEM_DF["year"] <= year_to)
+            ][cols].dropna().sort_values("year")
+            result = []
+            for _, r in rows.iterrows():
+                entry = {"year": int(r["year"])}
+
+                for v in variables:
+                    if v in r.index and pd.notna(r[v]):
+                        entry[v] = round(float(r[v]), 4)
+                result.append(entry)
+            return result
+        except Exception:
+            return []
+
+    # ── Chart 1: Democracia liberal 1990-2024 (AreaChart) ─────────────────────
+    libdem_series = _vdem_series("v2x_libdem", 1990, 2024)
+
+    # ── Chart 2: Elecciones libres y justas 1990-2024 ─────────────────────────
+    frefair_series = _vdem_series("v2xel_frefair", 1990, 2024)
+
+    # ── Chart alertas tempranas: irregularidades e intimidación 2000-2024 ──────
+    alert_series = _vdem_multi_series(["v2elirreg", "v2elintim"], 2000, 2024)
+
+    # ── Chart 3: Autonomía + Capacidad OGE 2010-2024 (BarChart agrupado) ──────
+    emb_series = _vdem_multi_series(["v2elembaut", "v2elembcap"], 2010, 2024)
+
+    # ── Chart 5: Libertad de prensa 2010-2024 (AreaChart) ─────────────────────
+    media_series = _vdem_multi_series(
+        ["v2mebias", "v2meharjrn", "v2mecenefi"], 2010, 2024
+    )
+
+    # ── Chart 4: Comparación regional (últimos datos disponibles) ─────────────
+    regional = []
+    latam_codes = ["PER","COL","BRA","ARG","CHL","BOL","ECU","MEX","URY","HND","SLV","PAN","GTM","NIC","VEN"]
+    for c in latam_codes:
+        vd = get_vdem_country(VDEM_DF, c)
+        fh = get_freedom_house_country(FH_DF, c)
+        if vd:
+            libdem_val = vd.get("liberal_democracy", 0)
+            fh_pr = fh.get("political_rights_score", 0) / 7 if fh else 0
+            regional.append({
+                "country_code": c,
+                "name": COUNTRY_CATALOG.get(c, {}).get("name", c),
+                "flag": COUNTRY_CATALOG.get(c, {}).get("flag", ""),
+                "libdem": round(libdem_val, 3),
+                "fh_score": round(fh_pr, 3),
+                "combined": round((libdem_val * 0.6 + fh_pr * 0.4), 3),
+                "highlight": c == code,
+            })
+    regional.sort(key=lambda x: x["combined"], reverse=True)
+
+    # ── Datos puntuales FH + RSF ───────────────────────────────────────────────
+    fh_data  = get_freedom_house_country(FH_DF, code)
+    rsf_data = get_rsf_country(RSF_DF, code)
+    pei_data = get_pei_country(PEI_DF, code)
+
+    # ── Hitos electorales para overlay en Chart 1 ─────────────────────────────
+    election_milestones = [
+        {"year": 1990, "label": "Fujimori", "type": "election"},
+        {"year": 1995, "label": "Reelección", "type": "election"},
+        {"year": 2000, "label": "Crisis / Toledo", "type": "crisis"},
+        {"year": 2001, "label": "Toledo", "type": "election"},
+        {"year": 2006, "label": "García", "type": "election"},
+        {"year": 2011, "label": "Humala", "type": "election"},
+        {"year": 2016, "label": "PPK", "type": "election"},
+        {"year": 2018, "label": "Crisis Congreso", "type": "crisis"},
+        {"year": 2021, "label": "Castillo", "type": "election"},
+        {"year": 2022, "label": "Boluarte", "type": "crisis"},
+        {"year": 2026, "label": "Próximas", "type": "upcoming"},
+    ] if code == "PER" else []
+
+    return {
+        "country_code": code,
+        "country_name": COUNTRY_CATALOG.get(code, {}).get("name", code),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "sources": {
+            "vdem": VDEM_CITATION,
+            "fh": "Freedom House, Freedom in the World 2025",
+            "rsf": "Reporters Without Borders, World Press Freedom Index 2025",
+        },
+        "charts": {
+            "libdem_series":    libdem_series,       # Chart 1: democracia liberal 1990-2024
+            "frefair_series":   frefair_series,      # Chart 2: elecciones libres y justas
+            "alert_series":     alert_series,        # Alerta temprana: irregularidades + intimidación
+            "emb_series":       emb_series,          # Chart 3: OGE 2010-2024
+            "media_series":     media_series,        # Chart 5: libertad de prensa 2010-2024
+            "regional":         regional,            # Chart 4: comparación regional
+        },
+        "milestones":  election_milestones,
+        "fh":  fh_data,
+        "rsf": rsf_data,
+        "pei": pei_data,
     }
 
 
@@ -6667,14 +7732,14 @@ def run_cli_analysis(country_code: str = "VEN"):
     print()
 
     print(f"🎯 RISK SCORE: {result['risk_score']}/100 ({result['risk_level'].upper()})")
-    print(f"⚖️  VIOLACIONES: {result['legal_analysis']['violation_count']}")
+    print(f"VIOLACIONES: {result['legal_analysis']['violation_count']}")
     print(f"📄 REPORTE: {len(result['final_report_markdown'])} caracteres")
     print()
 
     filename = f"peirs_report_{code.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(result["final_report_markdown"])
-    print(f"💾 Reporte guardado: {filename}")
+    print(f"Reporte guardado: {filename}")
 
     return result
 
