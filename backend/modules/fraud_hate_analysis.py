@@ -9,8 +9,7 @@ Integra con:
 """
 
 from __future__ import annotations
-from typing import List, Dict, Optional
-from datetime import datetime, timezone
+from typing import List, Dict
 
 # ── Taxonomías ────────────────────────────────────────────────────────────────
 

@@ -1,10 +1,10 @@
 """Tests para modules/data_loaders.py — verifica loaders con datos mock/None."""
 import pytest
 from modules.data_loaders import (
-    load_vdem_data, get_vdem_country,
-    load_freedom_house_data, get_freedom_house_country, derive_civil_liberties_from_fh,
-    load_rsf_data, get_rsf_country,
-    load_pei_data, get_pei_country,
+    get_vdem_country,
+    get_freedom_house_country, derive_civil_liberties_from_fh,
+    get_rsf_country,
+    get_pei_country,
 )
 
 

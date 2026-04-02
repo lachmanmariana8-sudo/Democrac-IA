@@ -14,7 +14,7 @@ Funciones principales:
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 
 
@@ -122,8 +122,6 @@ def validate_entry(entry: Dict, existing_entries: List[Dict]) -> ValidationResul
     category = entry.get("category", "other")
     severity  = entry.get("severity", "info")
     finding   = entry.get("finding", "")
-    location  = entry.get("location", "")
-    ts_str    = entry.get("timestamp", "")
 
     # ── 1. Campos recomendados por categoría ──────────────────────────────────
     required = REQUIRED_FIELDS_BY_CATEGORY.get(category, [])

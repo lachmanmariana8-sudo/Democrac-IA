@@ -1,7 +1,6 @@
 """pytest conftest — fixtures compartidas para PEIRS test suite."""
 import os
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest

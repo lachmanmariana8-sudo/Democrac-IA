@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -243,7 +242,10 @@ async def run_architect(
         Resultado final del agente como string
     """
     try:
-        from claude_agent_sdk import query, ClaudeAgentOptions, ResultMessage, SystemMessage
+        from claude_agent_sdk import (
+            query, ClaudeAgentOptions,
+            ResultMessage, SystemMessage, AssistantMessage, TextBlock,
+        )
     except ImportError:
         raise ImportError(
             "claude-agent-sdk no instalado. Instala con: pip install claude-agent-sdk"
@@ -253,12 +255,13 @@ async def run_architect(
     prompt = TASK_PROMPTS.get(task, task)  # Si no es predefinida, usar como prompt custom
 
     start_time = datetime.now(timezone.utc)
+    sep = "=" * 60
     if verbose:
-        print(f"\n{'═'*60}")
-        print(f"  🏛  Expert Architect Agent — Tarea: {task}")
-        print(f"  📁  Directorio: {cwd}")
-        print(f"  ⏰  Inicio: {start_time.strftime('%Y-%m-%d %H:%M UTC')}")
-        print(f"{'═'*60}\n")
+        print(f"\n{sep}")
+        print(f"  [ARCHITECT] Expert Architect Agent -- Tarea: {task}")
+        print(f"  [DIR]       {cwd}")
+        print(f"  [INICIO]    {start_time.strftime('%Y-%m-%d %H:%M UTC')}")
+        print(f"{sep}\n")
 
     result_text = ""
     session_id = None
@@ -274,12 +277,10 @@ async def run_architect(
             model="claude-opus-4-6",
         )
     ):
-        from claude_agent_sdk import ResultMessage, SystemMessage, AssistantMessage, TextBlock
-
         if isinstance(message, SystemMessage) and message.subtype == "init":
             session_id = message.data.get("session_id")
             if verbose:
-                print(f"  📋  Session: {session_id}\n")
+                print(f"  [SESSION]   {session_id}\n")
 
         elif isinstance(message, AssistantMessage) and verbose:
             for block in message.content:
@@ -290,9 +291,9 @@ async def run_architect(
             result_text = message.result
             if verbose:
                 elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
-                print(f"\n{'═'*60}")
-                print(f"  ✅  Completado en {elapsed:.1f}s")
-                print(f"{'═'*60}\n")
+                print(f"\n{sep}")
+                print(f"  [OK] Completado en {elapsed:.1f}s")
+                print(f"{sep}\n")
 
     # Guardar log de la sesión
     _save_architect_log(task, result_text, session_id, start_time, cwd)

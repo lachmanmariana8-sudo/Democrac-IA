@@ -4479,9 +4479,16 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# En producción restringir a los dominios de democracia.ar
+_RAW_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
+if _RAW_ORIGINS == "*":
+    _ALLOWED_ORIGINS: list[str] = ["*"]
+else:
+    _ALLOWED_ORIGINS = [o.strip() for o in _RAW_ORIGINS.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -4491,9 +4498,11 @@ app.add_middleware(
 import sqlite3
 
 DATA_DIR    = os.path.join(os.path.dirname(__file__), "..", "data")
-DB_PATH     = os.path.join(DATA_DIR, "democracia.db")
+# Configurable via env var — permite montar volúmenes persistentes en Railway/Fly.io
+DB_PATH     = os.getenv("DEMOCRACIA_DB_PATH", os.path.join(DATA_DIR, "democracia.db"))
 # Mantenemos la carpeta de reports para compatibilidad con JSON legacy
 REPORTS_DIR = os.path.join(DATA_DIR, "reports")
+os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
 

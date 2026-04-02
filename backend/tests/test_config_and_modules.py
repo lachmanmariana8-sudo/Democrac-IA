@@ -1,9 +1,8 @@
 """Tests para modules/config.py y módulos auxiliares."""
-import pytest
 from modules.config import (
     LLM_MODEL, LLM_TEMPERATURE, OBSERVER_API_KEYS,
     VDEM_COLUMNS, VDEM_LAST_YEAR, VDEM_VERSION,
-    FH_COUNTRY_NAMES, FH_LAST_EDITION,
+    FH_COUNTRY_NAMES,
     CONFIDENCE_CONFIRMED, CONFIDENCE_MOCK, SOURCE_API,
 )
 from modules.catalog import COUNTRY_CATALOG

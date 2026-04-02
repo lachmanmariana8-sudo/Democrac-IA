@@ -131,7 +131,7 @@ def check_pei() -> CheckResult:
 
 def check_rag() -> CheckResult:
     try:
-        import chromadb  # noqa: F401
+        __import__("chromadb")
     except ImportError:
         return CheckResult(
             "RAG (ChromaDB)", False,
@@ -139,7 +139,7 @@ def check_rag() -> CheckResult:
             critical=False
         )
     try:
-        import sentence_transformers  # noqa: F401
+        __import__("sentence_transformers")
     except ImportError:
         return CheckResult(
             "RAG (sentence-transformers)", False,
@@ -175,7 +175,7 @@ def check_db() -> CheckResult:
 
 def check_ooni() -> CheckResult:
     try:
-        import httpx  # noqa: F401
+        __import__("httpx")
         return CheckResult("OONI (httpx)", True, "httpx disponible — censura en tiempo real OK")
     except ImportError:
         return CheckResult(

@@ -1,5 +1,4 @@
 """Tests para Agent 5: FieldDataValidationAgent (modules/field_validator.py)."""
-import pytest
 from modules.field_validator import validate_entry, detect_patterns, render_pattern_markdown
 
 
@@ -33,7 +32,6 @@ class TestValidateEntry:
     def test_short_finding_generates_warning(self):
         entry = make_entry(finding="Problema")
         result = validate_entry(entry, [])
-        warnings = [w for w in result.warnings if "corto" in w.lower() or "breve" in w.lower() or "finding" in w.lower()]
         # Debe haber al menos un warning sobre el finding
         assert len(result.warnings) > 0
 
