@@ -301,7 +301,7 @@ def load_vdem_data() -> Optional[pd.DataFrame]:
 
 def get_vdem_country(df: Optional[pd.DataFrame], country_code: str, year: int = VDEM_LAST_YEAR) -> Optional[Dict]:
     if df is None:
-        return None
+        return get_vdem_country_static(country_code, year)
 
     row = df[(df["country_text_id"] == country_code) & (df["year"] == year)]
 
@@ -368,6 +368,83 @@ def get_vdem_country(df: Optional[pd.DataFrame], country_code: str, year: int = 
         "opposition_party_barriers": norm_vdem(r["v2psbars"], 0, 4) if "v2psbars" in r.index and pd.notna(r.get("v2psbars")) else None,
         "opposition_autonomy": norm_vdem(r["v2psoppaut"]) if "v2psoppaut" in r.index and pd.notna(r.get("v2psoppaut")) else None,
         "judicial_review": norm_vdem(r["v2jureview"], 0, 4) if "v2jureview" in r.index and pd.notna(r.get("v2jureview")) else None,
+        "citation": VDEM_CITATION,
+        "dataset_version": VDEM_VERSION,
+    }
+
+
+def get_vdem_country_static(country_code: str, year: int = VDEM_LAST_YEAR) -> Optional[Dict]:
+    """
+    Fallback para get_vdem_country cuando VDEM_DF no está disponible (producción sin CSV).
+    Lee de VDEM_STATIC[country_code][year] generado de V-Dem v15.
+    """
+    cc_data = VDEM_STATIC.get(country_code, {})
+    if not cc_data:
+        return None
+    # Buscar año exacto, luego año anterior
+    row = cc_data.get(str(year)) or cc_data.get(str(year - 1)) or cc_data.get(year) or cc_data.get(year - 1)
+    if not row:
+        # Usar el año más reciente disponible
+        available = sorted(int(y) for y in cc_data.keys())
+        if not available:
+            return None
+        row = cc_data.get(str(available[-1])) or cc_data.get(available[-1])
+        year = available[-1]
+    if not row:
+        return None
+
+    def norm(val, lo=-4.0, hi=4.0):
+        if val is None:
+            return None
+        return round((val - lo) / (hi - lo), 4)
+
+    def norm_inv(val, lo=-4.0, hi=4.0):
+        n = norm(val, lo, hi)
+        return round(1.0 - n, 4) if n is not None else None
+
+    emb_aut = row.get("v2elembaut")
+    if emb_aut is None:
+        emb_level = "unknown"
+    elif emb_aut >= 1.5:
+        emb_level = "full"
+    elif emb_aut >= 0.0:
+        emb_level = "partial"
+    elif emb_aut >= -1.5:
+        emb_level = "compromised"
+    else:
+        emb_level = "captured"
+
+    intmon = row.get("v2elintmon")
+    return {
+        "country_code": country_code,
+        "year": int(year),
+        "liberal_democracy": row.get("v2x_libdem"),
+        "electoral_democracy": row.get("v2x_polyarchy"),
+        "participatory_democracy": row.get("v2x_partipdem"),
+        "deliberative_democracy": row.get("v2x_delibdem"),
+        "egalitarian_democracy": row.get("v2x_egaldem"),
+        "free_fair_elections": row.get("v2xel_frefair"),
+        "freedom_of_expression": row.get("v2x_freexp_altinf"),
+        "freedom_of_association": row.get("v2x_frassoc_thick"),
+        "universal_suffrage": row.get("v2x_suffr"),
+        "rule_of_law": row.get("v2xcl_rol"),
+        "emb_autonomy_raw": emb_aut,
+        "emb_autonomy": norm(emb_aut),
+        "emb_capacity": norm(row.get("v2elembcap")),
+        "emb_independence_level": emb_level,
+        "electoral_irregularities": norm_inv(row.get("v2elirreg")),
+        "electoral_intimidation": norm_inv(row.get("v2elintim")),
+        "international_observation": bool(intmon == 1.0) if intmon is not None else None,
+        "internet_censorship": norm_inv(row.get("v2mecenefi")),
+        "media_censorship": norm_inv(row.get("v2mecenefm")),
+        "journalist_harassment": norm_inv(row.get("v2meharjrn")),
+        "media_bias_vdem": norm_inv(row.get("v2mebias")),
+        "gov_social_media_dominance": norm_inv(row.get("v2smgovdom")),
+        "gov_internet_filter_capacity": norm_inv(row.get("v2smgovfilcap")),
+        "social_media_regulation": norm_inv(row.get("v2smregcap")),
+        "opposition_party_barriers": norm(row.get("v2psbars"), 0, 4),
+        "opposition_autonomy": norm(row.get("v2psoppaut")),
+        "judicial_review": norm(row.get("v2jureview"), 0, 4),
         "citation": VDEM_CITATION,
         "dataset_version": VDEM_VERSION,
     }
@@ -1195,6 +1272,13 @@ try:
     print("[MODULES] peru_data cargado desde módulo.")
 except ImportError:
     pass   # fallback a definiciones inline más abajo en el archivo
+
+# V-Dem static fallback — todos los países soportados (1985-2024)
+try:
+    from modules.vdem_static import VDEM_STATIC
+    print("[MODULES] vdem_static cargado (38 países, 25 indicadores, 1985-2024).")
+except ImportError:
+    VDEM_STATIC: dict = {}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -6646,42 +6730,63 @@ async def get_country_chart_data(country_code: str):
 
     def _vdem_series(variable: str, year_from: int = 1990, year_to: int = 2024) -> list:
         """Extrae serie histórica de una variable V-Dem para el país."""
-        if VDEM_DF is None:
-            return []
-        try:
-            rows = VDEM_DF[
-                (VDEM_DF["country_text_id"] == code) &
-                (VDEM_DF["year"] >= year_from) &
-                (VDEM_DF["year"] <= year_to) &
-                (VDEM_DF[variable].notna())
-            ].sort_values("year")
-            return [{"year": int(r["year"]), "value": round(float(r[variable]), 4)}
-                    for _, r in rows.iterrows()]
-        except Exception:
-            return []
+        if VDEM_DF is not None:
+            try:
+                rows = VDEM_DF[
+                    (VDEM_DF["country_text_id"] == code) &
+                    (VDEM_DF["year"] >= year_from) &
+                    (VDEM_DF["year"] <= year_to) &
+                    (VDEM_DF[variable].notna())
+                ].sort_values("year")
+                result = [{"year": int(r["year"]), "value": round(float(r[variable]), 4)}
+                          for _, r in rows.iterrows()]
+                if result:
+                    return result
+            except Exception:
+                pass
+        # Fallback: datos estáticos (todos los países soportados, 1985-2024)
+        cc_data = VDEM_STATIC.get(code, {})
+        series = []
+        for yr_key, row in cc_data.items():
+            yr = int(yr_key)
+            if year_from <= yr <= year_to and variable in row:
+                series.append({"year": yr, "value": row[variable]})
+        return sorted(series, key=lambda x: x["year"])
 
     def _vdem_multi_series(variables: list, year_from: int, year_to: int) -> list:
         """Extrae múltiples variables V-Dem por año en una sola pasada."""
-        if VDEM_DF is None:
-            return []
-        try:
-            cols = ["year"] + [v for v in variables if v in VDEM_DF.columns]
-            rows = VDEM_DF[
-                (VDEM_DF["country_text_id"] == code) &
-                (VDEM_DF["year"] >= year_from) &
-                (VDEM_DF["year"] <= year_to)
-            ][cols].dropna().sort_values("year")
-            result = []
-            for _, r in rows.iterrows():
-                entry = {"year": int(r["year"])}
-
+        if VDEM_DF is not None:
+            try:
+                cols = ["year"] + [v for v in variables if v in VDEM_DF.columns]
+                rows = VDEM_DF[
+                    (VDEM_DF["country_text_id"] == code) &
+                    (VDEM_DF["year"] >= year_from) &
+                    (VDEM_DF["year"] <= year_to)
+                ][cols].dropna().sort_values("year")
+                result = []
+                for _, r in rows.iterrows():
+                    entry = {"year": int(r["year"])}
+                    for v in variables:
+                        if v in r.index and pd.notna(r[v]):
+                            entry[v] = round(float(r[v]), 4)
+                    result.append(entry)
+                if result:
+                    return result
+            except Exception:
+                pass
+        # Fallback: datos estáticos
+        cc_data = VDEM_STATIC.get(code, {})
+        series = []
+        for yr_key, row in cc_data.items():
+            yr = int(yr_key)
+            if year_from <= yr <= year_to:
+                entry = {"year": yr}
                 for v in variables:
-                    if v in r.index and pd.notna(r[v]):
-                        entry[v] = round(float(r[v]), 4)
-                result.append(entry)
-            return result
-        except Exception:
-            return []
+                    if v in row:
+                        entry[v] = row[v]
+                if len(entry) > 1:  # al menos un indicador además de year
+                    series.append(entry)
+        return sorted(series, key=lambda x: x["year"])
 
     # ── Chart 1: Democracia liberal 1990-2024 (AreaChart) ─────────────────────
     libdem_series = _vdem_series("v2x_libdem", 1990, 2024)
@@ -6700,23 +6805,7 @@ async def get_country_chart_data(country_code: str):
         ["v2mebias", "v2meharjrn", "v2mecenefi"], 2010, 2024
     )
 
-    # ── Fallback estático para Perú cuando el CSV V-Dem no está disponible ──────
-    # PERU_VDEM_STATIC contiene datos reales extraídos del CSV V-Dem v15 (384MB)
-    try:
-        _peru_static = PERU_VDEM_STATIC
-    except NameError:
-        _peru_static = {}
-    if code == "PER" and _peru_static:
-        if not libdem_series:
-            libdem_series = _peru_static.get("libdem_series", [])
-        if not frefair_series:
-            frefair_series = _peru_static.get("frefair_series", [])
-        if not emb_series:
-            emb_series = _peru_static.get("emb_series", [])
-        if not media_series:
-            media_series = _peru_static.get("media_series", [])
-        if not alert_series:
-            alert_series = _peru_static.get("alert_series", [])
+    # Fallback via VDEM_STATIC está integrado directamente en _vdem_series/_vdem_multi_series
 
     # ── Chart 4: Comparación regional (últimos datos disponibles) ─────────────
     regional = []
