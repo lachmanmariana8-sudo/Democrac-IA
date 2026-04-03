@@ -14,7 +14,7 @@ try:
     import chromadb
     from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
     _CHROMA_OK = True
-except ImportError:
+except Exception:
     _CHROMA_OK = False
 
 RAG_AVAILABLE: bool = False

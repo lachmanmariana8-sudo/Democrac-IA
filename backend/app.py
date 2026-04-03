@@ -3932,7 +3932,7 @@ def _generate_observation_chapter(session: dict, state: "ElectionRiskState") -> 
     for e in entries:
         sev = e.get("severity", "info")
         # R4: normalizar fase de entrada
-        raw_ph = e.get("phase", "electoral_silence")
+        raw_ph = e.get("phase") or phase_norm or "campaign"
         ph = _PHASE_ALIAS.get(raw_ph, raw_ph)
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
         phase_counts[ph]     = phase_counts.get(ph, 0) + 1
@@ -5475,7 +5475,7 @@ async def observation_add_entry(country_code: str, request: ObservationEntryInpu
     now = datetime.now(timezone.utc).isoformat()
 
     # R3+R4: Validar coherencia temporal de la phase enviada (usa _PHASE_ORDER global + aliases)
-    active_phase = session.get("phase", "electoral_silence")
+    active_phase = session.get("phase", "preparatory")
     # Normalizar alias legacy (p.ej. "pre_election" → "electoral_silence")
     raw_phase   = request.phase or active_phase
     entry_phase = _PHASE_ALIAS.get(raw_phase, raw_phase)
@@ -5646,7 +5646,7 @@ async def observation_status(country_code: str):
     phase_counts    = {}
     for e in entries:
         sev    = e.get("severity", "info")
-        raw_ph = e.get("phase", "electoral_silence")
+        raw_ph = e.get("phase") or session.get("phase", "preparatory")
         ph     = _PHASE_ALIAS.get(raw_ph, raw_ph)   # R4: normalizar alias
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
         phase_counts[ph]     = phase_counts.get(ph, 0) + 1
@@ -5827,7 +5827,7 @@ async def observation_advance_phase(country_code: str, request: ObservationAdvan
         raise HTTPException(status_code=400, detail=f"Fase inválida: '{target_raw}'. Opciones: {_PHASE_ORDER}")
 
     session = observation_store[code]
-    current_raw = session.get("phase", "electoral_silence")
+    current_raw = session.get("phase", "preparatory")
     current = _PHASE_ALIAS.get(current_raw, current_raw)
     current_idx = _PHASE_ORDER.index(current) if current in _PHASE_ORDER else 0
     target_idx  = _PHASE_ORDER.index(target)
