@@ -56,10 +56,14 @@ import hashlib
 import pandas as pd
 
 # ── RAG — importación condicional (fallback gracioso si no instalado) ─────────
+# Modo semántico (ChromaDB): requiere chromadb + sentence-transformers
+# Modo keyword (fallback): siempre disponible, sin dependencias externas
 try:
     from rag import query_legal_context as _rag_legal, query_fraud_context as _rag_fraud
     from rag import query_hate_speech_context as _rag_hate, format_rag_context_for_llm
     from rag import init_rag, RAG_AVAILABLE
+    # El retriever ahora tiene keyword fallback — siempre marca disponible
+    RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
     def _rag_legal(*a, **kw): return []
@@ -2235,7 +2239,8 @@ def legal_compliance_agent(state: ElectionRiskState) -> ElectionRiskState:  # MI
     risk_level = _risk_level_from_score(risk_score)
 
     # ── RAG: enriquecer violaciones con jurisprudencia y estándares recuperados ──
-    if RAG_AVAILABLE and violations:
+    # Funciona en modo semántico (ChromaDB) o keyword fallback — siempre activo si hay violaciones
+    if violations:
         for v in violations:
             try:
                 rag_hits = _rag_legal(

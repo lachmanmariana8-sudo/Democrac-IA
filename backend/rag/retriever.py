@@ -1,54 +1,108 @@
 """
 DEMOCRAC.IA / PEIRS — RAG Retriever
 Funciones de consulta al corpus legal para enriquecer análisis del agente legal.
+
+Dos modos:
+  1. ChromaDB (semántico): si chromadb + sentence-transformers están instalados
+  2. Keyword fallback (léxico): siempre disponible, sin dependencias externas
+     Búsqueda TF-IDF simplificada sobre LEGAL_CORPUS — suficiente para producción.
 """
 
 from __future__ import annotations
+import re
+from collections import Counter
 from typing import List, Dict, Optional
 from .indexer import RAG_AVAILABLE, get_collection
+
+
+# ── Keyword Retriever (fallback sin ChromaDB) ─────────────────────────────────
+
+def _tokenize(text: str) -> List[str]:
+    return re.findall(r"[a-záéíóúüñ]{3,}", text.lower())
+
+
+def _keyword_query(query_text: str, n_results: int = 3, category_filter: Optional[List[str]] = None) -> List[Dict]:
+    """
+    Búsqueda léxica sobre LEGAL_CORPUS.
+    Retorna los N documentos con mayor overlap de términos con la query.
+    Siempre disponible — sin ChromaDB, sin embeddings.
+    """
+    from .corpus import LEGAL_CORPUS
+
+    q_tokens = Counter(_tokenize(query_text))
+    if not q_tokens:
+        return []
+
+    scores = []
+    for doc in LEGAL_CORPUS:
+        if category_filter and doc.get("category") not in category_filter:
+            continue
+        doc_text = f"{doc.get('title', '')} {doc.get('text', '')} {' '.join(doc.get('tags', []))}"
+        d_tokens  = Counter(_tokenize(doc_text))
+        # Overlap normalizado por longitud de query
+        overlap = sum(min(q_tokens[t], d_tokens[t]) for t in q_tokens if t in d_tokens)
+        score   = overlap / (sum(q_tokens.values()) + 1)
+        if score > 0:
+            scores.append((score, doc))
+
+    scores.sort(key=lambda x: x[0], reverse=True)
+    results = []
+    for score, doc in scores[:n_results]:
+        excerpt = doc.get("text", "")[:600]
+        results.append({
+            "title":      doc.get("title", ""),
+            "instrument": doc.get("instrument", ""),
+            "category":   doc.get("category", ""),
+            "relevance":  round(min(score * 4, 1.0), 3),  # escalar a 0-1
+            "excerpt":    excerpt + "…" if len(doc.get("text", "")) > 600 else excerpt,
+        })
+    return results
 
 
 def _query(query_text: str, n_results: int = 3, where_filter: Optional[dict] = None) -> List[Dict]:
     """
     Consulta el corpus legal y retorna los fragmentos más relevantes.
-    Retorna lista vacía si RAG no disponible (fallback gracioso).
+    Modo 1 (ChromaDB semántico): si RAG_AVAILABLE=True
+    Modo 2 (keyword fallback): siempre disponible como fallback
     """
-    if not RAG_AVAILABLE:
-        return []
+    # Extraer filtro de categorías del where_filter de ChromaDB si lo hay
+    category_filter = None
+    if where_filter:
+        cat_filter = where_filter.get("category", {})
+        if isinstance(cat_filter, dict) and "$in" in cat_filter:
+            category_filter = cat_filter["$in"]
 
-    collection = get_collection()
-    if collection is None:
-        return []
+    # Modo 1: ChromaDB semántico
+    if RAG_AVAILABLE:
+        collection = get_collection()
+        if collection is not None:
+            try:
+                kwargs = {"query_texts": [query_text], "n_results": min(n_results, collection.count())}
+                if where_filter:
+                    kwargs["where"] = where_filter
+                results   = collection.query(**kwargs)
+                docs      = results.get("documents", [[]])[0]
+                metas     = results.get("metadatas", [[]])[0]
+                distances = results.get("distances", [[]])[0]
+                output = []
+                for doc, meta, dist in zip(docs, metas, distances):
+                    relevance = round(1 - dist, 3)
+                    if relevance < 0.25:
+                        continue
+                    output.append({
+                        "title":      meta.get("title", ""),
+                        "instrument": meta.get("instrument", ""),
+                        "category":   meta.get("category", ""),
+                        "relevance":  relevance,
+                        "excerpt":    doc[:600] + "…" if len(doc) > 600 else doc,
+                    })
+                if output:
+                    return output
+            except Exception as exc:
+                print(f"[RAG] Error ChromaDB, usando keyword fallback: {exc}")
 
-    try:
-        kwargs = {"query_texts": [query_text], "n_results": min(n_results, collection.count())}
-        if where_filter:
-            kwargs["where"] = where_filter
-
-        results = collection.query(**kwargs)
-
-        docs      = results.get("documents", [[]])[0]
-        metas     = results.get("metadatas", [[]])[0]
-        distances = results.get("distances", [[]])[0]
-
-        output = []
-        for doc, meta, dist in zip(docs, metas, distances):
-            # Convertir distancia coseno a score de relevancia (1 - dist = similaridad)
-            relevance = round(1 - dist, 3)
-            if relevance < 0.25:   # Umbral mínimo de relevancia
-                continue
-            output.append({
-                "title":      meta.get("title", ""),
-                "instrument": meta.get("instrument", ""),
-                "category":   meta.get("category", ""),
-                "relevance":  relevance,
-                "excerpt":    doc[:600] + "…" if len(doc) > 600 else doc,
-            })
-        return output
-
-    except Exception as exc:
-        print(f"[RAG] Error en consulta: {exc}")
-        return []
+    # Modo 2: keyword fallback (siempre disponible)
+    return _keyword_query(query_text, n_results=n_results, category_filter=category_filter)
 
 
 def query_legal_context(
