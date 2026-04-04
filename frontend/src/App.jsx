@@ -108,7 +108,7 @@ const ChartMethodologyBtn = ({ chartKey }) => {
   );
 };
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area, ReferenceLine } from "recharts";
 
 const COLORS = {
@@ -141,7 +141,7 @@ const RISK_LEVELS = {
   low: { color: COLORS.accent, label: "BAJO", bg: COLORS.accentDim },
 };
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8001";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 const DIMENSION_LABELS = {
   suffrage: "Sufragio Universal",
@@ -2454,7 +2454,6 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData, cha
   // ── Sección G: MOE Brief ──────────────────────────────────────────────────
   const moeBriefSectionHtml = moeBrief ? (() => {
     const rc = moeBrief.blocks && moeBrief.blocks.risk_context ? moeBrief.blocks.risk_context : {};
-    const lf = moeBrief.blocks && moeBrief.blocks.legal_framework ? moeBrief.blocks.legal_framework : {};
     const pa = moeBrief.blocks && moeBrief.blocks.priority_areas ? moeBrief.blocks.priority_areas : {};
     const proto = moeBrief.blocks && moeBrief.blocks.protocol ? moeBrief.blocks.protocol : {};
     const areas = pa.priority_areas || [];
@@ -2471,7 +2470,6 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData, cha
 
     const ki = rc.key_indicators || {};
     const critViol = rc.critical_violations || [];
-    const riskFactors = rc.risk_factors || [];
 
     const riskBadgeColor = (r) => {
       if (r === "critical") return "background:#fef2f2;color:#991b1b;border:1px solid #fca5a5";
@@ -2573,15 +2571,12 @@ const generateHtmlReport = (markdown, country, runId, timestamp, reportData, cha
       return styles[rp] || styles.moderate;
     };
 
-    const typeOrder = ["party", "person", "institution"];
     const grouped = {};
     actors.forEach(a => {
       const t = a.type || "party";
       if (!grouped[t]) grouped[t] = [];
       grouped[t].push(a);
     });
-
-    const typeLabels = { party: "Partidos Políticos", person: "Candidatos y Figuras Clave", institution: "Instituciones" };
 
     const rows = actors.map(a => {
       const keyIssues = (a.key_policies || a.key_issues || []).slice(0, 2).join("; ");
@@ -3807,7 +3802,7 @@ const ReportViewer = ({ runId, country }) => {
       .then(r => r.ok ? r.json() : null)
       .then(d => setRvChartData(d))
       .catch(() => {});
-  }, [country?.id]);
+  }, [country?.id, country?.country_code]);
 
   useEffect(() => {
     if (country?.id !== "per") return;
@@ -3823,7 +3818,7 @@ const ReportViewer = ({ runId, country }) => {
       .then(r => r.ok ? r.json() : null)
       .then(d => setRvMoeBrief(d))
       .catch(() => {});
-  }, [country?.id]);
+  }, [country?.id, country?.country_code]);
 
   const handleDownload = () => {
     if (!reportData || !country) return;
@@ -4871,7 +4866,7 @@ function PeruSituationRoom() {
   const [evalComparing, setEvalComparing]     = useState(false);
   const [evalSaving, setEvalSaving]           = useState(false);
 
-  const ELECTION_TS = new Date("2026-04-12T08:00:00-05:00");
+  const ELECTION_TS = useMemo(() => new Date("2026-04-12T08:00:00-05:00"), []);
 
   useEffect(() => {
     Promise.all([
@@ -4895,7 +4890,7 @@ function PeruSituationRoom() {
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [ELECTION_TS]);
 
   // Lazy-load actors and scenarios when tabs are first opened
   useEffect(() => {
@@ -4939,7 +4934,7 @@ function PeruSituationRoom() {
         })
         .catch(() => setEvalLoading(false));
     }
-  }, [innerTab]);
+  }, [innerTab, actors, actorsLoading, chartData, chartError, chartLoading, evalLoading, evalQuestionnaire, scenarios, scenariosLoading]);
 
   const downloadMOEBrief = () => {
     if (!brief || !country) return;
@@ -5617,7 +5612,6 @@ function PeruSituationRoom() {
                       const expanded = !!expandedActors[actor.id];
                       const setExpanded = (fn) => setExpandedActors(prev => ({ ...prev, [actor.id]: typeof fn === "function" ? fn(prev[actor.id]) : fn }));
                       const riskC = actor.risk_profile === "high" ? COLORS.danger : actor.risk_profile === "moderate" ? COLORS.warning : COLORS.accent;
-                      const isNoBancada = actor.id === "ind";
                       return (
                         <div key={actor.id} className="peru-card" style={{
                           borderRadius: 12, overflow: "hidden",
@@ -5854,11 +5848,6 @@ function PeruSituationRoom() {
                     idx++;
                   }
                 });
-
-                // Majority marker at 66 seats (halfway across outermost arc)
-                const majorityR = BASE_R + 4 * ROW_GAP + ROW_GAP * 0.5;
-                const mx = cx;
-                const my = cy - BASE_R - 2;
 
                 return (
                   <svg width={svgWidth} height={svgHeight} style={{ display: "block", margin: "0 auto" }}>
@@ -6623,7 +6612,7 @@ function PeruSituationRoom() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ answers: newAnswers }),
               });
-            } catch (e) { /* ignore */ }
+            } catch { /* ignore */ }
             finally { setEvalSaving(false); }
           };
 
@@ -6634,7 +6623,7 @@ function PeruSituationRoom() {
               const res = await fetch(`${API_BASE}/api/evaluation/PER/compare`);
               const data = await res.json();
               setEvalComparison(data);
-            } catch (e) { /* ignore */ }
+            } catch { /* ignore */ }
             finally { setEvalComparing(false); }
           };
 
@@ -7344,7 +7333,7 @@ export default function DemocracIADashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchDashboardData = async (forceRefresh = false) => {
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     if (forceRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
@@ -7364,9 +7353,9 @@ export default function DemocracIADashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedCountry]);
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
   const handleSelectCountry = (id) => {
     setSelectedCountry(id);
