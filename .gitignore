@@ -19,11 +19,21 @@ backend/peirs_report_*.md
 
 # Archivos de datos grandes (>100MB — no soportados por GitHub)
 data/V-Dem-CY-Full+Others-v15.csv
+data/Coder-Level-Dataset-v16.csv
 data/*.dta
 data/**/*.dta
 data/**/*.xlsx
 data/2025*.xlsx
 data/RSF/*.xlsx
+
+# ZIPs de datos (se descargan aparte)
+data/*.zip
+
+# PDFs de documentación V-Dem (se descargan con el dataset)
+data/*.pdf
+
+# JSONs generados (se regeneran en startup)
+data/*_static*.json
 
 # Reportes generados (auto-generados por el pipeline, no necesitan versionarse)
 data/reports/
@@ -34,6 +44,9 @@ data/peirs.db
 data/*.db
 data/rag_index/
 data/architect_logs/
+
+# EOS corpus (datos descargables aparte)
+data/eos_corpus/
 
 # Logs y temporales
 *.log
