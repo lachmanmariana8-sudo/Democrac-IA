@@ -4934,6 +4934,70 @@ async def on_startup():
             _run_startup_checks(raise_on_critical=False)
         except Exception as _sc_err:
             print(f"[STARTUP] Error en checks: {_sc_err}")
+    # ── Auto-bootstrap: sesiones de observación configuradas por env ──────
+    # Formato: AUTO_OBSERVE_COUNTRIES=PER,VEN,NIC (codes separados por coma)
+    auto_observe = os.getenv("AUTO_OBSERVE_COUNTRIES", "")
+    if auto_observe:
+        for cc in [c.strip().upper() for c in auto_observe.split(",") if c.strip()]:
+            if cc in observation_store:
+                print(f"[AUTO-OBSERVE] {cc} ya tiene sesión activa, skip.")
+                continue
+            # Buscar o crear reporte base
+            idx = _load_reports_index()
+            run_id = None
+            if cc in idx and idx[cc]:
+                run_id = idx[cc][-1].get("run_id")
+            if run_id and run_id in reports_store:
+                pass
+            elif run_id:
+                loaded = load_report(run_id)
+                if loaded:
+                    reports_store[run_id] = loaded
+                else:
+                    run_id = None
+            if not run_id:
+                # Generar análisis fresco
+                try:
+                    from agents.pipeline import run_pipeline
+                    result = run_pipeline(cc, llm=llm)
+                    run_id = result.get("run_id")
+                    if run_id:
+                        reports_store[run_id] = result
+                        save_report(result)
+                        print(f"[AUTO-OBSERVE] {cc} análisis generado: {run_id}")
+                except Exception as e:
+                    print(f"[AUTO-OBSERVE] {cc} no se pudo generar análisis: {e}")
+                    continue
+            # Crear sesión de observación
+            now = datetime.now(timezone.utc).isoformat()
+            session = {
+                "session_id": str(uuid4()),
+                "country_code": cc,
+                "run_id": run_id,
+                "phase": "preparatory",
+                "mission_name": "Misión de Observación Electoral",
+                "lead_org": "DemocracIA",
+                "observers": [],
+                "started_at": now,
+                "updated_at": now,
+                "entries": [],
+                "finalized": False,
+            }
+            observation_store[cc] = session
+            try:
+                with _get_db() as conn:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO observation_sessions "
+                        "(session_id, country_code, run_id, mission_name, lead_org, phase, started_at, updated_at, finalized, data) "
+                        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        (session["session_id"], cc, run_id, session["mission_name"],
+                         session["lead_org"], "preparatory", now, now, 0, json.dumps(session))
+                    )
+                    conn.commit()
+            except Exception as e:
+                print(f"[AUTO-OBSERVE] {cc} no se pudo persistir sesión: {e}")
+            print(f"[AUTO-OBSERVE] {cc} sesión iniciada — run_id: {run_id}")
+
     # Arrancar Hunter scheduler en background
     global _hunter_scheduler_task
     _hunter_scheduler_task = asyncio.create_task(_hunter_scheduler_loop())
