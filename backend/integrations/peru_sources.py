@@ -15,17 +15,30 @@ import httpx
 
 RSS_FEEDS: Dict[str, List[str]] = {
     # Agencia Andina — agencia oficial del Estado peruano. Política y elecciones.
-    # HTTP 200, formato RSS 2.0 verificado.
     "andina": [
         "https://andina.pe/rss/politica.xml",
     ],
     # RPP Noticias — radio/digital de mayor audiencia política en Perú.
-    # HTTP 200, formato RSS 2.0 verificado.
     "rpp": [
         "https://rpp.pe/feed/",
     ],
+    # El Comercio — diario de referencia, sección política. RSS 2.0 verificado.
+    "elcomercio": [
+        "https://elcomercio.pe/arcio/rss/category/politica/",
+    ],
+    # Gestión — prensa económica/política. RSS 2.0 verificado.
+    "gestion": [
+        "https://gestion.pe/arcio/rss/category/peru/",
+    ],
+    # IDL-Reporteros — periodismo de investigación (corrupción, crimen organizado).
+    "idl": [
+        "https://www.idl-reporteros.pe/feed/",
+    ],
+    # Wayka — medio digital independiente, cobertura de movimientos sociales.
+    "wayka": [
+        "https://wayka.pe/feed/",
+    ],
     # JNE — feed pendiente de verificación (403/404 en pruebas directas).
-    # Se mantiene para reintentos con headers de browser.
     "jne": [
         "https://www.jne.gob.pe/feed/",
     ],
@@ -37,14 +50,14 @@ RSS_FEEDS: Dict[str, List[str]] = {
 
 # ── Fuentes activas por fase electoral ───────────────────────────────────────
 PHASE_SOURCES: Dict[str, List[str]] = {
-    "preparatory":         ["andina", "jne"],
-    "pre_campaign":        ["andina", "jne", "onpe", "rpp"],
-    "campaign":            ["andina", "rpp", "jne", "onpe"],
-    "electoral_silence":   ["andina", "rpp"],          # + OONI en Hunter
-    "election_day":        ["andina", "rpp", "onpe"],  # + OONI en Hunter
-    "counting_tabulation": ["andina", "rpp", "onpe", "jne"],
-    "post_election":       ["andina", "rpp", "jne", "onpe"],
-    "dispute_resolution":  ["andina", "jne", "rpp"],
+    "preparatory":         ["andina", "elcomercio", "gestion", "idl", "jne"],
+    "pre_campaign":        ["andina", "elcomercio", "gestion", "idl", "wayka", "jne", "onpe", "rpp"],
+    "campaign":            ["andina", "elcomercio", "gestion", "idl", "wayka", "rpp", "jne", "onpe"],
+    "electoral_silence":   ["andina", "elcomercio", "rpp"],                # + OONI en Hunter
+    "election_day":        ["andina", "elcomercio", "rpp", "onpe"],        # + OONI en Hunter
+    "counting_tabulation": ["andina", "elcomercio", "gestion", "rpp", "onpe", "jne"],
+    "post_election":       ["andina", "elcomercio", "gestion", "idl", "rpp", "jne", "onpe"],
+    "dispute_resolution":  ["andina", "elcomercio", "idl", "jne", "rpp"],
     "completed":           ["andina", "jne"],
 }
 
