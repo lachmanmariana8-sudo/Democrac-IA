@@ -6593,16 +6593,43 @@ async def get_sentinel_alerts():
         if e.get("risk_level") in ["critical", "high"]
     )
 
+    # ── Hallazgos recientes de observación (todas las sesiones activas) ────
+    recent_findings = []
+    for cc, session in list(observation_store.items()):
+        entries = session.get("entries", [])
+        country_info = COUNTRY_CATALOG.get(cc, {})
+        for e in entries[-20:]:  # últimas 20 por país
+            recent_findings.append({
+                "country_code": cc,
+                "country_name": country_info.get("name", cc),
+                "flag": country_info.get("flag", "🌍"),
+                "entry_id": e.get("entry_id", ""),
+                "finding": e.get("finding", ""),
+                "category": e.get("category", ""),
+                "severity": e.get("severity", "info"),
+                "location": e.get("location", ""),
+                "phase": e.get("phase", ""),
+                "timestamp": e.get("timestamp", ""),
+                "rights_at_risk": e.get("rights_at_risk", []),
+                "observer_id": e.get("observer_id", ""),
+                "verified": e.get("verified", False),
+                "source": e.get("source", "observer"),
+            })
+    # Más recientes primero
+    recent_findings.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "as_of_date": now.isoformat(),
         "active_alerts": active_alerts,
         "watch_list": watch_list,
         "full_calendar": full_calendar,
+        "recent_findings": recent_findings[:50],
         "summary": {
             "active_count": len(active_alerts),
             "watch_count": len(watch_list),
             "critical_upcoming": critical_upcoming,
+            "findings_count": len(recent_findings),
             "next_election": full_calendar[0]["country_name"] if full_calendar else None,
             "next_election_days": full_calendar[0]["days_remaining"] if full_calendar else None,
         },

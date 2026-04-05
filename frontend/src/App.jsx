@@ -4693,7 +4693,56 @@ function SentinelView() {
     );
   };
 
-  const { summary, active_alerts, watch_list } = data;
+  const { summary, active_alerts, watch_list, recent_findings = [] } = data;
+
+  const findingSeverityColor = (sev) => {
+    if (sev === "critical") return COLORS.danger;
+    if (sev === "high") return "#f97316";
+    if (sev === "medium") return COLORS.warning;
+    if (sev === "low") return COLORS.accent;
+    return COLORS.textMuted;
+  };
+
+  const FindingCard = ({ f }) => {
+    const color = findingSeverityColor(f.severity);
+    return (
+      <div style={{
+        background: COLORS.surface, border: `1px solid ${color}33`,
+        borderLeft: `3px solid ${color}`, borderRadius: 10,
+        padding: "12px 16px",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 16 }}>{f.flag}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>{f.country_name}</span>
+            <span style={{
+              fontSize: 10, padding: "1px 7px", borderRadius: 5,
+              background: color + "22", color, fontFamily: "'DM Mono', monospace", fontWeight: 700,
+            }}>{f.severity.toUpperCase()}</span>
+            <span style={{
+              fontSize: 9, padding: "1px 6px", borderRadius: 4,
+              background: COLORS.surfaceLight, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace",
+            }}>{f.category}</span>
+          </div>
+          <span style={{ fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+            {f.timestamp ? new Date(f.timestamp).toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+          </span>
+        </div>
+        <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6 }}>{f.finding}</div>
+        {f.location && <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4 }}>📍 {f.location}</div>}
+        {f.rights_at_risk && f.rights_at_risk.length > 0 && (
+          <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
+            {f.rights_at_risk.map((r, i) => (
+              <span key={i} style={{
+                fontSize: 9, padding: "1px 6px", borderRadius: 4,
+                background: COLORS.danger + "15", color: COLORS.danger, fontFamily: "'DM Mono', monospace",
+              }}>{r}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: "28px 28px", maxWidth: 1100, margin: "0 auto" }}>
@@ -4721,6 +4770,7 @@ function SentinelView() {
           { label: "Alertas Activas", value: summary.active_count, color: summary.active_count > 0 ? COLORS.danger : COLORS.accent, note: "próx. 90 días" },
           { label: "En Observación", value: summary.watch_count, color: COLORS.warning, note: "90–365 días" },
           { label: "Riesgo Alto/Crítico", value: summary.critical_upcoming, color: COLORS.danger, note: "próx. 12 meses" },
+          { label: "Hallazgos", value: summary.findings_count || 0, color: "#f97316", note: "observación activa" },
           { label: "Próxima Elección", value: summary.next_election || "—", color: COLORS.info, note: summary.next_election_days !== null ? `en ${summary.next_election_days} días` : "" },
         ].map((kpi, i) => (
           <div key={i} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "14px 16px" }}>
@@ -4752,7 +4802,7 @@ function SentinelView() {
       </div>
 
       {/* Watch List */}
-      <div>
+      <div style={{ marginBottom: 28 }}>
         <h3 style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: COLORS.warning, fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
           EN OBSERVACIÓN — 90 A 365 DÍAS ({watch_list.length})
         </h3>
@@ -4761,6 +4811,22 @@ function SentinelView() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 8 }}>
             {watch_list.map(e => <SentinelCard key={e.country_code} entry={e} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Hallazgos recientes */}
+      <div>
+        <h3 style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#f97316", fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
+          HALLAZGOS RECIENTES — OBSERVACIÓN EN CAMPO ({recent_findings.length})
+        </h3>
+        {recent_findings.length === 0 ? (
+          <div style={{ padding: "20px 0", color: COLORS.textMuted, fontSize: 13 }}>
+            Sin hallazgos registrados. El Hunter se ejecuta cada 12h automáticamente.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {recent_findings.map(f => <FindingCard key={f.entry_id} f={f} />)}
           </div>
         )}
       </div>
