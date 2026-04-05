@@ -12,13 +12,14 @@ Uso:
   from rag import query_legal_context, RAG_AVAILABLE, init_rag
 """
 
-from .retriever import query_legal_context, query_fraud_context, query_hate_speech_context
+from .retriever import query_legal_context, query_fraud_context, query_hate_speech_context, format_rag_context_for_llm
 from .indexer import init_rag, RAG_AVAILABLE
 
 __all__ = [
     "query_legal_context",
     "query_fraud_context",
     "query_hate_speech_context",
+    "format_rag_context_for_llm",
     "init_rag",
     "RAG_AVAILABLE",
 ]
