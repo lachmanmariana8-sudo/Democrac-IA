@@ -225,10 +225,37 @@ async def _send_slack(event: AlertEvent) -> bool:
         return False
 
 
+def _format_discord_webhook(event: AlertEvent) -> dict:
+    """Payload con embeds para Discord webhooks."""
+    sev = event.severity.upper()
+    color_map = {"CRITICAL": 0xD32F2F, "HIGH": 0xF57C00, "MEDIUM": 0xFBC02D, "LOW": 0x388E3C, "INFO": 0x1976D2}
+    fields = [
+        {"name": "País", "value": event.country_code, "inline": True},
+        {"name": "Severidad", "value": sev, "inline": True},
+        {"name": "Fase", "value": event.phase or "—", "inline": True},
+    ]
+    if event.location:
+        fields.append({"name": "Ubicación", "value": event.location, "inline": True})
+    if event.rights_at_risk:
+        fields.append({"name": "Derechos en riesgo", "value": ", ".join(event.rights_at_risk), "inline": False})
+    if event.fraud_score is not None:
+        fields.append({"name": "Score fraude", "value": f"{event.fraud_score:.0%}", "inline": True})
+    return {
+        "embeds": [{
+            "title": f"🚨 {event.title}",
+            "description": event.description[:2000],
+            "color": color_map.get(sev, 0x9E9E9E),
+            "fields": fields,
+            "footer": {"text": f"PEIRS · {event.timestamp[:16]} UTC"},
+        }]
+    }
+
+
 async def _send_webhook(event: AlertEvent) -> bool:
     if not GENERIC_WEBHOOK_URL or not _HTTPX_OK:
         return False
-    payload = _format_generic_webhook(event)
+    is_discord = "discord.com/api/webhooks" in GENERIC_WEBHOOK_URL
+    payload = _format_discord_webhook(event) if is_discord else _format_generic_webhook(event)
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
             r = await client.post(GENERIC_WEBHOOK_URL, json=payload)
