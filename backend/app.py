@@ -4602,6 +4602,8 @@ DB_PATH     = os.getenv("DEMOCRACIA_DB_PATH", os.path.join(DATA_DIR, "democracia
 REPORTS_DIR = os.path.join(DATA_DIR, "reports")
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
+# Asegurar que el directorio padre de DB_PATH existe (para Railway Volumes u otros paths custom)
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 
 def _get_db() -> sqlite3.Connection:
