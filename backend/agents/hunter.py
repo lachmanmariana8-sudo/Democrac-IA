@@ -69,6 +69,18 @@ SEVERIDADES:
 DERECHOS EN RIESGO — usá artículos específicos como:
 ["ICCPR Art. 25", "CADH Art. 23", "CDI Art. 3", "CEDAW Art. 7", "UNDRIP Art. 18"]
 
+TEMAS PRIORITARIOS PERÚ 2026 — marcá como relevante si la noticia toca alguno:
+1. DOBLE VALLA ELECTORAL: 5% votos + 3 senadores / 7 diputados. Riesgo de subrepresentación masiva.
+2. VIOLENCIA POLÍTICA DIGITAL DE GÉNERO: deepfakes, ciberacoso a candidatas, sexualización con IA. Monitorear Observa Igualdad (JNE) y eMonitor+ (PNUD).
+3. DESINFORMACIÓN: narrativas de fraude, noticias falsas, erosión de confianza. Evaluar JNE Fact-Checking, ONPE Chequea, rol de Meta/X/TikTok.
+4. VOTO ELECTRÓNICO DIGITAL (VENP): auditorías de código fuente, confianza pública, implementación para FFAA/Policía/exterior. Acusaciones de hackeo o fraude digital.
+5. BICAMERALIDAD: primera vez en 30+ años. Senado 60 + Diputados 130. Confusión ciudadana, logística de cédulas nuevas.
+6. ELIMINACIÓN DE PASO: partidos usando delegados en vez de voto universal. Candidaturas "a dedo" por cúpulas.
+7. PARIDAD Y ALTERNANCIA 50/50: cumplimiento real en listas, impugnaciones, resistencia partidaria.
+8. CADENA DE CUSTODIA VOTO EXTERIOR: traslado físico de cédulas desde consulados. Riesgo logístico y de legitimidad.
+9. DESCONFIANZA INSTITUCIONAL: 73.5% desconfía de organismos electorales (JNE/ONPE/RENIEC).
+10. REELECCIÓN PARLAMENTARIA: congresistas postulando a alcaldías/gobernaciones simultáneamente.
+
 IMPORTANTE:
 - Solo marcás como relevante lo que tiene impacto directo en integridad electoral
 - El hallazgo debe ser técnico, conciso (1-2 oraciones), en español
