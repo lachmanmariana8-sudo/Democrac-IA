@@ -3779,7 +3779,7 @@ const SourceBadge = ({ label, value, confidence, year, color }) => (
 // ── ReportViewer Elite ────────────────────────────────────────────────────────
 const ReportViewer = ({ runId, country }) => {
   const [fetchState, setFetchState] = useState({ data: null, loading: true, error: null });
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("resumen");
   const [rvChartData, setRvChartData] = useState(null);
   const [rvActors, setRvActors] = useState(null);
   const [rvScenarios, setRvScenarios] = useState(null);
@@ -3882,11 +3882,57 @@ const ReportViewer = ({ runId, country }) => {
   const reportChapters = reportData.report_chapters || {};
   const execSummary = reportChapters["01_executive_summary"] || "";
 
-  const TABS = [
-    { id: "dashboard", label: "📊 Dashboard", desc: "Vista ejecutiva con indicadores clave" },
-    { id: "dictamen", label: "📋 Dictamen", desc: "Análisis técnico del sistema" },
-    { id: "informe", label: "📄 Informe", desc: "Texto completo del reporte" },
+  const CHAPTERS = [
+    { id: "resumen", num: "1", label: "Resumen Ejecutivo", icon: "📊", desc: "Dashboard de riesgo y fuentes verificadas" },
+    { id: "perfil", num: "0", label: "Perfil del País", icon: "🌍", desc: "Demografía, economía y padrón electoral" },
+    { id: "politico", num: "2", label: "Contexto Político", icon: "⚖️", desc: "Marco legal, fuerzas de poder, crisis institucional" },
+    { id: "emb", num: "3", label: "Organismo Electoral", icon: "🏛️", desc: "Independencia, registro, observación internacional" },
+    { id: "inclusividad", num: "4", label: "Inclusividad", icon: "🤝", desc: "Mujeres, pueblos originarios, LGBTQ+, discapacidad" },
+    { id: "campana", num: "5", label: "Campaña", icon: "📢", desc: "Libertades, financiamiento, cobertura mediática" },
+    { id: "digital", num: "6", label: "Amenazas Digitales", icon: "🔒", desc: "Internet, desinformación, plataformas" },
+    { id: "jornada", num: "7", label: "Jornada Electoral", icon: "🗳️", desc: "Observaciones en tiempo real" },
+    { id: "justicia", num: "8", label: "Justicia Electoral", icon: "⚡", desc: "Resolución de disputas, rendición de cuentas" },
+    { id: "recomendaciones", num: "9", label: "Recomendaciones", icon: "📋", desc: "Matriz de acción electoral" },
+    { id: "ia", num: "10", label: "IA y Regulación", icon: "🤖", desc: "Inteligencia artificial en el proceso" },
   ];
+
+  const ChapterContent = ({ num, title, desc, sources, markdown, children }) => (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 32, height: 32, borderRadius: 8,
+            background: COLORS.accent + "22", color: COLORS.accent,
+            fontFamily: "'DM Mono', monospace", fontWeight: 800, fontSize: 14,
+          }}>{num}</span>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.text }}>{title}</h3>
+        </div>
+        <p style={{ margin: 0, fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>{desc}</p>
+        {sources && sources.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+            {sources.map((s, i) => (
+              <span key={i} style={{
+                fontSize: 9, padding: "2px 8px", borderRadius: 4,
+                background: COLORS.surfaceLight, color: COLORS.textDim,
+                fontFamily: "'DM Mono', monospace", border: `1px solid ${COLORS.border}`,
+              }}>{s}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      {children}
+      {markdown && (
+        <div style={{
+          padding: "20px 24px", borderRadius: 10,
+          background: COLORS.surfaceLight, border: `1px solid ${COLORS.border}`,
+          marginTop: children ? 20 : 0,
+        }}>
+          {renderMarkdownWithTooltips(markdown)}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ marginTop: 24 }}>
@@ -3928,23 +3974,23 @@ const ReportViewer = ({ runId, country }) => {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Chapter Navigation */}
       <div style={{
-        display: "flex", gap: 0,
-        background: "#0d1220",
-        border: `1px solid ${COLORS.border}`,
+        display: "flex", gap: 6, overflowX: "auto", padding: "12px 16px",
+        background: "#0d1220", border: `1px solid ${COLORS.border}`,
         borderTop: "none", borderBottom: "none",
+        scrollbarWidth: "thin",
       }}>
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-            flex: 1, padding: "12px 16px", border: "none", cursor: "pointer",
-            fontSize: 12, fontWeight: 600,
-            background: activeTab === tab.id ? COLORS.surfaceLight : "transparent",
-            color: activeTab === tab.id ? COLORS.accent : COLORS.textMuted,
-            borderBottom: activeTab === tab.id ? `2px solid ${COLORS.accent}` : "2px solid transparent",
+        {CHAPTERS.map(ch => (
+          <button key={ch.id} onClick={() => setActiveTab(ch.id)} title={ch.desc} style={{
+            padding: "8px 14px", borderRadius: 8, cursor: "pointer",
+            fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+            background: activeTab === ch.id ? COLORS.accent + "22" : "transparent",
+            color: activeTab === ch.id ? COLORS.accent : COLORS.textMuted,
+            border: activeTab === ch.id ? `1px solid ${COLORS.accent}44` : "1px solid transparent",
             transition: "all 0.2s ease",
           }}>
-            {tab.label}
+            {ch.icon} {ch.num}. {ch.label}
           </button>
         ))}
       </div>
@@ -3958,9 +4004,11 @@ const ReportViewer = ({ runId, country }) => {
         padding: 24,
       }}>
 
-        {/* ── TAB: DASHBOARD ── */}
-        {activeTab === "dashboard" && (
-          <div>
+        {/* ── CAP 1: RESUMEN EJECUTIVO ── */}
+        {activeTab === "resumen" && (
+          <ChapterContent num="1" title="Resumen Ejecutivo & Dashboard de Riesgo"
+            desc="Vista ejecutiva con indicadores clave de integridad electoral, fuentes verificadas y análisis multidimensional."
+            sources={["Freedom House FIW 2025", "V-Dem v15 2024", "PEI v10 2021", "RSF 2025"]}>
             {/* Fila 1: Gauge + Fuentes verificadas */}
             <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 24, marginBottom: 24 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -4094,16 +4142,30 @@ const ReportViewer = ({ runId, country }) => {
                 </div>
               </div>
             )}
-          </div>
+          </ChapterContent>
         )}
 
-        {/* ── TAB: DICTAMEN ── */}
-        {activeTab === "dictamen" && (
-          <div>
-            {dictamen.narrative ? (
-              <>
+        {/* ── CAP 0: PERFIL DEL PAÍS ── */}
+        {activeTab === "perfil" && (
+          <ChapterContent
+            num="0" title="Perfil del País y Padrón Electoral"
+            desc="Datos demográficos, económicos y del padrón electoral que contextualizan el proceso."
+            sources={["INEI 2024", "ONPE 2026", "RENIEC 2026", "PNUD HDR 2024"]}
+            markdown={reportChapters["00_country_profile"] || ""}
+          />
+        )}
+
+        {/* ── CAP 2: CONTEXTO POLÍTICO ── */}
+        {activeTab === "politico" && (
+          <ChapterContent
+            num="2" title="Contexto Político"
+            desc="Marco legal, fuerzas de poder, crisis institucional y análisis del entorno político-electoral."
+            sources={["Freedom House FIW 2025", "V-Dem v15 2024", "PEI v10 2021"]}
+            markdown={reportChapters["02_political_context"] || ""}>
+            {dictamen.narrative && (
+              <div style={{ marginBottom: 20 }}>
                 <div style={{
-                  padding: "16px 20px", borderRadius: 12, marginBottom: 20,
+                  padding: "16px 20px", borderRadius: 12, marginBottom: 16,
                   background: "linear-gradient(135deg, #00d4aa0a, #111827)",
                   border: "1px solid #00d4aa33",
                   display: "flex", justifyContent: "space-between", alignItems: "flex-start",
@@ -4141,29 +4203,89 @@ const ReportViewer = ({ runId, country }) => {
                   Basado en fuentes verificadas con confidence=confirmed ·
                   {new Date(dictamen.generated_at).toLocaleString('es-AR', {timeZone:'UTC'})} UTC
                 </div>
-              </>
-            ) : (
-              <div style={{ padding: 20, color: "#64748b", fontSize: 13 }}>
-                Dictamen no disponible. Regenerá el análisis desde el dashboard.
               </div>
             )}
-          </div>
+          </ChapterContent>
         )}
 
-        {/* ── TAB: INFORME ── */}
-        {activeTab === "informe" && (
-          <div>
-            {md ? (
-              <div style={{
-                background: COLORS.surfaceLight, borderRadius: 10, padding: "20px 24px",
-                border: `1px solid ${COLORS.border}`,
-              }}>
-                {renderMarkdownWithTooltips(md)}
-              </div>
-            ) : (
-              <div style={{ color: "#64748b", fontSize: 13 }}>Informe no disponible.</div>
-            )}
-          </div>
+        {/* ── CAP 3: ORGANISMO ELECTORAL ── */}
+        {activeTab === "emb" && (
+          <ChapterContent
+            num="3" title="Organismo Electoral (EMB)"
+            desc="Independencia del organismo electoral, registro de votantes y observación internacional."
+            sources={["V-Dem v15 2024", "PEI v10 2021"]}
+            markdown={reportChapters["03_emb_analysis"] || ""}
+          />
+        )}
+
+        {/* ── CAP 4: INCLUSIVIDAD ── */}
+        {activeTab === "inclusividad" && (
+          <ChapterContent
+            num="4" title="Inclusividad"
+            desc="Participación de mujeres, pueblos originarios, comunidad LGBTQ+ y personas con discapacidad."
+            sources={["V-Dem v15 2024", "CEDAW", "CRPD"]}
+            markdown={reportChapters["04_inclusivity"] || ""}
+          />
+        )}
+
+        {/* ── CAP 5: CAMPAÑA ── */}
+        {activeTab === "campana" && (
+          <ChapterContent
+            num="5" title="Campaña y Financiamiento"
+            desc="Libertades de campaña, financiamiento político y cobertura mediática."
+            sources={["PEI v10 2021", "V-Dem v15 2024"]}
+            markdown={reportChapters["05_campaign_finance"] || ""}
+          />
+        )}
+
+        {/* ── CAP 6: AMENAZAS DIGITALES ── */}
+        {activeTab === "digital" && (
+          <ChapterContent
+            num="6" title="Ecosistema Digital y Amenazas"
+            desc="Libertad de internet, desinformación, interferencia de plataformas y amenazas digitales."
+            sources={["RSF 2025", "V-Dem v15 2024", "OONI"]}
+            markdown={reportChapters["06_digital_ecosystem"] || ""}
+          />
+        )}
+
+        {/* ── CAP 7: JORNADA ELECTORAL ── */}
+        {activeTab === "jornada" && (
+          <ChapterContent
+            num="7" title="Jornada Electoral"
+            desc="Observaciones en tiempo real sobre el desarrollo de la jornada electoral."
+            sources={["Observación en tiempo real", "Hunter Agent"]}
+            markdown={reportChapters["07_voting_day"] || ""}
+          />
+        )}
+
+        {/* ── CAP 8: JUSTICIA ELECTORAL ── */}
+        {activeTab === "justicia" && (
+          <ChapterContent
+            num="8" title="Justicia Electoral"
+            desc="Resolución de disputas electorales y mecanismos de rendición de cuentas."
+            sources={["V-Dem v15 2024", "PEI v10 2021"]}
+            markdown={reportChapters["08_electoral_justice"] || ""}
+          />
+        )}
+
+        {/* ── CAP 9: RECOMENDACIONES ── */}
+        {activeTab === "recomendaciones" && (
+          <ChapterContent
+            num="9" title="Recomendaciones"
+            desc="Matriz de acción electoral con recomendaciones priorizadas."
+            sources={["Análisis PEIRS integrado"]}
+            markdown={reportChapters["09_recommendations"] || ""}
+          />
+        )}
+
+        {/* ── CAP 10: IA Y REGULACIÓN ── */}
+        {activeTab === "ia" && (
+          <ChapterContent
+            num="10" title="Inteligencia Artificial y Regulación"
+            desc="Análisis del uso de inteligencia artificial en el proceso electoral y su regulación."
+            sources={["Análisis PEIRS"]}
+            markdown={reportChapters["10_ai_regulation"] || ""}
+          />
         )}
 
       </div>
