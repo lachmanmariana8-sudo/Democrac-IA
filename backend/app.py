@@ -38,7 +38,7 @@ except ImportError:
     pass
 import uuid
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import TypedDict, Dict, List, Optional, Any
 
 from langgraph.graph import StateGraph, END
@@ -127,6 +127,7 @@ try:
         close_session as _db_close_session,
         save_entry as _db_save_entry,
         save_alert as _db_save_alert,
+        list_alerts as _db_list_alerts,
         get_report as _db_get_report,
         get_latest_report as _db_get_latest_report,
         get_db_stats as _db_get_stats,
@@ -142,6 +143,7 @@ except ImportError:
     def _db_close_session(*a, **kw): pass
     def _db_save_entry(*a, **kw): pass
     def _db_save_alert(*a, **kw): pass
+    def _db_list_alerts(*a, **kw): return []
     def _db_get_report(*a, **kw): return None
     def _db_get_latest_report(*a, **kw): return None
     def _db_get_stats(): return {}
@@ -8057,6 +8059,66 @@ async def get_peru_scenarios():
         "historical_context": PERU_HISTORICAL_EVENTS,
         "regions": PERU_REGIONS_DATA,
         "data_note": "Escenarios proyectados: modelos estructurales basados en tendencias electorales 2011-2021, datos V-Dem y encuestas disponibles a enero 2026. No constituyen predicción electoral.",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/alerts/{country_code}")
+async def get_country_alerts(
+    country_code: str,
+    since_hours: int = 168,
+    min_severity: str = "low",
+    limit: int = 100,
+):
+    """
+    Lista las alertas dispatchadas por el Hunter para un país, desde la tabla `alerts` en SQLite.
+
+    Esta es la fuente que también alimenta Discord (vía ALERT_WEBHOOK_URL). El frontend
+    consume este endpoint para mostrar alertas en vivo en el Situation Room.
+
+    Query params:
+    - since_hours: ventana hacia atrás en horas (default 168 = 7 días)
+    - min_severity: low | medium | high | critical (default low = todas)
+    - limit: máximo de filas (default 100)
+    """
+    if not DB_AVAILABLE:
+        return {"country_code": country_code, "alerts": [], "total": 0, "db_available": False}
+
+    severity_rank = {"low": 0, "medium": 1, "moderate": 1, "high": 2, "critical": 3}
+    min_rank = severity_rank.get(min_severity.lower(), 0)
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
+    cutoff_iso = cutoff.isoformat()
+
+    raw = _db_list_alerts(country_code.upper(), limit=max(limit, 200))
+
+    filtered = []
+    for a in raw:
+        sev = (a.get("severity") or "low").lower()
+        if severity_rank.get(sev, 0) < min_rank:
+            continue
+        dispatched = a.get("dispatched_at") or ""
+        if dispatched < cutoff_iso:
+            continue
+        filtered.append(a)
+        if len(filtered) >= limit:
+            break
+
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for a in filtered:
+        sev = (a.get("severity") or "low").lower()
+        if sev == "moderate":
+            sev = "medium"
+        if sev in counts:
+            counts[sev] += 1
+
+    return {
+        "country_code": country_code.upper(),
+        "alerts": filtered,
+        "total": len(filtered),
+        "counts_by_severity": counts,
+        "since_hours": since_hours,
+        "min_severity": min_severity,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
