@@ -4999,6 +4999,7 @@ const PERU_INNER_TABS = [
   { id: "parlamento",   label: "Parlamento",     icon: "🏛" },
   { id: "brief",        label: "MOE Brief",      icon: "📋" },
   { id: "jornada",      label: "Jornada",        icon: "🗳" },
+  { id: "calendario",   label: "Calendario legal", icon: "📅" },
   { id: "datos",        label: "Datos V-Dem",    icon: "📈" },
   { id: "evaluacion",   label: "Evaluación",     icon: "📝" },
   { id: "informe",      label: "Informe",        icon: "📄" },
@@ -5014,6 +5015,20 @@ const PERU_HIST_EVENTS = [
   { year: 2023, label: "Protestas. 60+ muertes. CIDH medidas cautelares.", metric: null },
   { year: 2024, label: "Boluarte continuidad frágil. Aprobación <10%.", metric: null },
   { year: 2026, label: "Elecciones generales — 12 de abril. PEIRS activo.", metric: null },
+];
+
+// Restricciones legales del proceso electoral peruano 2026.
+// Fuentes: Ley Orgánica de Elecciones N° 26859 (LOE), Resoluciones JNE/ONPE 2026.
+// Cada entrada cita la base normativa para que el observador pueda verificar.
+const PERU_LEGAL_CALENDAR = [
+  { date: "2026-04-10", time: "00:00", label: "Inicio de Ley Seca", detail: "Prohibición de venta y consumo de bebidas alcohólicas en lugares públicos hasta el 13/04 08:00.", source: "LOE Art. 351 / Resol. JNE" },
+  { date: "2026-04-10", time: "00:00", label: "Inicio del silencio electoral", detail: "Prohibición de propaganda electoral en cualquier medio (TV, radio, prensa, redes sociales, vía pública).", source: "LOE Art. 190 / Resol. JNE" },
+  { date: "2026-04-11", time: "00:00", label: "Prohibición de reuniones y manifestaciones políticas", detail: "Queda prohibida toda reunión o manifestación pública de carácter político hasta el cierre de la jornada.", source: "LOE Art. 358" },
+  { date: "2026-04-12", time: "08:00", label: "Apertura de mesas de sufragio", detail: "Las 87,064 mesas de sufragio inician el proceso de votación a nivel nacional y exterior.", source: "ONPE — Cronograma electoral" },
+  { date: "2026-04-12", time: "16:00", label: "Cierre de mesas / boca de urna habilitada", detail: "Cierre oficial de votación. A partir de esta hora se permite la difusión de encuestas a boca de urna.", source: "LOE Art. 191 / JNE" },
+  { date: "2026-04-12", time: "23:30", label: "ONPE: conteo rápido al 100% (objetivo)", detail: "Meta institucional ONPE para la difusión del conteo rápido completo. Sujeto a flujo de actas.", source: "ONPE — Plan operativo 2026" },
+  { date: "2026-04-13", time: "08:00", label: "Fin de Ley Seca", detail: "Se restablece la venta de bebidas alcohólicas.", source: "LOE Art. 351" },
+  { date: "2026-04-15", time: "23:59", label: "Plazo para impugnaciones de actas de mesa", detail: "Vencimiento del plazo para que personeros presenten recursos contra actas observadas ante los Jurados Electorales Especiales.", source: "LOE Art. 363 / JNE" },
 ];
 
 function PeruSituationRoom() {
@@ -5053,8 +5068,36 @@ function PeruSituationRoom() {
   const [evalComparison, setEvalComparison]   = useState(null);
   const [evalComparing, setEvalComparing]     = useState(false);
   const [evalSaving, setEvalSaving]           = useState(false);
+  const [hunterRunning, setHunterRunning]     = useState(false);
+  const [hunterRunResult, setHunterRunResult] = useState(null);
 
   const ELECTION_TS = useMemo(() => new Date("2026-04-12T08:00:00-05:00"), []);
+
+  const triggerHunterRun = useCallback(async () => {
+    if (hunterRunning) return;
+    setHunterRunning(true);
+    setHunterRunResult(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/hunter/PER/run-now`, { method: "POST" });
+      const data = await r.json();
+      if (!r.ok) {
+        setHunterRunResult({ ok: false, msg: data.detail || `HTTP ${r.status}` });
+      } else {
+        setHunterRunResult({
+          ok: true,
+          registered: data.registered ?? 0,
+          fetched: data.fetched ?? 0,
+          duplicates: data.duplicates ?? 0,
+          errors: data.errors ?? 0,
+        });
+      }
+    } catch (e) {
+      setHunterRunResult({ ok: false, msg: e.message });
+    } finally {
+      setHunterRunning(false);
+      setTimeout(() => setHunterRunResult(null), 12000);
+    }
+  }, [hunterRunning]);
 
   useEffect(() => {
     Promise.all([
@@ -5317,6 +5360,38 @@ function PeruSituationRoom() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button
+                onClick={triggerHunterRun}
+                disabled={hunterRunning}
+                title="Disparar el Hunter ahora (RSS + Claude). Un ciclo cuesta pocos centavos en API calls."
+                style={{
+                  padding: "6px 12px", borderRadius: 8,
+                  background: hunterRunning ? COLORS.surface : alertColor + "12",
+                  border: `1px solid ${alertColor}55`,
+                  color: hunterRunning ? COLORS.textMuted : alertColor,
+                  fontSize: 11, fontWeight: 700,
+                  fontFamily: "'DM Mono', monospace", letterSpacing: 1,
+                  cursor: hunterRunning ? "wait" : "pointer",
+                  display: "flex", alignItems: "center", gap: 6,
+                  transition: "all 0.2s",
+                }}
+              >
+                {hunterRunning ? "● EJECUTANDO…" : "▶ HUNTER NOW"}
+              </button>
+              {hunterRunResult && (
+                <div style={{
+                  padding: "5px 11px", borderRadius: 7,
+                  background: hunterRunResult.ok ? COLORS.accentDim : COLORS.dangerDim,
+                  border: `1px solid ${hunterRunResult.ok ? COLORS.accent : COLORS.danger}66`,
+                  color: hunterRunResult.ok ? COLORS.accent : COLORS.danger,
+                  fontSize: 10, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
+                  whiteSpace: "nowrap",
+                }}>
+                  {hunterRunResult.ok
+                    ? `✓ ${hunterRunResult.registered} nuevos · ${hunterRunResult.fetched} fetched · ${hunterRunResult.duplicates} dup`
+                    : `✗ ${hunterRunResult.msg}`}
+                </div>
+              )}
               <div style={{
                 padding: "6px 14px", borderRadius: 8,
                 background: alertColor + "18", border: `1px solid ${alertColor}44`,
@@ -6573,6 +6648,49 @@ function PeruSituationRoom() {
                   </Card>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ TAB: CALENDARIO LEGAL ══ */}
+        {innerTab === "calendario" && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              Calendario Legal — Restricciones del Proceso Electoral 2026
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 20, lineHeight: 1.5 }}>
+              Hitos legales y operativos vinculantes del proceso electoral peruano. Cada entrada incluye su base normativa (Ley Orgánica de Elecciones N° 26859 y resoluciones JNE/ONPE 2026) para verificación independiente por el observador.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {PERU_LEGAL_CALENDAR.map((ev, i) => {
+                const evDate = new Date(`${ev.date}T${ev.time}:00-05:00`);
+                const isPast = evDate < new Date();
+                const isToday = ev.date === new Date().toISOString().slice(0, 10);
+                const accent = isToday ? COLORS.warning : isPast ? COLORS.textDim : COLORS.accent;
+                return (
+                  <Card key={i} className="peru-card" style={{ padding: 14, borderLeft: `3px solid ${accent}`, opacity: isPast ? 0.6 : 1 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+                      <div style={{ minWidth: 96, fontFamily: "'DM Mono', monospace" }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: accent, letterSpacing: 0.5 }}>{ev.date}</div>
+                        <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>{ev.time} PET</div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>
+                          {isToday && <span style={{ color: COLORS.warning, marginRight: 6 }}>● HOY</span>}
+                          {ev.label}
+                        </div>
+                        <div style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5, marginBottom: 6 }}>{ev.detail}</div>
+                        <div style={{ fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", letterSpacing: 0.3 }}>
+                          📖 {ev.source}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 20, padding: 12, background: COLORS.surface, border: `1px dashed ${COLORS.border}`, borderRadius: 6, fontSize: 11, color: COLORS.textDim, lineHeight: 1.5 }}>
+              ⚠ Esta vista es de referencia. Verificar siempre contra las resoluciones vigentes publicadas por JNE (jne.gob.pe) y ONPE (onpe.gob.pe), que pueden actualizarse hasta el día previo a la jornada.
             </div>
           </div>
         )}
