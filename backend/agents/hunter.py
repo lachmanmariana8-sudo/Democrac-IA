@@ -124,6 +124,8 @@ class HunterAgent:
         self.llm = llm
         self.ooni_available = ooni_available
         self.ooni_get_summary = ooni_get_summary
+        self._last_classify_error: Optional[str] = None
+        self._classify_errors: List[str] = []
 
     # ── MÉTODO PRINCIPAL ──────────────────────────────────────────────────────
 
@@ -196,8 +198,11 @@ class HunterAgent:
                     all_items, phase, phase_label, batch_size
                 )
                 result["items_classified"] = len(classified)
+                if self._classify_errors:
+                    for err in self._classify_errors:
+                        result["errors"].append(f"classify: {err}")
             except Exception as e:
-                result["errors"].append(f"LLM classification error: {e}")
+                result["errors"].append(f"LLM classification error: {type(e).__name__}: {e}")
 
         # Combinar RSS clasificados + OONI
         relevant = [c for c in classified if c.get("relevant")]
@@ -220,10 +225,14 @@ class HunterAgent:
     ) -> List[Dict]:
         """Clasifica ítems en batches para no superar el contexto del LLM."""
         all_classified: List[Dict] = []
+        self._classify_errors = []
 
         for i in range(0, len(items), batch_size):
             batch = items[i : i + batch_size]
+            self._last_classify_error = None
             batch_results = await self._classify_batch(batch, phase, phase_label)
+            if self._last_classify_error:
+                self._classify_errors.append(f"batch[{i}:{i+len(batch)}] {self._last_classify_error}")
             all_classified.extend(batch_results)
 
         return all_classified
@@ -258,6 +267,7 @@ class HunterAgent:
                 HumanMessage(content=user_msg),
             ])
             raw = response.content.strip()
+            raw_full = raw  # para diagnóstico si falla
 
             # Limpiar posible markdown ```json ... ``` del response
             if raw.startswith("```"):
@@ -266,9 +276,21 @@ class HunterAgent:
                     raw = raw[4:]
             raw = raw.strip()
 
-            parsed = json.loads(raw)
-            if not isinstance(parsed, list) or len(parsed) != len(items):
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError as je:
+                self._last_classify_error = f"JSONDecodeError: {je}. Raw[:300]={raw_full[:300]!r}"
                 return []
+            if not isinstance(parsed, list):
+                self._last_classify_error = f"Parsed no es lista, type={type(parsed).__name__}. Raw[:200]={raw_full[:200]!r}"
+                return []
+            if len(parsed) != len(items):
+                # Relajar: si Claude devolvió menos, paddeamos con not-relevant; si más, truncamos.
+                self._last_classify_error = f"Len mismatch: enviados={len(items)} recibidos={len(parsed)} (relajado, no descartamos batch)"
+                if len(parsed) < len(items):
+                    parsed = parsed + [{"relevant": False}] * (len(items) - len(parsed))
+                else:
+                    parsed = parsed[:len(items)]
 
             # Enriquecer cada resultado con metadata del ítem original
             enriched: List[Dict] = []
@@ -305,8 +327,8 @@ class HunterAgent:
 
             return enriched
 
-        except (json.JSONDecodeError, Exception):
-            # Si el LLM falla, retornar lista vacía de clasificaciones
+        except Exception as e:
+            self._last_classify_error = f"{type(e).__name__}: {str(e)[:300]}"
             return []
 
     # ── OONI → ENTRY ─────────────────────────────────────────────────────────
