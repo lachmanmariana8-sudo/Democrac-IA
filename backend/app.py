@@ -4900,6 +4900,73 @@ async def _auto_observe_bootstrap(auto_observe_raw: str) -> None:
 _hunter_scheduler_task: Optional[asyncio.Task] = None
 
 
+async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: int = 10) -> Dict[str, Any]:
+    """
+    Ejecuta el Hunter para una sesión activa y registra hallazgos relevantes.
+    Reutilizado por el scheduler automático y por el endpoint manual /api/hunter/{cc}/run-now.
+    Devuelve un dict con métricas: {registered, fetched, duplicates, errors, run_id}
+    """
+    out = {"registered": 0, "fetched": 0, "duplicates": 0, "errors": 0, "run_id": session.get("run_id")}
+    if session.get("finalized"):
+        out["error"] = "session finalized"
+        return out
+    run_id = session.get("run_id")
+    if not run_id:
+        out["error"] = "session has no run_id"
+        return out
+    phase = session.get("phase", "campaign")
+    phase_norm = _PHASE_ALIAS.get(phase, phase)
+    phase_label = _PHASE_LABELS.get(phase_norm, phase_norm)
+
+    from agents.hunter import HunterAgent, hunter_entry_to_observation
+    hunter = HunterAgent(
+        llm=llm,
+        ooni_available=OONI_AVAILABLE,
+        ooni_get_summary=get_ooni_summary if OONI_AVAILABLE else None,
+    )
+    result = await hunter.run(
+        country_code=cc,
+        phase=phase_norm,
+        phase_label=phase_label,
+        dry_run=False,
+        max_items_per_source=max_items,
+    )
+    entries = result.get("entries", [])
+    out["fetched"] = len(entries)
+
+    for entry in entries:
+        if not entry.get("relevant"):
+            continue
+        try:
+            obs = hunter_entry_to_observation(entry, phase_norm, cc)
+            existing = session.get("entries", [])
+            val = validate_entry(obs, existing)
+            if val.duplicate_of:
+                out["duplicates"] += 1
+                continue
+            obs["severity"] = _auto_escalate_severity(
+                obs["severity"], obs["category"], obs["finding"]
+            )
+            obs["rights_at_risk"] = list(
+                set(obs.get("rights_at_risk", []) + _auto_rights(obs["category"], obs["severity"]))
+            )
+            session["entries"].append(obs)
+            out["registered"] += 1
+            if ALERTS_AVAILABLE and obs["severity"] in ("critical", "high"):
+                try:
+                    dispatch_alert(build_entry_alert(obs, cc))
+                except Exception:
+                    pass
+        except Exception:
+            out["errors"] += 1
+            continue
+
+    if out["registered"] > 0:
+        session["updated_at"] = datetime.now(timezone.utc).isoformat()
+        observation_store[cc] = session
+    return out
+
+
 async def _hunter_scheduler_loop() -> None:
     """Background loop que dispara el Hunter cada N minutos para sesiones activas."""
     interval_min = int(os.getenv("HUNTER_INTERVAL_MINUTES", "0"))
@@ -4914,57 +4981,10 @@ async def _hunter_scheduler_loop() -> None:
         try:
             if HUNTER_AVAILABLE and llm and observation_store:
                 for cc, session in list(observation_store.items()):
-                    if session.get("finalized"):
-                        continue
-                    run_id = session.get("run_id")
-                    if not run_id:
-                        continue
-                    phase = session.get("phase", "campaign")
-                    phase_norm = _PHASE_ALIAS.get(phase, phase)
-                    phase_label = _PHASE_LABELS.get(phase_norm, phase_norm)
                     try:
-                        from agents.hunter import HunterAgent, hunter_entry_to_observation
-                        hunter = HunterAgent(
-                            llm=llm,
-                            ooni_available=OONI_AVAILABLE,
-                            ooni_get_summary=get_ooni_summary if OONI_AVAILABLE else None,
-                        )
-                        result = await hunter.run(
-                            country_code=cc,
-                            phase=phase_norm,
-                            phase_label=phase_label,
-                            dry_run=False,
-                            max_items_per_source=10,
-                        )
-                        registered = 0
-                        for entry in result.get("entries", []):
-                            if not entry.get("relevant"):
-                                continue
-                            try:
-                                obs = hunter_entry_to_observation(entry, phase_norm, cc)
-                                existing = session.get("entries", [])
-                                val = validate_entry(obs, existing)
-                                if val.duplicate_of:
-                                    continue
-                                obs["severity"] = _auto_escalate_severity(
-                                    obs["severity"], obs["category"], obs["finding"]
-                                )
-                                obs["rights_at_risk"] = list(
-                                    set(obs.get("rights_at_risk", []) + _auto_rights(obs["category"], obs["severity"]))
-                                )
-                                session["entries"].append(obs)
-                                registered += 1
-                                if ALERTS_AVAILABLE and obs["severity"] in ("critical", "high"):
-                                    try:
-                                        dispatch_alert(build_entry_alert(obs, cc))
-                                    except Exception:
-                                        pass
-                            except Exception:
-                                continue
-                        if registered > 0:
-                            session["updated_at"] = datetime.now(timezone.utc).isoformat()
-                            observation_store[cc] = session
-                            print(f"[Hunter][{cc}] Scheduler: {registered} nuevos hallazgos registrados.")
+                        res = await _hunter_run_for_session(cc, session, max_items=10)
+                        if res.get("registered", 0) > 0:
+                            print(f"[Hunter][{cc}] Scheduler: {res['registered']} nuevos hallazgos registrados.")
                     except Exception as _he:
                         print(f"[Hunter][{cc}] Error en scheduler: {_he}")
         except Exception as _loop_err:
@@ -6388,6 +6408,41 @@ class HunterRunInput(BaseModel):
     dry_run: bool = False                    # True = clasifica pero no registra
     max_items_per_source: int = 15           # Máximo ítems RSS por fuente
     sources: Optional[List[str]] = None     # None = todas las fuentes de la fase
+
+
+@app.post("/api/hunter/{country_code}/run-now")
+async def hunter_run_now(country_code: str):
+    """
+    Dispara manualmente un ciclo del Hunter para un país, sin parámetros.
+    Reutiliza la sesión activa (si existe) y su run_id. Mismo comportamiento
+    que el scheduler automático, pero on-demand desde el frontend.
+
+    Devuelve métricas del run: registered/fetched/duplicates/errors.
+    """
+    if not HUNTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Hunter Agent no disponible.")
+    if not llm:
+        raise HTTPException(status_code=503, detail="LLM no configurado (falta ANTHROPIC_API_KEY).")
+
+    code = country_code.upper()
+    if code not in observation_store:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay sesión de observación activa para {code}. "
+                   f"Verificá AUTO_OBSERVE_COUNTRIES o creá una sesión manualmente."
+        )
+    session = observation_store[code]
+    started_at = datetime.now(timezone.utc).isoformat()
+    try:
+        metrics = await _hunter_run_for_session(code, session, max_items=10)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Hunter run failed: {e}")
+    return {
+        "country_code": code,
+        "started_at": started_at,
+        "finished_at": datetime.now(timezone.utc).isoformat(),
+        **metrics,
+    }
 
 
 @app.post("/api/hunter/{country_code}/run")
