@@ -139,16 +139,43 @@ def _parse_rss(xml_text: str, source_key: str, feed_url: str) -> List[Dict]:
 
 async def fetch_feed(source_key: str, url: str, timeout: int = 12) -> List[Dict]:
     """Fetches y parsea un feed RSS/Atom/Sitemap. Retorna [] si falla."""
+    items, _err = await fetch_feed_debug(source_key, url, timeout)
+    return items
+
+
+async def fetch_feed_debug(source_key: str, url: str, timeout: int = 12):
+    """
+    Variante instrumentada: devuelve (items, error_info).
+    error_info = None si OK, o dict {kind, detail} si hubo problema.
+    Usado por el endpoint /api/hunter/debug-fetch para diagnosticar fallos en producción.
+    """
     try:
         async with httpx.AsyncClient(
             timeout=timeout, follow_redirects=True, verify=False
         ) as client:
             resp = await client.get(url, headers=_HEADERS)
             if resp.status_code != 200:
-                return []
-            return _parse_rss(resp.text, source_key, url)
-    except Exception:
-        return []
+                return [], {
+                    "kind": "http_error",
+                    "status": resp.status_code,
+                    "detail": f"HTTP {resp.status_code}",
+                    "body_preview": resp.text[:200] if resp.text else "",
+                }
+            items = _parse_rss(resp.text, source_key, url)
+            if not items:
+                return [], {
+                    "kind": "parse_empty",
+                    "status": 200,
+                    "detail": "200 OK pero parser no extrajo items",
+                    "body_preview": resp.text[:200],
+                    "content_type": resp.headers.get("content-type", ""),
+                }
+            return items, None
+    except Exception as e:
+        return [], {
+            "kind": "exception",
+            "detail": f"{type(e).__name__}: {str(e)[:200]}",
+        }
 
 
 async def fetch_sources(phase: str, extra_keys: Optional[List[str]] = None) -> Dict[str, List[Dict]]:

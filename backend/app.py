@@ -6410,6 +6410,44 @@ class HunterRunInput(BaseModel):
     sources: Optional[List[str]] = None     # None = todas las fuentes de la fase
 
 
+@app.get("/api/hunter/debug-fetch")
+async def hunter_debug_fetch(phase: str = "campaign"):
+    """
+    Diagnóstico: prueba cada feed RSS configurado para la fase indicada y devuelve
+    por fuente: status, count, y motivo de fallo si lo hubo. Sirve para identificar
+    bloqueos (403, timeouts, parse errors) cuando el Hunter devuelve fetched=0.
+    """
+    try:
+        from integrations.peru_sources import (
+            PHASE_SOURCES, RSS_FEEDS, fetch_feed_debug,
+        )
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"peru_sources no disponible: {e}")
+
+    keys = list(PHASE_SOURCES.get(phase, PHASE_SOURCES.get("campaign", [])))
+    results = []
+    total_items = 0
+    for key in keys:
+        for url in RSS_FEEDS.get(key, []):
+            items, err = await fetch_feed_debug(key, url, timeout=15)
+            results.append({
+                "source": key,
+                "url": url,
+                "ok": err is None,
+                "items": len(items),
+                "error": err,
+            })
+            total_items += len(items)
+    return {
+        "phase": phase,
+        "total_sources_tried": len(results),
+        "sources_ok": sum(1 for r in results if r["ok"]),
+        "total_items_fetched": total_items,
+        "results": results,
+        "tested_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @app.post("/api/hunter/{country_code}/run-now")
 async def hunter_run_now(country_code: str):
     """
