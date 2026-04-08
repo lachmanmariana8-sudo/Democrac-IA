@@ -4904,9 +4904,19 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
     """
     Ejecuta el Hunter para una sesión activa y registra hallazgos relevantes.
     Reutilizado por el scheduler automático y por el endpoint manual /api/hunter/{cc}/run-now.
-    Devuelve un dict con métricas: {registered, fetched, duplicates, errors, run_id}
+    Devuelve un dict con métricas: {registered, fetched, classified, relevant, duplicates, errors, run_id}
     """
-    out = {"registered": 0, "fetched": 0, "duplicates": 0, "errors": 0, "run_id": session.get("run_id")}
+    out = {
+        "registered": 0,
+        "fetched": 0,        # items crudos del RSS antes de clasificar
+        "classified": 0,     # items pasados por LLM
+        "relevant": 0,       # clasificados como relevant=True (+OONI)
+        "duplicates": 0,
+        "errors": 0,
+        "hunter_errors": [],
+        "sources_fetched": [],
+        "run_id": session.get("run_id"),
+    }
     if session.get("finalized"):
         out["error"] = "session finalized"
         return out
@@ -4932,7 +4942,12 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
         max_items_per_source=max_items,
     )
     entries = result.get("entries", [])
-    out["fetched"] = len(entries)
+    out["fetched"] = result.get("items_fetched", 0)
+    out["classified"] = result.get("items_classified", 0)
+    out["relevant"] = len(entries)
+    out["sources_fetched"] = result.get("sources_fetched", [])
+    if result.get("errors"):
+        out["hunter_errors"] = result["errors"][:5]
 
     for entry in entries:
         if not entry.get("relevant"):
