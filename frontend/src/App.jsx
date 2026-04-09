@@ -4994,6 +4994,7 @@ const MOE_TABS = [
 ];
 
 const PERU_INNER_TABS = [
+  { id: "alertas",      label: "Alertas en vivo", icon: "🚨" },
   { id: "inteligencia", label: "Inteligencia",  icon: "📡" },
   { id: "actores",      label: "Actores",        icon: "👥" },
   { id: "parlamento",   label: "Parlamento",     icon: "🏛" },
@@ -5070,8 +5071,39 @@ function PeruSituationRoom() {
   const [evalSaving, setEvalSaving]           = useState(false);
   const [hunterRunning, setHunterRunning]     = useState(false);
   const [hunterRunResult, setHunterRunResult] = useState(null);
+  const [liveAlerts, setLiveAlerts]           = useState(null);
+  const [liveAlertsLoading, setLiveAlertsLoading] = useState(false);
+  const [liveAlertsError, setLiveAlertsError] = useState(null);
+  const [liveAlertsLastFetch, setLiveAlertsLastFetch] = useState(null);
+  const [liveAlertsSeverity, setLiveAlertsSeverity]   = useState("low");
+  const [liveAlertsHours, setLiveAlertsHours]         = useState(168);
 
   const ELECTION_TS = useMemo(() => new Date("2026-04-12T08:00:00-05:00"), []);
+
+  const fetchLiveAlerts = useCallback(async () => {
+    setLiveAlertsLoading(true);
+    setLiveAlertsError(null);
+    try {
+      const url = `${API_BASE}/api/alerts/PER?since_hours=${liveAlertsHours}&min_severity=${liveAlertsSeverity}&limit=200`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      setLiveAlerts(data);
+      setLiveAlertsLastFetch(new Date());
+    } catch (e) {
+      setLiveAlertsError(e.message);
+    } finally {
+      setLiveAlertsLoading(false);
+    }
+  }, [liveAlertsSeverity, liveAlertsHours]);
+
+  // Polling cada 5 min cuando el tab "alertas" está abierto
+  useEffect(() => {
+    if (innerTab !== "alertas") return;
+    fetchLiveAlerts();
+    const interval = setInterval(fetchLiveAlerts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [innerTab, fetchLiveAlerts]);
 
   const triggerHunterRun = useCallback(async () => {
     if (hunterRunning) return;
@@ -6649,6 +6681,139 @@ function PeruSituationRoom() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ══ TAB: ALERTAS EN VIVO ══ */}
+        {innerTab === "alertas" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, gap: 12, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}>
+                Alertas en vivo — Hunter + Discord
+                {liveAlertsLoading && <span style={{ color: COLORS.accent }}>● cargando…</span>}
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
+                <label style={{ color: COLORS.textMuted }}>
+                  Severidad min:
+                  <select
+                    value={liveAlertsSeverity}
+                    onChange={(e) => setLiveAlertsSeverity(e.target.value)}
+                    style={{ marginLeft: 6, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, padding: "3px 6px", borderRadius: 4 }}
+                  >
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                    <option value="critical">critical</option>
+                  </select>
+                </label>
+                <label style={{ color: COLORS.textMuted }}>
+                  Ventana:
+                  <select
+                    value={liveAlertsHours}
+                    onChange={(e) => setLiveAlertsHours(Number(e.target.value))}
+                    style={{ marginLeft: 6, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, padding: "3px 6px", borderRadius: 4 }}
+                  >
+                    <option value={24}>24h</option>
+                    <option value={72}>72h</option>
+                    <option value={168}>7 días</option>
+                    <option value={720}>30 días</option>
+                  </select>
+                </label>
+                <button
+                  onClick={fetchLiveAlerts}
+                  disabled={liveAlertsLoading}
+                  style={{ padding: "4px 10px", background: COLORS.accentDim, color: COLORS.accent, border: `1px solid ${COLORS.accent}55`, borderRadius: 4, cursor: liveAlertsLoading ? "wait" : "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace" }}
+                >
+                  ↻ Refrescar
+                </button>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16, lineHeight: 1.5 }}>
+              Alertas detectadas automáticamente por el Hunter cada 4h sobre 5 fuentes RSS peruanas
+              (Andina, El Comercio, Gestión, IDL-Reporteros, RPP). Las severidades high y critical también
+              se despachan al canal Discord configurado. Auto-refresh cada 5 min.
+              {liveAlertsLastFetch && (
+                <span style={{ marginLeft: 8, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", fontSize: 10 }}>
+                  · última actualización: {liveAlertsLastFetch.toLocaleTimeString("es-PE")}
+                </span>
+              )}
+            </div>
+
+            {liveAlertsError && (
+              <Card className="peru-card" style={{ padding: 14, background: COLORS.dangerDim, borderLeft: `3px solid ${COLORS.danger}`, marginBottom: 16 }}>
+                <div style={{ color: COLORS.danger, fontSize: 12, fontWeight: 700 }}>Error: {liveAlertsError}</div>
+              </Card>
+            )}
+
+            {liveAlerts && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+                {[
+                  { key: "critical", label: "Críticas",  color: COLORS.danger },
+                  { key: "high",     label: "Altas",     color: "#f97316" },
+                  { key: "medium",   label: "Medias",    color: COLORS.warning },
+                  { key: "low",      label: "Bajas",     color: COLORS.info },
+                ].map(({ key, label, color }) => {
+                  const count = liveAlerts.counts_by_severity?.[key] || 0;
+                  return (
+                    <Card key={key} className="peru-card" style={{ padding: 14, borderLeft: `3px solid ${color}`, textAlign: "center" }}>
+                      <div style={{ fontSize: 26, fontWeight: 800, color, fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>{count}</div>
+                      <div style={{ fontSize: 10, color: COLORS.textMuted, marginTop: 4, letterSpacing: 1, textTransform: "uppercase" }}>{label}</div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {liveAlerts && liveAlerts.alerts && liveAlerts.alerts.length === 0 && !liveAlertsLoading && (
+              <Card className="peru-card" style={{ padding: 24, textAlign: "center", color: COLORS.textMuted, fontSize: 13 }}>
+                Sin alertas en la ventana seleccionada. El Hunter corre cada 4h —
+                podés disparar uno manualmente con el botón <strong>▶ HUNTER NOW</strong> arriba.
+              </Card>
+            )}
+
+            {liveAlerts && liveAlerts.alerts && liveAlerts.alerts.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {liveAlerts.alerts.map((a, i) => {
+                  const sev = (a.severity || "low").toLowerCase();
+                  const sevColor = sev === "critical" ? COLORS.danger : sev === "high" ? "#f97316" : sev === "medium" || sev === "moderate" ? COLORS.warning : COLORS.info;
+                  const dispatched = a.dispatched_at ? new Date(a.dispatched_at) : null;
+                  return (
+                    <Card key={a.alert_id || i} className="peru-card" style={{ padding: 14, borderLeft: `3px solid ${sevColor}` }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                        <div style={{ minWidth: 72, fontFamily: "'DM Mono', monospace" }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: sevColor, textTransform: "uppercase", letterSpacing: 1, padding: "2px 6px", border: `1px solid ${sevColor}66`, borderRadius: 4, textAlign: "center", marginBottom: 4 }}>
+                            {sev}
+                          </div>
+                          {dispatched && (
+                            <div style={{ fontSize: 9, color: COLORS.textDim, textAlign: "center" }}>
+                              {dispatched.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" })}<br />
+                              {dispatched.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 4, lineHeight: 1.4 }}>
+                            {a.title || "(sin título)"}
+                          </div>
+                          {a.description && (
+                            <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5, marginBottom: 6 }}>
+                              {a.description}
+                            </div>
+                          )}
+                          <div style={{ display: "flex", gap: 12, fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                            {a.event_type && <span>tipo: {a.event_type}</span>}
+                            {Array.isArray(a.rights_at_risk) && a.rights_at_risk.length > 0 && (
+                              <span>derechos: {a.rights_at_risk.slice(0, 2).join(", ")}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
