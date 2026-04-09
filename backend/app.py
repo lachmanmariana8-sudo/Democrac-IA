@@ -4969,9 +4969,30 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
             out["registered"] += 1
             if ALERTS_AVAILABLE and obs["severity"] in ("critical", "high"):
                 try:
-                    dispatch_alert(build_entry_alert(obs, cc))
-                except Exception:
-                    pass
+                    alert_event = build_entry_alert(obs, session)
+                    # Discord/webhook/slack
+                    await dispatch_alert(alert_event)
+                    # Persistir en tabla SQLite alerts (para que /api/alerts/PER la vea)
+                    if DB_AVAILABLE:
+                        try:
+                            _db_save_alert({
+                                "alert_id": f"{cc}-{obs.get('entry_id', '')}-{datetime.now(timezone.utc).timestamp()}",
+                                "country_code": cc,
+                                "event_type": alert_event.event_type,
+                                "severity": obs["severity"],
+                                "title": alert_event.title,
+                                "description": obs.get("finding", "")[:500],
+                                "entry_id": obs.get("entry_id"),
+                                "session_id": session.get("session_id"),
+                                "rights_at_risk": obs.get("rights_at_risk", []),
+                                "dispatched_at": datetime.now(timezone.utc).isoformat(),
+                                "channels": {"webhook": True},
+                                "channels_ok": 1,
+                            })
+                        except Exception as _se:
+                            out["hunter_errors"].append(f"alert db save: {_se}")
+                except Exception as _ae:
+                    out["hunter_errors"].append(f"alert dispatch: {_ae}")
         except Exception:
             out["errors"] += 1
             continue
