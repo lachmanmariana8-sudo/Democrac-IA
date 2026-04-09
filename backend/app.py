@@ -4970,6 +4970,13 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
             if ALERTS_AVAILABLE and obs["severity"] in ("critical", "high"):
                 try:
                     alert_event = build_entry_alert(obs, session)
+                    # Mejorar título: incluir snippet del finding (más informativo que "Hallazgo HIGH — disinformation (?)")
+                    finding_snippet = (obs.get("finding") or "").strip()
+                    if finding_snippet:
+                        snippet = finding_snippet[:120].rstrip()
+                        if len(finding_snippet) > 120:
+                            snippet += "…"
+                        alert_event.title = f"[{obs['severity'].upper()}] {snippet}"
                     # Discord/webhook/slack
                     await dispatch_alert(alert_event)
                     # Persistir en tabla SQLite alerts (para que /api/alerts/PER la vea)
@@ -5018,6 +5025,62 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
     return out
 
 
+async def _send_admin_discord(title: str, body: str, color: int = 16711680) -> bool:
+    """
+    Envía notificación administrativa al webhook Discord configurado en ALERT_WEBHOOK_URL.
+    Usado para incidentes de operación (LLM caído, Hunter degradado), distinto de las
+    alertas de hallazgos electorales. Falla en silencio.
+    """
+    webhook = os.getenv("ALERT_WEBHOOK_URL", "").strip()
+    if not webhook:
+        return False
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(webhook, json={
+                "embeds": [{
+                    "title": f"⚙️ {title}",
+                    "description": body[:1500],
+                    "color": color,
+                    "footer": {"text": f"DEMOCRAC.IA — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"},
+                }]
+            })
+        return True
+    except Exception as e:
+        print(f"[ADMIN-DISCORD] Falló envío: {e}")
+        return False
+
+
+async def _startup_llm_selftest() -> None:
+    """
+    Al arrancar el servicio, espera 30s y prueba el LLM con un ping mínimo.
+    Si falla, manda Discord administrativo para que Mariana se entere de inmediato.
+    Sin esto, una API key inválida o créditos en cero pasan inadvertidos hasta que
+    alguien revisa que el Hunter no escribió nada.
+    """
+    await asyncio.sleep(30)
+    print("[STARTUP-SELFTEST] Probando LLM...")
+    result = await _check_llm_alive()
+    if result["ok"]:
+        print(f"[STARTUP-SELFTEST] ✓ LLM operativo. checked_at={result['checked_at']}")
+    else:
+        msg = (
+            f"**⚠️ LLM no responde al arrancar el servicio**\n\n"
+            f"Error: `{result['error']}`\n\n"
+            f"Hunter no podrá clasificar items hasta que esto se resuelva. Posibles causas:\n"
+            f"• `ANTHROPIC_API_KEY` inválida o ausente en Railway\n"
+            f"• Cuenta sin créditos (https://console.anthropic.com/settings/billing)\n"
+            f"• Anthropic sobrecargado (esperar y reintentar)\n\n"
+            f"Verificar `/api/health?deep=true` para más detalle."
+        )
+        print(f"[STARTUP-SELFTEST] ✗ LLM caído: {result['error']}")
+        await _send_admin_discord("Startup self-test falló — LLM no responde", msg)
+
+
+# Estado global del Hunter para detectar degradación entre ciclos
+_HUNTER_HEALTH = {"consecutive_errors": 0, "last_alert_sent_at": None}
+
+
 async def _hunter_scheduler_loop() -> None:
     """Background loop que dispara el Hunter cada N minutos para sesiones activas."""
     interval_min = int(os.getenv("HUNTER_INTERVAL_MINUTES", "0"))
@@ -5029,17 +5092,54 @@ async def _hunter_scheduler_loop() -> None:
     await asyncio.sleep(60)  # warm-up: esperar 1 min antes del primer ciclo
 
     while True:
+        cycle_had_errors = False
+        cycle_total_registered = 0
         try:
             if HUNTER_AVAILABLE and llm and observation_store:
                 for cc, session in list(observation_store.items()):
                     try:
                         res = await _hunter_run_for_session(cc, session, max_items=10)
+                        cycle_total_registered += res.get("registered", 0)
+                        if res.get("hunter_errors"):
+                            cycle_had_errors = True
+                            print(f"[Hunter][{cc}] Scheduler: errores detectados — {res['hunter_errors'][:2]}")
                         if res.get("registered", 0) > 0:
                             print(f"[Hunter][{cc}] Scheduler: {res['registered']} nuevos hallazgos registrados.")
                     except Exception as _he:
+                        cycle_had_errors = True
                         print(f"[Hunter][{cc}] Error en scheduler: {_he}")
         except Exception as _loop_err:
+            cycle_had_errors = True
             print(f"[Hunter] Error en loop del scheduler: {_loop_err}")
+
+        # ── Detección de degradación entre ciclos ──
+        # Si 2 ciclos seguidos tienen errores Y registraron 0, mandamos Discord admin.
+        # Throttle: máximo 1 alerta cada 6h para no spammear.
+        if cycle_had_errors and cycle_total_registered == 0:
+            _HUNTER_HEALTH["consecutive_errors"] += 1
+        else:
+            _HUNTER_HEALTH["consecutive_errors"] = 0
+
+        if _HUNTER_HEALTH["consecutive_errors"] >= 2:
+            should_send = True
+            if _HUNTER_HEALTH["last_alert_sent_at"]:
+                try:
+                    last = datetime.fromisoformat(_HUNTER_HEALTH["last_alert_sent_at"])
+                    if (datetime.now(timezone.utc) - last).total_seconds() < 6 * 3600:
+                        should_send = False
+                except Exception:
+                    pass
+            if should_send:
+                _HUNTER_HEALTH["last_alert_sent_at"] = datetime.now(timezone.utc).isoformat()
+                msg = (
+                    f"**Hunter degradado**\n\n"
+                    f"{_HUNTER_HEALTH['consecutive_errors']} ciclos consecutivos sin registrar hallazgos y con errores.\n\n"
+                    f"Verificar:\n"
+                    f"• `GET /api/health?deep=true` (estado del LLM)\n"
+                    f"• `POST /api/hunter/PER/run-now` (ejecución manual con detalle de errores)\n"
+                    f"• Logs de Railway en busca de stack traces"
+                )
+                await _send_admin_discord("Hunter degradado — sin hallazgos en 2+ ciclos", msg, color=15105570)
 
         await asyncio.sleep(interval_min * 60)
 
@@ -5084,6 +5184,10 @@ async def on_startup():
     # Arrancar Hunter scheduler en background
     global _hunter_scheduler_task
     _hunter_scheduler_task = asyncio.create_task(_hunter_scheduler_loop())
+
+    # Self-test del LLM al arrancar (en background, no bloquea startup).
+    # Detecta API key inválida / créditos en cero / overload antes de que el Hunter falle.
+    asyncio.create_task(_startup_llm_selftest())
 
 
 class AnalyzeRequest(BaseModel):
@@ -5157,9 +5261,50 @@ class ObservationAdvanceInput(BaseModel):
     notes: Optional[str] = None
 
 
+# Cache del LLM ping para no quemar API en cada /health (que UptimeRobot etc. pegan cada 5min)
+_LLM_HEALTH_CACHE = {"checked_at": None, "ok": None, "error": None, "ttl_seconds": 300}
+
+
+async def _check_llm_alive() -> Dict[str, Any]:
+    """Ping liviano al LLM (1 token). Cacheado 5 min. Sirve para detectar
+    invalid api key, créditos en cero, overload, etc., antes de que se note en producción."""
+    now = datetime.now(timezone.utc)
+    cache = _LLM_HEALTH_CACHE
+    if cache["checked_at"]:
+        try:
+            last = datetime.fromisoformat(cache["checked_at"])
+            if (now - last).total_seconds() < cache["ttl_seconds"]:
+                return {"ok": cache["ok"], "error": cache["error"], "checked_at": cache["checked_at"], "cached": True}
+        except Exception:
+            pass
+
+    if llm is None:
+        cache.update({"ok": False, "error": "llm not initialized", "checked_at": now.isoformat()})
+        return {"ok": False, "error": "llm not initialized", "checked_at": cache["checked_at"], "cached": False}
+
+    try:
+        from langchain_core.messages import HumanMessage
+        # 1 token, prompt mínimo. Sonnet/Haiku responden esto en <500ms y cuesta ~$0.000003.
+        resp = await asyncio.wait_for(
+            llm.ainvoke([HumanMessage(content="ok")]),
+            timeout=10,
+        )
+        cache.update({"ok": True, "error": None, "checked_at": now.isoformat()})
+        return {"ok": True, "error": None, "checked_at": cache["checked_at"], "cached": False}
+    except Exception as e:
+        err = f"{type(e).__name__}: {str(e)[:200]}"
+        cache.update({"ok": False, "error": err, "checked_at": now.isoformat()})
+        return {"ok": False, "error": err, "checked_at": cache["checked_at"], "cached": False}
+
+
 @app.get("/api/health")
-async def health_check():
-    return {
+async def health_check(deep: bool = False):
+    """
+    Health check del sistema.
+    - default: liviano (sin tocar el LLM, devuelve flags estáticos).
+    - ?deep=true: incluye ping real al LLM (cacheado 5min). Usar desde monitores externos.
+    """
+    payload = {
         "status": "operational",
         "system": "DEMOCRAC.IA (PEIRS)",
         "version": "0.4.0",
@@ -5180,6 +5325,13 @@ async def health_check():
         "legal_instruments": len(UNIVERSAL_INSTRUMENTS) + sum(len(v) for v in REGIONAL_INSTRUMENTS.values()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if deep:
+        llm_check = await _check_llm_alive()
+        payload["llm_alive"] = llm_check["ok"]
+        payload["llm_check"] = llm_check
+        if not llm_check["ok"]:
+            payload["status"] = "degraded"
+    return payload
 
 
 @app.get("/api/stats")
