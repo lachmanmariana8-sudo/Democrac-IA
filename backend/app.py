@@ -4977,8 +4977,23 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
             continue
 
     if out["registered"] > 0:
-        session["updated_at"] = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
+        session["updated_at"] = now
         observation_store[cc] = session
+        # Persistir a SQLite — sin esto los entries del Hunter sólo viven en memoria
+        # y se pierden en el próximo redeploy. También bloquea que /status y /entries
+        # los vean (esos endpoints leen desde DB).
+        try:
+            with _get_db() as conn:
+                conn.execute(
+                    "UPDATE observation_sessions SET phase=?, updated_at=?, data=? WHERE country_code=? AND session_id=?",
+                    (session.get("phase", "campaign"), now, json.dumps(session), cc, session["session_id"])
+                )
+                conn.commit()
+            out["persisted"] = True
+        except Exception as e:
+            out["persisted"] = False
+            out["hunter_errors"].append(f"db persist failed: {type(e).__name__}: {e}")
     return out
 
 
