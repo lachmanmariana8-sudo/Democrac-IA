@@ -433,10 +433,12 @@ def build_entry_alert(entry: dict, session: dict, patterns=None) -> AlertEvent:
             title = f"⚡ ESCALADA DE SEVERIDAD — {session.get('country_code', '?')}"
             description = getattr(patterns, "escalation_description", finding)
 
-    # Traza de fuente: el Hunter rellena evidence_ref con la URL del RSS y source con el medio.
+    # Traza de fuente. hunter_entry_to_observation expone el medio y el título original
+    # como hunter_source / hunter_title; los entries crudos del Hunter usan source / title.
+    # Aceptamos ambos para que esta función sirva en los dos contextos.
     source_url   = entry.get("evidence_ref") or entry.get("url") or None
-    source_name  = entry.get("source") or None
-    source_title = entry.get("title") or None
+    source_name  = entry.get("hunter_source") or entry.get("source") or None
+    source_title = entry.get("hunter_title") or entry.get("title") or None
 
     return AlertEvent(
         event_type=event_type,

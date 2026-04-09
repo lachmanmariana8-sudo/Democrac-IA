@@ -4986,7 +4986,12 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
                             # parseable por el frontend, sin alterar el schema SQLite existente.
                             desc_parts = [obs.get("finding", "")[:400]]
                             if obs.get("evidence_ref"):
-                                desc_parts.append(f"\n\n📎 Fuente: {obs.get('source','?')} — {obs.get('title','')[:200]}\n🔗 {obs['evidence_ref']}")
+                                # hunter_entry_to_observation expone los datos del RSS como
+                                # hunter_source / hunter_title (no source/title, que son
+                                # campos internos del entry crudo).
+                                _src = obs.get("hunter_source") or obs.get("source") or "?"
+                                _ttl = obs.get("hunter_title") or obs.get("title") or ""
+                                desc_parts.append(f"\n\n📎 Fuente: {_src} — {_ttl[:200]}\n🔗 {obs['evidence_ref']}")
                             _db_save_alert({
                                 "alert_id": f"{cc}-{obs.get('entry_id', '')}-{datetime.now(timezone.utc).timestamp()}",
                                 "country_code": cc,
