@@ -81,6 +81,11 @@ class AlertEvent:
     iccpr_ref: Optional[str] = None
     fraud_score: Optional[float] = None
     run_id: Optional[str] = None
+    # ── Trazabilidad de fuente (Hunter RSS) ──
+    source_url: Optional[str] = None       # URL del artículo original (evidence_ref del entry)
+    source_name: Optional[str] = None      # Medio que publicó (Andina, El Comercio, etc.)
+    source_title: Optional[str] = None     # Título original del artículo
+    category: Optional[str] = None         # Categoría del hallazgo
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -226,29 +231,90 @@ async def _send_slack(event: AlertEvent) -> bool:
 
 
 def _format_discord_webhook(event: AlertEvent) -> dict:
-    """Payload con embeds para Discord webhooks."""
+    """Payload con embeds para Discord webhooks. Incluye link a fuente original cuando existe."""
     sev = event.severity.upper()
     color_map = {"CRITICAL": 0xD32F2F, "HIGH": 0xF57C00, "MEDIUM": 0xFBC02D, "LOW": 0x388E3C, "INFO": 0x1976D2}
-    fields = [
-        {"name": "País", "value": event.country_code, "inline": True},
-        {"name": "Severidad", "value": sev, "inline": True},
-        {"name": "Fase", "value": event.phase or "—", "inline": True},
-    ]
+
+    # Etiquetas legibles para fuentes y categorías
+    source_labels = {
+        "andina":     "Andina (agencia oficial)",
+        "elcomercio": "El Comercio",
+        "gestion":    "Gestión",
+        "idl":        "IDL-Reporteros",
+        "wayka":      "Wayka",
+        "rpp":        "RPP Noticias",
+        "jne":        "JNE (oficial)",
+        "onpe":       "ONPE (oficial)",
+        "ooni":       "OONI (censura digital)",
+    }
+    category_labels = {
+        "disinformation":      "🗣️ Desinformación",
+        "media_restriction":   "📰 Restricción a medios",
+        "campaign_violation":  "⚖️ Violación de campaña",
+        "fraud_allegation":    "🚨 Alegación de fraude",
+        "hate_speech":         "💢 Discurso de odio",
+        "voter_suppression":   "🚫 Supresión del voto",
+        "violence":            "⚠️ Violencia política",
+        "digital":             "💻 Incidente digital",
+        "institutional":       "🏛️ Crisis institucional",
+        "gender_violence":     "♀️ Violencia política de género",
+        "transparency":        "🔍 Transparencia electoral",
+        "other":               "📌 Otro",
+    }
+
+    fields = []
+    fields.append({"name": "País", "value": event.country_code, "inline": True})
+    fields.append({"name": "Severidad", "value": sev, "inline": True})
+    if event.category:
+        fields.append({"name": "Categoría", "value": category_labels.get(event.category, event.category), "inline": True})
+
     if event.location:
-        fields.append({"name": "Ubicación", "value": event.location, "inline": True})
-    if event.rights_at_risk:
-        fields.append({"name": "Derechos en riesgo", "value": ", ".join(event.rights_at_risk), "inline": False})
+        fields.append({"name": "📍 Ubicación", "value": event.location, "inline": True})
+    if event.phase:
+        fields.append({"name": "Fase", "value": event.phase, "inline": True})
     if event.fraud_score is not None:
         fields.append({"name": "Score fraude", "value": f"{event.fraud_score:.0%}", "inline": True})
-    return {
-        "embeds": [{
-            "title": f"🚨 {event.title}",
-            "description": event.description[:2000],
-            "color": color_map.get(sev, 0x9E9E9E),
-            "fields": fields,
-            "footer": {"text": f"PEIRS · {event.timestamp[:16]} UTC"},
-        }]
+
+    # Bloque de FUENTE — lo más importante para la observadora
+    if event.source_url or event.source_name:
+        source_value_parts = []
+        if event.source_name:
+            source_value_parts.append(f"**{source_labels.get(event.source_name, event.source_name)}**")
+        if event.source_title:
+            # Discord soporta truncado natural; limitamos para no romper layout
+            title_clip = event.source_title[:200]
+            if event.source_url:
+                # Discord embed soporta markdown link
+                source_value_parts.append(f"[{title_clip}]({event.source_url})")
+            else:
+                source_value_parts.append(title_clip)
+        elif event.source_url:
+            source_value_parts.append(f"[Ver artículo original]({event.source_url})")
+        fields.append({
+            "name": "📎 Fuente original",
+            "value": "\n".join(source_value_parts) or "—",
+            "inline": False,
+        })
+
+    if event.rights_at_risk:
+        fields.append({
+            "name": "⚖️ Derechos en riesgo",
+            "value": ", ".join(event.rights_at_risk[:5]),
+            "inline": False,
+        })
+
+    embed = {
+        "title": event.title[:256],
+        "description": (event.description or "")[:2000],
+        "color": color_map.get(sev, 0x9E9E9E),
+        "fields": fields,
+        "footer": {"text": f"PEIRS · {event.timestamp[:16]} UTC · entry {event.entry_id or '—'}"},
     }
+    # Si hay URL de fuente, también la ponemos como url del embed (clickeable en el título)
+    if event.source_url:
+        embed["url"] = event.source_url
+
+    return {"embeds": [embed]}
 
 
 async def _send_webhook(event: AlertEvent) -> bool:
@@ -367,6 +433,11 @@ def build_entry_alert(entry: dict, session: dict, patterns=None) -> AlertEvent:
             title = f"⚡ ESCALADA DE SEVERIDAD — {session.get('country_code', '?')}"
             description = getattr(patterns, "escalation_description", finding)
 
+    # Traza de fuente: el Hunter rellena evidence_ref con la URL del RSS y source con el medio.
+    source_url   = entry.get("evidence_ref") or entry.get("url") or None
+    source_name  = entry.get("source") or None
+    source_title = entry.get("title") or None
+
     return AlertEvent(
         event_type=event_type,
         country_code=session.get("country_code", "??"),
@@ -380,4 +451,8 @@ def build_entry_alert(entry: dict, session: dict, patterns=None) -> AlertEvent:
         rights_at_risk=rights,
         fraud_score=fraud_score,
         run_id=session.get("run_id"),
+        source_url=source_url,
+        source_name=source_name,
+        source_title=source_title,
+        category=category,
     )

@@ -4982,13 +4982,18 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
                     # Persistir en tabla SQLite alerts (para que /api/alerts/PER la vea)
                     if DB_AVAILABLE:
                         try:
+                            # Empaquetamos source/url en el campo description con un separador
+                            # parseable por el frontend, sin alterar el schema SQLite existente.
+                            desc_parts = [obs.get("finding", "")[:400]]
+                            if obs.get("evidence_ref"):
+                                desc_parts.append(f"\n\n📎 Fuente: {obs.get('source','?')} — {obs.get('title','')[:200]}\n🔗 {obs['evidence_ref']}")
                             _db_save_alert({
                                 "alert_id": f"{cc}-{obs.get('entry_id', '')}-{datetime.now(timezone.utc).timestamp()}",
                                 "country_code": cc,
                                 "event_type": alert_event.event_type,
                                 "severity": obs["severity"],
                                 "title": alert_event.title,
-                                "description": obs.get("finding", "")[:500],
+                                "description": "".join(desc_parts)[:1500],
                                 "entry_id": obs.get("entry_id"),
                                 "session_id": session.get("session_id"),
                                 "rights_at_risk": obs.get("rights_at_risk", []),

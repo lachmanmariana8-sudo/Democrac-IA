@@ -6796,11 +6796,48 @@ function PeruSituationRoom() {
                           <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 4, lineHeight: 1.4 }}>
                             {a.title || "(sin título)"}
                           </div>
-                          {a.description && (
-                            <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5, marginBottom: 6 }}>
-                              {a.description}
-                            </div>
-                          )}
+                          {(() => {
+                            // El backend empaqueta source/url en description con un separador
+                            // "📎 Fuente: <medio> — <título>\n🔗 <url>". Lo parseamos para
+                            // mostrar el link clickeable separado del finding.
+                            const desc = a.description || "";
+                            const urlMatch = desc.match(/🔗\s*(https?:\/\/\S+)/);
+                            const sourceMatch = desc.match(/📎\s*Fuente:\s*([^—\n]+?)(?:\s*—\s*([^\n]+))?\s*\n/);
+                            const finding = desc.split("📎")[0].trim();
+                            const url = urlMatch ? urlMatch[1] : null;
+                            const sourceName = sourceMatch ? sourceMatch[1].trim() : null;
+                            const sourceTitle = sourceMatch ? (sourceMatch[2] || "").trim() : null;
+                            return (
+                              <>
+                                {finding && (
+                                  <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5, marginBottom: 8 }}>
+                                    {finding}
+                                  </div>
+                                )}
+                                {(url || sourceName) && (
+                                  <div style={{ fontSize: 11, padding: "6px 10px", background: COLORS.surface, borderRadius: 4, marginBottom: 6, borderLeft: `2px solid ${COLORS.accent}` }}>
+                                    {sourceName && (
+                                      <div style={{ fontSize: 10, color: COLORS.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
+                                        📎 {sourceName}
+                                      </div>
+                                    )}
+                                    {url ? (
+                                      <a
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: COLORS.text, textDecoration: "underline", fontSize: 11, lineHeight: 1.4, wordBreak: "break-word" }}
+                                      >
+                                        {sourceTitle || url}
+                                      </a>
+                                    ) : sourceTitle && (
+                                      <span style={{ color: COLORS.textMuted }}>{sourceTitle}</span>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                           <div style={{ display: "flex", gap: 12, fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
                             {a.event_type && <span>tipo: {a.event_type}</span>}
                             {Array.isArray(a.rights_at_risk) && a.rights_at_risk.length > 0 && (
