@@ -929,6 +929,123 @@ const CircularScore = ({ value, max = 100, label, sublabel, color, size = 110 })
   );
 };
 
+/**
+ * DatasetCard — presentación narrativa de un índice internacional.
+ *
+ * Reemplaza al CircularScore pelado: muestra valor + barra + escala interpretativa +
+ * descripción del índice + fuente + año. Pensado para que un observador entienda
+ * qué mide cada dataset sin necesidad de consultar un glosario externo.
+ *
+ * Props:
+ *  name          — "Freedom House", "V-Dem", "PEI", "RSF"
+ *  icon          — emoji opcional
+ *  value         — número a mostrar
+ *  max           — escala (100 para FH/PEI/RSF, 1 para V-Dem)
+ *  unit          — sufijo opcional ("/100", "")
+ *  year          — año del dato
+ *  description   — qué mide el índice
+ *  source        — organización que lo publica
+ *  scale         — array de { from, to, label, color } para la escala interpretativa
+ *  sourceUrl     — link al sitio oficial
+ */
+const DatasetCard = ({ name, icon = "📊", value, max = 100, unit = "", year, description, source, scale = [], sourceUrl }) => {
+  const hasValue = value !== null && value !== undefined;
+  const pct = hasValue && max > 0 ? (value / max) * 100 : 0;
+
+  // Determinar el nivel actual según la escala
+  const currentLevel = hasValue
+    ? scale.find(s => value >= s.from && value <= s.to) || scale[scale.length - 1]
+    : null;
+  const color = currentLevel?.color || COLORS.textMuted;
+
+  return (
+    <Card className="peru-card" style={{ padding: 14 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 16 }}>{icon}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text, letterSpacing: 1 }}>{name}</span>
+        </div>
+        {year && (
+          <span style={{ fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace",
+            padding: "2px 8px", border: `1px solid ${COLORS.border}`, borderRadius: 4 }}>
+            {year}
+          </span>
+        )}
+      </div>
+
+      {/* Valor + barra */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 28, fontWeight: 800, color, fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
+            {hasValue ? (max === 1 ? value.toFixed(2) : Math.round(value)) : "—"}
+          </span>
+          <span style={{ fontSize: 12, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+            / {max}{unit}
+          </span>
+          {currentLevel && (
+            <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, color,
+              padding: "3px 8px", background: `${color}18`, border: `1px solid ${color}55`, borderRadius: 4,
+              textTransform: "uppercase", letterSpacing: 1 }}>
+              {currentLevel.label}
+            </span>
+          )}
+        </div>
+        <div style={{ height: 6, background: COLORS.border, borderRadius: 3, overflow: "hidden" }}>
+          <div style={{
+            height: "100%", width: `${Math.min(pct, 100)}%`, borderRadius: 3,
+            background: `linear-gradient(90deg, ${color}88, ${color})`,
+            boxShadow: `0 0 6px ${color}66`,
+            transition: "width 1.2s cubic-bezier(0.4, 0, 0.2, 1)",
+          }} />
+        </div>
+      </div>
+
+      {/* Descripción */}
+      {description && (
+        <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5, marginBottom: 10 }}>
+          {description}
+        </div>
+      )}
+
+      {/* Escala interpretativa */}
+      {scale.length > 0 && (
+        <div style={{ marginBottom: 8, padding: "6px 8px", background: COLORS.surface, borderRadius: 5 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
+            Escala interpretativa
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {scale.map((s, i) => (
+              <div key={i} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                fontSize: 10, fontFamily: "'DM Mono', monospace",
+                padding: "2px 0",
+                color: s === currentLevel ? s.color : COLORS.textMuted,
+                fontWeight: s === currentLevel ? 700 : 400,
+              }}>
+                <span>
+                  <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: s.color, marginRight: 6 }} />
+                  {s.label}
+                </span>
+                <span>{s.from}–{s.to}{max === 1 ? "" : unit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Footer: fuente */}
+      {source && (
+        <div style={{ fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", paddingTop: 6, borderTop: `1px dashed ${COLORS.border}` }}>
+          Fuente: {sourceUrl
+            ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.textMuted, textDecoration: "underline" }}>{source}</a>
+            : source}
+        </div>
+      )}
+    </Card>
+  );
+};
+
 const BarMeter = ({ value, label, invert = false }) => {
   const pct = value !== null && value !== undefined ? Math.round(value * 100) : 0;
   const displayPct = invert ? 100 - pct : pct;
@@ -4993,17 +5110,24 @@ const MOE_TABS = [
   { id: "protocol",       label: "Protocolo MOE",       icon: "📋" },
 ];
 
+// Orden de tabs: operativos primero (lo que se usa en vivo), contextuales después, informe al final.
+// Agrupación visual en 4 bloques: monitoreo en vivo → contexto → observación de campo → salida final.
 const PERU_INNER_TABS = [
-  { id: "alertas",      label: "Alertas en vivo", icon: "🚨" },
-  { id: "inteligencia", label: "Inteligencia",  icon: "📡" },
-  { id: "actores",      label: "Actores",        icon: "👥" },
-  { id: "parlamento",   label: "Parlamento",     icon: "🏛" },
-  { id: "brief",        label: "MOE Brief",      icon: "📋" },
-  { id: "jornada",      label: "Jornada",        icon: "🗳" },
+  // Bloque 1 — MONITOREO EN VIVO
+  { id: "alertas",      label: "Alertas en vivo",  icon: "🚨" },
   { id: "calendario",   label: "Calendario legal", icon: "📅" },
-  { id: "datos",        label: "Datos V-Dem",    icon: "📈" },
-  { id: "evaluacion",   label: "Evaluación",     icon: "📝" },
-  { id: "informe",      label: "Informe",        icon: "📄" },
+  // Bloque 2 — CONTEXTO
+  { id: "inteligencia", label: "Contexto y datos", icon: "📊" },
+  { id: "datos",        label: "Series V-Dem",     icon: "📈" },
+  { id: "actores",      label: "Actores",          icon: "👥" },
+  { id: "parlamento",   label: "Parlamento",       icon: "🏛" },
+  // Bloque 3 — OBSERVACIÓN DE CAMPO
+  { id: "brief",        label: "MOE Brief",        icon: "📋" },
+  { id: "jornada",      label: "Jornada",          icon: "🗳" },
+  { id: "evaluacion",   label: "Evaluación",       icon: "📝" },
+  // Bloque 4 — SALIDA + METODOLOGÍA
+  { id: "metodologia",  label: "Metodología",      icon: "⚙️" },
+  { id: "informe",      label: "Informe PEIRS",    icon: "📄" },
 ];
 
 const PERU_HIST_EVENTS = [
@@ -5511,25 +5635,68 @@ function PeruSituationRoom() {
           <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
               <div>
-                <Card className="peru-card" style={{ marginBottom: 16 }}>
-                  <SectionTitle icon="📊">Fuentes Verificadas</SectionTitle>
-                  <div style={{ display: "flex", justifyContent: "space-around", padding: "10px 0 4px" }}>
-                    <CircularScore value={country?.freedomScore} max={100} label="Freedom House" sublabel="FIW 2025"
-                      color={country?.freedomScore < 40 ? COLORS.danger : country?.freedomScore < 65 ? COLORS.warning : COLORS.accent} size={88} />
-                    <CircularScore value={country?.vdemIndex} max={1} label="V-Dem" sublabel="Lib. Democracy"
-                      color={country?.vdemIndex < 0.3 ? COLORS.danger : country?.vdemIndex < 0.5 ? COLORS.warning : COLORS.accent} size={108} />
-                    <CircularScore value={peiEmbs ? parseFloat(peiEmbs) : null} max={100} label="PEI — EMBs"
-                      sublabel={peiYear ? `Elec. ${peiYear}` : "Sin datos"}
-                      color={peiEmbs && parseFloat(peiEmbs) < 40 ? COLORS.danger : COLORS.warning} size={88} />
-                  </div>
-                  <div style={{ marginTop: 10, padding: "6px 10px", borderRadius: 7, background: COLORS.surfaceLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 10, color: COLORS.textDim }}>Convergencia entre fuentes</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, fontFamily: "'DM Mono', monospace",
-                      color: convScore >= 75 ? COLORS.accent : convScore >= 50 ? COLORS.warning : COLORS.danger }}>
-                      {convScore}/100
-                    </span>
-                  </div>
-                </Card>
+                {/* ══ Datasets internacionales — cards narrativas ══
+                    Reemplaza al bloque "Fuentes Verificadas" con CircularScore pelado.
+                    Cada dataset incluye descripción, escala interpretativa, año y fuente. */}
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 8 }}>
+                  Índices internacionales — contexto pre-electoral
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                  <DatasetCard
+                    name="Freedom House" icon="🗽"
+                    value={country?.freedomScore} max={100} year="FIW 2025"
+                    description="Mide derechos políticos y libertades civiles en 195 países. Puntaje agregado sobre 100."
+                    source="Freedom House (EE.UU.)" sourceUrl="https://freedomhouse.org"
+                    scale={[
+                      { from: 70, to: 100, label: "Libre",            color: COLORS.accent },
+                      { from: 40, to: 69,  label: "Parcialmente libre", color: COLORS.warning },
+                      { from: 0,  to: 39,  label: "No libre",          color: COLORS.danger  },
+                    ]} />
+                  <DatasetCard
+                    name="V-Dem — Lib. Democracy" icon="⚖️"
+                    value={country?.vdemIndex} max={1} year="V-Dem v15"
+                    description="Índice de democracia liberal. Combina democracia electoral + límites al ejecutivo, igualdad ante la ley y libertades."
+                    source="V-Dem Institute (Suecia)" sourceUrl="https://v-dem.net"
+                    scale={[
+                      { from: 0.81, to: 1.00, label: "Democracia liberal",    color: COLORS.accent  },
+                      { from: 0.51, to: 0.80, label: "Democracia electoral", color: "#22c55e"      },
+                      { from: 0.21, to: 0.50, label: "Autocracia electoral", color: COLORS.warning },
+                      { from: 0.00, to: 0.20, label: "Autocracia cerrada",   color: COLORS.danger  },
+                    ]} />
+                  <DatasetCard
+                    name="PEI — Integridad electoral" icon="🗳️"
+                    value={peiEmbs ? parseFloat(peiEmbs) : null} max={100}
+                    year={peiYear ? `Elección ${peiYear}` : "—"}
+                    description="Percepción de expertos sobre la integridad del proceso electoral (EMBs, leyes, padrones, conteo, disputas)."
+                    source="Electoral Integrity Project" sourceUrl="https://www.electoralintegrityproject.com"
+                    scale={[
+                      { from: 70, to: 100, label: "Alta integridad",     color: COLORS.accent  },
+                      { from: 50, to: 69,  label: "Integridad moderada", color: COLORS.warning },
+                      { from: 0,  to: 49,  label: "Baja integridad",     color: COLORS.danger  },
+                    ]} />
+                  <DatasetCard
+                    name="RSF — Libertad de prensa" icon="📰"
+                    value={country?.rsf?.score ?? country?.dimensions?.pressFreedom ?? null}
+                    max={100} year="RSF 2025"
+                    description="Índice de libertad de prensa. Mayor puntaje = más libertad. Cubre 180 países."
+                    source="Reporteros Sin Fronteras" sourceUrl="https://rsf.org"
+                    scale={[
+                      { from: 85, to: 100, label: "Situación buena",        color: COLORS.accent  },
+                      { from: 70, to: 84,  label: "Satisfactoria",          color: "#22c55e"      },
+                      { from: 55, to: 69,  label: "Problemática",           color: COLORS.warning },
+                      { from: 40, to: 54,  label: "Difícil",                color: "#f97316"      },
+                      { from: 0,  to: 39,  label: "Muy grave",              color: COLORS.danger  },
+                    ]} />
+                </div>
+                <div style={{ padding: "8px 12px", borderRadius: 7, background: COLORS.surfaceLight, border: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <span style={{ fontSize: 10, color: COLORS.textDim }} title="Qué tan consistente es el diagnóstico cuando se cruzan las cuatro fuentes">
+                    Convergencia entre fuentes
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 800, fontFamily: "'DM Mono', monospace",
+                    color: convScore >= 75 ? COLORS.accent : convScore >= 50 ? COLORS.warning : COLORS.danger }}>
+                    {convScore}/100
+                  </span>
+                </div>
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                     <span>&#127963;</span> JNE — Jurado Nacional de Elecciones
@@ -5588,39 +5755,10 @@ function PeruSituationRoom() {
               </div>
             </div>
 
-            {/* Comparativa historica */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <Card className="peru-card">
-                <SectionTitle icon="📊">Comparativa Electoral: 2021 vs 2026</SectionTitle>
-                {[
-                  { label: "Freedom House Score", v21: 71,   v26: country?.freedomScore, unit: "/100", better: "higher" },
-                  { label: "V-Dem Lib. Democracy", v21: 0.52, v26: country?.vdemIndex,   unit: "",     better: "higher" },
-                  { label: "PEIRS Risk Score",      v21: 38,  v26: country?.riskScore,   unit: "/100", better: "lower"  },
-                  { label: "Fragmentación Congreso", v21: "8+ bancadas", v26: "8+ bancadas (proy.)", unit: "", better: null },
-                ].map(row => {
-                  const v26n = typeof row.v26 === "number" ? row.v26 : null;
-                  const improved    = v26n !== null && (row.better === "higher" ? v26n > row.v21  : row.better === "lower" ? v26n < row.v21 : false);
-                  const deteriorated = v26n !== null && (row.better === "higher" ? v26n < row.v21  : row.better === "lower" ? v26n > row.v21 : false);
-                  return (
-                    <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-                      <span style={{ fontSize: 11, color: COLORS.textMuted }}>{row.label}</span>
-                      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                        <span style={{ fontSize: 11, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
-                          2021: {row.v21}{row.unit}
-                        </span>
-                        <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace",
-                          color: improved ? COLORS.accent : deteriorated ? COLORS.danger : COLORS.text }}>
-                          {improved ? "▲" : deteriorated ? "▼" : "●"} 2026: {v26n !== null ? v26n : row.v26}{typeof row.v26 === "number" ? row.unit : ""}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div style={{ marginTop: 12, padding: "8px 10px", borderRadius: 7, background: COLORS.dangerDim, fontSize: 10, color: COLORS.textDim, lineHeight: 1.6 }}>
-                  Contexto: Perú 2026 llega con 6 presidentes en 4 años. La inestabilidad institucional crónica es el principal factor de riesgo estructural.
-                </div>
-              </Card>
-
+            {/* Línea histórica visual — timeline único (la Comparativa 2021 vs 2026
+                se removió: estaba duplicada en el Informe Cap 1 y usaba valores
+                hardcoded sin fuente documentada). */}
+            <div>
               <Card className="peru-card" style={{ padding: 0, overflow: "hidden" }}>
                 {/* ── PIZARRA: Draw-my-life timeline ── */}
                 {(() => {
@@ -7413,6 +7551,110 @@ function PeruSituationRoom() {
             </div>
           );
         })()}
+
+        {/* ══ TAB: METODOLOGÍA ══
+            Glosario de datasets + guía de lectura del dashboard.
+            Responde a la necesidad de que el observador entienda qué mide cada
+            índice sin consultar fuentes externas. */}
+        {innerTab === "metodologia" && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              Metodología — glosario y guía de lectura
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 18, lineHeight: 1.5 }}>
+              Este tab documenta qué mide cada dataset mostrado en el dashboard, qué escalas usa, de dónde provienen los datos y cómo interpretar lo que el observador ve. Es de lectura recomendada antes de usar el informe operativamente.
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10, marginTop: 16 }}>
+              📊 Índices internacionales utilizados
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
+              <Card className="peru-card" style={{ padding: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>🗽 Freedom House — FIW</div>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                  <strong>Freedom in the World</strong> evalúa derechos políticos (proceso electoral, pluralismo y participación, funcionamiento del gobierno) y libertades civiles (libertad de expresión, asociación, estado de derecho, autonomía personal) sobre 195 países. Puntaje agregado 0–100. Publicación anual.
+                  <br /><br />
+                  <strong>Fuente:</strong> Freedom House Inc. (Washington DC). <a href="https://freedomhouse.org/report/freedom-world" target="_blank" rel="noopener noreferrer" style={{ color: COLORS.accent }}>Metodología oficial</a>.
+                </div>
+              </Card>
+              <Card className="peru-card" style={{ padding: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>⚖️ V-Dem — Liberal Democracy Index</div>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                  <strong>Varieties of Democracy</strong> combina 5 principios: democracia electoral, liberal (límites al ejecutivo), participativa, deliberativa y de igualdad. El índice usado aquí es el <em>Liberal Democracy</em> (electoral + frenos institucionales). Escala 0–1. V-Dem v15 cubre 202 países desde 1789. Métricas construidas por consenso experto ponderado (Bayesian IRT).
+                  <br /><br />
+                  <strong>Fuente:</strong> V-Dem Institute, Universidad de Gotemburgo (Suecia). <a href="https://v-dem.net/data/dataset-archive/" target="_blank" rel="noopener noreferrer" style={{ color: COLORS.accent }}>Dataset y documentación</a>.
+                </div>
+              </Card>
+              <Card className="peru-card" style={{ padding: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>🗳️ PEI — Perceptions of Electoral Integrity</div>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                  Encuesta a expertos post-electoral sobre 11 dimensiones (marco legal, diseño de circunscripciones, registro de electores, registro de partidos, campaña, medios, financiamiento, jornada, conteo, resultados, autoridades electorales). El índice EMBs mide específicamente la percepción sobre los organismos electorales (JNE/ONPE/RENIEC en el caso peruano). Escala 0–100.
+                  <br /><br />
+                  <strong>Fuente:</strong> Electoral Integrity Project (Univ. de Sydney & Univ. de Harvard). <a href="https://www.electoralintegrityproject.com" target="_blank" rel="noopener noreferrer" style={{ color: COLORS.accent }}>Sitio oficial</a>.
+                </div>
+              </Card>
+              <Card className="peru-card" style={{ padding: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>📰 RSF — Press Freedom Index</div>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                  Índice anual sobre libertad de prensa en 180 países. Cinco indicadores: contexto político, marco legal, contexto económico, sociocultural, y seguridad de periodistas. Escala 0–100 (mayor = más libertad).
+                  <br /><br />
+                  <strong>Fuente:</strong> Reporteros Sin Fronteras (Francia). <a href="https://rsf.org/en/index" target="_blank" rel="noopener noreferrer" style={{ color: COLORS.accent }}>Ranking anual</a>.
+                </div>
+              </Card>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10, marginTop: 16 }}>
+              🎯 PEIRS Score y Convergencia
+            </div>
+            <Card className="peru-card" style={{ padding: 14, marginBottom: 18 }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                <strong>PEIRS Risk Score</strong> (Predictive Electoral Integrity &amp; Risk Score) es una métrica compuesta 0–100 que combina los cuatro índices internacionales con una normalización propia y ponderación sobre 8 dimensiones: marco legal, organismo electoral, financiamiento, medios, inclusión, resolución de disputas, amenazas digitales, y trayectoria institucional. Se interpreta como <em>riesgo a la integridad electoral</em> (mayor = más riesgo).
+                <br /><br />
+                <strong>Convergencia entre fuentes</strong> mide qué tan consistente es el diagnóstico cuando se cruzan FH + V-Dem + PEI. 75+ indica que las tres apuntan en la misma dirección; &lt;50 indica divergencia (requiere investigar por qué).
+                <br /><br />
+                <strong>Limitación:</strong> PEIRS es un indicador estructural, no una predicción. Fuerzas de choque (crisis institucionales, fraudes agudos, catástrofes operativas) no se capturan plenamente en los índices internacionales publicados con desfase anual.
+              </div>
+            </Card>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10, marginTop: 16 }}>
+              🛰️ Hunter — fuentes de monitoreo en vivo
+            </div>
+            <Card className="peru-card" style={{ padding: 14, marginBottom: 18 }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                El <strong>Hunter Agent</strong> extrae cada 4 horas sobre feeds RSS de medios peruanos. Cada ítem se clasifica con <strong>Claude Sonnet 4.6</strong> (Anthropic) en una de 17 categorías (desinformación, logística electoral, violación de campaña, fraude, discurso de odio, restricción a medios, violencia, etc.) y se asigna severidad info/low/medium/high/critical.
+                <br /><br />
+                <strong>Fuentes activas:</strong> Andina (agencia oficial), El Comercio, Gestión, IDL-Reporteros, RPP Noticias. JNE y ONPE emiten RSS pero devuelven error 403/404 (pendientes de evaluación técnica). Wayka devuelve HTML no parseable.
+                <br /><br />
+                <strong>Alertas high/critical</strong> se despachan automáticamente al canal Discord configurado y se persisten en la tabla <code>alerts</code> de SQLite sobre volumen persistente. Visibles también en el tab "🚨 Alertas en vivo" con refresh cada 5 minutos.
+                <br /><br />
+                <strong>Derechos citados:</strong> ICCPR Art. 19 y 25, CADH Art. 13 y 23, CDI Art. 3, LOE Art. 190/191/351/358/363.
+              </div>
+            </Card>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10, marginTop: 16 }}>
+              🗺️ Guía de lectura del dashboard
+            </div>
+            <Card className="peru-card" style={{ padding: 14, marginBottom: 18 }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.7 }}>
+                <strong>1. Arranque operativo:</strong> empezar por <strong>🚨 Alertas en vivo</strong> para ver qué detectó el Hunter desde el último refresh. Si hay críticas rojas → prioridad máxima.
+                <br />
+                <strong>2. Planificación del día:</strong> <strong>📅 Calendario legal</strong> muestra qué hitos legales rigen hoy (Ley Seca, silencio electoral, plazo de impugnaciones).
+                <br />
+                <strong>3. Contextualizar:</strong> <strong>📊 Contexto y datos</strong> cruza los 4 índices internacionales. Usar las cards narrativas; cada una viene con su escala interpretativa.
+                <br />
+                <strong>4. Profundizar:</strong> <strong>📈 Series V-Dem</strong> para tendencias temporales, <strong>👥 Actores</strong> y <strong>🏛 Parlamento</strong> para composición política.
+                <br />
+                <strong>5. Observación activa:</strong> <strong>📋 MOE Brief</strong> descargable, <strong>🗳 Jornada</strong> con formulario, <strong>📝 Evaluación</strong> con cuestionario auditable.
+                <br />
+                <strong>6. Documento final:</strong> <strong>📄 Informe PEIRS</strong> reúne los 11 capítulos del análisis completo con citas de fuentes primarias.
+              </div>
+            </Card>
+
+            <div style={{ marginTop: 14, padding: 12, background: COLORS.surface, border: `1px dashed ${COLORS.border}`, borderRadius: 6, fontSize: 11, color: COLORS.textDim, lineHeight: 1.5 }}>
+              ⚠ Este informe es un <strong>sistema de apoyo a la observación electoral</strong>, no reemplaza la observación presencial ni los informes oficiales de las misiones acreditadas (OEA, OSCE/ODIHR, Carter Center, IDEA Internacional, NDI). Las clasificaciones automáticas del Hunter deben verificarse contra la fuente primaria antes de citar.
+            </div>
+          </div>
+        )}
 
         {/* ══ TAB: INFORME ══ */}
         {innerTab === "informe" && (() => {
