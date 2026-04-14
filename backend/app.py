@@ -4829,9 +4829,26 @@ def _preload_sessions_on_startup() -> None:
 # ── Auto-observe bootstrap (background) ──────────────────────────────────────
 
 async def _auto_observe_bootstrap(auto_observe_raw: str) -> None:
-    """Crea sesiones de observación para países configurados. Corre post-startup."""
-    await asyncio.sleep(5)  # Esperar a que el servidor esté listo
-    for cc in [c.strip().upper() for c in auto_observe_raw.split(",") if c.strip()]:
+    """Crea sesiones de observación para países configurados. Corre post-startup.
+
+    IMPORTANTE: run_pipeline es síncrono y llamarlo directamente dentro de esta
+    corutina bloquea el event loop de FastAPI durante ~60s por país, congelando
+    /api/health y todos los demás endpoints. Usamos asyncio.to_thread() para
+    que corra en un pool aparte sin bloquear el servidor.
+
+    Safeguard: si AUTO_OBSERVE_COUNTRIES contiene muchos países (>5), loggeamos
+    warning y procesamos solo los primeros 5 para evitar colgar el servicio.
+    El caso de uso normal es 1 país (PER).
+    """
+    await asyncio.sleep(10)  # Esperar a que el healthcheck haya pasado
+    all_codes = [c.strip().upper() for c in auto_observe_raw.split(",") if c.strip()]
+    if len(all_codes) > 5:
+        print(f"[AUTO-OBSERVE] AVISO: {len(all_codes)} países configurados. "
+              f"Procesando solo los primeros 5 para no saturar el servicio.")
+        all_codes = all_codes[:5]
+    print(f"[AUTO-OBSERVE] Iniciando bootstrap para {all_codes}")
+
+    for cc in all_codes:
         if cc in observation_store:
             print(f"[AUTO-OBSERVE] {cc} ya tiene sesión activa, skip.")
             continue
@@ -4849,15 +4866,22 @@ async def _auto_observe_bootstrap(auto_observe_raw: str) -> None:
             else:
                 run_id = None
         if not run_id:
-            # Generar análisis en background (no bloquea startup)
+            # Generar análisis en thread pool (run_pipeline es sync bloqueante).
+            # Timeout de 120s por país para evitar colgarse en OONI slow endpoints.
             try:
                 from agents.pipeline import run_pipeline
-                result = run_pipeline(cc, llm=llm)
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(run_pipeline, cc, llm=llm),
+                    timeout=120,
+                )
                 run_id = result.get("run_id")
                 if run_id:
                     reports_store[run_id] = result
                     save_report(result)
                     print(f"[AUTO-OBSERVE] {cc} análisis generado: {run_id}")
+            except asyncio.TimeoutError:
+                print(f"[AUTO-OBSERVE] {cc} timeout tras 120s, skip.")
+                continue
             except Exception as e:
                 print(f"[AUTO-OBSERVE] {cc} no se pudo generar análisis: {e}")
                 continue
