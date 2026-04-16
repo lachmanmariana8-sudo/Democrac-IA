@@ -1678,8 +1678,16 @@ const LEGAL_ARTICLES = {
 
 const TooltipInfo = ({ text, children }) => {
   const [show, setShow] = useState(false);
+  // El wrapper era <span>, lo que genera HTML inválido cuando children es un <div>
+  // (caso típico en DimensionBar). Ese mismatch rompe layout y hace parpadear el
+  // tooltip al hover. Cambio a <div> con layout block; conserva tamaño natural.
+  // Wrapper block por defecto (hijo puede ser div o span), pero configurable para
+  // usos inline (InfoIcon al lado de un título) vía prop `inline`.
+  const wrapperStyle = text.inline
+    ? { position: "relative", display: "inline-block" }
+    : { position: "relative", display: "block", width: "100%" };
   return (
-    <span style={{ position: "relative", display: "inline-block" }}
+    <div style={wrapperStyle}
       onMouseEnter={() => setShow(true)}
       onMouseLeave={() => setShow(false)}>
       {children}
@@ -1711,12 +1719,12 @@ const TooltipInfo = ({ text, children }) => {
           )}
         </div>
       )}
-    </span>
+    </div>
   );
 };
 
 const InfoIcon = ({ tooltip }) => (
-  <TooltipInfo text={tooltip}>
+  <TooltipInfo text={{ ...tooltip, inline: true }}>
     <span style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center",
       width: 16, height: 16, borderRadius: "50%",
@@ -3905,11 +3913,17 @@ const ReportViewer = ({ runId, country }) => {
 
   useEffect(() => {
     if (!runId) return;
+    // Flag para evitar set-state si el componente se desmonta durante el fetch en vuelo.
+    // Antes había un cleanup que reseteaba fetchState a null en cada unmount/re-render,
+    // lo que hacía oscilar reportData entre valor real y null y re-disparaba la animación
+    // del gauge del Índice de Riesgo constantemente (bug visible: "el número cambia todo
+    // el tiempo, mal calibrado").
+    let alive = true;
     fetch(`${API_BASE}/api/report/${runId}`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => setFetchState({ data, loading: false, error: null }))
-      .catch(err => setFetchState({ data: null, loading: false, error: err.message }));
-    return () => setFetchState({ data: null, loading: true, error: null });
+      .then(data => { if (alive) setFetchState({ data, loading: false, error: null }); })
+      .catch(err => { if (alive) setFetchState({ data: null, loading: false, error: err.message }); });
+    return () => { alive = false; };
   }, [runId]);
 
   useEffect(() => {
