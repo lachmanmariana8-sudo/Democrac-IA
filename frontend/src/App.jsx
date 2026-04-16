@@ -247,12 +247,25 @@ const SectionTitle = ({ children, icon }) => (
 
 const AnimatedCounter = ({ value, suffix = "" }) => {
   const [display, setDisplay] = useState(0);
+  // Evita re-animación si el value prácticamente no cambia entre re-renders del padre.
+  // Este componente era el responsable del parpadeo en https://democracia.ar/ —
+  // los 4 stats de arriba (Elecciones, Riesgo Promedio, Alertas Críticas, Violaciones)
+  // re-animaban cada vez que el padre recalculaba countries.
+  const animatedFor = React.useRef(null);
   useEffect(() => {
+    const target = value || 0;
+    // Tolerancia 0.5 porque mostramos enteros con Math.round — cualquier cambio <0.5
+    // no altera lo que ve el usuario.
+    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.5) {
+      setDisplay(Math.round(target));
+      return;
+    }
+    animatedFor.current = target;
     let frame;
     const start = performance.now();
     const animate = (now) => {
       const p = Math.min((now - start) / 900, 1);
-      setDisplay(Math.round((1 - Math.pow(1 - p, 3)) * value));
+      setDisplay(Math.round((1 - Math.pow(1 - p, 3)) * target));
       if (p < 1) frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
