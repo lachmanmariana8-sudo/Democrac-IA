@@ -8139,6 +8139,13 @@ export default function DemocracIADashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // IMPORTANTE: fetchDashboardData NO puede depender de selectedCountry.
+  // Antes era `useCallback(..., [selectedCountry])` y eso creaba un loop de
+  // re-fetch: fetch → setSelectedCountry → fetchDashboardData nuevo →
+  // useEffect re-ejecuta fetch → AnimatedCounter re-anima con cada respuesta.
+  // Síntoma: números parpadeando "como locos" en https://democracia.ar/.
+  // Fix: deps vacío + setSelectedCountry solo con el updater functional
+  // (no depende del valor actual, lo chequea en tiempo real dentro del set).
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     if (forceRefresh) setRefreshing(true);
     else setLoading(true);
@@ -8150,7 +8157,9 @@ export default function DemocracIADashboard() {
       const data = await res.json();
       setCountries(data.countries);
       setGeneratedAt(data.generated_at || null);
-      if (!selectedCountry) setSelectedCountry(data.countries[0]?.id || null);
+      // Updater functional: accede al valor actual sin hacer que la callback
+      // cambie de referencia cuando selectedCountry cambia.
+      setSelectedCountry(prev => prev || data.countries[0]?.id || null);
       setApiStatus("connected");
     } catch (err) {
       setError(err.message);
@@ -8159,7 +8168,7 @@ export default function DemocracIADashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedCountry]);
+  }, []);
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
