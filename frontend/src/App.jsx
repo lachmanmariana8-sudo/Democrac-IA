@@ -884,13 +884,26 @@ const ViolationCard = ({ violation }) => {
 
 const CircularScore = ({ value, max = 100, label, sublabel, color, size = 110 }) => {
   const [anim, setAnim] = useState(0);
+  // animatedFor guarda el valor ya animado para no re-animar si el padre
+  // re-renderiza con el mismo número (o con un número casi idéntico).
+  // Esto evita el parpadeo/oscilación cuando un componente padre tiene
+  // ciclos de re-render por fetch de datos.
+  const animatedFor = React.useRef(null);
   useEffect(() => {
+    const target = value || 0;
+    // Si ya animamos hacia este valor (tolerancia 0.05), no re-animar:
+    // solo sincronizamos el estado final sin disparar requestAnimationFrame.
+    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.05) {
+      setAnim(target);
+      return;
+    }
+    animatedFor.current = target;
     let frame;
     const start = performance.now();
     const animate = (now) => {
       const p = Math.min((now - start) / 1100, 1);
       const eased = 1 - Math.pow(1 - p, 3);
-      setAnim(eased * (value || 0));
+      setAnim(eased * target);
       if (p < 1) frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
@@ -3606,13 +3619,21 @@ const CIVIL_LIBERTY_LABELS = {
 // ── Gauge Component ──────────────────────────────────────────────────────────
 const RiskGaugeElite = ({ score, riskLevel, size = 200 }) => {
   const [anim, setAnim] = useState(0);
+  // Evita re-animación si el score prácticamente no cambia entre re-renders.
+  const animatedFor = React.useRef(null);
   useEffect(() => {
+    const target = score || 0;
+    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.05) {
+      setAnim(target);
+      return;
+    }
+    animatedFor.current = target;
     let frame;
     const start = performance.now();
     const animate = (now) => {
       const p = Math.min((now - start) / 1400, 1);
       const eased = 1 - Math.pow(1 - p, 4);
-      setAnim(eased * score);
+      setAnim(eased * target);
       if (p < 1) frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
@@ -3702,14 +3723,22 @@ const RiskGaugeElite = ({ score, riskLevel, size = 200 }) => {
 const DimensionBar = ({ dimKey, value, delay = 0 }) => {
   const [anim, setAnim] = useState(0);
   const meta = DIMENSION_META[dimKey] || { label: dimKey, icon: "📊", desc: "" };
+  const animatedFor = React.useRef(null);
 
   useEffect(() => {
+    const target = value || 0;
+    // No re-animar si el valor es prácticamente el mismo que ya animamos.
+    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.05) {
+      setAnim(target);
+      return;
+    }
+    animatedFor.current = target;
     const timer = setTimeout(() => {
       let frame;
       const start = performance.now();
       const animate = (now) => {
         const p = Math.min((now - start) / 900, 1);
-        setAnim((1 - Math.pow(1 - p, 3)) * value);
+        setAnim((1 - Math.pow(1 - p, 3)) * target);
         if (p < 1) frame = requestAnimationFrame(animate);
       };
       frame = requestAnimationFrame(animate);
