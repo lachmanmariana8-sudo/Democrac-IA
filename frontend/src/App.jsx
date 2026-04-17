@@ -5118,13 +5118,57 @@ const PERU_LEGAL_CALENDAR = [
   { date: "2026-04-15", time: "23:59", label: "Plazo para impugnaciones de actas de mesa", detail: "Vencimiento del plazo para que personeros presenten recursos contra actas observadas ante los Jurados Electorales Especiales.", source: "LOE Art. 363 / JNE" },
 ];
 
+// Componente standalone para el countdown. Tiene su propio setInterval cada 1s.
+// Al estar aislado, solo re-renderiza esta caja (4 dígitos) y NO todo el
+// PeruSituationRoom (~3000 líneas de JSX). Esta era la causa raíz del parpadeo:
+// el setCountdown cada segundo re-disparaba toda la función de render del parent.
+const ElectionCountdown = React.memo(({ electionTs, alertColor }) => {
+  const [cd, setCd] = useState({ days: 0, hrs: 0, mins: 0, secs: 0 });
+  useEffect(() => {
+    const tick = () => {
+      const diff = electionTs - new Date();
+      if (diff <= 0) { setCd({ days: 0, hrs: 0, mins: 0, secs: 0 }); return; }
+      setCd({
+        days: Math.floor(diff / 86400000),
+        hrs:  Math.floor((diff % 86400000) / 3600000),
+        mins: Math.floor((diff % 3600000) / 60000),
+        secs: Math.floor((diff % 60000) / 1000),
+      });
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [electionTs]);
+
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {[
+        { val: cd.days, label: "días" },
+        { val: cd.hrs,  label: "hrs"  },
+        { val: cd.mins, label: "min"  },
+        { val: cd.secs, label: "seg"  },
+      ].map(({ val, label }) => (
+        <div key={label} style={{
+          textAlign: "center", padding: "4px 10px",
+          background: "#111827", borderRadius: 7,
+          border: "1px solid #1e2d3d",
+        }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: alertColor, fontFamily: "'DM Mono', monospace", lineHeight: 1.1 }}>
+            {String(val).padStart(2, "0")}
+          </div>
+          <div style={{ fontSize: 8, color: "#475569", letterSpacing: 1, textTransform: "uppercase" }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+});
+
 function PeruSituationRoom() {
   const [country, setCountry]       = useState(null);
   const [brief, setBrief]           = useState(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
   const [moeTab, setMoeTab]         = useState("risk_context");
-  const [countdown, setCountdown]   = useState({ days: 0, hrs: 0, mins: 0, secs: 0 });
   const [innerTab, setInnerTab]     = useState("inteligencia");
   const [actors, setActors]         = useState(null);
   const [actorsLoading, setActorsLoading] = useState(false);
@@ -5225,21 +5269,8 @@ function PeruSituationRoom() {
       .catch(e => { setError(e.message); setLoading(false); });
   }, []);
 
-  useEffect(() => {
-    const tick = () => {
-      const diff = ELECTION_TS - new Date();
-      if (diff <= 0) { setCountdown({ days: 0, hrs: 0, mins: 0, secs: 0 }); return; }
-      setCountdown({
-        days: Math.floor(diff / 86400000),
-        hrs:  Math.floor((diff % 86400000) / 3600000),
-        mins: Math.floor((diff % 3600000) / 60000),
-        secs: Math.floor((diff % 60000) / 1000),
-      });
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, [ELECTION_TS]);
+  // Countdown movido a <ElectionCountdown> — componente standalone que no
+  // re-renderiza todo PeruSituationRoom cada segundo.
 
   // Lazy-load actors and scenarios when tabs are first opened
   useEffect(() => {
@@ -5520,25 +5551,7 @@ function PeruSituationRoom() {
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: alertColor, display: "inline-block", boxShadow: `0 0 8px ${alertColor}` }} />
                 {alertLabel}
               </div>
-              <div style={{ display: "flex", gap: 4 }}>
-                {[
-                  { val: countdown.days, label: "días" },
-                  { val: countdown.hrs,  label: "hrs"  },
-                  { val: countdown.mins, label: "min"  },
-                  { val: countdown.secs, label: "seg"  },
-                ].map(({ val, label }) => (
-                  <div key={label} style={{
-                    textAlign: "center", padding: "4px 10px",
-                    background: COLORS.surface, borderRadius: 7,
-                    border: `1px solid ${COLORS.border}`,
-                  }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: alertColor, fontFamily: "'DM Mono', monospace", lineHeight: 1.1 }}>
-                      {String(val).padStart(2, "0")}
-                    </div>
-                    <div style={{ fontSize: 8, color: COLORS.textDim, letterSpacing: 1, textTransform: "uppercase" }}>{label}</div>
-                  </div>
-                ))}
-              </div>
+              <ElectionCountdown electionTs={ELECTION_TS} alertColor={alertColor} />
             </div>
           </div>
           <div style={{ display: "flex", gap: 4, marginTop: 14, alignItems: "center" }}>
