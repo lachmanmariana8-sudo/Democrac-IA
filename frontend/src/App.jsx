@@ -246,32 +246,7 @@ const SectionTitle = ({ children, icon }) => (
 );
 
 const AnimatedCounter = ({ value, suffix = "" }) => {
-  const [display, setDisplay] = useState(0);
-  // Evita re-animación si el value prácticamente no cambia entre re-renders del padre.
-  // Este componente era el responsable del parpadeo en https://democracia.ar/ —
-  // los 4 stats de arriba (Elecciones, Riesgo Promedio, Alertas Críticas, Violaciones)
-  // re-animaban cada vez que el padre recalculaba countries.
-  const animatedFor = React.useRef(null);
-  useEffect(() => {
-    const target = value || 0;
-    // Tolerancia 0.5 porque mostramos enteros con Math.round — cualquier cambio <0.5
-    // no altera lo que ve el usuario.
-    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.5) {
-      setDisplay(Math.round(target));
-      return;
-    }
-    animatedFor.current = target;
-    let frame;
-    const start = performance.now();
-    const animate = (now) => {
-      const p = Math.min((now - start) / 900, 1);
-      setDisplay(Math.round((1 - Math.pow(1 - p, 3)) * target));
-      if (p < 1) frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [value]);
-  return <span>{display}{suffix}</span>;
+  return <span>{Math.round(value || 0)}{suffix}</span>;
 };
 
 const LoadingScreen = () => (
@@ -896,36 +871,10 @@ const ViolationCard = ({ violation }) => {
 // ── Componentes Elite para DetailView ──────────────────────────────────────
 
 const CircularScore = ({ value, max = 100, label, sublabel, color, size = 110 }) => {
-  const [anim, setAnim] = useState(0);
-  // animatedFor guarda el valor ya animado para no re-animar si el padre
-  // re-renderiza con el mismo número (o con un número casi idéntico).
-  // Esto evita el parpadeo/oscilación cuando un componente padre tiene
-  // ciclos de re-render por fetch de datos.
-  const animatedFor = React.useRef(null);
-  useEffect(() => {
-    const target = value || 0;
-    // Si ya animamos hacia este valor (tolerancia 0.05), no re-animar:
-    // solo sincronizamos el estado final sin disparar requestAnimationFrame.
-    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.05) {
-      setAnim(target);
-      return;
-    }
-    animatedFor.current = target;
-    let frame;
-    const start = performance.now();
-    const animate = (now) => {
-      const p = Math.min((now - start) / 1100, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setAnim(eased * target);
-      if (p < 1) frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [value]);
-
+  const displayVal = value || 0;
   const r = size / 2 - 10;
   const circ = 2 * Math.PI * r;
-  const pct = max > 0 ? anim / max : 0;
+  const pct = max > 0 ? displayVal / max : 0;
   const offset = circ * (1 - pct);
 
   return (
@@ -942,7 +891,7 @@ const CircularScore = ({ value, max = 100, label, sublabel, color, size = 110 })
           alignItems: "center", justifyContent: "center",
         }}>
           <span style={{ fontSize: size * 0.22, fontWeight: 800, color, fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
-            {value !== null && value !== undefined ? (Number.isInteger(value) ? Math.round(anim) : anim.toFixed(2)) : "N/A"}
+            {value !== null && value !== undefined ? (Number.isInteger(value) ? Math.round(displayVal) : displayVal.toFixed(2)) : "N/A"}
           </span>
           {max !== 100 && <span style={{ fontSize: 9, color: COLORS.textDim }}>/{max}</span>}
         </div>
@@ -3631,27 +3580,7 @@ const CIVIL_LIBERTY_LABELS = {
 
 // ── Gauge Component ──────────────────────────────────────────────────────────
 const RiskGaugeElite = ({ score, riskLevel, size = 200 }) => {
-  const [anim, setAnim] = useState(0);
-  // Evita re-animación si el score prácticamente no cambia entre re-renders.
-  const animatedFor = React.useRef(null);
-  useEffect(() => {
-    const target = score || 0;
-    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.05) {
-      setAnim(target);
-      return;
-    }
-    animatedFor.current = target;
-    let frame;
-    const start = performance.now();
-    const animate = (now) => {
-      const p = Math.min((now - start) / 1400, 1);
-      const eased = 1 - Math.pow(1 - p, 4);
-      setAnim(eased * target);
-      if (p < 1) frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [score]);
+  const anim = score || 0;
 
   const rc = RISK_CONFIG[riskLevel] || RISK_CONFIG.moderate;
   const r = size / 2 - 18;
@@ -3734,31 +3663,8 @@ const RiskGaugeElite = ({ score, riskLevel, size = 200 }) => {
 
 // ── Dimension Bar ────────────────────────────────────────────────────────────
 const DimensionBar = ({ dimKey, value, delay = 0 }) => {
-  const [anim, setAnim] = useState(0);
+  const anim = value || 0;
   const meta = DIMENSION_META[dimKey] || { label: dimKey, icon: "📊", desc: "" };
-  const animatedFor = React.useRef(null);
-
-  useEffect(() => {
-    const target = value || 0;
-    // No re-animar si el valor es prácticamente el mismo que ya animamos.
-    if (animatedFor.current !== null && Math.abs(animatedFor.current - target) < 0.05) {
-      setAnim(target);
-      return;
-    }
-    animatedFor.current = target;
-    const timer = setTimeout(() => {
-      let frame;
-      const start = performance.now();
-      const animate = (now) => {
-        const p = Math.min((now - start) / 900, 1);
-        setAnim((1 - Math.pow(1 - p, 3)) * target);
-        if (p < 1) frame = requestAnimationFrame(animate);
-      };
-      frame = requestAnimationFrame(animate);
-      return () => cancelAnimationFrame(frame);
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
 
   const color = value >= 70 ? "#00d4aa" : value >= 45 ? "#f59e0b" : value >= 25 ? "#f97316" : "#ef4444";
   const bgColor = value >= 70 ? "#00d4aa18" : value >= 45 ? "#f59e0b18" : value >= 25 ? "#f9731618" : "#ef444418";
