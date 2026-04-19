@@ -608,4 +608,472 @@ VIOLACIONES DE DERECHOS EN CONTEXTO ELECTORAL PERUANO (2020-2025):
 - Financiamiento ilícito: múltiples candidatos investigados por vínculos con crimen organizado
   (UFIM/PNP 2024-2025).""",
     },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # CORPUS CONSTITUCIONALISTA PERÚ — agregado 2026-04-19
+    # Textos desarrollados para sub-agente constitucionalista especializado en
+    # democracia, partidos políticos, sistema electoral peruano.
+    # ══════════════════════════════════════════════════════════════════════════
+    {
+        "id": "peru_constitucion_1993_arts_electorales",
+        "title": "Constitución Política del Perú 1993 — Artículos electorales y democráticos",
+        "instrument": "PERU_CONSTITUCION_1993",
+        "category": "constitutional_framework",
+        "tags": ["peru", "constitucion", "derechos_politicos", "sistema_electoral", "JNE", "ONPE", "RENIEC"],
+        "text": """Constitución Política del Perú (1993) — Artículos clave en materia electoral y democrática.
+
+TÍTULO I — DE LA PERSONA Y LA SOCIEDAD
+Art. 2 — Derechos fundamentales:
+  Inciso 17: Toda persona tiene derecho a participar, en forma individual o asociada, en la vida
+  política, económica, social y cultural de la Nación. Los ciudadanos tienen, conforme a ley,
+  los derechos de elección, de remoción o revocación de autoridades, de iniciativa legislativa
+  y de referéndum.
+
+Art. 31 — Participación ciudadana:
+  Los ciudadanos tienen derecho a participar en los asuntos públicos mediante referéndum, iniciativa
+  legislativa, remoción o revocación de autoridades y demanda de rendición de cuentas. Tienen
+  también el derecho de ser elegidos y de elegir libremente a sus representantes, de acuerdo con
+  las condiciones y procedimientos determinados por ley orgánica.
+  *Es nulo y punible todo acto que prohíba o limite al ciudadano el ejercicio de sus derechos.*
+  Es obligatorio votar hasta los 70 años. Es facultativo después.
+
+Art. 35 — Organizaciones políticas:
+  Los ciudadanos ejercen sus derechos políticos individualmente o a través de organizaciones
+  políticas como partidos, movimientos o alianzas, conforme a ley. Tales organizaciones concurren
+  a la formación y manifestación de la voluntad popular. Su inscripción en el registro correspondiente
+  les concede personalidad jurídica. La ley establece normas orientadas a asegurar el funcionamiento
+  democrático de los partidos políticos, y la transparencia en cuanto al origen de sus recursos
+  económicos y el acceso gratuito a los medios de comunicación social de propiedad del Estado en
+  forma proporcional al último resultado electoral general.
+
+CAPÍTULO XIII — DEL SISTEMA ELECTORAL (Arts. 176-187)
+
+Art. 176 — Finalidad del Sistema Electoral:
+  El Sistema Electoral tiene por finalidad asegurar que las votaciones traduzcan la expresión
+  auténtica, libre y espontánea de los ciudadanos; y que los escrutinios sean reflejo exacto y
+  oportuno de la voluntad del elector expresada en las urnas por votación directa.
+  Tiene por funciones básicas el planeamiento, la organización y la ejecución de los procesos
+  electorales o de referéndum u otras consultas populares; el mantenimiento y la custodia de un
+  registro único de identificación de las personas; y el registro de los actos que modifican el
+  estado civil.
+
+Art. 177 — Composición tripartita del Sistema Electoral:
+  El Sistema Electoral está conformado por el Jurado Nacional de Elecciones (JNE); la Oficina
+  Nacional de Procesos Electorales (ONPE); y el Registro Nacional de Identificación y Estado
+  Civil (RENIEC). Actúan con autonomía y mantienen entre sí relaciones de coordinación, de acuerdo
+  con sus atribuciones.
+
+Art. 178 — Atribuciones del JNE:
+  Compete al Jurado Nacional de Elecciones:
+  1. Fiscalizar la legalidad del ejercicio del sufragio y de la realización de los procesos
+     electorales, del referéndum y de otras consultas populares, así como también la elaboración
+     de los padrones electorales.
+  2. Mantener y custodiar el registro de organizaciones políticas.
+  3. Velar por el cumplimiento de las normas sobre organizaciones políticas y demás disposiciones
+     referidas a materia electoral.
+  4. Administrar justicia en materia electoral.
+  5. Proclamar a los candidatos elegidos; el resultado del referéndum o el de otros tipos de consulta
+     popular y expedir las credenciales correspondientes.
+  6. Las demás que la ley señala.
+  *En materia electoral, el Jurado Nacional de Elecciones tiene iniciativa en la formación de las
+  leyes. Presenta al Poder Ejecutivo el proyecto de Presupuesto del Sistema Electoral que incluye
+  por separado las partidas propuestas por cada entidad del sistema. Lo sustenta en esa instancia
+  y ante el Congreso.*
+
+Art. 181 — Resoluciones del JNE:
+  El Pleno del Jurado Nacional de Elecciones aprecia los hechos con criterio de conciencia. Resuelve
+  con arreglo a ley y a los principios generales de derecho. En materias electorales, de referéndum
+  o de otro tipo de consultas populares, sus resoluciones son dictadas en instancia final, definitiva,
+  y no son revisables. Contra ellas no procede recurso alguno.
+
+Art. 182 — Jefe de la ONPE:
+  El Jefe de la Oficina Nacional de Procesos Electorales es nombrado por el Consejo Nacional de
+  la Magistratura por un período renovable de cuatro años. Puede ser removido por el propio Consejo
+  por falta grave. Está afecto a las mismas incompatibilidades previstas para los integrantes del
+  Pleno del Jurado Nacional de Elecciones.
+
+Art. 183 — Funciones de la ONPE:
+  La Oficina Nacional de Procesos Electorales tiene a su cargo organizar todos los procesos
+  electorales, de referéndum y los de otros tipos de consulta popular, incluido su presupuesto, así
+  como la elaboración y el diseño de la cédula de sufragio. Le corresponde asimismo la entrega de
+  actas y demás material necesario para los escrutinios y la difusión de sus resultados. Brinda
+  información permanente sobre el cómputo desde el inicio del escrutinio en las mesas de sufragio.
+
+Art. 184 — Nulidad de procesos electorales:
+  El Jurado Nacional de Elecciones declara la nulidad de un proceso electoral, de un referéndum
+  o de otro tipo de consulta popular cuando los votos nulos o en blanco, sumados o separadamente,
+  superan los dos tercios del número de votos emitidos. La ley puede establecer proporciones
+  distintas para las elecciones municipales.
+
+Art. 187 — Fundamento del sistema electoral:
+  En las elecciones pluripersonales hay representación proporcional, conforme al sistema que
+  establece la ley. La ley contiene disposiciones especiales para facilitar el voto de los peruanos
+  residentes en el extranjero.
+""",
+    },
+
+    {
+        "id": "peru_LOE_26859_disposiciones_clave",
+        "title": "Ley Orgánica de Elecciones N° 26859 — Disposiciones clave",
+        "instrument": "PERU_LOE_26859",
+        "category": "electoral_law",
+        "tags": ["peru", "LOE", "sufragio", "cedula", "escrutinio", "impugnaciones", "silencio_electoral"],
+        "text": """Ley Orgánica de Elecciones N° 26859 (1997) y sus modificatorias — disposiciones clave
+para la observación electoral de las Elecciones Generales 2026.
+
+TÍTULO I — DE LA ACTIVIDAD ELECTORAL Y DERECHOS POLÍTICOS
+
+Art. 20 — Requisitos para ser candidato:
+  Son requisitos generales para ser candidato: ser peruano por nacimiento; ciudadano en ejercicio;
+  y estar inscrito en el Registro Electoral. Los requisitos específicos de cada elección se establecen
+  en las normas correspondientes.
+
+TÍTULO XI — DE LA PROPAGANDA ELECTORAL
+
+Art. 190 — Silencio electoral:
+  En el lapso comprendido entre 24 horas antes de la iniciación del acto electoral y hasta las
+  4 horas posteriores a su clausura, queda prohibida cualquier forma de propaganda electoral por
+  cualquier medio de comunicación, incluyendo redes sociales y medios digitales (modificatoria
+  Ley 30688, 2017). La infracción se sanciona con multa establecida por el JNE.
+
+Art. 191 — Encuestas electorales y boca de urna:
+  Está prohibido difundir encuestas u otras formas de pronóstico electoral desde 7 días antes
+  del acto electoral hasta su clausura. Los resultados de sondeos a pie de urna pueden difundirse
+  a partir del cierre de las mesas de sufragio.
+
+TÍTULO XIII — DE LA VOTACIÓN
+
+Art. 261 — Personeros en las mesas:
+  Cada organización política que participe tiene derecho a designar un personero por mesa de sufragio.
+  Los personeros pueden formular observaciones al acto de sufragio, pedir la consignación de sus
+  reclamos en el acta y firmar las actas.
+
+Art. 272 — Instalación de mesas:
+  Las mesas de sufragio deben instalarse a las 8:00 horas del día de la elección. La instalación
+  requiere quorum de 3 miembros de mesa. Si no se completa el quorum, el Jurado Electoral Especial
+  procede a completar la mesa con electores hábiles presentes.
+
+TÍTULO XIV — DEL ESCRUTINIO
+
+Art. 287 — Principios del escrutinio:
+  El escrutinio se realiza en la mesa de sufragio inmediatamente después de cerrado el acto de
+  votación. Es público y se efectúa en un solo acto ininterrumpido. Los personeros pueden
+  presenciar, observar y formular reclamos.
+
+Art. 288 — Actas de escrutinio:
+  El acta de escrutinio contiene: número total de votantes, votos válidos obtenidos por cada
+  organización política, votos blancos, votos nulos, e impugnaciones o reclamos. Firman los
+  tres miembros de mesa y los personeros presentes. Una copia se entrega al Jurado Electoral
+  Especial, otra a la ONPE y otra es exhibida en el local de votación.
+
+Art. 343 — Actas observadas:
+  Son actas observadas: las que contienen errores manifiestos en las sumas, las que tienen
+  cifras que superan el número de electores hábiles de la mesa, las que presentan signos de
+  alteración, y aquellas donde personeros hayan formulado reclamos no resueltos.
+
+Art. 358 — Prohibición de reuniones políticas:
+  Desde las 00:00 horas del día anterior al de la elección hasta las 24:00 horas del día
+  electoral, queda prohibida toda reunión o manifestación pública de carácter político. La
+  prohibición incluye concentraciones partidarias, caravanas y actos similares.
+
+Art. 351 — Ley Seca electoral:
+  Queda prohibida la venta, suministro y consumo de bebidas alcohólicas desde 24 horas antes
+  del inicio de la jornada electoral hasta 24 horas después de su término. Los establecimientos
+  que incumplan son sancionados con clausura temporal y multa.
+
+Art. 363 — Plazo de impugnaciones de mesa:
+  Los reclamos sobre el escrutinio, la calificación del acta o la redacción del acta pueden
+  ser presentados por los personeros ante el Jurado Electoral Especial correspondiente dentro
+  de los tres (3) días siguientes a la publicación oficial del acta. Transcurrido el plazo sin
+  reclamo, el acta queda firme.
+
+TÍTULO XVI — DEL CÓMPUTO Y PROCLAMACIÓN
+
+Art. 380 — Segunda vuelta electoral:
+  Si ningún candidato a la Presidencia obtiene más de la mitad de los votos válidos, se procede
+  a una segunda elección entre los dos candidatos que hubieran obtenido la votación más alta,
+  dentro de los treinta días siguientes a la proclamación de los cómputos oficiales. Resulta
+  elegido quien obtenga la mayoría simple de los votos válidos.
+""",
+    },
+
+    {
+        "id": "peru_ley_organizaciones_politicas_28094",
+        "title": "Ley de Organizaciones Políticas N° 28094 — Financiamiento, paridad, democracia interna",
+        "instrument": "PERU_LOP_28094",
+        "category": "parties_law",
+        "tags": ["peru", "partidos", "financiamiento", "paridad", "democracia_interna", "registro"],
+        "text": """Ley de Organizaciones Políticas N° 28094 (2003) y modificatorias — marco regulatorio
+de los partidos políticos peruanos.
+
+CAPÍTULO I — PRINCIPIOS GENERALES
+
+Art. 1 — Definición de organización política:
+  Las organizaciones políticas expresan el pluralismo democrático. Concurren a la formación y
+  manifestación de la voluntad popular, y a los procesos electorales. Son instituciones
+  fundamentales para la participación política de la ciudadanía.
+
+CAPÍTULO II — CONSTITUCIÓN Y RECONOCIMIENTO DE LAS ORGANIZACIONES POLÍTICAS
+
+Art. 5 — Requisitos para inscripción de partidos políticos:
+  Presentación de: acta de fundación, estatuto que contenga democracia interna, y relación de
+  adherentes en número no menor al 0,1% del total de electores a nivel nacional. Los comités
+  partidarios deben instalarse en no menos de un tercio de las provincias, ubicadas en no menos
+  de dos tercios de los departamentos.
+
+CAPÍTULO III — DEMOCRACIA INTERNA
+
+Art. 19 — Elecciones internas:
+  Las elecciones de autoridades partidarias y candidatos a cargos de elección popular se realizan
+  por votación directa, universal, libre, voluntaria, igual y secreta de los afiliados. La ONPE
+  brinda asistencia técnica. La fiscalización corresponde al JNE.
+
+Art. 20 — Paridad y alternancia (modificatoria Ley 31030 del 2020):
+  Las listas de candidatos a cargos pluripersonales deben incluir un número equitativo de
+  mujeres y hombres (paridad 50-50). La ubicación debe ser alternada entre mujeres y hombres
+  (alternancia). El incumplimiento acarrea la no inscripción de la lista.
+
+Art. 22 — Requisitos internos:
+  Los estatutos partidarios deben establecer: procedimientos internos para elección democrática de
+  autoridades y candidatos; derechos y deberes de los afiliados; causales de exclusión; régimen
+  disciplinario.
+
+CAPÍTULO IV — FINANCIAMIENTO DE ORGANIZACIONES POLÍTICAS
+
+Art. 29 — Financiamiento público directo:
+  Los partidos políticos reciben financiamiento público directo proporcional al último resultado
+  electoral general, destinado a actividades de formación, capacitación e investigación. El monto
+  se fija anualmente en el Presupuesto General de la República.
+
+Art. 30 — Financiamiento privado:
+  Los partidos pueden recibir aportes privados. Quedan prohibidos los aportes de personas naturales
+  condenadas con sentencia firme por delitos de tráfico ilícito de drogas, lavado de activos,
+  terrorismo, trata de personas o minería ilegal. Los aportes deben ser registrados y declarados.
+
+Art. 34 — Obligación de transparencia:
+  Las organizaciones políticas deben presentar ante la ONPE información financiera detallada sobre
+  ingresos y egresos de campaña. La omisión o falsedad configura infracción electoral sancionable
+  con multa y eventual cancelación de la inscripción. (Esta es la base legal de la denuncia por
+  no-presentación de reportes que recurrentemente aparece en las observaciones del Hunter —
+  ej. caso Obras de Ricardo Belmont, 2026.)
+
+Art. 36 — Sanciones por infracciones al régimen de financiamiento:
+  Multa desde el 1% hasta el 30% de los fondos recibidos en la campaña. En caso de aportes
+  prohibidos o falsedad documentaria, suspensión de la inscripción hasta por 2 años. Reincidencia
+  puede llevar a la cancelación definitiva.
+
+CAPÍTULO V — ACOSO POLÍTICO Y PARTICIPACIÓN DE LA MUJER
+
+Ley 31170 (2021) — Tipificación del acoso político contra las mujeres:
+  Modifica el Código Penal introduciendo el tipo penal de acoso político contra mujeres en
+  el marco de la vida política. Sanción: pena privativa de libertad no menor de dos ni mayor de
+  cuatro años. La agravante aplica si la víctima es candidata, autoridad electa o funcionaria.
+""",
+    },
+
+    {
+        "id": "peru_jurisprudencia_jne_2025",
+        "title": "Jurisprudencia JNE relevante — Selección de resoluciones 2018-2025",
+        "instrument": "PERU_JNE_JURISPRUDENCIA",
+        "category": "case_law",
+        "tags": ["peru", "JNE", "jurisprudencia", "inhabilitacion", "voto_electronico", "financiamiento"],
+        "text": """Resoluciones del JNE relevantes para el proceso electoral 2026.
+
+Res. JNE 0234-2018-JNE — Inhabilitación por financiamiento ilícito:
+  Establece el precedente de que la vinculación documentada con financiamiento proveniente de
+  organizaciones criminales o sentencia firme por delitos graves (narcotráfico, lavado, corrupción)
+  constituye causal de inhabilitación electoral. La inhabilitación puede declararse incluso iniciada
+  la campaña, con posibilidad de reemplazo en la lista hasta 48 horas antes del cierre de mesas.
+
+Res. JNE 0891-2025-JNE (15 agosto 2025) — Rechazo del voto electrónico no presencial (VENP)
+para Elecciones Generales 2026:
+  El JNE rechazó formalmente la implementación del Voto Electrónico No Presencial propuesto por
+  ONPE para las Elecciones Generales 2026. Fundamento: *"ausencia de auditoría independiente
+  certificada del código fuente y del modelo de seguridad del sistema propuesto"*. La resolución
+  reafirma el principio constitucional del artículo 176 según el cual los escrutinios deben ser
+  reflejo exacto y oportuno de la voluntad del elector, principio incompatible con sistemas
+  tecnológicos no auditados públicamente.
+  *Observación crítica para el observador electoral:* el mismo criterio de "auditoría independiente
+  certificada" no se aplicó al sistema STAE (Solución Tecnológica de Apoyo al Escrutinio) con
+  componente de IA en la fase SCE (Sistema de Cómputo Electoral), aunque ambos operan sobre la
+  cadena de integridad del resultado electoral. Esta asimetría regulatoria es un vacío jurídico
+  pendiente de atender.
+
+Res. JNE 0547-2021-JNE — Criterios para determinación de acta observada:
+  Sistematiza los criterios del art. 343 LOE: (a) errores manifiestos en sumas, (b) cifras que
+  superan el número de electores hábiles, (c) signos físicos de alteración (enmendaduras, firmas
+  discordantes), (d) reclamos de personeros no resueltos en mesa. La resolución aclara que las
+  actas observadas deben ser resueltas por el JEE dentro de los 3 días siguientes.
+
+Precedente JNE post-2026: Caso Corvetto (ONPE):
+  A partir del 14 de abril de 2026, el Procurador del JNE inició denuncia penal contra el jefe
+  de ONPE Piero Corvetto y otros 3 funcionarios por presuntos delitos contra el derecho de
+  sufragio y omisión de actos funcionales, fundada en los arts. 176-178 de la Constitución
+  (finalidad del sistema electoral: asegurar que las votaciones traduzcan la voluntad auténtica
+  y que los escrutinios sean reflejo exacto y oportuno) y arts. 287-288 LOE (principios del
+  escrutinio). El caso plantea la cuestión constitucional novedosa de la responsabilidad del
+  titular del organismo electoral durante el curso mismo del escrutinio, y el estándar que
+  debe aplicar la JNJ para evaluar una medida cautelar de separación mientras el proceso
+  electoral sigue abierto.
+
+Doctrina del JNE sobre nulidad parcial de mesas:
+  La jurisprudencia reiterada del JNE distingue entre nulidad total del proceso electoral
+  (art. 184 Constitución, requiere votos nulos+blancos > 2/3) y nulidad parcial de mesas
+  específicas (por motivos taxativamente establecidos en la LOE y relacionados con irregularidades
+  graves en esa mesa particular). La nulidad parcial requiere demostrar: (a) la irregularidad es
+  grave y atribuible al organismo electoral, (b) la irregularidad impidió el ejercicio del voto
+  de un número significativo de ciudadanos, (c) el impacto en el resultado es determinante.
+""",
+    },
+
+    {
+        "id": "peru_marco_internacional_aplicable",
+        "title": "Marco Internacional Aplicable al Perú — Compromisos democráticos",
+        "instrument": "PERU_INTL_FRAMEWORK",
+        "category": "international_framework",
+        "tags": ["peru", "CADH", "CIDH", "CDI", "ICCPR", "estandares_internacionales"],
+        "text": """Marco Internacional de Derechos Humanos aplicable al Perú en materia democrática y
+electoral. Instrumentos ratificados y vinculantes.
+
+CONVENCIÓN AMERICANA SOBRE DERECHOS HUMANOS (CADH) — Pacto de San José
+Ratificada por el Perú: 28 de julio de 1978. Plenamente vigente.
+
+Art. 23 — Derechos políticos (aplicable al caso peruano):
+  1. Todos los ciudadanos deben gozar de los siguientes derechos y oportunidades:
+     a) Participar en la dirección de los asuntos públicos, directamente o por medio de
+        representantes libremente elegidos;
+     b) Votar y ser elegidos en elecciones periódicas auténticas, realizadas por sufragio universal
+        e igual y por voto secreto que garantice la libre expresión de la voluntad de los electores;
+     c) Tener acceso, en condiciones generales de igualdad, a las funciones públicas de su país.
+  2. La ley puede reglamentar el ejercicio de los derechos y oportunidades por razones de edad,
+     nacionalidad, residencia, idioma, instrucción, capacidad civil o mental, o condena, por juez
+     competente, en proceso penal.
+
+CARTA DEMOCRÁTICA INTERAMERICANA (CDI) — Adoptada 11 sept 2001, Lima:
+  Art. 3 — Son elementos esenciales de la democracia representativa:
+  - el respeto a los derechos humanos y las libertades fundamentales;
+  - el acceso al poder y su ejercicio con sujeción al estado de derecho;
+  - la celebración de elecciones periódicas, libres, justas y basadas en el sufragio universal y
+    secreto como expresión de la soberanía del pueblo;
+  - el régimen plural de partidos y organizaciones políticas;
+  - y la separación e independencia de los poderes públicos.
+
+  Art. 4 — Son componentes fundamentales del ejercicio de la democracia:
+  - la transparencia de las actividades gubernamentales;
+  - la probidad;
+  - la responsabilidad de los gobiernos en la gestión pública;
+  - el respeto por los derechos sociales;
+  - y la libertad de expresión y de prensa.
+
+  Art. 20 — En caso de que en un Estado Miembro se produzca una alteración del orden constitucional
+  que afecte gravemente su orden democrático, cualquier Estado Miembro o el Secretario General podrá
+  solicitar la convocatoria inmediata del Consejo Permanente para realizar una apreciación colectiva
+  de la situación y adoptar las decisiones que estime conveniente.
+
+JURISPRUDENCIA CORTE IDH SOBRE PERÚ EN MATERIA ELECTORAL:
+
+Caso Castañeda Gutman vs. México (2008) — precedente aplicable a Perú:
+  La Corte IDH estableció que las limitaciones al derecho a ser elegido solo pueden imponerse por
+  razones objetivas y razonables previstas en ley. Las restricciones deben ser proporcionales al fin
+  legítimo perseguido y necesarias en una sociedad democrática.
+
+Medidas cautelares CIDH Comunidades del Sur del Perú (2023):
+  Tras la represión de las protestas post-destitución de Pedro Castillo (diciembre 2022 - febrero
+  2023), con 60+ muertes documentadas, la CIDH otorgó medidas cautelares a comunidades específicas
+  del sur del país. Estas medidas reconocen el impacto diferenciado de la violencia estatal sobre
+  pueblos indígenas y comunidades campesinas, y exigen medidas de protección y de investigación
+  con debida diligencia.
+
+Observaciones del Comité de Derechos Humanos ONU (informes periódicos sobre Perú):
+  El Comité ha expresado preocupación recurrente sobre: (i) la inestabilidad institucional crónica
+  (6 presidentes en 4 años entre 2020-2024), (ii) la captura legislativa por parte de partidos con
+  intereses particulares (coalición denunciada por IDL-Reporteros en el caso "Los votos y las leyes
+  del pacto para capturar el país", abril 2026), (iii) las restricciones a la libertad de prensa y
+  las amenazas contra periodistas independientes, (iv) la violencia política de género documentada
+  por el Observatorio JNE-Observa Igualdad.
+
+COMPROMISOS ASUMIDOS POR PERÚ EN CUMBRES HEMISFÉRICAS:
+- Declaración de Quebec (2001) sobre democracia representativa
+- Compromiso de Lima (2018) sobre gobernabilidad democrática frente a la corrupción
+- Declaración de Los Ángeles (2022) sobre Migración y Protección, con implicancias para el voto
+  en el exterior (más de 2 millones de peruanos residentes fuera del país con derecho al sufragio).
+""",
+    },
+
+    {
+        "id": "peru_sistema_tripartito_EMB",
+        "title": "Sistema Electoral Peruano Tripartito — JNE / ONPE / RENIEC",
+        "instrument": "PERU_EMB_TRIPARTITO",
+        "category": "electoral_institutions",
+        "tags": ["peru", "JNE", "ONPE", "RENIEC", "autonomia", "EMB", "institucional"],
+        "text": """Sistema Electoral Peruano — Análisis del diseño tripartito.
+
+ARQUITECTURA INSTITUCIONAL (Constitución Art. 177):
+Perú es uno de los pocos países del mundo con un sistema electoral tripartito. Las funciones que
+en la mayoría de los países se concentran en un único Electoral Management Body (EMB) se distribuyen
+aquí entre tres organismos constitucionalmente autónomos:
+
+1. JURADO NACIONAL DE ELECCIONES (JNE) — Justicia electoral
+   - Naturaleza: órgano jurisdiccional autónomo
+   - Composición: Pleno de 5 miembros (uno elegido por la Corte Suprema, uno por la Junta de
+     Fiscales Supremos, uno por el Colegio de Abogados de Lima, uno por los decanos de Facultades
+     de Derecho de universidades públicas, uno por los decanos de Facultades de Derecho de
+     universidades privadas). Mandato de 4 años renovable.
+   - Funciones clave (art. 178 Constitución):
+     * Fiscaliza la legalidad del proceso electoral
+     * Administra justicia electoral en instancia final (art. 181: resoluciones no revisables)
+     * Mantiene el Registro de Organizaciones Políticas (ROP)
+     * Resuelve tachas, impugnaciones, solicitudes de nulidad
+     * Proclama candidatos elegidos
+     * Vela por el cumplimiento de normas electorales y de partidos
+   - Limitación constitucional: no organiza el voto (eso le corresponde a ONPE).
+
+2. OFICINA NACIONAL DE PROCESOS ELECTORALES (ONPE) — Organización operativa
+   - Naturaleza: organismo constitucionalmente autónomo
+   - Jefatura: Jefe de ONPE designado por la Junta Nacional de Justicia (antes CNM) por 4 años.
+     Puede ser removido por falta grave por el mismo órgano (art. 182 Constitución).
+   - Funciones clave (art. 183 Constitución):
+     * Organiza los procesos electorales en su faz operativa
+     * Diseña e imprime las cédulas de sufragio
+     * Distribuye material electoral a las 87.064 mesas de sufragio
+     * Entrega actas y soportes para el escrutinio
+     * Difunde resultados desde el inicio del escrutinio en mesa
+     * Opera los sistemas informáticos electorales (STAE, SCE, SPR en 2026)
+   - Punto crítico 2026: la responsabilidad penal del jefe de ONPE (Piero Corvetto) por fallas
+     en la distribución de material electoral el 12-abr-2026 — el primer caso en la historia
+     del país donde el procurador del JNE denuncia penalmente al titular de ONPE durante el
+     curso mismo del escrutinio.
+
+3. REGISTRO NACIONAL DE IDENTIFICACIÓN Y ESTADO CIVIL (RENIEC) — Padrón y DNI
+   - Naturaleza: organismo constitucionalmente autónomo
+   - Jefatura: Jefe de RENIEC designado por la JNJ
+   - Funciones:
+     * Administra el padrón electoral (25.852.414 electores hábiles en 2026)
+     * Emite el DNI (credencial para votar)
+     * Mantiene el registro civil
+     * Depura el padrón de fallecidos, inhabilitados, etc.
+   - Relación con el proceso electoral: suministra el padrón a ONPE con cierre legal 120 días
+     antes de la elección.
+
+COORDINACIÓN INTERSTITUCIONAL (art. 177 in fine):
+Los tres organismos "actúan con autonomía y mantienen entre sí relaciones de coordinación, de
+acuerdo con sus atribuciones". En la práctica, la coordinación se ve tensionada cuando uno
+de los organismos considera que otro incumple sus funciones. La denuncia penal del JNE contra
+el titular de ONPE en abril 2026 es un caso paradigmático de esa tensión institucional.
+
+IMPLICANCIAS DEL DISEÑO TRIPARTITO:
+Ventajas:
+- Separación de la función jurisdiccional (JNE) de la operativa (ONPE) reduce el riesgo de
+  captura del organismo que resuelve disputas por el que ejecuta.
+- La autonomía constitucional protege a los tres organismos de injerencia del Ejecutivo.
+- RENIEC especializa la administración del padrón y despolitiza su mantenimiento.
+
+Desafíos:
+- Coordinación compleja: problemas logísticos de ONPE no pueden ser resueltos directamente por JNE.
+- Responsabilidades difusas: cuando hay fallas, ningún organismo asume individualmente la
+  responsabilidad global del proceso.
+- Vacío regulatorio en materia de IA: el JNE rechazó VENP por falta de auditoría (Res. 0891-2025)
+  pero el STAE con IA fue desplegado por ONPE sin estándar equivalente aplicado por JNE.
+""",
+    },
 ]

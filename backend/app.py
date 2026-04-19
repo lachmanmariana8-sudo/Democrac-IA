@@ -6685,6 +6685,49 @@ async def hunter_debug_fetch(phase: str = "campaign"):
     }
 
 
+class ConstitutionalistQuery(BaseModel):
+    """Consulta al sub-agente constitucionalista peruano."""
+    question: str
+    context: Optional[str] = None
+
+
+@app.post("/api/ask/constitutionalist")
+async def ask_constitutionalist(query: ConstitutionalistQuery):
+    """
+    Sub-agente jurista constitucionalista especializado en derecho electoral peruano.
+    Responde consultas sobre Constitución 1993, LOE N° 26859, LOP N° 28094, jurisprudencia
+    JNE y marco internacional vinculante (ICCPR, CADH, CDI).
+
+    Body:
+        question (str): la consulta del/la observador/a.
+        context (str, opcional): información adicional sobre el caso concreto.
+
+    Response:
+        answer, legal_basis, case_law, international_framework, confidence,
+        caveats, sources_cited, generated_at.
+    """
+    if not llm:
+        raise HTTPException(
+            status_code=503,
+            detail="LLM no configurado (falta ANTHROPIC_API_KEY válida).",
+        )
+    try:
+        from agents.constitutionalist import ConstitutionalistAgent
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Sub-agente no disponible: {e}")
+
+    agent = ConstitutionalistAgent(llm=llm)
+    try:
+        result = await agent.ask(question=query.question, context=query.context)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error del sub-agente: {type(e).__name__}: {e}")
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    return result
+
+
 @app.post("/api/hunter/{country_code}/run-now")
 async def hunter_run_now(country_code: str):
     """
