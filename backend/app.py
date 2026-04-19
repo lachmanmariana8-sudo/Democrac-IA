@@ -6691,6 +6691,65 @@ class ConstitutionalistQuery(BaseModel):
     context: Optional[str] = None
 
 
+class DesignerRequest(BaseModel):
+    """Request al sub-agente ReportDesigner (Fase A — esqueleto)."""
+    country_code: str = "PER"
+    audience: str = "technical"  # technical | executive | press | international
+    period_days: int = 7
+    include_live_alerts: bool = True
+    include_datasets: bool = True
+    include_chapters: Optional[List[str]] = None
+    language: str = "es"
+    output_formats: List[str] = ["md", "html"]
+
+
+@app.post("/api/report/designer/generate")
+async def generate_designed_report(req: DesignerRequest):
+    """
+    Sub-agente ReportDesigner — Fase A (esqueleto funcional).
+
+    Genera un informe estructurado con narrativas mock basadas en el informe v1.1
+    de Perú. Las Fases B-E reemplazarán los mocks con lógica real (dedupe
+    semántico, matplotlib SVG, prompts Claude).
+
+    Body:
+        country_code: "PER" soportado en Fase A; otros países devuelven esqueleto vacío.
+        audience: "technical" | "executive" | "press" | "international"
+        language: "es" | "en"
+        output_formats: lista de ["md", "html", "pdf"]
+
+    Response:
+        report_id, markdown, html, sections, stats, sources_cited, visualizations, warnings.
+    """
+    try:
+        from agents.report_designer import ReportDesigner, ReportRequest as RR
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"ReportDesigner no disponible: {e}")
+
+    try:
+        rr = RR(
+            country_code=req.country_code,
+            audience=req.audience,
+            period_days=req.period_days,
+            include_live_alerts=req.include_live_alerts,
+            include_datasets=req.include_datasets,
+            include_chapters=req.include_chapters,
+            language=req.language,
+            output_formats=req.output_formats,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Parámetros inválidos: {e}")
+
+    designer = ReportDesigner(llm=llm if HUNTER_AVAILABLE else None)
+    try:
+        result = await designer.run(rr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error del designer: {type(e).__name__}: {e}")
+
+    # Devolvemos el modelo como dict para serialización FastAPI limpia
+    return result.model_dump()
+
+
 @app.post("/api/ask/constitutionalist")
 async def ask_constitutionalist(query: ConstitutionalistQuery):
     """

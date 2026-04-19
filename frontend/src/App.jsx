@@ -5089,6 +5089,7 @@ const PERU_INNER_TABS = [
   { id: "evaluacion",   label: "Evaluación",       icon: "📝" },
   // Bloque 4 — CONSULTA JURÍDICA + SALIDA + METODOLOGÍA
   { id: "constitucional", label: "Consulta constitucional", icon: "⚖️" },
+  { id: "designer",     label: "Informe preliminar", icon: "📑" },
   { id: "metodologia",  label: "Metodología",      icon: "⚙️" },
   { id: "informe",      label: "Informe PEIRS",    icon: "📄" },
 ];
@@ -5208,6 +5209,41 @@ function PeruSituationRoom() {
   const [liveAlertsLastFetch, setLiveAlertsLastFetch] = useState(null);
   const [liveAlertsSeverity, setLiveAlertsSeverity]   = useState("low");
   const [liveAlertsHours, setLiveAlertsHours]         = useState(168);
+
+  // Sub-agente ReportDesigner (Fase A)
+  const [designerAudience, setDesignerAudience]   = useState("technical");
+  const [designerLanguage, setDesignerLanguage]   = useState("es");
+  const [designerPeriod, setDesignerPeriod]       = useState(7);
+  const [designerLoading, setDesignerLoading]     = useState(false);
+  const [designerResult, setDesignerResult]       = useState(null);
+  const [designerError, setDesignerError]         = useState(null);
+
+  const generateDesignedReport = useCallback(async () => {
+    if (designerLoading) return;
+    setDesignerLoading(true);
+    setDesignerError(null);
+    setDesignerResult(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/report/designer/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          country_code: "PER",
+          audience: designerAudience,
+          language: designerLanguage,
+          period_days: designerPeriod,
+          output_formats: ["md", "html"],
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) setDesignerError(data.detail || `HTTP ${r.status}`);
+      else setDesignerResult(data);
+    } catch (e) {
+      setDesignerError(e.message);
+    } finally {
+      setDesignerLoading(false);
+    }
+  }, [designerAudience, designerLanguage, designerPeriod, designerLoading]);
 
   // Sub-agente constitucionalista peruano
   const [constQuestion, setConstQuestion]     = useState("");
@@ -7744,6 +7780,156 @@ function PeruSituationRoom() {
                   <span>• ¿Puede el JNE separar al jefe de la ONPE durante el escrutinio?</span>
                   <span>• ¿Cómo se resuelven las actas observadas según la LOE Art. 343?</span>
                 </div>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ══ TAB: INFORME PRELIMINAR (ReportDesigner Fase A) ══
+            Sub-agente que compone informes estructurados parametrizables por
+            audiencia. Fase A: esqueleto con narrativas mock basadas en el
+            informe v1.1. Fases B-E reemplazan con lógica real. */}
+        {innerTab === "designer" && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              Informe Preliminar — Sub-agente ReportDesigner
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16, lineHeight: 1.5 }}>
+              Genera informes parametrizables por audiencia (técnico, ejecutivo, prensa, internacional)
+              e idioma. <strong>Fase A — esqueleto funcional</strong>: narrativas con plantillas basadas
+              en el informe v1.1. Próximas fases (B–E) agregan dedupe semántico, visualizaciones SVG
+              reales y redacción con Claude.
+            </div>
+
+            <Card className="peru-card" style={{ padding: 14, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Audiencia</div>
+                  <select value={designerAudience} onChange={(e) => setDesignerAudience(e.target.value)}
+                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }}>
+                    <option value="technical">🧑‍🔬 Técnico (completo)</option>
+                    <option value="executive">🧑‍💼 Ejecutivo (2 pág)</option>
+                    <option value="press">📰 Prensa (1 pág + infografía)</option>
+                    <option value="international">🌐 Internacional (inglés)</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Idioma</div>
+                  <select value={designerLanguage} onChange={(e) => setDesignerLanguage(e.target.value)}
+                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }}>
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Período</div>
+                  <select value={designerPeriod} onChange={(e) => setDesignerPeriod(Number(e.target.value))}
+                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }}>
+                    <option value={1}>Últimas 24h</option>
+                    <option value={3}>Últimos 3 días</option>
+                    <option value={7}>Últimos 7 días</option>
+                    <option value={30}>Último mes</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={generateDesignedReport} disabled={designerLoading}
+                style={{
+                  padding: "10px 24px", borderRadius: 6,
+                  background: designerLoading ? COLORS.surface : COLORS.accentDim,
+                  color: designerLoading ? COLORS.textMuted : COLORS.accent,
+                  border: `1px solid ${COLORS.accent}55`,
+                  fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                  cursor: designerLoading ? "wait" : "pointer", letterSpacing: 0.5, width: "100%",
+                }}>
+                {designerLoading ? "● Generando informe..." : "▶ Generar informe preliminar"}
+              </button>
+            </Card>
+
+            {designerError && (
+              <Card className="peru-card" style={{ padding: 14, marginBottom: 16, background: COLORS.dangerDim, borderLeft: `3px solid ${COLORS.danger}` }}>
+                <div style={{ color: COLORS.danger, fontSize: 12, fontWeight: 700 }}>Error: {designerError}</div>
+              </Card>
+            )}
+
+            {designerResult && designerResult.stats && (
+              <div>
+                {/* Stats header */}
+                <Card className="peru-card" style={{ padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                  {[
+                    { label: "Hallazgos", value: designerResult.stats.total_findings, color: COLORS.accent },
+                    { label: "Críticos", value: designerResult.stats.critical, color: COLORS.danger },
+                    { label: "Altos", value: designerResult.stats.high, color: "#f97316" },
+                    { label: "Días", value: designerResult.stats.days_covered, color: COLORS.info },
+                  ].map((kpi, i) => (
+                    <div key={i} style={{ textAlign: "center", padding: 8, borderLeft: `3px solid ${kpi.color}`, background: COLORS.surface, borderRadius: 5 }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: kpi.color, fontFamily: "'DM Mono', monospace" }}>{kpi.value}</div>
+                      <div style={{ fontSize: 9, color: COLORS.textDim, marginTop: 2, textTransform: "uppercase", letterSpacing: 1 }}>{kpi.label}</div>
+                    </div>
+                  ))}
+                </Card>
+
+                {/* HTML preview */}
+                {designerResult.html && (
+                  <Card className="peru-card" style={{ padding: 0, marginBottom: 12, overflow: "hidden" }}>
+                    <div style={{ padding: "8px 14px", background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}`, fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", display: "flex", justifyContent: "space-between" }}>
+                      <span>Preview del informe</span>
+                      <span>report_id: {designerResult.report_id}</span>
+                    </div>
+                    <iframe title="Report preview" srcDoc={designerResult.html}
+                      style={{ width: "100%", height: 600, border: "none", background: "white" }}></iframe>
+                  </Card>
+                )}
+
+                {/* Markdown download */}
+                {designerResult.markdown && (
+                  <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                    <a
+                      href={`data:text/markdown;charset=utf-8,${encodeURIComponent(designerResult.markdown)}`}
+                      download={`informe-${designerResult.country_code}-${designerResult.audience}-${designerResult.report_id}.md`}
+                      style={{
+                        flex: 1, padding: 10, textAlign: "center",
+                        background: COLORS.accentDim, color: COLORS.accent,
+                        border: `1px solid ${COLORS.accent}55`, borderRadius: 6,
+                        fontSize: 12, fontWeight: 700, textDecoration: "none",
+                        fontFamily: "'DM Mono', monospace",
+                      }}>
+                      ⬇ Descargar Markdown
+                    </a>
+                    <a
+                      href={`data:text/html;charset=utf-8,${encodeURIComponent(designerResult.html || "")}`}
+                      download={`informe-${designerResult.country_code}-${designerResult.audience}-${designerResult.report_id}.html`}
+                      style={{
+                        flex: 1, padding: 10, textAlign: "center",
+                        background: COLORS.infoDim, color: COLORS.info,
+                        border: `1px solid ${COLORS.info}55`, borderRadius: 6,
+                        fontSize: 12, fontWeight: 700, textDecoration: "none",
+                        fontFamily: "'DM Mono', monospace",
+                      }}>
+                      ⬇ Descargar HTML
+                    </a>
+                  </div>
+                )}
+
+                {/* Warnings */}
+                {Array.isArray(designerResult.warnings) && designerResult.warnings.length > 0 && (
+                  <Card className="peru-card" style={{ padding: 10, background: COLORS.warningDim, borderLeft: `3px solid ${COLORS.warning}`, fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                    <strong style={{ color: COLORS.warning }}>⚠️ Notas:</strong>
+                    <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                      {designerResult.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {!designerResult && !designerError && !designerLoading && (
+              <Card className="peru-card" style={{ padding: 16, textAlign: "center", color: COLORS.textDim, fontSize: 12, lineHeight: 1.7 }}>
+                Seleccioná la audiencia, idioma y período, y presioná <strong>"▶ Generar informe preliminar"</strong>.
+                <br /><br />
+                <span style={{ fontSize: 11, color: COLORS.textMuted }}>
+                  Cada audiencia produce una estructura distinta: técnico (~20 pág completo),
+                  ejecutivo (2 pág accionables), prensa (1 pág + infografía), internacional (inglés + marco comparado).
+                </span>
               </Card>
             )}
           </div>
