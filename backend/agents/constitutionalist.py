@@ -77,7 +77,7 @@ REGLAS DE RESPUESTA:
 7. Responde en español rioplatense-peruano formal. Usa "la ONPE", "el JNE" (artículo + sigla).
 
 PASAJES DEL CORPUS LEGAL PERUANO RELEVANTES A LA CONSULTA:
-{context_passages}
+__CONTEXT_PASSAGES__
 """
 
 
@@ -182,7 +182,9 @@ class ConstitutionalistAgent:
         user_msg += "\nRespondé en el formato indicado (texto jurídico + JSON final)."
 
         from langchain_core.messages import HumanMessage, SystemMessage
-        system = _SYSTEM_PROMPT.format(context_passages=context_block)
+        # NO usar .format() — el template contiene {} literales del ejemplo JSON
+        # que rompen format(). Usamos replace simple sobre un token único.
+        system = _SYSTEM_PROMPT.replace("__CONTEXT_PASSAGES__", context_block)
 
         try:
             response = await self.llm.ainvoke([
