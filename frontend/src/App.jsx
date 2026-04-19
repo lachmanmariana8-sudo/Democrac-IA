@@ -5087,7 +5087,8 @@ const PERU_INNER_TABS = [
   { id: "brief",        label: "MOE Brief",        icon: "📋" },
   { id: "jornada",      label: "Jornada",          icon: "🗳" },
   { id: "evaluacion",   label: "Evaluación",       icon: "📝" },
-  // Bloque 4 — SALIDA + METODOLOGÍA
+  // Bloque 4 — CONSULTA JURÍDICA + SALIDA + METODOLOGÍA
+  { id: "constitucional", label: "Consulta constitucional", icon: "⚖️" },
   { id: "metodologia",  label: "Metodología",      icon: "⚙️" },
   { id: "informe",      label: "Informe PEIRS",    icon: "📄" },
 ];
@@ -5207,6 +5208,40 @@ function PeruSituationRoom() {
   const [liveAlertsLastFetch, setLiveAlertsLastFetch] = useState(null);
   const [liveAlertsSeverity, setLiveAlertsSeverity]   = useState("low");
   const [liveAlertsHours, setLiveAlertsHours]         = useState(168);
+
+  // Sub-agente constitucionalista peruano
+  const [constQuestion, setConstQuestion]     = useState("");
+  const [constContext, setConstContext]       = useState("");
+  const [constAnswer, setConstAnswer]         = useState(null);
+  const [constLoading, setConstLoading]       = useState(false);
+  const [constError, setConstError]           = useState(null);
+  const [constHistory, setConstHistory]       = useState([]);
+
+  const askConstitutionalist = useCallback(async () => {
+    const q = constQuestion.trim();
+    if (!q || constLoading) return;
+    setConstLoading(true);
+    setConstError(null);
+    setConstAnswer(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/ask/constitutionalist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, context: constContext.trim() || null }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setConstError(data.detail || `HTTP ${r.status}`);
+      } else {
+        setConstAnswer(data);
+        setConstHistory(prev => [{ question: q, at: new Date().toISOString(), ...data }, ...prev].slice(0, 10));
+      }
+    } catch (e) {
+      setConstError(e.message);
+    } finally {
+      setConstLoading(false);
+    }
+  }, [constQuestion, constContext, constLoading]);
 
   const ELECTION_TS = useMemo(() => new Date("2026-04-12T08:00:00-05:00"), []);
 
@@ -7526,6 +7561,193 @@ function PeruSituationRoom() {
             </div>
           );
         })()}
+
+        {/* ══ TAB: CONSULTA CONSTITUCIONAL ══
+            Sub-agente jurista experto en derecho electoral peruano.
+            Consulta POST /api/ask/constitutionalist y renderiza respuesta estructurada. */}
+        {innerTab === "constitucional" && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              Consulta Constitucional — Sub-agente Jurídico Perú
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16, lineHeight: 1.5 }}>
+              Consultas al sub-agente experto en derecho constitucional y electoral peruano.
+              Cubre Constitución 1993, LOE N° 26859, LOP N° 28094, jurisprudencia JNE y marco
+              internacional vinculante (ICCPR, CADH, CDI). Cada respuesta cita artículos y
+              resoluciones específicas.
+            </div>
+
+            {/* Formulario */}
+            <Card className="peru-card" style={{ padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>
+                Pregunta ⚖️
+              </div>
+              <textarea
+                value={constQuestion}
+                onChange={(e) => setConstQuestion(e.target.value)}
+                placeholder="Ej: ¿Puede la ONPE seguir organizando la segunda vuelta con su jefe bajo investigación penal?"
+                rows={3}
+                style={{
+                  width: "100%", padding: 10, borderRadius: 6,
+                  background: COLORS.surface, color: COLORS.text,
+                  border: `1px solid ${COLORS.border}`,
+                  fontSize: 13, fontFamily: "inherit", resize: "vertical",
+                  boxSizing: "border-box",
+                }}
+              />
+              <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.text, marginTop: 10, marginBottom: 6 }}>
+                Contexto adicional (opcional)
+              </div>
+              <textarea
+                value={constContext}
+                onChange={(e) => setConstContext(e.target.value)}
+                placeholder="Antecedentes, actores, fechas, hechos relevantes al caso..."
+                rows={2}
+                style={{
+                  width: "100%", padding: 10, borderRadius: 6,
+                  background: COLORS.surface, color: COLORS.text,
+                  border: `1px solid ${COLORS.border}`,
+                  fontSize: 13, fontFamily: "inherit", resize: "vertical",
+                  boxSizing: "border-box",
+                }}
+              />
+              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                <button
+                  onClick={askConstitutionalist}
+                  disabled={constLoading || !constQuestion.trim()}
+                  style={{
+                    padding: "8px 18px", borderRadius: 6,
+                    background: constLoading ? COLORS.surface : COLORS.accentDim,
+                    color: constLoading ? COLORS.textMuted : COLORS.accent,
+                    border: `1px solid ${COLORS.accent}55`,
+                    fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                    cursor: constLoading || !constQuestion.trim() ? "not-allowed" : "pointer",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {constLoading ? "● Consultando..." : "▶ Consultar"}
+                </button>
+                {constHistory.length > 0 && (
+                  <span style={{ fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                    Consultas previas: {constHistory.length}
+                  </span>
+                )}
+              </div>
+            </Card>
+
+            {/* Error */}
+            {constError && (
+              <Card className="peru-card" style={{ padding: 14, marginBottom: 16, background: COLORS.dangerDim, borderLeft: `3px solid ${COLORS.danger}` }}>
+                <div style={{ color: COLORS.danger, fontSize: 12, fontWeight: 700 }}>Error: {constError}</div>
+              </Card>
+            )}
+
+            {/* Respuesta principal */}
+            {constAnswer && (
+              <Card className="peru-card" style={{ padding: 16, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.accent, letterSpacing: 2, textTransform: "uppercase" }}>
+                    Dictamen del Sub-agente
+                  </span>
+                  {constAnswer.confidence && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 4,
+                      background: constAnswer.confidence === "high" ? COLORS.accentDim
+                                : constAnswer.confidence === "medium" ? COLORS.warningDim
+                                : COLORS.dangerDim,
+                      color: constAnswer.confidence === "high" ? COLORS.accent
+                           : constAnswer.confidence === "medium" ? COLORS.warning
+                           : COLORS.danger,
+                      textTransform: "uppercase", letterSpacing: 1, fontFamily: "'DM Mono', monospace",
+                    }}>
+                      Confianza {constAnswer.confidence}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7, whiteSpace: "pre-wrap", marginBottom: 14 }}>
+                  {constAnswer.answer}
+                </div>
+                {Array.isArray(constAnswer.legal_basis) && constAnswer.legal_basis.length > 0 && (
+                  <div style={{ marginTop: 12, padding: 10, background: COLORS.surface, borderRadius: 6, borderLeft: `2px solid ${COLORS.accent}` }}>
+                    <div style={{ fontSize: 10, color: COLORS.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>
+                      📖 Base legal
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: COLORS.textMuted, lineHeight: 1.6 }}>
+                      {constAnswer.legal_basis.map((b, i) => <li key={i}>{b}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {Array.isArray(constAnswer.case_law) && constAnswer.case_law.length > 0 && (
+                  <div style={{ marginTop: 8, padding: 10, background: COLORS.surface, borderRadius: 6, borderLeft: `2px solid ${COLORS.info}` }}>
+                    <div style={{ fontSize: 10, color: COLORS.info, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>
+                      ⚖️ Jurisprudencia
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: COLORS.textMuted, lineHeight: 1.6 }}>
+                      {constAnswer.case_law.map((c, i) => <li key={i}>{c}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {Array.isArray(constAnswer.international_framework) && constAnswer.international_framework.length > 0 && (
+                  <div style={{ marginTop: 8, padding: 10, background: COLORS.surface, borderRadius: 6, borderLeft: `2px solid ${COLORS.purple}` }}>
+                    <div style={{ fontSize: 10, color: COLORS.purple, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>
+                      🌐 Marco internacional
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: COLORS.textMuted, lineHeight: 1.6 }}>
+                      {constAnswer.international_framework.map((f, i) => <li key={i}>{f}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {Array.isArray(constAnswer.caveats) && constAnswer.caveats.length > 0 && (
+                  <div style={{ marginTop: 8, padding: 10, background: COLORS.surface, borderRadius: 6, borderLeft: `2px solid ${COLORS.warning}` }}>
+                    <div style={{ fontSize: 10, color: COLORS.warning, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>
+                      ⚠️ Limitaciones
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: COLORS.textMuted, lineHeight: 1.6 }}>
+                      {constAnswer.caveats.map((c, i) => <li key={i}>{c}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {Array.isArray(constAnswer.sources_cited) && constAnswer.sources_cited.length > 0 && (
+                  <div style={{ marginTop: 12, fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", paddingTop: 8, borderTop: `1px dashed ${COLORS.border}` }}>
+                    Fuentes RAG consultadas: {constAnswer.sources_cited.map(s => s.instrument || s.id).join(" · ")}
+                    {constAnswer.tokens_used && ` · Tokens: ${constAnswer.tokens_used.input || 0}→${constAnswer.tokens_used.output || 0}`}
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* Historial */}
+            {constHistory.length > 1 && (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textDim, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, marginTop: 20 }}>
+                  Historial de consultas ({constHistory.length - 1} previas)
+                </div>
+                {constHistory.slice(1).map((h, i) => (
+                  <Card key={i} className="peru-card" style={{ padding: 10, marginBottom: 8, fontSize: 11 }}>
+                    <div style={{ color: COLORS.textMuted, fontWeight: 600, marginBottom: 4 }}>
+                      ❓ {h.question}
+                    </div>
+                    <div style={{ color: COLORS.textDim, lineHeight: 1.5, fontSize: 10 }}>
+                      {(h.answer || "").substring(0, 200)}...
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {!constAnswer && !constError && !constLoading && (
+              <Card className="peru-card" style={{ padding: 16, textAlign: "center", color: COLORS.textDim, fontSize: 12 }}>
+                Ejemplos de consultas:
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6, textAlign: "left", fontSize: 11 }}>
+                  <span>• ¿Cuáles son las causales constitucionales para anular una elección en Perú?</span>
+                  <span>• ¿Qué establece la Ley 31030 sobre paridad y alternancia?</span>
+                  <span>• ¿Puede el JNE separar al jefe de la ONPE durante el escrutinio?</span>
+                  <span>• ¿Cómo se resuelven las actas observadas según la LOE Art. 343?</span>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* ══ TAB: METODOLOGÍA ══
             Glosario de datasets + guía de lectura del dashboard.
