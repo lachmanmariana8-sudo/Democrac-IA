@@ -27,6 +27,7 @@ import json
 import re
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
+from collections import Counter
 
 
 # Tags que identifican contenido peruano en el corpus RAG
@@ -88,61 +89,68 @@ class ConstitutionalistAgent:
         """
         Args:
             llm: instancia de Claude / LangChain (ChatAnthropic) con API key válida
-            retriever: funciones de búsqueda del corpus. Si es None, intenta importar
-                       el retriever keyword del módulo rag.
+            retriever: función custom(query, max) → List[Dict]. Si None, usa el
+                       buscador léxico interno sobre LEGAL_CORPUS (ver _internal_search).
         """
         self.llm = llm
         self._retriever = retriever
-        if self._retriever is None:
-            try:
-                from rag.retriever import keyword_search
-                self._retriever = keyword_search
-            except Exception:
-                self._retriever = None
 
-    def _get_peru_passages(self, question: str, max_passages: int = 6) -> List[Dict[str, Any]]:
-        """Recupera pasajes del corpus filtrados por relevancia peruana + keywords de la pregunta."""
-        if self._retriever is None:
+    def _internal_search(self, query: str, max_results: int = 6) -> List[Dict[str, Any]]:
+        """Búsqueda léxica TF sobre LEGAL_CORPUS filtrando PERU_TAGS.
+        Reemplaza al retriever anterior (keyword_search no existía en rag.retriever)."""
+        try:
+            from rag.corpus import LEGAL_CORPUS
+        except ImportError:
             return []
 
-        # Busca con la pregunta completa y con keywords expandidas
-        query = question.lower()
-        # Expandir con términos técnicos si la pregunta los menciona
-        expansions = []
-        if re.search(r"\bonpe\b", query): expansions.append("ONPE")
-        if re.search(r"\bjne\b", query): expansions.append("JNE")
-        if re.search(r"\breniec\b", query): expansions.append("RENIEC")
-        if "partido" in query or "partidos" in query: expansions.append("organizaciones políticas")
-        if "financi" in query: expansions.append("financiamiento partidos")
-        if "paridad" in query or "mujer" in query or "género" in query: expansions.append("paridad")
-        if "segunda vuelta" in query or "segunda ronda" in query: expansions.append("segunda vuelta")
-        if "voto electrónico" in query or "venp" in query: expansions.append("voto electrónico VENP")
-        if "escrutin" in query or "acta" in query: expansions.append("escrutinio")
-        if "nulidad" in query: expansions.append("nulidad elección")
+        # Tokenización simple con unicode
+        def tok(t):
+            return re.findall(r"[a-záéíóúüñ]{3,}", (t or "").lower())
 
-        try:
-            results = self._retriever(query, top_k=max_passages * 2)
-        except Exception:
-            results = []
+        # Query expandida: agregamos sinónimos del dominio si aparecen keywords
+        q_lower = query.lower()
+        q_extra = []
+        if re.search(r"\bjne\b", q_lower): q_extra.append("jurado nacional elecciones")
+        if re.search(r"\bonpe\b", q_lower): q_extra.append("oficina nacional procesos electorales")
+        if re.search(r"\breniec\b", q_lower): q_extra.append("registro nacional identificación")
+        if "partido" in q_lower: q_extra.append("organizaciones políticas financiamiento")
+        if "paridad" in q_lower or "mujer" in q_lower: q_extra.append("paridad alternancia ley 31030")
+        if "voto electrónico" in q_lower or "venp" in q_lower: q_extra.append("voto electrónico VENP 0891-2025")
+        if "escrutin" in q_lower or "acta" in q_lower: q_extra.append("escrutinio actas observadas impugnaciones")
+        if "nulidad" in q_lower: q_extra.append("nulidad elección")
+        if "segunda vuelta" in q_lower: q_extra.append("segunda vuelta 380")
+        if "silencio" in q_lower: q_extra.append("silencio electoral 190")
 
-        # Filtrar por tags peruanos
-        peru_results = []
-        for r in results:
-            tags = set(r.get("tags", []))
-            if tags & PERU_TAGS or "PERU" in str(r.get("instrument", "")):
-                peru_results.append(r)
-            if len(peru_results) >= max_passages:
-                break
+        full_query = query + " " + " ".join(q_extra)
+        q_tokens = Counter(tok(full_query))
+        if not q_tokens:
+            return []
 
-        # Si no hay suficientes, completar con resultados generales relevantes
-        if len(peru_results) < max_passages:
-            for r in results:
-                if r not in peru_results:
-                    peru_results.append(r)
-                    if len(peru_results) >= max_passages:
-                        break
+        scored = []
+        for doc in LEGAL_CORPUS:
+            tags = set(doc.get("tags", []))
+            instrument = str(doc.get("instrument", ""))
+            # Boost si es peruano
+            peru_boost = 2.0 if (tags & PERU_TAGS or "PERU" in instrument) else 1.0
 
-        return peru_results
+            doc_text = f"{doc.get('title','')} {doc.get('text','')} {' '.join(tags)}"
+            d_tokens = Counter(tok(doc_text))
+            overlap = sum(min(q_tokens[t], d_tokens[t]) for t in q_tokens if t in d_tokens)
+            score = (overlap / (sum(q_tokens.values()) + 1)) * peru_boost
+            if score > 0:
+                scored.append((score, doc))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [doc for _, doc in scored[:max_results]]
+
+    def _get_peru_passages(self, question: str, max_passages: int = 6) -> List[Dict[str, Any]]:
+        """Recupera pasajes del corpus relevantes a la consulta peruana."""
+        if self._retriever is not None:
+            try:
+                return self._retriever(question, max_passages)
+            except Exception:
+                pass
+        return self._internal_search(question, max_passages)
 
     def _format_passages(self, passages: List[Dict[str, Any]]) -> str:
         if not passages:
