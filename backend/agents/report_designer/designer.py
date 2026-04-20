@@ -25,6 +25,7 @@ from agents.report_designer.models import (
     FindingRef, VizSpec, SourceCitation,
 )
 from agents.report_designer.structurer import Structurer, THEMES
+from agents.report_designer import visualizer as viz_renderer
 
 
 REPORTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "reports", "designed")
@@ -300,13 +301,27 @@ class ReportDesigner:
                     caption=f"Datos del sistema PEIRS cubriendo {stats.days_covered} días.",
                     data={
                         "kpis": [
-                            {"label": "Hallazgos registrados", "value": stats.total_findings, "color": "#00d4aa"},
-                            {"label": "Críticos", "value": stats.critical, "color": "#ef4444"},
+                            {"label": "Hallazgos registrados", "value": stats.total_findings, "color": "#00796b"},
+                            {"label": "Críticos", "value": stats.critical, "color": "#d32f2f"},
                             {"label": "Altos", "value": stats.high, "color": "#f97316"},
-                            {"label": "Fuentes", "value": stats.sources_count, "color": "#3b82f6"},
+                            {"label": "Fuentes", "value": stats.sources_count, "color": "#1976d2"},
                         ]
                     },
                 ))
+                # Donut de severidades
+                if section.section_id == "cifras_clave":
+                    section.viz_specs.append(VizSpec(
+                        kind="donut",
+                        title="Distribución por severidad",
+                        caption="Universo total de hallazgos clasificados.",
+                        data={"segments": [
+                            {"label": "critical", "value": stats.critical, "color": "#d32f2f"},
+                            {"label": "high", "value": stats.high, "color": "#f97316"},
+                            {"label": "medium", "value": stats.medium, "color": "#fbc02d"},
+                            {"label": "low", "value": stats.low, "color": "#388e3c"},
+                            {"label": "info", "value": stats.info, "color": "#1976d2"},
+                        ]},
+                    ))
             if section.section_id in ("timeline_hallazgos", "findings"):
                 section.viz_specs.append(VizSpec(
                     kind="timeline",
@@ -728,38 +743,83 @@ class ReportDesigner:
 
     def _render_html(self, sections: List[ReportSection], stats: ReportStats,
                     req: ReportRequest) -> str:
-        """HTML liviano embebible en iframe del frontend."""
+        """HTML liviano embebible en iframe del frontend. Fase D: SVG inline reales."""
         body_sections = []
         for section in sections:
             viz_html = ""
             for v in section.viz_specs:
-                if v.kind == "infographic_top" and v.data.get("kpis"):
-                    kpis = v.data["kpis"]
-                    viz_html += '<div class="kpis">' + "".join(
-                        f'<div class="kpi" style="border-color:{k["color"]};"><div class="kpi-val" style="color:{k["color"]};">{k["value"]}</div><div class="kpi-label">{k["label"]}</div></div>'
-                        for k in kpis
-                    ) + "</div>"
+                svg = viz_renderer.render(v.kind, v.data)
+                if svg:
+                    viz_html += (
+                        f'<figure class="viz">'
+                        f'<figcaption class="viz-title">{self._escape(v.title)}</figcaption>'
+                        f'<div class="viz-svg">{svg}</div>'
+                        f'<figcaption class="viz-caption">{self._escape(v.caption)}</figcaption>'
+                        f'</figure>'
+                    )
                 else:
-                    viz_html += f'<div class="viz-placeholder">[{v.kind}] {v.title} — <em>{v.caption}</em></div>'
+                    viz_html += (
+                        f'<div class="viz-placeholder">[{v.kind}] '
+                        f'{self._escape(v.title)} — <em>{self._escape(v.caption)}</em></div>'
+                    )
+
+            # Render narrative con markdown simplificado: ** → strong, - → li, \n\n → párrafos
+            narrative_html = self._render_markdown_simple(section.narrative)
+            # Citas de findings de la sección (si existen)
+            if section.findings:
+                narrative_html += '<div class="findings"><h4>Hallazgos citados:</h4><ul>'
+                for f in section.findings[:8]:
+                    src = f.source_name or "fuente"
+                    link = f' — <a href="{self._escape(f.source_url)}" target="_blank" rel="noopener">{src}</a>' if f.source_url else f' — {src}'
+                    sev_tag = f'<span class="sev sev-{f.severity}">{f.severity}</span>'
+                    narrative_html += f'<li>{sev_tag}{self._escape(f.finding[:220])}{link}</li>'
+                narrative_html += '</ul></div>'
 
             body_sections.append(
-                f'<section><h2>{section.title}</h2>'
-                f'<div class="narrative">{section.narrative.replace(chr(10), "<br>").replace("**", "<strong>").replace("<strong>", "<strong>", 1)}</div>'
+                f'<section><h2>{self._escape(section.title)}</h2>'
+                f'{narrative_html}'
                 f'{viz_html}'
                 f'</section>'
             )
 
         css = """
         body { font-family: -apple-system, 'Segoe UI', sans-serif; max-width: 900px;
-               margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.6; }
-        h1 { color: #0a0e17; border-bottom: 2px solid #00796b; padding-bottom: 8px; }
-        h2 { color: #004d40; border-bottom: 1px solid #b0bec5; padding-bottom: 4px; margin-top: 2rem; }
+               margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.6;
+               font-size: 14px; }
+        h1 { color: #0a0e17; border-bottom: 2px solid #00796b; padding-bottom: 8px;
+             font-size: 24px; }
+        h2 { color: #004d40; border-bottom: 1px solid #b0bec5; padding-bottom: 4px;
+             margin-top: 2.2rem; font-size: 18px; }
+        h3 { color: #00695c; font-size: 15px; margin-top: 1.4rem; }
+        h4 { color: #263238; font-size: 13px; margin-top: 1rem; text-transform: uppercase;
+             letter-spacing: 1px; }
         .narrative { margin: 1rem 0; }
-        .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 1rem 0; }
-        .kpi { padding: 14px; border: 2px solid; border-radius: 8px; text-align: center; }
-        .kpi-val { font-size: 28px; font-weight: 800; font-family: monospace; line-height: 1.1; }
-        .kpi-label { font-size: 10px; color: #64748b; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
-        .viz-placeholder { background: #f0f7f6; padding: 14px; border-left: 3px solid #00796b; margin: 10px 0; font-size: 13px; }
+        .narrative p { margin: 0.7rem 0; }
+        .narrative ul, .narrative ol { margin: 0.7rem 0; padding-left: 1.6rem; }
+        .narrative strong { color: #000; font-weight: 700; }
+        .narrative a { color: #00695c; }
+        .narrative em { color: #37474f; }
+        .viz { margin: 1.2rem 0; padding: 10px; background: #fafafa; border-radius: 8px;
+               border: 1px solid #e5e7eb; }
+        .viz-title { font-size: 12px; font-weight: 700; color: #00695c;
+                     text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+        .viz-caption { font-size: 11px; color: #78909c; margin-top: 6px; font-style: italic; }
+        .viz-svg { text-align: center; }
+        .viz-svg svg { max-width: 100%; height: auto; }
+        .viz-placeholder { background: #f0f7f6; padding: 14px; border-left: 3px solid #00796b;
+                           margin: 10px 0; font-size: 13px; color: #78909c; }
+        .findings { margin-top: 1rem; padding: 10px 14px; background: #f7fafc;
+                    border-left: 3px solid #00796b; border-radius: 4px; }
+        .findings ul { margin: 6px 0 0; padding-left: 1.2rem; }
+        .findings li { margin: 8px 0; font-size: 12px; color: #37474f; line-height: 1.6; }
+        .sev { display: inline-block; padding: 1px 6px; border-radius: 3px;
+               font-family: monospace; font-size: 9px; font-weight: 700;
+               text-transform: uppercase; margin-right: 6px; letter-spacing: 1px; }
+        .sev-critical { background: #fef2f2; color: #d32f2f; }
+        .sev-high { background: #fff7ed; color: #f97316; }
+        .sev-medium, .sev-moderate { background: #fefce8; color: #b45309; }
+        .sev-low { background: #f0fdf4; color: #388e3c; }
+        .sev-info { background: #eff6ff; color: #1976d2; }
         """
         return (
             f'<!DOCTYPE html><html lang="{req.language}"><head><meta charset="utf-8">'
@@ -770,6 +830,67 @@ class ReportDesigner:
             + f'<hr><p style="color:#78909c;font-size:11px">Fase A — Esqueleto funcional ReportDesigner. {stats.total_findings} hallazgos base.</p>'
             + '</body></html>'
         )
+
+    @staticmethod
+    def _escape(s: str) -> str:
+        import html
+        return html.escape(s or "")
+
+    def _render_markdown_simple(self, md: str) -> str:
+        """Conversor markdown → HTML liviano (sin libs externas). Soporta:
+        - **bold** y _em_ / *em*
+        - # H1, ## H2, ### H3 (solo a inicio de línea)
+        - - / * listas
+        - párrafos separados por línea en blanco
+        - [link](url)
+        """
+        if not md:
+            return ""
+        import re
+        import html as _html
+
+        lines = md.split("\n")
+        out = []
+        in_list = False
+
+        def inline(s: str) -> str:
+            s = _html.escape(s)
+            # Links [texto](url)
+            s = re.sub(r'\[([^\]]+)\]\(([^)]+)\)',
+                       r'<a href="\2" target="_blank" rel="noopener">\1</a>', s)
+            # Bold **x**
+            s = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', s)
+            # Italic _x_
+            s = re.sub(r'(?<!\w)_([^_]+)_(?!\w)', r'<em>\1</em>', s)
+            return s
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                if in_list:
+                    out.append("</ul>")
+                    in_list = False
+                out.append("")
+                continue
+            if stripped.startswith("### "):
+                if in_list: out.append("</ul>"); in_list = False
+                out.append(f"<h3>{inline(stripped[4:])}</h3>")
+            elif stripped.startswith("## "):
+                if in_list: out.append("</ul>"); in_list = False
+                out.append(f"<h3>{inline(stripped[3:])}</h3>")
+            elif stripped.startswith("# "):
+                if in_list: out.append("</ul>"); in_list = False
+                out.append(f"<h3>{inline(stripped[2:])}</h3>")
+            elif stripped.startswith("- ") or stripped.startswith("* "):
+                if not in_list:
+                    out.append("<ul>"); in_list = True
+                out.append(f"<li>{inline(stripped[2:])}</li>")
+            else:
+                if in_list: out.append("</ul>"); in_list = False
+                out.append(f"<p>{inline(stripped)}</p>")
+        if in_list:
+            out.append("</ul>")
+        return '<div class="narrative">' + "\n".join(out) + "</div>"
 
     def _persist_mock(self, output: ReportOutput, req: ReportRequest) -> None:
         """Guarda MD + HTML en disco bajo reports/designed/."""
