@@ -6740,7 +6740,21 @@ async def generate_designed_report(req: DesignerRequest):
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Parámetros inválidos: {e}")
 
-    designer = ReportDesigner(llm=llm if HUNTER_AVAILABLE else None)
+    # Pasamos los stores del backend para que el Structurer Fase B tenga data real
+    def _alerts_loader(cc: str, limit: int = 500):
+        if DB_AVAILABLE:
+            try:
+                return _db_list_alerts(cc, limit=limit)
+            except Exception:
+                return []
+        return []
+
+    designer = ReportDesigner(
+        llm=llm,
+        observation_store=observation_store,
+        alerts_loader=_alerts_loader,
+        reports_store=reports_store,
+    )
     try:
         result = await designer.run(rr)
     except Exception as e:

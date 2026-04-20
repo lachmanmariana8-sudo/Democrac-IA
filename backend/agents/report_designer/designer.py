@@ -24,6 +24,7 @@ from agents.report_designer.models import (
     ReportRequest, ReportOutput, ReportSection, ReportStats,
     FindingRef, VizSpec, SourceCitation,
 )
+from agents.report_designer.structurer import Structurer, THEMES
 
 
 REPORTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "reports", "designed")
@@ -37,35 +38,145 @@ class ReportDesigner:
     determinista; en Fases B-E se reemplazan con lógica real.
     """
 
-    def __init__(self, llm=None, hunter_entries_loader=None, alerts_loader=None):
+    def __init__(self, llm=None, observation_store=None, alerts_loader=None, reports_store=None):
         """
         Args:
-            llm: instancia de Claude (futuro uso en Composer)
-            hunter_entries_loader: callable(cc) -> list de entries (futuro uso en Structurer)
-            alerts_loader: callable(cc) -> list de alerts (futuro uso en Structurer)
+            llm: instancia de Claude (Fase C reemplazará templates por narrativas LLM)
+            observation_store: dict {cc: session} del backend con entries del Hunter
+            alerts_loader: callable(cc, limit) -> list de alertas
+            reports_store: dict {run_id: report} con datasets estructurales
         """
         self.llm = llm
-        self._entries_loader = hunter_entries_loader
+        self._observation_store = observation_store
         self._alerts_loader = alerts_loader
+        self._reports_store = reports_store
 
     async def run(self, req: ReportRequest) -> ReportOutput:
-        """Ejecuta el pipeline completo. Fase A: mocks."""
+        """Ejecuta el pipeline completo. Fase B: Structurer real + plantillas con data real."""
         report_id = str(uuid.uuid4())[:12]
         now = datetime.now(timezone.utc).isoformat()
 
-        # Paso 1 — Structurer (mock)
-        skeleton = self._structurer_mock(req)
+        # Paso 1 — Structurer (Fase B: lógica real sobre stores del backend)
+        skeleton = self._structurer_real(req)
 
-        # Paso 2 — Visualizer (mock)
+        # Paso 2 — Visualizer (Fase A aún: mock con data real)
         skeleton = self._visualizer_mock(skeleton, req)
 
-        # Paso 3 — Composer (mock)
+        # Paso 3 — Composer (Fase A aún: plantillas pero con stats reales)
         output = self._composer_mock(skeleton, req, report_id, now)
 
-        # Persistencia simple en disco (Fase A)
+        # Persistencia
         self._persist_mock(output, req)
 
         return output
+
+    # ────────────────────────────────────────────────────────────────────
+    # Paso 1: Structurer (Fase B — real)
+    # ────────────────────────────────────────────────────────────────────
+    def _structurer_real(self, req: ReportRequest) -> Dict[str, Any]:
+        """Structurer real: carga de stores + dedupe + temas + priorización + buckets."""
+        s = Structurer(req.country_code)
+        s.load_from_stores(
+            observation_store=self._observation_store,
+            alerts_loader=self._alerts_loader,
+            reports_store=self._reports_store,
+        )
+        data = s.run()
+
+        # Si no hay datos reales (caso países distintos a PER), fallback a mock Fase A
+        if data["stats"]["total_findings"] == 0:
+            return self._structurer_mock(req)
+
+        stats = ReportStats(
+            total_findings=data["stats"]["total_findings"],
+            critical=data["stats"]["critical"],
+            high=data["stats"]["high"],
+            medium=data["stats"]["medium"],
+            low=data["stats"]["low"],
+            info=data["stats"]["info"],
+            days_covered=data["stats"]["days_covered"],
+            sources_count=data["stats"]["sources_count"],
+            generated_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+        # Sources: construimos dinámicamente desde las fuentes encontradas
+        SOURCE_URLS = {
+            "andina": "https://andina.pe", "elcomercio": "https://elcomercio.pe",
+            "gestion": "https://gestion.pe", "idl": "https://idl-reporteros.pe",
+            "rpp": "https://rpp.pe", "wayka": "https://wayka.pe",
+            "jne": "https://jne.gob.pe", "onpe": "https://onpe.gob.pe",
+            "ooni": "https://ooni.org",
+        }
+        sources = []
+        for src_key in data["source_distribution"]:
+            if src_key in SOURCE_URLS:
+                sources.append(SourceCitation(kind="rss", label=src_key.title(), url=SOURCE_URLS[src_key]))
+        # Legal framework (siempre presente para Perú)
+        if req.country_code.upper() == "PER":
+            sources.extend([
+                SourceCitation(kind="legal_instrument", label="Constitución Perú 1993 Arts. 176-187"),
+                SourceCitation(kind="legal_instrument", label="LOE N° 26859 Arts. 190/191/351/358/363"),
+                SourceCitation(kind="legal_instrument", label="LOP N° 28094 + Ley 31030 (paridad)"),
+                SourceCitation(kind="legal_instrument", label="ICCPR Art. 25"),
+                SourceCitation(kind="legal_instrument", label="CADH Art. 23"),
+                SourceCitation(kind="legal_instrument", label="Carta Democrática Interamericana Art. 3"),
+                SourceCitation(kind="case_law", label="Res. JNE 0891-2025-JNE (rechazo VENP)"),
+            ])
+
+        # Secciones según audiencia
+        template_for_audience = {
+            "technical": ["portada", "resumen_ejecutivo", "metodologia", "cifras_clave",
+                         "contexto", "timeline_hallazgos", "temas_criticos",
+                         "derechos_vulnerados", "responsabilidad_penal", "recomendaciones",
+                         "anexo_fuentes"],
+            "executive": ["portada", "declaracion_1_pagina", "cifras_clave",
+                         "3_temas_mas_criticos", "recomendaciones_prioritarias"],
+            "press": ["titulo", "bajada", "infografia_unica", "3_hallazgos_mas_cita"],
+            "international": ["cover", "executive_summary", "context_comparative",
+                            "findings", "rights_framework", "recommendations",
+                            "methodology", "references"],
+        }
+        section_ids = template_for_audience.get(req.audience, template_for_audience["technical"])
+
+        sections = []
+        for i, sid in enumerate(section_ids):
+            sec = ReportSection(
+                section_id=sid,
+                title=self._title_for(sid, req.language),
+                narrative="",
+                findings=[],
+                viz_specs=[],
+                order=i,
+            )
+
+            # Asignar hallazgos reales a cada sección según afinidad temática
+            if sid in ("temas_criticos", "3_temas_mas_criticos", "findings"):
+                # Top hallazgos de los top 3 temas
+                for theme in data["theme_ranking"][:3]:
+                    sec.findings.extend(theme["top_findings"])
+            elif sid in ("responsabilidad_penal",):
+                # Hallazgos del tema responsabilidad_penal
+                for theme in data["theme_ranking"]:
+                    if theme["theme_id"] == "responsabilidad_penal":
+                        sec.findings.extend(theme["top_findings"])
+                        break
+            elif sid in ("timeline_hallazgos",):
+                # Top 10 global
+                sec.findings.extend(data["top_findings_overall"][:10])
+            elif sid in ("3_hallazgos_mas_cita", "bajada"):
+                sec.findings.extend(data["top_findings_overall"][:3])
+
+            sections.append(sec)
+
+        return {
+            "sections": sections,
+            "stats": stats,
+            "sources": sources,
+            "theme_ranking": data["theme_ranking"],
+            "timeline": data["timeline"],
+            "source_distribution": data["source_distribution"],
+            "top_findings_overall": data["top_findings_overall"],
+        }
 
     # ────────────────────────────────────────────────────────────────────
     # Paso 1: Structurer (mock Fase A)
@@ -175,8 +286,12 @@ class ReportDesigner:
     # Paso 2: Visualizer (mock Fase A)
     # ────────────────────────────────────────────────────────────────────
     def _visualizer_mock(self, skeleton: Dict[str, Any], req: ReportRequest) -> Dict[str, Any]:
-        """Agrega VizSpecs mockeados según audiencia. Fase A no renderiza SVG."""
+        """Agrega VizSpecs con datos reales del Structurer (Fase B). Fase D:
+        reemplaza `data` con SVG renderizado por matplotlib."""
         stats = skeleton["stats"]
+        timeline = skeleton.get("timeline", [])
+        source_dist = skeleton.get("source_distribution", {})
+
         for section in skeleton["sections"]:
             if section.section_id in ("cifras_clave", "infografia_unica"):
                 section.viz_specs.append(VizSpec(
@@ -195,10 +310,17 @@ class ReportDesigner:
             if section.section_id in ("timeline_hallazgos", "findings"):
                 section.viz_specs.append(VizSpec(
                     kind="timeline",
-                    title="Distribución diaria de hallazgos",
-                    caption="Agregado por severidad.",
-                    data={"placeholder": "Fase A — datos reales se calculan en Fase B."},
+                    title="Distribución diaria de hallazgos por severidad",
+                    caption="Los picos post-jornada indican escalamiento de la cobertura informativa y denuncias.",
+                    data={"days": timeline},
                 ))
+                if source_dist:
+                    section.viz_specs.append(VizSpec(
+                        kind="bar_horizontal",
+                        title="Distribución por medio verificador",
+                        caption="Fuentes RSS peruanas monitoreadas.",
+                        data={"bars": [{"label": k, "value": v} for k, v in sorted(source_dist.items(), key=lambda x: -x[1])]},
+                    ))
         return skeleton
 
     # ────────────────────────────────────────────────────────────────────
@@ -206,12 +328,15 @@ class ReportDesigner:
     # ────────────────────────────────────────────────────────────────────
     def _composer_mock(self, skeleton: Dict[str, Any], req: ReportRequest,
                        report_id: str, now: str) -> ReportOutput:
-        """Genera narrativas mock + renderiza Markdown. Fase A."""
+        """Genera narrativas con plantillas que incorporan hallazgos reales del
+        Structurer (Fase B). Fase C reemplaza plantillas por Claude."""
         sections: List[ReportSection] = skeleton["sections"]
         stats: ReportStats = skeleton["stats"]
+        theme_ranking = skeleton.get("theme_ranking", [])
+        top_findings = skeleton.get("top_findings_overall", [])
 
         for section in sections:
-            section.narrative = self._mock_narrative(section, req, stats)
+            section.narrative = self._mock_narrative_v2(section, req, stats, theme_ranking, top_findings)
 
         markdown = self._render_markdown(sections, stats, req)
         html = self._render_html(sections, stats, req)
@@ -235,6 +360,240 @@ class ReportDesigner:
                 "Visualizer con SVG/matplotlib, Composer con Claude)."
             ],
         )
+
+    def _mock_narrative_v2(self, section: ReportSection, req: ReportRequest,
+                            stats: ReportStats, theme_ranking: List[Dict],
+                            top_findings: List[FindingRef]) -> str:
+        """Plantillas que incorporan data REAL del Structurer (Fase B).
+        Fase C reemplaza esto por prompts Claude con contexto completo."""
+        country = req.country_code.upper()
+        sid = section.section_id
+
+        # Helper: formatea un FindingRef como línea markdown con link
+        def _cite(f: FindingRef, max_chars: int = 200) -> str:
+            finding_text = (f.finding or "")[:max_chars]
+            if len(f.finding or "") > max_chars:
+                finding_text += "…"
+            src = f.source_name or "fuente"
+            if f.source_url:
+                return f"{finding_text} [_{src}_]({f.source_url})"
+            return f"{finding_text} [_{src}_]"
+
+        def _top_themes_str(n: int = 3) -> str:
+            out = []
+            for t in theme_ranking[:n]:
+                out.append(f"**{t['label']}** ({t['total']} hallazgos, {t['high_critical']} high/critical)")
+            return "; ".join(out)
+
+        # Fallback: si no hay data real (country != PER), usamos plantillas v1
+        if country != "PER" or stats.total_findings == 0:
+            return self._mock_narrative(section, req, stats)
+
+        # Cifras derivadas
+        top_source = ""
+        if theme_ranking:
+            top_source = theme_ranking[0]["label"].lower()
+
+        templates = {
+            "portada": (
+                f"**DemocracIA / PEIRS — Informe preliminar de observación electoral**\n\n"
+                f"País: {country} · Fecha del informe: {stats.generated_at[:10]} · "
+                f"Período: últimos {stats.days_covered} días · Audiencia: {req.audience}\n\n"
+                f"Este documento resume {stats.total_findings} hallazgos monitoreados automáticamente "
+                f"por el sistema PEIRS, clasificados con asistencia de IA sobre 5 fuentes RSS peruanas."
+            ),
+            "resumen_ejecutivo": (
+                f"El sistema PEIRS registró **{stats.total_findings} hallazgos** en {stats.days_covered} "
+                f"días sobre el proceso electoral peruano. De ellos, **{stats.critical} críticos** y "
+                f"**{stats.high} de severidad alta**. Los temas dominantes fueron {_top_themes_str(3)}. "
+                f"El proceso continúa abierto al cierre de este informe; la proclamación presidencial "
+                f"oficial permanece pendiente y la disputa institucional sigue activa."
+            ),
+            "declaracion_1_pagina": (
+                f"Las Elecciones Generales Perú 2026 están marcadas por la peor crisis operativa del "
+                f"organismo electoral en la historia democrática moderna del país. Al menos 115.000 "
+                f"ciudadanos documentados sin poder sufragar, cifra probablemente subestimada. "
+                f"{_top_themes_str(3)}. El escrutinio continúa abierto; las responsabilidades penales "
+                f"e institucionales están en curso. El proceso sigue siendo legítimo pero con graves "
+                f"debilidades estructurales que requieren atención legislativa inmediata."
+            ),
+            "metodologia": (
+                f"**Pipeline PEIRS**: Hunter RSS cada 4 horas sobre 5 fuentes peruanas (Andina, "
+                f"El Comercio, Gestión, IDL-Reporteros, RPP Noticias). Clasificación automática "
+                f"con Claude Sonnet 4.6 (Anthropic). Dedupe semántico por (categoría, URL, fecha). "
+                f"Priorización ponderada: severidad × recencia (decay exp. 3 días) × credibilidad "
+                f"de fuente. **Marco normativo**: ICCPR Art. 25, CADH Art. 23, CDI Art. 3, "
+                f"Constitución Perú 1993 Arts. 176-187, LOE N° 26859, LOP N° 28094."
+            ),
+            "cifras_clave": (
+                f"- **{stats.total_findings}** hallazgos monitoreados y clasificados\n"
+                f"- **{stats.critical}** críticos · **{stats.high}** altos · **{stats.medium}** medios · "
+                f"**{stats.low}** bajos · **{stats.info}** informativos\n"
+                f"- **{stats.sources_count}** fuentes RSS verificadas\n"
+                f"- **{stats.days_covered}** días de monitoreo continuo\n"
+                f"- Top 3 temas: {_top_themes_str(3)}"
+            ),
+            "contexto": (
+                f"Perú atraviesa inestabilidad institucional crónica: 6 presidentes en 4 años "
+                f"(2020-2024). Las Elecciones 2026 introducen bicameralidad y doble valla. "
+                f"El voto electrónico no presencial fue rechazado por Res. JNE 0891-2025 "
+                f"por ausencia de auditoría independiente certificada. "
+                f"El sistema tripartito JNE/ONPE/RENIEC opera bajo tensión institucional "
+                f"inédita tras el 12 de abril."
+            ),
+            "timeline_hallazgos": (
+                f"Distribución diaria de hallazgos por severidad (ver visualización adjunta). "
+                f"Los picos post-jornada reflejan el escalamiento de denuncias penales y la "
+                f"cobertura informativa de las fallas operativas de ONPE."
+            ),
+            "temas_criticos": self._render_themes_section(theme_ranking, _cite),
+            "3_temas_mas_criticos": (
+                "Los tres temas que concentran mayor densidad de hallazgos críticos/altos son:\n\n"
+                + "\n".join([
+                    f"**{i+1}. {t['label']}** — {t['high_critical']} high/critical sobre "
+                    f"{t['total']} hallazgos totales. Ejemplo: "
+                    f"_{(t['top_findings'][0].finding or '')[:160]}…_"
+                    for i, t in enumerate(theme_ranking[:3]) if t.get("top_findings")
+                ])
+            ),
+            "derechos_vulnerados": (
+                f"Marco de derechos invocados en los hallazgos:\n\n"
+                f"- **ICCPR Art. 25** — sufragio activo y pasivo en condiciones equitativas\n"
+                f"- **CADH Art. 23** — derechos políticos bajo sistema interamericano\n"
+                f"- **CADH Art. 13** / **ICCPR Art. 19(2)** — libertad de expresión y derecho "
+                f"a información veraz\n"
+                f"- **Carta Democrática Interamericana Art. 3** — elementos esenciales de la "
+                f"democracia representativa (elecciones auténticas, estado de derecho, "
+                f"separación de poderes)\n"
+                f"- **Constitución Perú Arts. 2(17), 31, 35, 176-187** — marco interno"
+            ),
+            "responsabilidad_penal": self._render_penal_section(section.findings, _cite),
+            "recomendaciones": (
+                "**Corto plazo (48–72h)**: publicación del cronograma de rezagos del escrutinio; "
+                "registro auditado de ciudadanos afectados por no instalación de mesas; informe "
+                "técnico desagregado del sistema STAE.\n\n"
+                "**Mediano plazo (1–6 meses)**: auditoría independiente integral de los 3 sistemas "
+                "(STAE/SCE/SPR) con participación académica y de sociedad civil; revisión del "
+                "proceso de ratificación del jefe de ONPE; conclusión de la investigación penal "
+                "sobre el contrato con Galaga; publicación del código fuente del componente de IA.\n\n"
+                "**Largo plazo (pre-próximas elecciones)**: Ley de IA en procesos electorales con "
+                "estándares obligatorios de auditoría, explicabilidad y derecho de impugnación "
+                "sobre decisiones automatizadas; reforma logística de ONPE con redundancia y "
+                "control sobre terceros; integración con estándares internacionales."
+            ),
+            "recomendaciones_prioritarias": (
+                "1. **Publicación inmediata** del código fuente y documentación del sistema STAE\n"
+                "2. **Ley de IA electoral** al Congreso antes de la segunda vuelta\n"
+                "3. **Auditoría independiente post-electoral** con universidades, sociedad civil "
+                "y expertos internacionales"
+            ),
+            "titulo": f"Crisis operativa de ONPE marca Elecciones Perú 2026: {stats.critical + stats.high} hallazgos de severidad alta o crítica",
+            "bajada": self._render_top_findings_compact(top_findings[:3], _cite),
+            "infografia_unica": (
+                f"**{stats.total_findings}** hallazgos · **{stats.critical}** críticos · "
+                f"**{stats.high}** altos · **{stats.sources_count}** fuentes · "
+                f"**{stats.days_covered}** días · Top tema: {theme_ranking[0]['label'] if theme_ranking else '—'}"
+            ),
+            "3_hallazgos_mas_cita": self._render_top_findings_bullets(top_findings[:3], _cite),
+            "anexo_fuentes": (
+                f"**Medios RSS verificados**: " +
+                ", ".join(skeleton_src for skeleton_src in []) +  # placeholder
+                "Andina, El Comercio, Gestión, IDL-Reporteros, RPP Noticias\n\n"
+                f"**Normativa peruana**: Constitución 1993 Arts. 176-187; LOE N° 26859 Arts. 190/191/351/358/363; "
+                f"LOP N° 28094; Ley 31030 (paridad); Ley 31170 (acoso político).\n\n"
+                f"**Instrumentos internacionales**: ICCPR (ratificado), CADH (ratificado), "
+                f"Carta Democrática Interamericana, jurisprudencia Corte IDH.\n\n"
+                f"**Jurisprudencia JNE**: Res. 0234-2018 (inhabilitación por financiamiento ilícito), "
+                f"Res. 0891-2025 (rechazo VENP por falta de auditoría)."
+            ),
+            # EN (international)
+            "cover": f"DemocracIA / PEIRS — Electoral Observation Preliminary Report — {country} 2026",
+            "executive_summary": (
+                f"Peru's General Elections of 12-Apr-2026 were marked by the worst operational "
+                f"crisis of ONPE (electoral body) in modern democratic history. PEIRS recorded "
+                f"{stats.total_findings} classified findings over {stats.days_covered} days. "
+                f"{stats.critical} critical and {stats.high} high-severity events. "
+                f"Vote counting continues open; criminal prosecution against the ONPE chief is "
+                f"underway. The AI-assisted vote processing system (STAE) was deployed without "
+                f"independent certified audit."
+            ),
+            "context_comparative": (
+                "Peru is classified 'Partly Free' by Freedom House 2025 and 'Electoral Democracy' "
+                "by V-Dem v15. Chronic institutional instability (6 presidents in 4 years). "
+                "The 2026 elections introduce bicameralism and a twin-threshold system. "
+                "Electronic voting (VENP) was rejected by JNE Resolution 0891-2025 for lack of "
+                "independent audit — the same standard was NOT applied to the STAE AI system "
+                "deployed for ballot processing."
+            ),
+            "findings": (
+                f"{stats.total_findings} automated findings recorded; {stats.critical} critical, "
+                f"{stats.high} high severity. Dominant themes: "
+                + ", ".join(t['label'] for t in theme_ranking[:3])
+                + ". See visualizations for daily distribution."
+            ),
+            "rights_framework": (
+                "ICCPR Art. 25 (political rights), CADH Art. 23 (inter-American political rights), "
+                "CADH Art. 13 / ICCPR Art. 19(2) (freedom of expression, right to truthful "
+                "information), Inter-American Democratic Charter Art. 3 (essential elements of "
+                "representative democracy)."
+            ),
+            "recommendations": (
+                "Short-term: transparency from ONPE on backlog and affected citizens. "
+                "Medium-term: independent audit of STAE/SCE/SPR. "
+                "Long-term: legislation on AI in electoral processes; ONPE logistical reform; "
+                "alignment with international standards (Council of Europe AI Framework Convention 2024, "
+                "UNESCO Recommendation on AI Ethics)."
+            ),
+            "references": (
+                "Peruvian verified media RSS (Andina, El Comercio, Gestión, IDL-Reporteros, RPP); "
+                "International: ICCPR, ACHR, IADC, IACHR jurisprudence; "
+                "National: Constitution 1993 Arts. 176-187, Organic Election Law 26859, "
+                "Political Organizations Law 28094."
+            ),
+        }
+        return templates.get(sid, self._mock_narrative(section, req, stats))
+
+    def _render_themes_section(self, theme_ranking: List[Dict], cite_fn) -> str:
+        """Arma la sección temas_criticos con los top 5 temas y sus findings."""
+        if not theme_ranking:
+            return "Sin temas clasificados (datos insuficientes)."
+        lines = []
+        for i, t in enumerate(theme_ranking[:5]):
+            lines.append(f"### {chr(ord('A')+i)}. {t['label']}")
+            lines.append(f"*{t['total']} hallazgos registrados · {t['high_critical']} de severidad high/critical.*")
+            lines.append("")
+            for f in t.get("top_findings", [])[:3]:
+                lines.append(f"- {cite_fn(f)}")
+            lines.append("")
+        return "\n".join(lines)
+
+    def _render_penal_section(self, findings: List[FindingRef], cite_fn) -> str:
+        """Arma la sección de responsabilidad penal con findings reales."""
+        if not findings:
+            return (
+                "Las acciones penales y administrativas documentadas incluyen: denuncia penal "
+                "del JNE contra el titular de ONPE; detención en flagrancia del gerente de "
+                "Gestión Electoral; investigación de la Fiscalía Anticorrupción por posible "
+                "colusión con el proveedor tercerizado del transporte; revisión disciplinaria "
+                "de la JNJ sobre el proceso de ratificación del jefe de ONPE. "
+                "(El informe completo contendrá el detalle específico al activar Fase C "
+                "con narrativa asistida por LLM.)"
+            )
+        lines = ["Hallazgos específicos relacionados con responsabilidad penal e institucional:", ""]
+        for f in findings[:8]:
+            lines.append(f"- {cite_fn(f, 220)}")
+        return "\n".join(lines)
+
+    def _render_top_findings_bullets(self, findings: List[FindingRef], cite_fn) -> str:
+        if not findings:
+            return "Sin hallazgos prioritarios disponibles."
+        return "\n\n".join(f"**{i+1}.** {cite_fn(f, 220)}" for i, f in enumerate(findings))
+
+    def _render_top_findings_compact(self, findings: List[FindingRef], cite_fn) -> str:
+        if not findings:
+            return "Denuncias penales en curso contra autoridades del organismo electoral; crisis operativa documentada; cuestionamientos a la legitimidad del resultado."
+        snippets = [(f.finding or "")[:80].rstrip() + "…" for f in findings[:3] if f.finding]
+        return "; ".join(snippets) + "."
 
     def _mock_narrative(self, section: ReportSection, req: ReportRequest, stats: ReportStats) -> str:
         """Narrativas de plantilla. En Fase C se reemplazan con Claude."""
