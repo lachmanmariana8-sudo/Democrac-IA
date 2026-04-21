@@ -430,8 +430,11 @@ footer.elite-footer {
 
 
 # ── Helpers ────────────────────────────────────────────────────────────
-def _esc(s: str) -> str:
-    return _html.escape(s or "")
+def _esc(s) -> str:
+    """Escape HTML. Acepta cualquier tipo; convierte a str primero."""
+    if s is None:
+        return ""
+    return _html.escape(str(s))
 
 
 def _markdown_to_html(md: str) -> str:
