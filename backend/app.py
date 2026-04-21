@@ -6803,6 +6803,252 @@ async def ask_constitutionalist(query: ConstitutionalistQuery):
     return result
 
 
+# ═════════════════════════════════════════════════════════════════════
+# PEIRS Elite Report — endpoints (Sprint 6 del blueprint ELITE_REPORT.md)
+# ═════════════════════════════════════════════════════════════════════
+
+class EliteMissionInput(BaseModel):
+    """Metadata de misión para el Elite Report."""
+    mission_name: str = "DemocracIA — Observación Electoral PEIRS"
+    lead_observer: str = "Mariana Lachman"
+    organization: str = "DemocracIA"
+    report_number: str = "DMC-PER-2026-001"
+    classification: str = "public"  # public | restricted | confidential
+    period_start: str = "2026-04-09"
+    period_end: str = "2026-04-20"
+    jornada_date: str = "2026-04-12"
+
+
+class EliteReportInput(BaseModel):
+    """Request para generar informe Elite."""
+    country_code: str = "PER"
+    mission: EliteMissionInput = EliteMissionInput()
+    audience: str = "institutional"  # institutional|executive|press|international
+    language: str = "es"  # es | en
+    report_type: str = "preliminary"  # pre_electoral|jornada|preliminary|final|ad_hoc
+    include_chapters: Optional[List[int]] = None
+    include_predictive: bool = True
+    include_appendix_c: bool = True
+    forecast_horizon_days: int = 14
+    use_llm: bool = True
+    output_formats: List[str] = ["md", "html", "pdf"]
+
+
+@app.post("/api/report/elite/generate")
+async def generate_elite_report(req: EliteReportInput):
+    """
+    Orquestador Elite Report. Pipeline completo:
+    EliteLoader → PhaseOrganizer → CrossReferenceBuilder → PredictiveEngine
+    → ChapterComposer (12 caps con Claude) → Visualizer (SVG) → CitationBuilder (APA 7)
+    → HTML + PDF renderers.
+
+    Genera informe de nivel institucional internacional equivalente a OEA/DECO,
+    EU EOM, Carter Center, IDEA Internacional. Tiempo estimado: 2-5 minutos.
+    Costo estimado: ~$0.40-0.80 por informe.
+
+    Body: EliteReportInput con mission, audience, report_type, use_llm, etc.
+    Returns: EliteReportOutput completo con chapters, html, markdown, pdf_path.
+    """
+    try:
+        from agents.elite_report import (
+            PEIRSEliteReport,
+            EliteReportRequest as EliteRR,
+            MissionMetadata,
+        )
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Elite Report no disponible: {e}")
+
+    # Armar request
+    try:
+        mm = MissionMetadata(
+            mission_name=req.mission.mission_name,
+            lead_observer=req.mission.lead_observer,
+            organization=req.mission.organization,
+            report_number=req.mission.report_number,
+            classification=req.mission.classification,
+            period_start=req.mission.period_start,
+            period_end=req.mission.period_end,
+            jornada_date=req.mission.jornada_date,
+        )
+        rr = EliteRR(
+            country_code=req.country_code,
+            mission_metadata=mm,
+            audience=req.audience,
+            language=req.language,
+            report_type=req.report_type,
+            include_chapters=req.include_chapters,
+            include_predictive=req.include_predictive,
+            include_appendix_c=req.include_appendix_c,
+            forecast_horizon_days=req.forecast_horizon_days,
+            use_llm=req.use_llm,
+            output_formats=req.output_formats,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Parámetros inválidos: {e}")
+
+    def _alerts_loader(cc: str, limit: int = 500):
+        if DB_AVAILABLE:
+            try:
+                return _db_list_alerts(cc, limit=limit)
+            except Exception:
+                return []
+        return []
+
+    pipeline = PEIRSEliteReport(
+        llm=llm if req.use_llm else None,
+        observation_store=observation_store,
+        alerts_loader=_alerts_loader,
+        reports_store=reports_store,
+    )
+    try:
+        result = await pipeline.compose(rr)
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()[-800:]
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error del Elite pipeline: {type(e).__name__}: {e}\n{tb}"
+        )
+
+    # Persistir metadata en tabla SQLite (sin bloquear respuesta)
+    try:
+        _persist_elite_metadata(result)
+    except Exception as e:
+        result.warnings.append(f"SQLite persist failed: {type(e).__name__}: {e}")
+
+    return result.model_dump()
+
+
+@app.get("/api/report/elite/list")
+async def list_elite_reports(country_code: str = "PER", limit: int = 20):
+    """Lista los informes Elite generados (desde tabla SQLite + directorio)."""
+    items = []
+    if DB_AVAILABLE:
+        try:
+            with _get_db() as conn:
+                rows = conn.execute(
+                    "SELECT report_id, country_code, audience, language, report_type, "
+                    "mission_name, report_number, generated_at, generation_time_s, "
+                    "estimated_cost_usd, total_findings "
+                    "FROM elite_reports WHERE country_code=? "
+                    "ORDER BY generated_at DESC LIMIT ?",
+                    (country_code.upper(), limit),
+                ).fetchall()
+            items = [dict(r) for r in rows]
+        except Exception:
+            items = []
+    return {"items": items, "total": len(items)}
+
+
+@app.get("/api/report/elite/{report_id}/download")
+async def download_elite_report(report_id: str, format: str = "html"):
+    """Descarga el archivo generado. format: pdf|html|md"""
+    from fastapi.responses import FileResponse
+    base = os.path.join("reports", "elite", report_id)
+    paths = {
+        "pdf":  os.path.join(base, "report.pdf"),
+        "html": os.path.join(base, "report.html"),
+        "md":   os.path.join(base, "report.md"),
+    }
+    p = paths.get(format.lower())
+    if not p or not os.path.exists(p):
+        raise HTTPException(status_code=404, detail=f"Archivo {format} no encontrado para {report_id}")
+    media = {"pdf": "application/pdf", "html": "text/html; charset=utf-8", "md": "text/markdown; charset=utf-8"}
+    return FileResponse(
+        p,
+        media_type=media[format.lower()],
+        filename=f"elite-{report_id}.{format.lower()}",
+    )
+
+
+def _ensure_elite_table():
+    """Crea tabla elite_reports si no existe."""
+    if not DB_AVAILABLE:
+        return
+    try:
+        with _get_db() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS elite_reports (
+                    report_id         TEXT PRIMARY KEY,
+                    country_code      TEXT NOT NULL,
+                    mission_name      TEXT,
+                    lead_observer     TEXT,
+                    report_number     TEXT,
+                    classification    TEXT,
+                    audience          TEXT,
+                    language          TEXT,
+                    report_type       TEXT,
+                    generated_at      TEXT NOT NULL,
+                    generation_time_s REAL,
+                    tokens_input      INTEGER,
+                    tokens_output     INTEGER,
+                    estimated_cost_usd REAL,
+                    total_findings    INTEGER,
+                    status            TEXT,
+                    md_path           TEXT,
+                    html_path         TEXT,
+                    pdf_path          TEXT,
+                    stats_json        TEXT
+                )
+            """)
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_elite_country_date "
+                "ON elite_reports(country_code, generated_at DESC)"
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"[Elite] No se pudo crear tabla elite_reports: {e}")
+
+
+def _persist_elite_metadata(output):
+    """Inserta metadata del informe Elite en SQLite."""
+    if not DB_AVAILABLE:
+        return
+    _ensure_elite_table()
+    try:
+        base = os.path.join("reports", "elite", output.report_id)
+        with _get_db() as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO elite_reports (
+                    report_id, country_code, mission_name, lead_observer,
+                    report_number, classification, audience, language, report_type,
+                    generated_at, generation_time_s, tokens_input, tokens_output,
+                    estimated_cost_usd, total_findings, status,
+                    md_path, html_path, pdf_path, stats_json
+                ) VALUES (
+                    :rid, :cc, :mn, :lo,
+                    :rn, :cl, :au, :la, :rt,
+                    :gen, :gt, :ti, :to_,
+                    :cost, :tf, :status,
+                    :mp, :hp, :pp, :sj
+                )
+            """, {
+                "rid": output.report_id,
+                "cc":  output.country_code,
+                "mn":  output.mission.mission_name,
+                "lo":  output.mission.lead_observer,
+                "rn":  output.mission.report_number,
+                "cl":  output.mission.classification,
+                "au":  output.audience,
+                "la":  output.language,
+                "rt":  output.report_type,
+                "gen": output.generated_at,
+                "gt":  output.generation_time_seconds,
+                "ti":  output.tokens_used.get("input", 0),
+                "to_": output.tokens_used.get("output", 0),
+                "cost": output.estimated_cost_usd,
+                "tf":  output.stats.get("total", 0),
+                "status": output.status,
+                "mp":  os.path.join(base, "report.md") if output.markdown else None,
+                "hp":  os.path.join(base, "report.html") if output.html else None,
+                "pp":  output.pdf_path,
+                "sj":  json.dumps(output.stats, ensure_ascii=False),
+            })
+            conn.commit()
+    except Exception as e:
+        print(f"[Elite] Persist SQLite falló: {e}")
+
+
 @app.post("/api/hunter/{country_code}/run-now")
 async def hunter_run_now(country_code: str):
     """

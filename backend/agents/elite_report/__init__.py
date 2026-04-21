@@ -21,7 +21,11 @@ from agents.elite_report.models import (
     ForecastScenario,
     ForecastPayload,
     CitationEntry,
+    EvidenceBundle,
+    FindingRef,
+    VizSpec,
 )
+from agents.elite_report.elite_report import PEIRSEliteReport
 
 __all__ = [
     "EliteReportRequest",
@@ -35,4 +39,8 @@ __all__ = [
     "ForecastScenario",
     "ForecastPayload",
     "CitationEntry",
+    "EvidenceBundle",
+    "FindingRef",
+    "VizSpec",
+    "PEIRSEliteReport",
 ]

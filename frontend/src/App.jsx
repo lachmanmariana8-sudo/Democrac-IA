@@ -5090,8 +5090,9 @@ const PERU_INNER_TABS = [
   // Bloque 4 — CONSULTA JURÍDICA + SALIDA + METODOLOGÍA
   { id: "constitucional", label: "Consulta constitucional", icon: "⚖️" },
   { id: "designer",     label: "Informe preliminar", icon: "📑" },
+  { id: "elite",        label: "Informe Elite",    icon: "📘" },
   { id: "metodologia",  label: "Metodología",      icon: "⚙️" },
-  { id: "informe",      label: "Informe PEIRS",    icon: "📄" },
+  { id: "informe",      label: "Informe PEIRS (técnico)", icon: "📄" },
 ];
 
 const PERU_HIST_EVENTS = [
@@ -5215,6 +5216,66 @@ function PeruSituationRoom() {
   const [designerLanguage, setDesignerLanguage]   = useState("es");
   const [designerPeriod, setDesignerPeriod]       = useState(7);
   const [designerUseLLM, setDesignerUseLLM]       = useState(false);
+
+  // Informe Elite (Sprint 6 del blueprint ELITE_REPORT.md)
+  const [eliteAudience, setEliteAudience]     = useState("institutional");
+  const [eliteLanguage, setEliteLanguage]     = useState("es");
+  const [eliteReportType, setEliteReportType] = useState("preliminary");
+  const [eliteIncludePredictive, setEliteIncludePredictive] = useState(true);
+  const [eliteLoading, setEliteLoading]       = useState(false);
+  const [eliteResult, setEliteResult]         = useState(null);
+  const [eliteError, setEliteError]           = useState(null);
+  const [eliteHistory, setEliteHistory]       = useState([]);
+
+  const fetchEliteHistory = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/api/report/elite/list?country_code=PER&limit=10`);
+      if (r.ok) {
+        const data = await r.json();
+        setEliteHistory(data.items || []);
+      }
+    } catch (_) {}
+  }, []);
+
+  const generateEliteReport = useCallback(async () => {
+    if (eliteLoading) return;
+    setEliteLoading(true);
+    setEliteError(null);
+    setEliteResult(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/report/elite/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          country_code: "PER",
+          audience: eliteAudience,
+          language: eliteLanguage,
+          report_type: eliteReportType,
+          include_predictive: eliteIncludePredictive,
+          include_appendix_c: true,
+          forecast_horizon_days: 14,
+          use_llm: true,
+          output_formats: ["md", "html", "pdf"],
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setEliteError(data.detail || `HTTP ${r.status}`);
+      } else {
+        setEliteResult(data);
+        fetchEliteHistory();
+      }
+    } catch (e) {
+      setEliteError(e.message);
+    } finally {
+      setEliteLoading(false);
+    }
+  }, [eliteAudience, eliteLanguage, eliteReportType, eliteIncludePredictive, eliteLoading, fetchEliteHistory]);
+
+  // Cargar historial al montar el tab elite
+  useEffect(() => {
+    if (innerTab === "elite") fetchEliteHistory();
+  }, [innerTab, fetchEliteHistory]);
   const [designerLoading, setDesignerLoading]     = useState(false);
   const [designerResult, setDesignerResult]       = useState(null);
   const [designerError, setDesignerError]         = useState(null);
@@ -7949,6 +8010,221 @@ function PeruSituationRoom() {
                   Cada audiencia produce una estructura distinta: técnico (~20 pág completo),
                   ejecutivo (2 pág accionables), prensa (1 pág + infografía), internacional (inglés + marco comparado).
                 </span>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ══ TAB: INFORME ELITE ══
+            Orquestador completo del blueprint ELITE_REPORT.md — 12 capítulos
+            con Claude, 21 visualizaciones SVG, citas APA 7, motor predictivo. */}
+        {innerTab === "elite" && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              📘 Informe Elite — Nivel Institucional Internacional
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16, lineHeight: 1.5 }}>
+              Informe de observación electoral de calidad comparable a misiones OEA/DECO, EU EOM,
+              Carter Center e IDEA Internacional. 12 capítulos con narrativa Claude, citas APA 7,
+              análisis predictivo y visualizaciones SVG institucionales.
+              <strong> Tiempo estimado: 2-5 min · Costo: ~$0.40-0.80 por informe.</strong>
+            </div>
+
+            <Card className="peru-card" style={{ padding: 14, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Audiencia</div>
+                  <select value={eliteAudience} onChange={(e) => setEliteAudience(e.target.value)}
+                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }}>
+                    <option value="institutional">🏛️ Institucional (OEA/EU EOM)</option>
+                    <option value="executive">🧑‍💼 Ejecutiva</option>
+                    <option value="press">📰 Prensa</option>
+                    <option value="international">🌐 Internacional (inglés)</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Tipo de informe</div>
+                  <select value={eliteReportType} onChange={(e) => setEliteReportType(e.target.value)}
+                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }}>
+                    <option value="pre_electoral">📋 Pre-electoral</option>
+                    <option value="jornada">🗳️ De jornada</option>
+                    <option value="preliminary">📊 Preliminar</option>
+                    <option value="final">📘 Final</option>
+                    <option value="ad_hoc">⚡ Ad-hoc</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Idioma</div>
+                  <select value={eliteLanguage} onChange={(e) => setEliteLanguage(e.target.value)}
+                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }}>
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+              </div>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
+                background: eliteIncludePredictive ? COLORS.accentDim : COLORS.surface,
+                border: `1px solid ${eliteIncludePredictive ? COLORS.accent + "55" : COLORS.border}`,
+                borderRadius: 5, cursor: "pointer", marginBottom: 10, fontSize: 12 }}>
+                <input type="checkbox" checked={eliteIncludePredictive}
+                  onChange={(e) => setEliteIncludePredictive(e.target.checked)} />
+                <span style={{ color: eliteIncludePredictive ? COLORS.accent : COLORS.text, fontWeight: 600 }}>
+                  🔮 Incluir análisis predictivo (Cap. 9) — 3-5 escenarios probabilísticos con bandas de confianza
+                </span>
+              </label>
+
+              <button onClick={generateEliteReport} disabled={eliteLoading}
+                style={{
+                  padding: "12px 24px", borderRadius: 6,
+                  background: eliteLoading ? COLORS.surface : COLORS.accent,
+                  color: eliteLoading ? COLORS.textMuted : "#fff",
+                  border: `1px solid ${COLORS.accent}`,
+                  fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                  cursor: eliteLoading ? "wait" : "pointer", letterSpacing: 0.5, width: "100%",
+                }}>
+                {eliteLoading ? "● Generando Informe Elite (puede tomar 2-5 min)..." : "▶ Generar Informe Elite"}
+              </button>
+            </Card>
+
+            {eliteError && (
+              <Card className="peru-card" style={{ padding: 14, marginBottom: 16, background: COLORS.dangerDim, borderLeft: `3px solid ${COLORS.danger}` }}>
+                <div style={{ color: COLORS.danger, fontSize: 12, fontWeight: 700, whiteSpace: "pre-wrap" }}>Error: {eliteError}</div>
+              </Card>
+            )}
+
+            {eliteResult && (
+              <div>
+                {/* Stats */}
+                <Card className="peru-card" style={{ padding: 12, marginBottom: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+                    {[
+                      { label: "Capítulos", value: (eliteResult.chapters || []).length, color: COLORS.accent },
+                      { label: "Críticos", value: (eliteResult.stats || {}).critical || 0, color: COLORS.danger },
+                      { label: "Altos", value: (eliteResult.stats || {}).high || 0, color: "#f97316" },
+                      { label: "Citas APA", value: (eliteResult.citations || []).length, color: COLORS.info },
+                      { label: "Tokens", value: `${((eliteResult.tokens_used || {}).input || 0) + ((eliteResult.tokens_used || {}).output || 0)}`, color: COLORS.purple },
+                    ].map((kpi, i) => (
+                      <div key={i} style={{ textAlign: "center", padding: 8, borderLeft: `3px solid ${kpi.color}`, background: COLORS.surface, borderRadius: 5 }}>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: kpi.color, fontFamily: "'DM Mono', monospace" }}>{kpi.value}</div>
+                        <div style={{ fontSize: 8, color: COLORS.textDim, marginTop: 2, textTransform: "uppercase", letterSpacing: 1 }}>{kpi.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 11, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace" }}>
+                    Report ID: <strong>{eliteResult.report_id}</strong> · Costo: <strong>USD {eliteResult.estimated_cost_usd?.toFixed(4)}</strong> ·
+                    Tiempo: <strong>{eliteResult.generation_time_seconds?.toFixed(1)}s</strong>
+                  </div>
+                </Card>
+
+                {/* Preview HTML */}
+                {eliteResult.html && (
+                  <Card className="peru-card" style={{ padding: 0, marginBottom: 12, overflow: "hidden" }}>
+                    <div style={{ padding: "8px 14px", background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}`, fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", display: "flex", justifyContent: "space-between" }}>
+                      <span>Preview del Informe Elite — {(eliteResult.chapters || []).length} capítulos + anexos</span>
+                      <span>{eliteResult.mission?.report_number}</span>
+                    </div>
+                    <iframe title="Elite report preview" srcDoc={eliteResult.html}
+                      style={{ width: "100%", height: 800, border: "none", background: "white" }}></iframe>
+                  </Card>
+                )}
+
+                {/* Botones de descarga */}
+                <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                  <a
+                    href={`${API_BASE}/api/report/elite/${eliteResult.report_id}/download?format=pdf`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      flex: 1, padding: 12, textAlign: "center",
+                      background: COLORS.accent, color: "#fff",
+                      border: `1px solid ${COLORS.accent}`, borderRadius: 6,
+                      fontSize: 13, fontWeight: 700, textDecoration: "none",
+                      fontFamily: "'DM Mono', monospace",
+                    }}>
+                    ⬇ PDF (calidad editorial)
+                  </a>
+                  <a
+                    href={`${API_BASE}/api/report/elite/${eliteResult.report_id}/download?format=html`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      flex: 1, padding: 12, textAlign: "center",
+                      background: COLORS.infoDim, color: COLORS.info,
+                      border: `1px solid ${COLORS.info}55`, borderRadius: 6,
+                      fontSize: 13, fontWeight: 700, textDecoration: "none",
+                      fontFamily: "'DM Mono', monospace",
+                    }}>
+                    ⬇ HTML
+                  </a>
+                  <a
+                    href={`${API_BASE}/api/report/elite/${eliteResult.report_id}/download?format=md`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      flex: 1, padding: 12, textAlign: "center",
+                      background: COLORS.accentDim, color: COLORS.accent,
+                      border: `1px solid ${COLORS.accent}55`, borderRadius: 6,
+                      fontSize: 13, fontWeight: 700, textDecoration: "none",
+                      fontFamily: "'DM Mono', monospace",
+                    }}>
+                    ⬇ Markdown
+                  </a>
+                </div>
+
+                {/* Warnings */}
+                {Array.isArray(eliteResult.warnings) && eliteResult.warnings.length > 0 && (
+                  <Card className="peru-card" style={{ padding: 10, background: COLORS.warningDim, borderLeft: `3px solid ${COLORS.warning}`, fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                    <strong style={{ color: COLORS.warning }}>⚠️ Warnings del pipeline:</strong>
+                    <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                      {eliteResult.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Historial */}
+            {eliteHistory.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textDim, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, marginTop: 20 }}>
+                  Historial de Informes Elite ({eliteHistory.length})
+                </div>
+                {eliteHistory.map((h, i) => (
+                  <Card key={i} className="peru-card" style={{ padding: 10, marginBottom: 8, fontSize: 11, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 10, alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: COLORS.text }}>{h.report_number} · {h.audience}</div>
+                      <div style={{ fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                        {h.report_id} · {(h.generated_at || "").slice(0, 16).replace("T", " ")}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, color: COLORS.textMuted }}>
+                      <span style={{ color: COLORS.accent, fontFamily: "'DM Mono', monospace" }}>
+                        {h.total_findings || 0}
+                      </span> hallazgos
+                    </div>
+                    <div style={{ fontSize: 10, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace" }}>
+                      USD {(h.estimated_cost_usd || 0).toFixed(3)}
+                    </div>
+                    <div style={{ fontSize: 10, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace" }}>
+                      {(h.generation_time_s || 0).toFixed(0)}s
+                    </div>
+                    <a href={`${API_BASE}/api/report/elite/${h.report_id}/download?format=pdf`}
+                       target="_blank" rel="noopener noreferrer"
+                       style={{ padding: "4px 10px", background: COLORS.accentDim, color: COLORS.accent, borderRadius: 4, fontSize: 10, textDecoration: "none", fontWeight: 700, fontFamily: "'DM Mono', monospace" }}>
+                      ⬇ PDF
+                    </a>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {!eliteResult && !eliteError && !eliteLoading && eliteHistory.length === 0 && (
+              <Card className="peru-card" style={{ padding: 20, textAlign: "center", color: COLORS.textDim, fontSize: 12, lineHeight: 1.7 }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>📘</div>
+                <strong style={{ color: COLORS.text }}>Producto insignia del sistema PEIRS</strong>
+                <br /><br />
+                El Informe Elite combina 12 capítulos narrados por Claude, análisis predictivo
+                con escenarios probabilísticos, visualizaciones SVG institucionales, y citas
+                APA 7 trazables hasta la fuente primaria. Seleccioná los parámetros y presioná
+                <strong> "▶ Generar Informe Elite"</strong>.
               </Card>
             )}
           </div>
