@@ -1,10 +1,23 @@
 # PEIRS Elite Report — Blueprint arquitectónico
 
-**Versión:** 1.0 — Blueprint
-**Estado:** En revisión. Sin implementar.
+**Versión:** 1.1 — APROBADO para implementación
+**Estado:** Decisiones confirmadas por Mariana Lachman el 2026-04-20. Sprint 2 autorizado.
 **Fecha:** 2026-04-20
 **Autora del proyecto:** Mariana Lachman · DemocracIA
 **Referencias:** `REPORT_DESIGNER.md` (blueprint predecesor, Fases A-D ya implementadas), `INFORME_PERU_2026.md` (informe v1.1 manual ya entregado).
+
+## Decisiones confirmadas (2026-04-20)
+
+| # | Pregunta | Respuesta |
+|---|---|---|
+| 1 | 12 capítulos correctos | ✅ OK |
+| 2 | Triángulo de evidencia como principio rector | ✅ OK |
+| 3 | Motor predictivo obligatorio en preliminary/final | ✅ OK |
+| 4 | Clasificación por defecto `public` | ✅ OK |
+| 5 | Firma del jefe de misión | ❌ NO — sin firma en portada |
+| 6 | Tab "Informe PEIRS" reemplaza o coexiste | ✅ reemplaza (mantiene ReportViewer como "vista técnica" alterna) |
+| 7 | Alcance Elite | 🇵🇪 **Solo Perú por ahora** (arquitectura genérica, contenido específico PER) |
+| 8 | Costo máximo $1.00 | ✅ OK |
 
 ---
 
