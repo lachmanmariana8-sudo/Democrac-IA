@@ -5214,6 +5214,7 @@ function PeruSituationRoom() {
   const [designerAudience, setDesignerAudience]   = useState("technical");
   const [designerLanguage, setDesignerLanguage]   = useState("es");
   const [designerPeriod, setDesignerPeriod]       = useState(7);
+  const [designerUseLLM, setDesignerUseLLM]       = useState(false);
   const [designerLoading, setDesignerLoading]     = useState(false);
   const [designerResult, setDesignerResult]       = useState(null);
   const [designerError, setDesignerError]         = useState(null);
@@ -5232,6 +5233,7 @@ function PeruSituationRoom() {
           audience: designerAudience,
           language: designerLanguage,
           period_days: designerPeriod,
+          use_llm: designerUseLLM,
           output_formats: ["md", "html"],
         }),
       });
@@ -5243,7 +5245,7 @@ function PeruSituationRoom() {
     } finally {
       setDesignerLoading(false);
     }
-  }, [designerAudience, designerLanguage, designerPeriod, designerLoading]);
+  }, [designerAudience, designerLanguage, designerPeriod, designerUseLLM, designerLoading]);
 
   // Sub-agente constitucionalista peruano
   const [constQuestion, setConstQuestion]     = useState("");
@@ -7832,6 +7834,23 @@ function PeruSituationRoom() {
                   </select>
                 </div>
               </div>
+
+              {/* Toggle IA */}
+              <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
+                background: designerUseLLM ? COLORS.accentDim : COLORS.surface,
+                border: `1px solid ${designerUseLLM ? COLORS.accent + "55" : COLORS.border}`,
+                borderRadius: 5, cursor: "pointer", marginBottom: 10, fontSize: 12 }}>
+                <input type="checkbox" checked={designerUseLLM}
+                  onChange={(e) => setDesignerUseLLM(e.target.checked)}
+                  style={{ cursor: "pointer" }} />
+                <span style={{ color: designerUseLLM ? COLORS.accent : COLORS.text, fontWeight: 600 }}>
+                  🤖 Redacción asistida por Claude (Fase C)
+                </span>
+                <span style={{ fontSize: 10, color: COLORS.textDim, marginLeft: "auto" }}>
+                  {designerUseLLM ? "60-90s · ~$0.05-0.15" : "&lt;5s · $0 (plantillas)"}
+                </span>
+              </label>
+
               <button onClick={generateDesignedReport} disabled={designerLoading}
                 style={{
                   padding: "10px 24px", borderRadius: 6,
@@ -7841,7 +7860,7 @@ function PeruSituationRoom() {
                   fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono', monospace",
                   cursor: designerLoading ? "wait" : "pointer", letterSpacing: 0.5, width: "100%",
                 }}>
-                {designerLoading ? "● Generando informe..." : "▶ Generar informe preliminar"}
+                {designerLoading ? (designerUseLLM ? "● Redactando con Claude..." : "● Generando informe...") : "▶ Generar informe preliminar"}
               </button>
             </Card>
 

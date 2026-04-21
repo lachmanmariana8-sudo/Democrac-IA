@@ -25,6 +25,7 @@ class ReportRequest(BaseModel):
     include_chapters: Optional[List[str]] = None
     language: Language = "es"
     output_formats: List[OutputFormat] = Field(default_factory=lambda: ["md", "html"])
+    use_llm: bool = Field(False, description="Si True, usa Claude para narrativas (Fase C). Si False, usa plantillas (Fase B).")
 
 
 class FindingRef(BaseModel):

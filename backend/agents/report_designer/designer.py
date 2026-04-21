@@ -53,23 +53,83 @@ class ReportDesigner:
         self._reports_store = reports_store
 
     async def run(self, req: ReportRequest) -> ReportOutput:
-        """Ejecuta el pipeline completo. Fase B: Structurer real + plantillas con data real."""
+        """Ejecuta el pipeline completo: Structurer (B) + Visualizer (D) + Composer (C opt-in).
+        Si use_llm=False: plantillas con data real (rápido, gratis). Si True: Claude redacta."""
         report_id = str(uuid.uuid4())[:12]
         now = datetime.now(timezone.utc).isoformat()
 
         # Paso 1 — Structurer (Fase B: lógica real sobre stores del backend)
         skeleton = self._structurer_real(req)
 
-        # Paso 2 — Visualizer (Fase A aún: mock con data real)
+        # Paso 2 — Visualizer (Fase D: SVG real)
         skeleton = self._visualizer_mock(skeleton, req)
 
-        # Paso 3 — Composer (Fase A aún: plantillas pero con stats reales)
+        # Paso 3 — Composer
         output = self._composer_mock(skeleton, req, report_id, now)
+
+        # Paso 3b — Fase C: si use_llm=True, reemplazar plantillas por narrativas de Claude
+        if req.use_llm and self.llm is not None:
+            await self._enrich_with_llm(output, skeleton, req)
+
+        # Re-render markdown y HTML si se enriqueció con LLM
+        if req.use_llm and self.llm is not None:
+            output.markdown = self._render_markdown(output.sections, output.stats, req)
+            output.html = self._render_html(output.sections, output.stats, req)
 
         # Persistencia
         self._persist_mock(output, req)
 
         return output
+
+    async def _enrich_with_llm(self, output: ReportOutput, skeleton: Dict[str, Any],
+                                req: ReportRequest) -> None:
+        """Fase C: reemplaza narrativas de plantilla por generadas por Claude."""
+        try:
+            from agents.report_designer.composer import compose_all_sections
+        except ImportError as e:
+            output.warnings.append(f"Composer LLM no disponible: {e}")
+            return
+
+        country_ctx = ""
+        if req.country_code.upper() == "PER":
+            country_ctx = (
+                "Perú atraviesa inestabilidad institucional crónica (6 presidentes en 4 años, "
+                "2020-2024). Elecciones Generales 2026 introducen bicameralidad y doble valla. "
+                "El sistema electoral es tripartito: JNE (justicia electoral, Art. 178 Const.), "
+                "ONPE (organización, Art. 183), RENIEC (padrón). Voto electrónico VENP rechazado "
+                "por Res. JNE 0891-2025 por ausencia de auditoría certificada. "
+                "STAE (sistema tecnológico de apoyo al escrutinio con IA) desplegado en Lima y "
+                "Callao sin el mismo estándar de auditoría aplicado."
+            )
+
+        try:
+            narratives = await compose_all_sections(
+                llm=self.llm,
+                sections=output.sections,
+                req=req,
+                stats=output.stats,
+                theme_ranking=skeleton.get("theme_ranking", []),
+                top_findings_overall=skeleton.get("top_findings_overall", []),
+                country_context=country_ctx,
+                concurrency_limit=3,
+            )
+        except Exception as e:
+            output.warnings.append(f"Fallo Composer LLM: {type(e).__name__}: {e}")
+            return
+
+        enriched_count = 0
+        for section in output.sections:
+            if section.section_id in narratives and narratives[section.section_id]:
+                section.narrative = narratives[section.section_id]
+                enriched_count += 1
+
+        output.warnings = [
+            w for w in output.warnings if "Fases B+D" not in w
+        ]
+        output.warnings.append(
+            f"Fase C activa: {enriched_count}/{len(output.sections)} secciones "
+            f"enriquecidas con Claude. Las secciones sin enriquecer mantienen plantilla Fase B."
+        )
 
     # ────────────────────────────────────────────────────────────────────
     # Paso 1: Structurer (Fase B — real)
@@ -370,9 +430,11 @@ class ReportDesigner:
             sources_cited=skeleton["sources"],
             visualizations=[v for s in sections for v in s.viz_specs],
             warnings=[
-                "Fase A — esqueleto funcional. Narrativas generadas con plantillas; "
-                "las Fases B-E implementarán lógica real (Structurer con dedupe semántico, "
-                "Visualizer con SVG/matplotlib, Composer con Claude)."
+                "Fases B+D activas: Structurer real con dedupe semántico + clasificación "
+                "por 11 temas + priorización ponderada; Visualizer con SVG reales "
+                "(infographic, timeline apilado, donut, bar horizontal). "
+                "Fase C pendiente: narrativas generadas con plantillas; Claude reemplazará "
+                "esto para producir texto sustantivo con citas verificables."
             ],
         )
 

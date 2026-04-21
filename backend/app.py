@@ -6692,7 +6692,7 @@ class ConstitutionalistQuery(BaseModel):
 
 
 class DesignerRequest(BaseModel):
-    """Request al sub-agente ReportDesigner (Fase A — esqueleto)."""
+    """Request al sub-agente ReportDesigner."""
     country_code: str = "PER"
     audience: str = "technical"  # technical | executive | press | international
     period_days: int = 7
@@ -6701,6 +6701,7 @@ class DesignerRequest(BaseModel):
     include_chapters: Optional[List[str]] = None
     language: str = "es"
     output_formats: List[str] = ["md", "html"]
+    use_llm: bool = False  # True = Claude redacta (Fase C); False = plantillas (B+D)
 
 
 @app.post("/api/report/designer/generate")
@@ -6736,6 +6737,7 @@ async def generate_designed_report(req: DesignerRequest):
             include_chapters=req.include_chapters,
             language=req.language,
             output_formats=req.output_formats,
+            use_llm=req.use_llm,
         )
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Parámetros inválidos: {e}")
