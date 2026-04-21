@@ -118,11 +118,12 @@ def render_timeseries_multi(data: Dict[str, Any]) -> str:
             y = mt + ph * (1 - y_norm)
             svg.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.5" fill="{color}"/>')
 
-        # Leyenda (sidebar derecho)
+        # Leyenda (sidebar derecho) — truncamos labels para que no excedan el margen
         ly = mt + si * 22
+        label_truncated = _esc(s["label"])[:16]  # 16 chars cabe en los 120px de mr
         svg.append(f'<rect x="{W-mr+8}" y="{ly+2}" width="10" height="10" fill="{color}"/>')
         svg.append(f'<text x="{W-mr+22}" y="{ly+11}" font-family="{FONT_SANS}" '
-                   f'font-size="9" fill="{COLORS["text"]}">{_esc(s["label"])}</text>')
+                   f'font-size="9" fill="{COLORS["text"]}">{label_truncated}</text>')
         svg.append(f'<text x="{W-mr+22}" y="{ly+22}" font-family="{FONT_MONO}" '
                    f'font-size="8" fill="{COLORS["text_dim"]}">'
                    f'{vmin:.2f}→{vmax:.2f}</text>')
@@ -285,8 +286,8 @@ def render_forecast_chart(data: Dict[str, Any]) -> str:
         ci_low = s.get("ci_low", max(prob - 0.1, 0))
         ci_high = s.get("ci_high", min(prob + 0.1, 1))
 
-        # Label
-        label = _esc(s.get("label", ""))[:40]
+        # Label — truncamos para caber en los 230px de ml=240 (margen izq 10)
+        label = _esc(s.get("label", ""))[:34]
         svg.append(f'<text x="{ml-10}" y="{y+4}" text-anchor="end" '
                    f'font-family="{FONT_SANS}" font-size="10" '
                    f'fill="{COLORS["text"]}">{label}</text>')
@@ -339,7 +340,8 @@ def render_scenario_probability(data: Dict[str, Any]) -> str:
     for si, s in enumerate(scenarios):
         y = 36 + si * row_h
         prob = s.get("probability", 0)
-        label = _esc(s.get("label", ""))[:36]
+        # ml=220 con 8px margen → 212px disponibles; truncamos a 30 chars
+        label = _esc(s.get("label", ""))[:30]
         svg.append(f'<text x="{ml-8}" y="{y+18}" text-anchor="end" '
                    f'font-family="{FONT_SANS}" font-size="10" '
                    f'fill="{COLORS["text"]}">{label}</text>')
@@ -381,10 +383,14 @@ def render_heatmap_rights(data: Dict[str, Any]) -> str:
     W = 680
     cell_w = 54
     cell_h = 36
-    ml, mt = 180, 90
+    ml, mt = 200, 120  # +ml para rights label; +mt para labels rotados de categorías
     pw = cell_w * len(categories)
     ph = cell_h * len(rights)
     H = mt + ph + 30
+    # Si el ancho calculado excede W, reducir cell_w (fit-to-width)
+    if ml + pw > W - 20:
+        cell_w = max(30, (W - 20 - ml) // max(len(categories), 1))
+        pw = cell_w * len(categories)
 
     max_val = max((max(row[:len(categories)]) for row in matrix), default=1) or 1
 
@@ -395,20 +401,23 @@ def render_heatmap_rights(data: Dict[str, Any]) -> str:
                f'font-weight="700" fill="{COLORS["teal_dark"]}">'
                f'Derechos invocados × Categoría de hallazgo</text>')
 
-    # Labels categorías (arriba, rotadas)
+    # Labels categorías (arriba, rotadas). Acortamos a 14 chars y subimos mt.
     for ci, cat in enumerate(categories):
         cx = ml + ci * cell_w + cell_w / 2
-        svg.append(f'<text x="{cx}" y="{mt-10}" text-anchor="end" '
+        # rotamos sobre el punto base del texto (extremo derecho) para que
+        # los labels nunca se desborden por arriba del viewBox
+        label = _esc(cat[:14])
+        svg.append(f'<text x="{cx}" y="{mt-6}" text-anchor="end" '
                    f'font-family="{FONT_SANS}" font-size="9" '
                    f'fill="{COLORS["text_muted"]}" '
-                   f'transform="rotate(-45 {cx} {mt-10})">{_esc(cat[:18])}</text>')
+                   f'transform="rotate(-40 {cx} {mt-6})">{label}</text>')
 
-    # Filas: derechos + celdas
+    # Filas: derechos + celdas — truncar a 22 chars para caber en ml=200
     for ri, right in enumerate(rights):
         ry = mt + ri * cell_h + cell_h / 2
         svg.append(f'<text x="{ml-8}" y="{ry+4}" text-anchor="end" '
                    f'font-family="{FONT_SANS}" font-size="10" '
-                   f'fill="{COLORS["text"]}">{_esc(right[:24])}</text>')
+                   f'fill="{COLORS["text"]}">{_esc(right[:22])}</text>')
 
         row = matrix[ri] if ri < len(matrix) else []
         for ci, cat in enumerate(categories):
@@ -519,9 +528,10 @@ def render_dimensions_radar(data: Dict[str, Any]) -> str:
         return ""
 
     scale_max = data.get("scale_max", 100)
-    W, H = 420, 420
-    cx, cy = W / 2, H / 2 + 8
-    r_max = 150
+    # W más amplio para acomodar labels de 14 chars en los lados sin overflow
+    W, H = 500, 440
+    cx, cy = W / 2, H / 2 + 12
+    r_max = 140
     n = len(dims)
     angles = [-math.pi/2 + 2 * math.pi * i / n for i in range(n)]
 
@@ -643,8 +653,8 @@ def render_matrix_normativa(data: Dict[str, Any]) -> str:
             svg.append(f'<rect x="12" y="{y-18}" width="{W-24}" height="{row_h}" '
                        f'fill="{COLORS["bg_soft"]}"/>')
 
-        inst = _esc(r.get("instrument", ""))[:30]
-        topic = _esc(r.get("topic", ""))[:44]
+        inst = _esc(r.get("instrument", ""))[:26]
+        topic = _esc(r.get("topic", ""))[:38]
         hier = r.get("hierarchy", "legal")
         color = h_color.get(hier, COLORS["text_muted"])
 

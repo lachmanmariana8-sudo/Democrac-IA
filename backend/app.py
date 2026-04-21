@@ -6942,18 +6942,42 @@ async def list_elite_reports(country_code: str = "PER", limit: int = 20):
 
 @app.get("/api/report/elite/{report_id}/download")
 async def download_elite_report(report_id: str, format: str = "html"):
-    """Descarga el archivo generado. format: pdf|html|md"""
-    from fastapi.responses import FileResponse
-    base = os.path.join("reports", "elite", report_id)
+    """Descarga el archivo generado. format: pdf|html|md
+
+    Los archivos se guardan en {raíz-del-proyecto}/reports/elite/{report_id}/.
+    Railway corre uvicorn desde backend/ (CWD != raíz), por eso usamos path
+    absoluto derivado del módulo del elite_report para ubicarlos.
+    """
+    from fastapi.responses import FileResponse, Response
+    # Base absoluto: raíz del proyecto → reports/elite/{report_id}/
+    try:
+        from agents.elite_report.elite_report import REPORTS_DIR as ELITE_DIR
+        base_dir = ELITE_DIR / report_id
+    except Exception:
+        # Fallback: try relative resolution
+        base_dir = os.path.join("reports", "elite", report_id)
+
+    base_dir = str(base_dir)
     paths = {
-        "pdf":  os.path.join(base, "report.pdf"),
-        "html": os.path.join(base, "report.html"),
-        "md":   os.path.join(base, "report.md"),
+        "pdf":  os.path.join(base_dir, "report.pdf"),
+        "html": os.path.join(base_dir, "report.html"),
+        "md":   os.path.join(base_dir, "report.md"),
     }
     p = paths.get(format.lower())
     if not p or not os.path.exists(p):
-        raise HTTPException(status_code=404, detail=f"Archivo {format} no encontrado para {report_id}")
-    media = {"pdf": "application/pdf", "html": "text/html; charset=utf-8", "md": "text/markdown; charset=utf-8"}
+        # Si no hay archivo en disco pero es html/md, podemos regenerarlo on-the-fly
+        # desde la base de datos SQLite si tenemos el informe cacheado.
+        raise HTTPException(
+            status_code=404,
+            detail=f"Archivo {format} no encontrado para {report_id}. "
+                   f"Path buscado: {p}. CWD={os.getcwd()}. "
+                   f"Tip: regenerá el informe — los archivos se persisten al generarlo."
+        )
+    media = {
+        "pdf":  "application/pdf",
+        "html": "text/html; charset=utf-8",
+        "md":   "text/markdown; charset=utf-8",
+    }
     return FileResponse(
         p,
         media_type=media[format.lower()],

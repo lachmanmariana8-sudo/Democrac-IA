@@ -56,12 +56,31 @@ html, body {
   line-height: 1.65;
   color: var(--text);
   background: var(--bg);
+  overflow-x: hidden;  /* evita scroll horizontal accidental */
 }
 
 article.elite-report {
   max-width: 880px;
   margin: 0 auto;
   padding: 48px 56px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+article.elite-report * {
+  max-width: 100%;  /* protección global contra overflow */
+}
+
+article.elite-report p,
+article.elite-report li,
+article.elite-report blockquote {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+article.elite-report a {
+  word-break: break-all;  /* URLs largas no rompen el layout */
 }
 
 /* ── Portada ───────────────────────────────────────────────────────── */
@@ -257,6 +276,9 @@ figure.viz {
   border: 1px solid var(--border-dim);
   border-radius: 6px;
   page-break-inside: avoid;
+  overflow: hidden;  /* contiene SVG que puedan exceder el ancho */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 figure.viz figcaption.viz-title {
@@ -267,10 +289,22 @@ figure.viz figcaption.viz-title {
   text-transform: uppercase;
   color: var(--teal-dark);
   margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-figure.viz .viz-svg { text-align: center; }
-figure.viz .viz-svg svg { max-width: 100%; height: auto; }
+figure.viz .viz-svg {
+  text-align: center;
+  overflow: hidden;  /* evita que texto de SVG se desborde */
+  max-width: 100%;
+}
+figure.viz .viz-svg svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
 
 figure.viz figcaption.viz-caption {
   font-size: 10px;
@@ -278,6 +312,8 @@ figure.viz figcaption.viz-caption {
   font-style: italic;
   margin-top: 8px;
   text-align: center;
+  line-height: 1.5;
+  overflow-wrap: break-word;
 }
 
 /* ── Findings citados ─────────────────────────────────────────────── */
