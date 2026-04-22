@@ -1,3 +1,10 @@
+# PyTorch CPU-only wheels.
+# Railway corre sin GPU: sin este pin, `sentence-transformers` arrastra
+# `torch` + todo el stack NVIDIA CUDA (~2.5GB de nvidia-cu*, triton, etc.).
+# Con el pin +cpu la imagen baja de 3GB a ~500MB y el build es mucho más rápido.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0+cpu
+
 langgraph>=0.2.0
 langchain-core>=0.3.0
 langchain-anthropic>=0.2.0
