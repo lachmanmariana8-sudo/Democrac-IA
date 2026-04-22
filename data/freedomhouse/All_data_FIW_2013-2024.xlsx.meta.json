@@ -1,0 +1,9 @@
+{
+  "dataset": "fh",
+  "version": "2025",
+  "source_url": "https://freedomhouse.org/sites/default/files/2025-02/All_data_FIW_2013-2024.xlsx",
+  "downloaded_at": "2026-04-20T14:24:44.100584+00:00",
+  "sha256": "3dfa43b074baa2ff0fb353bb53e8baccea1065a91c8490a8c3b97bef67c44205",
+  "filename": "All_data_FIW_2013-2024.xlsx",
+  "size_bytes": 499762
+}

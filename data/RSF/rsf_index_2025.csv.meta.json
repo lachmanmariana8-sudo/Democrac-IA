@@ -1,0 +1,9 @@
+{
+  "dataset": "rsf",
+  "version": "2025",
+  "source_url": "https://rsf.org/sites/default/files/import_classement/2025.csv",
+  "downloaded_at": "2026-04-20T14:11:26.829611+00:00",
+  "sha256": "22c147218f321dff690f8fef0b639c8d508782e2bfa0ad8fbffdc13743cf47cd",
+  "filename": "rsf_index_2025.csv",
+  "size_bytes": 26912
+}

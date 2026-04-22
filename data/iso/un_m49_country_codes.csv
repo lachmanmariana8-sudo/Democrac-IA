@@ -1,0 +1,20 @@
+﻿country_code,iso3,iso2,name_en,name_es,region,subregion
+32,ARG,AR,Argentina,Argentina,Americas,South America
+68,BOL,BO,Bolivia,Bolivia,Americas,South America
+76,BRA,BR,Brazil,Brasil,Americas,South America
+152,CHL,CL,Chile,Chile,Americas,South America
+170,COL,CO,Colombia,Colombia,Americas,South America
+188,CRI,CR,Costa Rica,Costa Rica,Americas,Central America
+192,CUB,CU,Cuba,Cuba,Americas,Caribbean
+214,DOM,DO,Dominican Republic,República Dominicana,Americas,Caribbean
+218,ECU,EC,Ecuador,Ecuador,Americas,South America
+222,SLV,SV,El Salvador,El Salvador,Americas,Central America
+320,GTM,GT,Guatemala,Guatemala,Americas,Central America
+340,HND,HN,Honduras,Honduras,Americas,Central America
+484,MEX,MX,Mexico,México,Americas,Central America
+558,NIC,NI,Nicaragua,Nicaragua,Americas,Central America
+591,PAN,PA,Panama,Panamá,Americas,Central America
+600,PRY,PY,Paraguay,Paraguay,Americas,South America
+604,PER,PE,Peru,Perú,Americas,South America
+858,URY,UY,Uruguay,Uruguay,Americas,South America
+862,VEN,VE,Venezuela,Venezuela,Americas,South America

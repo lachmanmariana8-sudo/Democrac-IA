@@ -52,3 +52,10 @@ data/eos_corpus/
 *.log
 dist/
 .dist/
+
+# Dumps runtime del backend PEIRS (regenerables, pesados)
+alerts_dump.json
+entries_dump.json
+
+# Claude Code runtime (ephemeral lockfile de scheduled_tasks)
+.claude/scheduled_tasks.lock

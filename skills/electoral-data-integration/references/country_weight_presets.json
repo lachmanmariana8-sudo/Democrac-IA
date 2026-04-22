@@ -1,0 +1,44 @@
+{
+  "_doc": "Ponderaciones del índice compuesto PEIRS por país (código M49). Ajustar según contexto. Los pesos NO tienen que sumar 1.0 exactamente — el cálculo los renormaliza.",
+  "_default": { "vdem": 0.35, "pei": 0.30, "fh": 0.20, "rsf": 0.15 },
+
+  "604": {
+    "_label": "Perú — alto riesgo 2026, elecciones generales en curso",
+    "vdem": 0.40,
+    "pei": 0.30,
+    "fh": 0.20,
+    "rsf": 0.10
+  },
+
+  "862": {
+    "_label": "Venezuela — régimen electoral contestado, priorizar V-Dem y RSF",
+    "vdem": 0.45,
+    "pei": 0.15,
+    "fh": 0.20,
+    "rsf": 0.20
+  },
+
+  "558": {
+    "_label": "Nicaragua — alto riesgo, compresión de prensa",
+    "vdem": 0.40,
+    "pei": 0.20,
+    "fh": 0.20,
+    "rsf": 0.20
+  },
+
+  "32": {
+    "_label": "Argentina — democracia consolidada, ponderaciones por defecto",
+    "vdem": 0.35,
+    "pei": 0.30,
+    "fh": 0.20,
+    "rsf": 0.15
+  },
+
+  "858": {
+    "_label": "Uruguay — democracia consolidada, PEI tiene buena cobertura",
+    "vdem": 0.30,
+    "pei": 0.40,
+    "fh": 0.20,
+    "rsf": 0.10
+  }
+}
