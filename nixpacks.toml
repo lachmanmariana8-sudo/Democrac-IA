@@ -1,8 +1,16 @@
-# Dejamos que Nixpacks auto-detecte el proyecto Python y maneje pip.
-# El `requirements.txt` de la raíz tiene todas las deps necesarias.
-# Forzar `python -m pip install ...` falla en la imagen Nixpacks porque el
-# Python de /root/.nix-profile no viene con pip pre-instalado; Nixpacks
-# crea su propio venv con pip al auto-detectar.
+# La imagen base de Nixpacks trae Python pero no pip. Forzamos su instalación
+# vía nixPkgs en la fase setup, y luego corremos pip explícitamente sobre
+# requirements.txt de la raíz (que incluye todas las deps del backend).
+
+[phases.setup]
+nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv", "gcc"]
+
+[phases.install]
+cmds = [
+  "python -m venv /opt/venv",
+  ". /opt/venv/bin/activate && pip install --upgrade pip",
+  ". /opt/venv/bin/activate && pip install -r requirements.txt"
+]
 
 [start]
-cmd = "cd backend && python -m uvicorn app:app --host 0.0.0.0 --port $PORT"
+cmd = "cd backend && . /opt/venv/bin/activate && python -m uvicorn app:app --host 0.0.0.0 --port $PORT"
