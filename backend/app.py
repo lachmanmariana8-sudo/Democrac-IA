@@ -5431,7 +5431,12 @@ async def health_check(deep: bool = False):
         "status": "operational",
         "system": "DEMOCRAC.IA (PEIRS)",
         "version": "0.4.0",
-        "features": ["country_profile", "electoral_observation_protocol", "traceability", "vdem_v15", "freedom_house", "pei_v10", "ooni_live", "fraud_hate_analysis", "rag_legal"],
+        "features": [
+            "country_profile", "electoral_observation_protocol", "traceability",
+            "vdem_v15", "freedom_house", "pei_v10", "rsf_index",
+            "ooni_live", "fraud_hate_analysis", "rag_legal", "constitutionalist",
+            "report_designer", "elite_report", "video_producer",
+        ],
         "traceability": "enabled",
         "observation_protocol": "enabled",
         "llm_configured": llm is not None,
