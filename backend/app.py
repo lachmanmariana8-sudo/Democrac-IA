@@ -246,7 +246,7 @@ _RATE_LIMIT_WINDOW_S = 60
 _RATE_LIMIT_MAX_PER_MIN = int(os.getenv("EXPENSIVE_RATE_LIMIT_PER_MIN", "5"))
 
 
-async def _rate_limit_expensive(request: "Request"):
+async def _rate_limit_expensive(request: Request):
     """Dependencia FastAPI: máx N requests/min por IP en endpoints caros.
     Devuelve 429 Too Many Requests si se excede.
     """
