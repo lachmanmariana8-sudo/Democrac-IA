@@ -2,8 +2,11 @@
 # Forzamos Nixpacks (builder estable). Railway está migrando a Railpack+mise,
 # que intenta mountar todas las env vars como build-secrets y falla si alguna
 # no está disponible en contexto de build (caso HEYGEN_API_KEY, runtime-only).
+#
+# No seteamos buildCommand: la imagen de Nixpacks no viene con pip
+# pre-instalado, así que dejamos que Nixpacks auto-detecte Python al ver
+# requirements.txt en la raíz y arme un venv con pip para instalar las deps.
 builder = "nixpacks"
-buildCommand = "python -m pip install -r requirements.txt"
 
 [deploy]
 startCommand = "cd backend && python -m uvicorn app:app --host 0.0.0.0 --port $PORT"

@@ -1,5 +1,8 @@
-[phases.install]
-cmds = ["python -m pip install -r backend/requirements.txt"]
+# Dejamos que Nixpacks auto-detecte el proyecto Python y maneje pip.
+# El `requirements.txt` de la raíz tiene todas las deps necesarias.
+# Forzar `python -m pip install ...` falla en la imagen Nixpacks porque el
+# Python de /root/.nix-profile no viene con pip pre-instalado; Nixpacks
+# crea su propio venv con pip al auto-detectar.
 
 [start]
 cmd = "cd backend && python -m uvicorn app:app --host 0.0.0.0 --port $PORT"
