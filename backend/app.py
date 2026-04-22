@@ -48,7 +48,7 @@ from langchain_anthropic import ChatAnthropic
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Security, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Security, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel
@@ -232,6 +232,95 @@ async def _require_observer_key(api_key: str = Security(_obs_key_header)):
             }
         )
     return api_key
+
+
+# ── Hardening: rate limit en endpoints caros (Claude + HeyGen + render) ─────
+# In-memory por IP. Es best-effort (no persiste entre reinicios ni entre replicas
+# en Railway multi-instance), pero mitiga el riesgo de burn-in por abuso casual.
+# Para producción seria considerar Redis como backing store.
+from collections import defaultdict as _defaultdict
+import time as _tm
+
+_RATE_LIMIT_BUCKETS: Dict[str, List[float]] = _defaultdict(list)
+_RATE_LIMIT_WINDOW_S = 60
+_RATE_LIMIT_MAX_PER_MIN = int(os.getenv("EXPENSIVE_RATE_LIMIT_PER_MIN", "5"))
+
+
+async def _rate_limit_expensive(request: "Request"):
+    """Dependencia FastAPI: máx N requests/min por IP en endpoints caros.
+    Devuelve 429 Too Many Requests si se excede.
+    """
+    ip = "unknown"
+    try:
+        ip = request.client.host if request and request.client else "unknown"
+    except Exception:
+        pass
+    now = _tm.time()
+    bucket = [t for t in _RATE_LIMIT_BUCKETS[ip] if now - t < _RATE_LIMIT_WINDOW_S]
+    if len(bucket) >= _RATE_LIMIT_MAX_PER_MIN:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit excedido: máx {_RATE_LIMIT_MAX_PER_MIN} requests/min "
+                   f"en endpoints caros. Reintente en unos segundos.",
+        )
+    bucket.append(now)
+    _RATE_LIMIT_BUCKETS[ip] = bucket
+    return ip
+
+
+def _check_daily_budget(country_code: str, kind: str) -> None:
+    """Valida que no se haya excedido el budget diario (videos/elite reports por país).
+    Lanza 429 si excedido. kind ∈ {"video", "elite"}.
+    Configurable vía env vars: MAX_VIDEOS_PER_DAY (default 20), MAX_ELITE_PER_DAY (5).
+    """
+    try:
+        from datetime import datetime as _dt, timezone as _tz
+    except Exception:
+        return
+
+    if kind == "video":
+        table = "video_jobs"
+        limit = int(os.getenv("MAX_VIDEOS_PER_DAY", "20"))
+    elif kind == "elite":
+        table = "elite_reports"
+        limit = int(os.getenv("MAX_ELITE_PER_DAY", "5"))
+    else:
+        return
+
+    # No podemos chequear sin DB — fail-open con warning en logs
+    try:
+        _db_available = bool(globals().get("DB_AVAILABLE"))
+    except Exception:
+        _db_available = False
+    if not _db_available:
+        return
+
+    today = _dt.now(_tz.utc).strftime("%Y-%m-%d")
+    try:
+        with _get_db() as conn:
+            row = conn.execute(
+                f"SELECT COUNT(*) as c FROM {table} "
+                f"WHERE country_code=? AND substr(generated_at,1,10)=?",
+                (country_code.upper(), today),
+            ).fetchone()
+            count = row["c"] if row else 0
+    except Exception as e:
+        # Tabla puede no existir todavía (primer request del día)
+        return
+
+    if count >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Budget diario agotado para {country_code}.",
+                "kind": kind,
+                "count_today": count,
+                "limit": limit,
+                "date_utc": today,
+                "hint": "El límite se reinicia a las 00:00 UTC. "
+                        "Para aumentarlo, ajustar MAX_VIDEOS_PER_DAY o MAX_ELITE_PER_DAY.",
+            },
+        )
 
 # Inicialización del LLM (se usa en agentes 3 y 4)
 llm = ChatAnthropic(
@@ -6705,9 +6794,15 @@ class DesignerRequest(BaseModel):
 
 
 @app.post("/api/report/designer/generate")
-async def generate_designed_report(req: DesignerRequest):
+async def generate_designed_report(
+    req: DesignerRequest,
+    _key: str = Depends(_require_observer_key),
+    _ip: str = Depends(_rate_limit_expensive),
+):
     """
     Sub-agente ReportDesigner — Fase A (esqueleto funcional).
+
+    Seguridad: requiere X-Observer-Key + rate limit 5/min por IP.
 
     Genera un informe estructurado con narrativas mock basadas en el informe v1.1
     de Perú. Las Fases B-E reemplazarán los mocks con lógica real (dedupe
@@ -6835,7 +6930,11 @@ class EliteReportInput(BaseModel):
 
 
 @app.post("/api/report/elite/generate")
-async def generate_elite_report(req: EliteReportInput):
+async def generate_elite_report(
+    req: EliteReportInput,
+    _key: str = Depends(_require_observer_key),
+    _ip: str = Depends(_rate_limit_expensive),
+):
     """
     Orquestador Elite Report. Pipeline completo:
     EliteLoader → PhaseOrganizer → CrossReferenceBuilder → PredictiveEngine
@@ -6846,9 +6945,13 @@ async def generate_elite_report(req: EliteReportInput):
     EU EOM, Carter Center, IDEA Internacional. Tiempo estimado: 2-5 minutos.
     Costo estimado: ~$0.40-0.80 por informe.
 
+    Seguridad: requiere X-Observer-Key, rate-limited (5/min), budget
+    diario (MAX_ELITE_PER_DAY, default 5).
+
     Body: EliteReportInput con mission, audience, report_type, use_llm, etc.
     Returns: EliteReportOutput completo con chapters, html, markdown, pdf_path.
     """
+    _check_daily_budget(req.country_code, "elite")
     try:
         from agents.elite_report import (
             PEIRSEliteReport,
@@ -8952,7 +9055,11 @@ def _persist_video_job(res) -> None:
 
 
 @app.post("/api/video/generate")
-async def generate_video(req: VideoGenerateInput):
+async def generate_video(
+    req: VideoGenerateInput,
+    _key: str = Depends(_require_observer_key),
+    _ip: str = Depends(_rate_limit_expensive),
+):
     """Orquestador del Video Producer.
     Pipeline: findings → Guionista Claude → Director Claude → HeyGen render.
 
@@ -8962,7 +9069,14 @@ async def generate_video(req: VideoGenerateInput):
     Si dry_run=True, no llama a HeyGen (sólo guión + plan para preview).
 
     Costos aprox: Claude ~$0.10-0.15 + HeyGen ~$0.30-0.60 por video 60-90s.
+
+    Seguridad:
+    - Requiere header X-Observer-Key (un valor de OBSERVER_API_KEYS).
+    - Rate limit: 5 requests/min por IP.
+    - Budget diario por país: MAX_VIDEOS_PER_DAY (default 20).
     """
+    _check_daily_budget(req.country_code, "video")
+
     try:
         from agents.video_producer import VideoProducer, VideoJobRequest
     except ImportError as e:

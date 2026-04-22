@@ -143,6 +143,36 @@ const RISK_LEVELS = {
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
+// ── Observer API key (para endpoints caros: elite/designer/video) ─────────
+// Prioridad: localStorage > VITE_OBSERVER_KEY > ""
+// Onboarding: si la URL trae ?key=xyz, se guarda en localStorage y se limpia la URL.
+function getObserverKey() {
+  try {
+    const fromLS = localStorage.getItem("peirs_observer_key");
+    if (fromLS) return fromLS;
+  } catch (_) {}
+  return import.meta.env.VITE_OBSERVER_KEY || "";
+}
+
+function authHeaders(extra = {}) {
+  const k = getObserverKey();
+  const headers = { "Content-Type": "application/json", ...extra };
+  if (k) headers["X-Observer-Key"] = k;
+  return headers;
+}
+
+(function ingestKeyFromURL() {
+  try {
+    const u = new URL(window.location.href);
+    const qk = u.searchParams.get("key");
+    if (qk) {
+      localStorage.setItem("peirs_observer_key", qk);
+      u.searchParams.delete("key");
+      window.history.replaceState({}, "", u.toString());
+    }
+  } catch (_) {}
+})();
+
 const DIMENSION_LABELS = {
   suffrage: "Sufragio Universal",
   legalFramework: "Marco Legal",
@@ -5245,7 +5275,7 @@ function PeruSituationRoom() {
     try {
       const r = await fetch(`${API_BASE}/api/report/elite/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           country_code: "PER",
           audience: eliteAudience,
@@ -5260,7 +5290,17 @@ function PeruSituationRoom() {
       });
       const data = await r.json();
       if (!r.ok) {
-        setEliteError(data.detail || `HTTP ${r.status}`);
+        const msg = typeof data.detail === "string"
+          ? data.detail
+          : JSON.stringify(data.detail) || `HTTP ${r.status}`;
+        if (r.status === 403) {
+          setEliteError("Acceso restringido. Falta o es inválida tu Observer Key. " +
+            "Pedila al coordinador de misión y agregala vía ?key=... en la URL.");
+        } else if (r.status === 429) {
+          setEliteError(msg);
+        } else {
+          setEliteError(msg);
+        }
       } else {
         setEliteResult(data);
         fetchEliteHistory();
@@ -5288,7 +5328,7 @@ function PeruSituationRoom() {
     try {
       const r = await fetch(`${API_BASE}/api/report/designer/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           country_code: "PER",
           audience: designerAudience,
@@ -5299,8 +5339,14 @@ function PeruSituationRoom() {
         }),
       });
       const data = await r.json();
-      if (!r.ok) setDesignerError(data.detail || `HTTP ${r.status}`);
-      else setDesignerResult(data);
+      if (!r.ok) {
+        const msg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+        if (r.status === 403) {
+          setDesignerError("Acceso restringido. Falta Observer Key (agregala con ?key=... en la URL).");
+        } else {
+          setDesignerError(msg || `HTTP ${r.status}`);
+        }
+      } else setDesignerResult(data);
     } catch (e) {
       setDesignerError(e.message);
     } finally {
