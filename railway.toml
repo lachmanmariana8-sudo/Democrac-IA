@@ -1,4 +1,8 @@
 [build]
+# Forzamos Nixpacks (builder estable). Railway está migrando a Railpack+mise,
+# que intenta mountar todas las env vars como build-secrets y falla si alguna
+# no está disponible en contexto de build (caso HEYGEN_API_KEY, runtime-only).
+builder = "nixpacks"
 buildCommand = "python -m pip install -r requirements.txt"
 
 [deploy]
