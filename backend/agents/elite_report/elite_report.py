@@ -143,14 +143,8 @@ class PEIRSEliteReport:
         # ── 9. RENDERIZADO ─────────────────────────────────────────────
         from agents.elite_report.renderer.html_renderer import render_markdown, render_html
         from agents.elite_report.renderer.pdf_renderer import render_pdf
+        from agents.elite_report.renderer.markitdown_bridge import html_to_markdown
 
-        markdown = render_markdown(
-            chapters=chapters,
-            citations=citations,
-            req=req,
-            stats=stats,
-            country_name=country_name,
-        )
         html = render_html(
             chapters=chapters,
             citations=citations,
@@ -161,6 +155,18 @@ class PEIRSEliteReport:
             report_id=report_id,
             generated_at=generated_at,
         )
+
+        # Markdown: intentamos con microsoft/markitdown (mejor fidelidad),
+        # y si falla degradamos al generador interno.
+        markdown = html_to_markdown(html)
+        if not markdown:
+            markdown = render_markdown(
+                chapters=chapters,
+                citations=citations,
+                req=req,
+                stats=stats,
+                country_name=country_name,
+            )
 
         pdf_path: Optional[str] = None
         if "pdf" in req.output_formats:

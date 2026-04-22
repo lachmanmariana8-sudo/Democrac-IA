@@ -86,12 +86,22 @@ article.elite-report a {
 /* ── Portada ───────────────────────────────────────────────────────── */
 section.cover {
   min-height: 700px;
-  padding: 80px 0;
+  padding: 80px 0 64px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 20px;                                  /* espacio uniforme entre elementos */
   border-bottom: 3px solid var(--teal);
   page-break-after: always;
+}
+
+section.cover .pretitle {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 0;
 }
 
 section.cover h1 {
@@ -100,7 +110,7 @@ section.cover h1 {
   font-weight: 800;
   line-height: 1.15;
   color: var(--teal-dark);
-  margin: 0 0 16px;
+  margin: 8px 0 0;                            /* sin margen abajo — flex gap lo maneja */
   letter-spacing: -0.8px;
 }
 
@@ -109,7 +119,15 @@ section.cover .subtitle {
   font-size: 22px;
   color: var(--text);
   font-style: italic;
-  margin-bottom: 48px;
+  margin: 0 0 24px;
+}
+
+section.cover .cover-stats {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.7;
+  margin: 0;
 }
 
 section.cover .metadata {
@@ -119,7 +137,7 @@ section.cover .metadata {
   line-height: 2;
   border-top: 1px solid var(--border);
   padding-top: 24px;
-  margin-top: 48px;
+  margin: 24px 0 0;
 }
 
 section.cover .metadata strong {
@@ -128,8 +146,7 @@ section.cover .metadata strong {
 }
 
 section.cover .classification {
-  display: inline-block;
-  margin-top: 24px;
+  align-self: flex-start;
   padding: 4px 12px;
   background: var(--teal);
   color: white;
@@ -618,19 +635,15 @@ def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
 
     return f"""<section class="cover">
 <div class="classification">{_esc(mm.classification).upper()}</div>
-<div style="margin-top:24px; font-family: 'DM Mono', monospace; font-size:10px; color: var(--text-muted); letter-spacing:3px; text-transform:uppercase;">
-Misión de Observación Electoral · PEIRS
-</div>
+<p class="pretitle">Misión de Observación Electoral · PEIRS</p>
 <h1>{_esc(country_name)} — {_esc(type_label)}</h1>
-<div class="subtitle">Elecciones {mm.jornada_date[:4]} · Jornada del {_esc(mm.jornada_date)}</div>
-
-<div style="font-family: 'Fraunces', serif; font-size:18px; color:var(--text); line-height:1.6; margin:24px 0;">
+<p class="subtitle">Elecciones {mm.jornada_date[:4]} · Jornada del {_esc(mm.jornada_date)}</p>
+<p class="cover-stats">
 <strong>{_esc(stats.get("total", 0))}</strong> hallazgos monitoreados ·
 <strong style="color:var(--critical);">{stats.get("critical", 0)} críticos</strong> ·
 <strong style="color:var(--high);">{stats.get("high", 0)} altos</strong> ·
 <strong>{stats.get("days_covered", 0)} días</strong> de monitoreo continuo
-</div>
-
+</p>
 <div class="metadata">
 <strong>Misión:</strong> {_esc(mm.mission_name)}<br>
 <strong>Observadora responsable:</strong> {_esc(mm.lead_observer)}<br>

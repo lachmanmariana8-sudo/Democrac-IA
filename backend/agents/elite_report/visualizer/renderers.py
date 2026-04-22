@@ -29,6 +29,25 @@ def _esc(s: str) -> str:
     return html.escape(s or "")
 
 
+def _render_empty_state(title: str, subtitle: str = "") -> str:
+    """Placeholder visual consistente cuando no hay datos para graficar.
+
+    Evita dejar un `<figure>` vacío después del viz-title (que confunde al lector).
+    """
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 120" '
+        f'role="img" aria-label="Sin datos disponibles">'
+        f'<rect width="640" height="120" fill="{COLORS["bg_soft"]}" '
+        f'stroke="{COLORS["border"]}" stroke-width="1" stroke-dasharray="4,4" rx="8"/>'
+        f'<text x="320" y="54" text-anchor="middle" font-family="{FONT_SANS}" '
+        f'font-size="12" font-weight="700" fill="{COLORS["text_muted"]}">'
+        f'⊘ {_esc(title)}</text>'
+        f'<text x="320" y="78" text-anchor="middle" font-family="{FONT_SANS}" '
+        f'font-size="10" fill="{COLORS["text_dim"]}">{_esc(subtitle[:110])}</text>'
+        f'</svg>'
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # 1. timeseries_multi — series históricas superpuestas (V-Dem, FH, PEI, RSF)
 # ═══════════════════════════════════════════════════════════════════════
@@ -45,10 +64,14 @@ def render_timeseries_multi(data: Dict[str, Any]) -> str:
     series = data.get("series", [])
     events = data.get("events", [])
     if not series:
-        return ""
+        return _render_empty_state(
+            "Series históricas no disponibles en el entorno de ejecución actual",
+            "Los datasets V-Dem, Freedom House, PEI y RSF no pudieron cargarse. "
+            "La narrativa del capítulo cita los valores disponibles.",
+        )
 
-    W, H = 680, 320
-    ml, mr, mt, mb = 60, 120, 28, 56
+    W, H = 680, 300
+    ml, mr, mt, mb = 60, 120, 12, 56
     pw, ph = W - ml - mr, H - mt - mb
 
     # Rango temporal global
@@ -61,10 +84,7 @@ def render_timeseries_multi(data: Dict[str, Any]) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Series históricas">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    # Título
-    svg.append(f'<text x="{ml}" y="18" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'Trayectoria histórica — índices democráticos</text>')
+    # (El título del gráfico lo pone la figcaption HTML — no lo duplicamos en SVG)
 
     # Grid eje Y (cada serie normalizada a 0-1 para comparación)
     for i in range(5):
@@ -147,10 +167,13 @@ def render_phase_timeline(data: Dict[str, Any]) -> str:
     """
     phases = data.get("phases", [])
     if not phases:
-        return ""
+        return _render_empty_state(
+            "Sin fases con hallazgos registrados",
+            "El período no contiene hallazgos asignables a las 9 fases del ciclo electoral.",
+        )
 
-    W, H = 680, 300
-    ml, mr, mt, mb = 50, 20, 44, 70
+    W, H = 680, 280
+    ml, mr, mt, mb = 50, 20, 16, 70
     pw, ph = W - ml - mr, H - mt - mb
 
     # Total por fase para escala
@@ -165,9 +188,6 @@ def render_phase_timeline(data: Dict[str, Any]) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Timeline por fase electoral">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    svg.append(f'<text x="{ml}" y="22" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'Densidad de hallazgos por fase del ciclo electoral</text>')
 
     # Grid Y
     for i in range(5):
@@ -239,7 +259,10 @@ def render_forecast_chart(data: Dict[str, Any]) -> str:
     scenarios = data.get("scenarios", [])
     warning_level = data.get("warning_level", "amber")
     if not scenarios:
-        return ""
+        return _render_empty_state(
+            "Motor predictivo sin escenarios activos",
+            "No se activaron escenarios probabilísticos para este informe.",
+        )
 
     warn_color = {
         "green":  COLORS["warn_green"],
@@ -250,25 +273,21 @@ def render_forecast_chart(data: Dict[str, Any]) -> str:
 
     W = 680
     row_h = 46
-    H = 80 + row_h * len(scenarios) + 30
+    H = 50 + row_h * len(scenarios) + 30
 
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Forecast de escenarios">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    # Título
-    svg.append(f'<text x="20" y="22" font-family="{FONT_SANS}" font-size="12" '
-               f'font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'Escenarios probabilísticos con bandas de confianza</text>')
 
-    # Badge warning level
-    svg.append(f'<rect x="{W-160}" y="10" width="150" height="22" rx="4" '
+    # Badge warning level (solo)
+    svg.append(f'<rect x="{W-160}" y="8" width="150" height="22" rx="4" '
                f'fill="{warn_color}"/>')
-    svg.append(f'<text x="{W-85}" y="25" text-anchor="middle" '
+    svg.append(f'<text x="{W-85}" y="23" text-anchor="middle" '
                f'font-family="{FONT_SANS}" font-size="10" font-weight="700" '
                f'fill="white">ALERTA {warning_level.upper()}</text>')
 
     # Escala 0-100%
-    ml, mr, mt = 240, 60, 52
+    ml, mr, mt = 240, 60, 44
     pw = W - ml - mr
     # ticks 0, 25, 50, 75, 100
     for i in range(5):
@@ -322,23 +341,20 @@ def render_scenario_probability(data: Dict[str, Any]) -> str:
     """
     scenarios = data.get("scenarios", [])
     if not scenarios:
-        return ""
+        return _render_empty_state("Sin escenarios para graficar", "")
 
     W = 640
     row_h = 32
-    H = 36 + row_h * len(scenarios) + 20
+    H = 12 + row_h * len(scenarios) + 20
     ml, mr = 220, 50
     pw = W - ml - mr
 
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Probabilidad de escenarios">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    svg.append(f'<text x="12" y="20" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'Probabilidad estimada por escenario</text>')
 
     for si, s in enumerate(scenarios):
-        y = 36 + si * row_h
+        y = 12 + si * row_h
         prob = s.get("probability", 0)
         # ml=220 con 8px margen → 212px disponibles; truncamos a 30 chars
         label = _esc(s.get("label", ""))[:30]
@@ -373,7 +389,10 @@ def render_heatmap_rights(data: Dict[str, Any]) -> str:
     categories = data.get("categories", [])
     matrix = data.get("matrix", [])
     if not rights or not categories or not matrix:
-        return ""
+        return _render_empty_state(
+            "Heatmap derechos × categorías no disponible",
+            "El período no presenta hallazgos con cruce derechos×categoría.",
+        )
 
     # Cap dimensiones
     rights = rights[:8]
@@ -383,7 +402,7 @@ def render_heatmap_rights(data: Dict[str, Any]) -> str:
     W = 680
     cell_w = 54
     cell_h = 36
-    ml, mt = 200, 120  # +ml para rights label; +mt para labels rotados de categorías
+    ml, mt = 200, 96   # sin título interno: solo dejamos margen para labels rotados
     pw = cell_w * len(categories)
     ph = cell_h * len(rights)
     H = mt + ph + 30
@@ -397,9 +416,6 @@ def render_heatmap_rights(data: Dict[str, Any]) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Heatmap derechos por categoría">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    svg.append(f'<text x="12" y="22" font-family="{FONT_SANS}" font-size="12" '
-               f'font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'Derechos invocados × Categoría de hallazgo</text>')
 
     # Labels categorías (arriba, rotadas). Acortamos a 14 chars y subimos mt.
     for ci, cat in enumerate(categories):
@@ -456,7 +472,7 @@ def render_semaphore_institutional(data: Dict[str, Any]) -> str:
     """
     organs = data.get("organs", [])
     if not organs:
-        return ""
+        return _render_empty_state("Sin evaluación institucional disponible", "")
 
     status_color = {
         "green":  COLORS["warn_green"],
@@ -467,14 +483,11 @@ def render_semaphore_institutional(data: Dict[str, Any]) -> str:
 
     W = 680
     col_w = W / len(organs)
-    H = 260
+    H = 230
 
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Semáforo institucional">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    svg.append(f'<text x="12" y="22" font-family="{FONT_SANS}" font-size="12" '
-               f'font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'Evaluación institucional por órgano</text>')
 
     for oi, o in enumerate(organs):
         cx = col_w * oi + col_w / 2
@@ -486,7 +499,7 @@ def render_semaphore_institutional(data: Dict[str, Any]) -> str:
         # Semáforo vertical con 4 estados, el activo en color
         levels = ["red", "orange", "amber", "green"]
         for li, lvl in enumerate(levels):
-            cy = 60 + li * 36
+            cy = 28 + li * 36
             is_active = (lvl == status)
             r = 16 if is_active else 11
             fill = status_color[lvl] if is_active else COLORS["border_dim"]
@@ -497,11 +510,11 @@ def render_semaphore_institutional(data: Dict[str, Any]) -> str:
                            f'fill="none" stroke="{fill}" stroke-width="1.5" opacity="0.4"/>')
 
         # Label órgano
-        svg.append(f'<text x="{cx}" y="225" text-anchor="middle" '
+        svg.append(f'<text x="{cx}" y="195" text-anchor="middle" '
                    f'font-family="{FONT_SANS}" font-size="11" font-weight="700" '
                    f'fill="{COLORS["text"]}">{label}</text>')
         # Nota breve
-        svg.append(f'<text x="{cx}" y="243" text-anchor="middle" '
+        svg.append(f'<text x="{cx}" y="213" text-anchor="middle" '
                    f'font-family="{FONT_SANS}" font-size="8" '
                    f'fill="{COLORS["text_muted"]}">{note[:40]}</text>')
 
@@ -525,12 +538,12 @@ def render_dimensions_radar(data: Dict[str, Any]) -> str:
     """
     dims = data.get("dimensions", [])
     if len(dims) < 3:
-        return ""
+        return _render_empty_state("Radar 8 dimensiones no disponible", "Se requieren ≥3 dimensiones evaluadas.")
 
     scale_max = data.get("scale_max", 100)
     # W más amplio para acomodar labels de 14 chars en los lados sin overflow
-    W, H = 500, 440
-    cx, cy = W / 2, H / 2 + 12
+    W, H = 500, 420
+    cx, cy = W / 2, H / 2
     r_max = 140
     n = len(dims)
     angles = [-math.pi/2 + 2 * math.pi * i / n for i in range(n)]
@@ -538,9 +551,6 @@ def render_dimensions_radar(data: Dict[str, Any]) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Radar 8 dimensiones">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    svg.append(f'<text x="{W/2}" y="22" text-anchor="middle" font-family="{FONT_SANS}" '
-               f'font-size="12" font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'8 Dimensiones PEIRS (0–100)</text>')
 
     # Círculos concéntricos (4 niveles)
     for lvl in range(1, 5):
@@ -611,12 +621,12 @@ def render_matrix_normativa(data: Dict[str, Any]) -> str:
     """
     rows = data.get("rows", [])
     if not rows:
-        return ""
+        return _render_empty_state("Matriz normativa vacía", "")
 
     rows = rows[:12]
     W = 680
     row_h = 30
-    H = 56 + row_h * len(rows)
+    H = 32 + row_h * len(rows)
 
     # Columnas
     col_x = {"instrument": 16, "article": 16, "topic": 280, "hierarchy": 540}
@@ -632,12 +642,9 @@ def render_matrix_normativa(data: Dict[str, Any]) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Matriz normativa">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
-    svg.append(f'<text x="16" y="22" font-family="{FONT_SANS}" font-size="12" '
-               f'font-weight="700" fill="{COLORS["teal_dark"]}">'
-               f'Marco normativo — instrumento × tema × jerarquía</text>')
 
     # Header
-    y_hdr = 40
+    y_hdr = 18
     svg.append(f'<line x1="12" y1="{y_hdr+6}" x2="{W-12}" y2="{y_hdr+6}" '
                f'stroke="{COLORS["teal"]}" stroke-width="1.5"/>')
     for col, label in [("instrument", "INSTRUMENTO"), ("topic", "TEMA"),
@@ -648,7 +655,7 @@ def render_matrix_normativa(data: Dict[str, Any]) -> str:
 
     # Rows
     for ri, r in enumerate(rows):
-        y = 56 + ri * row_h + 18
+        y = 32 + ri * row_h + 18
         if ri % 2 == 1:
             svg.append(f'<rect x="12" y="{y-18}" width="{W-24}" height="{row_h}" '
                        f'fill="{COLORS["bg_soft"]}"/>')
