@@ -9247,6 +9247,44 @@ async def preview_video_beat(job_id: str, beat_idx: int):
     return Response(content=png_bytes, media_type="image/png")
 
 
+@app.get("/api/video/{job_id}/audio/{beat_idx}")
+async def video_beat_audio(job_id: str, beat_idx: int):
+    """Sirve el MP3 del beat <beat_idx> de un job (Fase C).
+
+    El archivo se generó durante POST /api/video/generate y se persistió en
+    {VIDEO_AUDIO_ROOT}/{job_id}/beat_XX.mp3.
+    """
+    if not DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="DB no disponible.")
+
+    _ensure_video_jobs_table()
+    with _get_db() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM video_jobs WHERE job_id=?", (job_id,)
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"job_id {job_id} no encontrado.")
+
+    try:
+        from agents.video_producer.video_producer import video_audio_root
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Video audio no disponible: {e}")
+
+    audio_path = video_audio_root() / job_id / f"beat_{beat_idx:02d}.mp3"
+    if not audio_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"audio del beat {beat_idx} no generado (narración vacía o TTS falló).",
+        )
+
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=audio_path,
+        media_type="audio/mpeg",
+        filename=f"{job_id}_beat{beat_idx:02d}.mp3",
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 7. CLI — Ejecución directa para testing
 # ═══════════════════════════════════════════════════════════════════════════════

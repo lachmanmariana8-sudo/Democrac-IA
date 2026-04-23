@@ -47,6 +47,22 @@ except ImportError:
     render_beat_png = None            # type: ignore[assignment]
     render_beat_to_file = None        # type: ignore[assignment]
 
+# TTS — opcional (requiere edge-tts).
+try:
+    from agents.video_producer.tts import (
+        TTSEngine,
+        SynthesisResult,
+        pick_voice,
+        synthesize_beat_audio,
+    )
+    TTS_AVAILABLE = True
+except ImportError:
+    TTS_AVAILABLE = False
+    TTSEngine = None                  # type: ignore[assignment]
+    SynthesisResult = None            # type: ignore[assignment]
+    pick_voice = None                 # type: ignore[assignment]
+    synthesize_beat_audio = None      # type: ignore[assignment]
+
 
 __all__ = [
     # models
@@ -70,4 +86,10 @@ __all__ = [
     "render_beat_png",
     "render_beat_to_file",
     "RENDERER_AVAILABLE",
+    # TTS (Fase C)
+    "TTSEngine",
+    "SynthesisResult",
+    "pick_voice",
+    "synthesize_beat_audio",
+    "TTS_AVAILABLE",
 ]

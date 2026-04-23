@@ -92,6 +92,12 @@ class Beat(BaseModel):
     bg_color_hex: str = "#0B1F2A"             # teal institucional oscuro
     accent_color_hex: str = "#D97706"         # naranja institucional
 
+    # Audio (Fase C). El archivo se guarda en {audio_root}/{job_id}/beat_{idx:02d}.mp3
+    # y se sirve via GET /api/video/{job_id}/audio/{beat_idx}.
+    has_audio: bool = False
+    audio_duration_s: Optional[float] = None
+    audio_voice: Optional[str] = None
+
 
 class Storyboard(BaseModel):
     preset: VideoPreset

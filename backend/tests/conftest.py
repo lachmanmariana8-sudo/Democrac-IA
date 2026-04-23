@@ -8,6 +8,27 @@ import pytest
 # Asegura que backend/ está en el path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+
+def pytest_configure(config):
+    """Registra markers custom para no tirar warnings."""
+    config.addinivalue_line(
+        "markers",
+        "network: marca test que hace llamadas reales a servicios externos. "
+        "Skippeado por default; correr con `pytest -m network`."
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip @network tests a menos que se pase `-m network` explícitamente."""
+    # Si el usuario pidió explícitamente network, no deselectamos.
+    expr = config.getoption("-m", default=None) or ""
+    if "network" in expr:
+        return
+    skip_network = pytest.mark.skip(reason="test de red — correr con `pytest -m network`")
+    for item in items:
+        if "network" in item.keywords:
+            item.add_marker(skip_network)
+
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture
