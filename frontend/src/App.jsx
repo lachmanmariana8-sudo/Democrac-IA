@@ -5318,19 +5318,28 @@ function PeruSituationRoom() {
     if (innerTab === "elite") fetchEliteHistory();
   }, [innerTab, fetchEliteHistory]);
 
-  // ═══ VIDEO PRODUCER — estado y funciones ═══
+  // ═══ VIDEO PRODUCER — estado y funciones (data-driven, sin avatar IA) ═══
+  const [videoPresets, setVideoPresets]             = useState([]);   // [{id,label,description,...}]
+  const [videoPreset, setVideoPreset]               = useState("alert_30s");
   const [videoLanguage, setVideoLanguage]           = useState("es");
   const [videoStyle, setVideoStyle]                 = useState("sober");
   const [videoPeriod, setVideoPeriod]               = useState(7);
   const [videoSeverity, setVideoSeverity]           = useState("high");
-  const [videoMaxFindings, setVideoMaxFindings]     = useState(5);
-  const [videoDuration, setVideoDuration]           = useState(75);
   const [videoDryRun, setVideoDryRun]               = useState(false);
   const [videoLoading, setVideoLoading]             = useState(false);
   const [videoResult, setVideoResult]               = useState(null);
   const [videoError, setVideoError]                 = useState(null);
   const [videoHistory, setVideoHistory]             = useState([]);
-  const [videoStatus, setVideoStatus]               = useState(null); // { status, video_url, thumbnail_url, ... }
+
+  const fetchVideoPresets = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/api/video/presets`);
+      if (r.ok) {
+        const data = await r.json();
+        setVideoPresets(data.presets || []);
+      }
+    } catch (_) {}
+  }, []);
 
   const fetchVideoHistory = useCallback(async () => {
     try {
@@ -5347,19 +5356,17 @@ function PeruSituationRoom() {
     setVideoLoading(true);
     setVideoError(null);
     setVideoResult(null);
-    setVideoStatus(null);
     try {
       const r = await fetch(`${API_BASE}/api/video/generate`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({
           country_code: "PER",
+          preset: videoPreset,
           language: videoLanguage,
           style: videoStyle,
           period_days: videoPeriod,
           severity_min: videoSeverity,
-          max_findings: videoMaxFindings,
-          target_duration_s: videoDuration,
           dry_run: videoDryRun,
           use_llm: true,
         }),
@@ -5381,35 +5388,15 @@ function PeruSituationRoom() {
     } finally {
       setVideoLoading(false);
     }
-  }, [videoLanguage, videoStyle, videoPeriod, videoSeverity, videoMaxFindings,
-      videoDuration, videoDryRun, videoLoading, fetchVideoHistory]);
-
-  // Polling: si hay un video rendering, consultar cada 10s hasta que esté listo
-  useEffect(() => {
-    if (!videoResult || !videoResult.job_id) return;
-    if (videoResult.status === "completed" || videoResult.status === "failed") return;
-    const jobId = videoResult.job_id;
-    let cancelled = false;
-    const tick = async () => {
-      try {
-        const r = await fetch(`${API_BASE}/api/video/${jobId}/status`);
-        if (!r.ok) return;
-        const data = await r.json();
-        if (cancelled) return;
-        setVideoStatus(data);
-        if (data.status === "completed" || data.status === "failed") {
-          fetchVideoHistory();
-        }
-      } catch (_) {}
-    };
-    tick();                                     // fire once al inicio
-    const id = setInterval(tick, 10000);        // luego cada 10s
-    return () => { cancelled = true; clearInterval(id); };
-  }, [videoResult, fetchVideoHistory]);
+  }, [videoPreset, videoLanguage, videoStyle, videoPeriod, videoSeverity,
+      videoDryRun, videoLoading, fetchVideoHistory]);
 
   useEffect(() => {
-    if (innerTab === "videos") fetchVideoHistory();
-  }, [innerTab, fetchVideoHistory]);
+    if (innerTab === "videos") {
+      fetchVideoPresets();
+      fetchVideoHistory();
+    }
+  }, [innerTab, fetchVideoPresets, fetchVideoHistory]);
   const [designerLoading, setDesignerLoading]     = useState(false);
   const [designerResult, setDesignerResult]       = useState(null);
   const [designerError, setDesignerError]         = useState(null);
@@ -8371,23 +8358,55 @@ function PeruSituationRoom() {
         )}
 
         {/* ══ TAB: VIDEOS ══
-            Video Producer: Guionista-Claude + Director-Claude + HeyGen.
-            Noticias breves (60-90s) con avatar hablante multilingüe desde los
-            hallazgos del monitoreo. Seguridad: requiere Observer Key. */}
+            Video Producer data-driven: Scriptwriter (Claude) + StoryboardBuilder.
+            Genera guión + storyboard de frames; el render a MP4 (frames + TTS +
+            ffmpeg) entra en Fases B-D del sprint. Seguridad: Observer Key. */}
         {innerTab === "videos" && (
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-              🎬 Videos — Noticias breves con avatar IA
+              🎬 Videos — Data briefs sin avatar IA
             </div>
             <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16, lineHeight: 1.5 }}>
-              Genera videos 60-90s tipo noticia internacional (BBC/DW/NHK) a partir de los hallazgos
-              del monitoreo. Pipeline: <strong>Guionista-Claude</strong> escribe el guión periodístico →{" "}
-              <strong>Director-Claude</strong> planifica escenas con overlays → <strong>HeyGen</strong>{" "}
-              renderiza con avatar multilingüe.
-              <strong> Tiempo: 1-2 min · Costo: ~$0.50-0.75 por video.</strong>
+              Genera videos cortos (30s-5min) a partir de los hallazgos del Hunter.
+              Pipeline: <strong>Guionista-Claude</strong> escribe el guión →{" "}
+              <strong>StoryboardBuilder</strong> arma los beats con datos, citas y fuentes
+              visibles en pantalla (sin avatares IA, sin talking heads).
+              <strong> Costo: ~$0.02-0.05 por guión. Render a MP4 en Fases B-D.</strong>
             </div>
 
             <Card className="peru-card" style={{ padding: 14, marginBottom: 16 }}>
+              {/* Selector de preset (el corazón del flow) */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Preset</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {(videoPresets.length > 0 ? videoPresets : [
+                    { id: "alert_30s",     label: "🚨 Alerta crítica",     description: "30s · 9:16",  target_duration_s: 30,  target_platforms: ["reels","tiktok"] },
+                    { id: "weekly_90s",    label: "📊 Resumen semanal",    description: "90s · 9:16",  target_duration_s: 90,  target_platforms: ["reels","feed"] },
+                    { id: "brief_5min",    label: "📘 Brief institucional", description: "5min · 16:9", target_duration_s: 300, target_platforms: ["youtube","linkedin"] },
+                    { id: "explainer_60s", label: "🎓 Explainer técnico",   description: "60s · 9:16",  target_duration_s: 60,  target_platforms: ["reels","shorts"] },
+                  ]).map((p) => {
+                    const selected = videoPreset === p.id;
+                    return (
+                      <button key={p.id} onClick={() => setVideoPreset(p.id)}
+                        style={{
+                          padding: 10, borderRadius: 6, textAlign: "left", cursor: "pointer",
+                          background: selected ? COLORS.accentDim : COLORS.surface,
+                          border: `2px solid ${selected ? COLORS.accent : COLORS.border}`,
+                          color: COLORS.text,
+                        }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: selected ? COLORS.accent : COLORS.text, marginBottom: 3 }}>
+                          {p.label}
+                        </div>
+                        <div style={{ fontSize: 10, color: COLORS.textMuted, lineHeight: 1.4 }}>
+                          {p.description}{p.aspect_ratio ? ` · ${p.aspect_ratio}` : ""}
+                          {p.target_duration_s ? ` · ${p.target_duration_s}s` : ""}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Idioma</div>
@@ -8418,25 +8437,11 @@ function PeruSituationRoom() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Período (días)</div>
-                  <input type="number" min="1" max="30" value={videoPeriod}
-                    onChange={(e) => setVideoPeriod(parseInt(e.target.value || "7"))}
-                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Max. hallazgos</div>
-                  <input type="number" min="2" max="10" value={videoMaxFindings}
-                    onChange={(e) => setVideoMaxFindings(parseInt(e.target.value || "5"))}
-                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Duración objetivo (s)</div>
-                  <input type="number" min="30" max="120" step="5" value={videoDuration}
-                    onChange={(e) => setVideoDuration(parseInt(e.target.value || "75"))}
-                    style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }} />
-                </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Período (días)</div>
+                <input type="number" min="1" max="30" value={videoPeriod}
+                  onChange={(e) => setVideoPeriod(parseInt(e.target.value || "7"))}
+                  style={{ width: "100%", padding: 8, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 5, fontSize: 12 }} />
               </div>
 
               <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
@@ -8446,7 +8451,7 @@ function PeruSituationRoom() {
                 <input type="checkbox" checked={videoDryRun}
                   onChange={(e) => setVideoDryRun(e.target.checked)} />
                 <span style={{ color: videoDryRun ? COLORS.warning : COLORS.text, fontWeight: 600 }}>
-                  🧪 Dry run — solo generar guión + plan (sin render en HeyGen, gratis)
+                  🧪 Dry run — generar sólo guión + storyboard (sin render)
                 </span>
               </label>
 
@@ -8459,8 +8464,7 @@ function PeruSituationRoom() {
                   fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono', monospace",
                   cursor: videoLoading ? "wait" : "pointer", letterSpacing: 0.5, width: "100%",
                 }}>
-                {videoLoading ? "● Generando guión + plan + enviando a HeyGen..." :
-                  videoDryRun ? "▶ Generar guión + plan (dry run)" : "▶ Generar video completo"}
+                {videoLoading ? "● Generando guión + storyboard..." : "▶ Generar guión + storyboard"}
               </button>
             </Card>
 
@@ -8478,28 +8482,30 @@ function PeruSituationRoom() {
                 <Card className="peru-card" style={{ padding: 12, marginBottom: 12 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
                     {[
-                      { label: "Hallazgos", value: videoResult.findings_count || 0, color: COLORS.accent },
-                      { label: "Escenas", value: (videoResult.plan?.scenes || []).length, color: COLORS.info },
-                      { label: "Duración", value: `${(videoResult.plan?.total_duration_s || 0).toFixed(0)}s`, color: COLORS.purple },
-                      { label: "Tokens", value: `${((videoResult.tokens_used || {}).input || 0) + ((videoResult.tokens_used || {}).output || 0)}`, color: COLORS.warning },
-                      { label: "Costo Claude", value: `$${(videoResult.estimated_cost_usd || 0).toFixed(4)}`, color: COLORS.danger },
+                      { label: "Preset",     value: videoResult.preset || "—", color: COLORS.accent },
+                      { label: "Hallazgos",  value: videoResult.findings_count || 0, color: COLORS.info },
+                      { label: "Beats",      value: (videoResult.storyboard?.beats || []).length, color: COLORS.purple },
+                      { label: "Duración",   value: `${(videoResult.storyboard?.total_duration_s || 0).toFixed(0)}s`, color: COLORS.warning },
+                      { label: "Costo",      value: `$${(videoResult.estimated_cost_usd || 0).toFixed(4)}`, color: COLORS.danger },
                     ].map((kpi, i) => (
                       <div key={i} style={{ textAlign: "center", padding: 8, borderLeft: `3px solid ${kpi.color}`, background: COLORS.surface, borderRadius: 5 }}>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: kpi.color, fontFamily: "'DM Mono', monospace" }}>{kpi.value}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: kpi.color, fontFamily: "'DM Mono', monospace" }}>{kpi.value}</div>
                         <div style={{ fontSize: 8, color: COLORS.textDim, marginTop: 2, textTransform: "uppercase", letterSpacing: 1 }}>{kpi.label}</div>
                       </div>
                     ))}
                   </div>
                   <div style={{ marginTop: 10, fontSize: 11, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace" }}>
                     Job ID: <strong>{videoResult.job_id}</strong>
-                    {videoResult.heygen_video_id && <> · HeyGen: <strong>{videoResult.heygen_video_id.slice(0, 12)}...</strong></>}
-                    {" · Estado actual: "}
+                    {videoResult.storyboard && (
+                      <> · Lienzo: <strong>{videoResult.storyboard.width}×{videoResult.storyboard.height}@{videoResult.storyboard.fps}fps</strong></>
+                    )}
+                    {" · Estado: "}
                     <strong style={{ color:
-                      (videoStatus?.status || videoResult.status) === "completed" ? COLORS.accent :
-                      (videoStatus?.status || videoResult.status) === "failed" ? COLORS.danger :
+                      videoResult.status === "storyboard_ready" ? COLORS.accent :
+                      videoResult.status === "failed" ? COLORS.danger :
                       COLORS.warning
                     }}>
-                      {videoStatus?.status || videoResult.status}
+                      {videoResult.status}
                     </strong>
                   </div>
                 </Card>
@@ -8511,10 +8517,10 @@ function PeruSituationRoom() {
                       📝 Guión periodístico (Claude)
                     </div>
                     {[
-                      { label: "Hook", text: videoResult.script.hook, color: COLORS.danger },
-                      { label: "Context", text: videoResult.script.context, color: COLORS.info },
-                      { label: "Findings", text: videoResult.script.findings_narrative, color: COLORS.accent },
-                      { label: "Closing", text: videoResult.script.closing, color: COLORS.purple },
+                      { label: "Hook",     text: videoResult.script.hook,                color: COLORS.danger },
+                      { label: "Context",  text: videoResult.script.context,             color: COLORS.info },
+                      { label: "Findings", text: videoResult.script.findings_narrative,  color: COLORS.accent },
+                      { label: "Closing",  text: videoResult.script.closing,             color: COLORS.purple },
                     ].map((b, i) => (
                       <div key={i} style={{ marginBottom: 10, paddingLeft: 10, borderLeft: `3px solid ${b.color}` }}>
                         <div style={{ fontSize: 9, fontWeight: 700, color: b.color, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 3 }}>{b.label}</div>
@@ -8529,57 +8535,28 @@ function PeruSituationRoom() {
                   </Card>
                 )}
 
-                {/* Plan cinematográfico */}
-                {videoResult.plan && (videoResult.plan.scenes || []).length > 0 && (
+                {/* Storyboard */}
+                {videoResult.storyboard && (videoResult.storyboard.beats || []).length > 0 && (
                   <Card className="peru-card" style={{ padding: 14, marginBottom: 12 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.info, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>
-                      🎞 Plan de escenas (Director)
+                      🎞 Storyboard ({videoResult.storyboard.beats.length} beats · {videoResult.storyboard.preset})
                     </div>
-                    {videoResult.plan.scenes.map((sc, i) => (
+                    {videoResult.storyboard.beats.map((bt, i) => (
                       <div key={i} style={{ padding: 8, marginBottom: 6, background: COLORS.surface, borderRadius: 5, border: `1px solid ${COLORS.border}` }}>
                         <div style={{ fontSize: 10, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace", marginBottom: 3 }}>
-                          Escena {i + 1}: <strong style={{ color: COLORS.accent }}>{sc.scene_id}</strong> ·
-                          {" "}{sc.duration_s?.toFixed(1)}s · {sc.background} · {sc.avatar_style}
+                          Beat {i + 1}: <strong style={{ color: COLORS.accent }}>{bt.beat_id}</strong> ·
+                          {" "}{bt.duration_s?.toFixed(1)}s · <strong style={{ color: COLORS.info }}>{bt.kind}</strong> · visual: {bt.visual}
                         </div>
-                        <div style={{ fontSize: 11, color: COLORS.text, lineHeight: 1.4 }}>{sc.narration}</div>
-                        {(sc.overlays || []).length > 0 && (
+                        {bt.narration && (
+                          <div style={{ fontSize: 11, color: COLORS.text, lineHeight: 1.4 }}>{bt.narration}</div>
+                        )}
+                        {(bt.overlays || []).length > 0 && (
                           <div style={{ fontSize: 9, color: COLORS.info, marginTop: 3, fontFamily: "'DM Mono', monospace" }}>
-                            ↳ {sc.overlays.map((o) => `${o.kind}: "${o.content.slice(0, 40)}"`).join(" | ")}
+                            ↳ {bt.overlays.map((o) => `${o.kind}: "${(o.text || "").slice(0, 40)}"`).join(" | ")}
                           </div>
                         )}
                       </div>
                     ))}
-                  </Card>
-                )}
-
-                {/* Video player cuando está completo */}
-                {(videoStatus?.video_url || videoResult.video_url) && (
-                  <Card className="peru-card" style={{ padding: 0, marginBottom: 12, overflow: "hidden" }}>
-                    <div style={{ padding: "8px 14px", background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}`, fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", display: "flex", justifyContent: "space-between" }}>
-                      <span>🎬 Video renderizado · HeyGen</span>
-                      <a href={videoStatus?.video_url || videoResult.video_url} target="_blank" rel="noopener noreferrer"
-                        style={{ color: COLORS.accent, textDecoration: "none", fontWeight: 700 }}>
-                        ⬇ Descargar MP4
-                      </a>
-                    </div>
-                    <video controls style={{ width: "100%", maxHeight: 500, background: "#000" }}
-                      src={videoStatus?.video_url || videoResult.video_url}
-                      poster={videoStatus?.thumbnail_url || videoResult.thumbnail_url}>
-                    </video>
-                  </Card>
-                )}
-
-                {/* Estado rendering */}
-                {((videoStatus?.status || videoResult.status) === "rendering") &&
-                 !videoStatus?.video_url && !videoResult.video_url && (
-                  <Card className="peru-card" style={{ padding: 20, marginBottom: 12, textAlign: "center", background: COLORS.warningDim, borderLeft: `3px solid ${COLORS.warning}` }}>
-                    <div style={{ fontSize: 20, marginBottom: 4 }}>⏳</div>
-                    <div style={{ fontSize: 12, color: COLORS.warning, fontWeight: 700, marginBottom: 4 }}>
-                      HeyGen está renderizando el video...
-                    </div>
-                    <div style={{ fontSize: 10, color: COLORS.textMuted }}>
-                      Tiempo típico: 30-120s. El frontend consulta cada 10s automáticamente.
-                    </div>
                   </Card>
                 )}
 
@@ -8605,10 +8582,10 @@ function PeruSituationRoom() {
                   <Card key={i} className="peru-card" style={{ padding: 10, marginBottom: 8, fontSize: 11, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 10, alignItems: "center" }}>
                     <div>
                       <div style={{ fontWeight: 700, color: COLORS.text }}>
-                        {h.language?.toUpperCase()} · {h.style}
+                        {h.preset || "—"} · {h.language?.toUpperCase()} · {h.style}
                         {" · "}
                         <span style={{ color:
-                          h.status === "completed" ? COLORS.accent :
+                          h.status === "storyboard_ready" || h.status === "completed" ? COLORS.accent :
                           h.status === "failed" ? COLORS.danger :
                           COLORS.warning
                         }}>{h.status}</span>
@@ -8633,7 +8610,7 @@ function PeruSituationRoom() {
                       </a>
                     ) : (
                       <span style={{ padding: "4px 10px", color: COLORS.textDim, fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
-                        {h.error ? "error" : "pending"}
+                        {h.status === "storyboard_ready" ? "preview" : (h.error ? "error" : "pending")}
                       </span>
                     )}
                   </Card>
@@ -8644,15 +8621,15 @@ function PeruSituationRoom() {
             {!videoResult && !videoError && !videoLoading && videoHistory.length === 0 && (
               <Card className="peru-card" style={{ padding: 20, textAlign: "center", color: COLORS.textDim, fontSize: 12, lineHeight: 1.7 }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>🎬</div>
-                <strong style={{ color: COLORS.text }}>Video Producer — noticias breves con IA</strong>
+                <strong style={{ color: COLORS.text }}>Video Producer — data briefs sin avatar IA</strong>
                 <br /><br />
-                El pipeline toma los <strong>N hallazgos más relevantes</strong> del período seleccionado,
-                los convierte en un guión periodístico estructurado (hook + contexto + evidencia + cierre)
-                y los presenta con un avatar hablante multilingüe. Ideal para{" "}
-                <strong>reportes rápidos en redes sociales</strong> o comunicación institucional.
+                Seleccioná un <strong>preset</strong> según el uso (alerta crítica, resumen semanal,
+                brief institucional o explainer técnico). El pipeline arma un guión periodístico y un
+                storyboard con datos, citas y fuentes visibles — sin avatares IA, coherente con una
+                misión anti-desinformación.
                 <br /><br />
-                Configurá los parámetros y presioná <strong>"▶ Generar video completo"</strong>.
-                Probá primero con <em>dry run</em> para ver el guión sin gastar en HeyGen.
+                En esta etapa (Fase A) se entrega <strong>guión + storyboard</strong> para preview.
+                El render a MP4 (frames + TTS + ffmpeg) entra en las próximas fases.
               </Card>
             )}
           </div>

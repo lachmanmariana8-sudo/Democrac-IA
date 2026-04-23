@@ -1,70 +1,28 @@
-"""Schemas del Video Producer."""
+"""Schemas del Video Producer — pipeline data-driven (sin avatar IA).
+
+Flujo: findings → VideoScript (guión) → Storyboard (beats + visuals) →
+       Render (frames + audio TTS + MP4). Fase A entrega hasta Storyboard.
+"""
 from __future__ import annotations
 
-from typing import List, Optional, Literal, Dict, Any
+from enum import Enum
+from typing import Any, Dict, List, Literal, Optional
+
 from pydantic import BaseModel, Field
 
 
-# ── Entrada del guionista ────────────────────────────────────────────────
+# ── Presets ──────────────────────────────────────────────────────────────
+
+class VideoPreset(str, Enum):
+    ALERT_30S     = "alert_30s"         # 1 incidente crítico · 30s · 9:16
+    WEEKLY_90S    = "weekly_90s"        # top findings de la semana · 90s · 9:16
+    BRIEF_5MIN    = "brief_5min"        # institucional · 3-5min · 16:9
+    EXPLAINER_60S = "explainer_60s"     # concepto técnico · 60s · 9:16
+
+
+# ── Guionista ────────────────────────────────────────────────────────────
+
 class VideoScriptRequest(BaseModel):
-    """Filtros para seleccionar los hallazgos que alimentan el guión."""
-    country_code: str = "PER"
-    period_days: int = 7                       # últimos N días de findings
-    severity_min: str = "high"                 # high | critical
-    max_findings: int = 5                      # 3-5 es lo ideal para 60-90s
-    language: Literal["es", "en", "pt", "qu"] = "es"
-    style: Literal["sober", "urgent", "explainer"] = "sober"
-    target_duration_s: int = 75                # 60-90s típico
-
-
-# ── Salida del guionista ────────────────────────────────────────────────
-class VideoScript(BaseModel):
-    """Guión periodístico producido por el Guionista-Claude."""
-    hook: str                                  # apertura (~10s)
-    context: str                               # marco (~15s)
-    findings_narrative: str                    # hallazgos citados (~30-45s)
-    closing: str                               # cierre + CTA (~10s)
-    word_count: int = 0
-    estimated_duration_s: float = 0.0
-    full_text: str = ""                        # hook + context + findings + closing concatenado
-    sources_cited: List[str] = Field(default_factory=list)
-    language: str = "es"
-    tone: str = "sober"
-
-
-# ── Plan cinematográfico ─────────────────────────────────────────────────
-class OverlaySpec(BaseModel):
-    """Elemento gráfico sobrepuesto a una escena."""
-    kind: Literal["lower_third", "caption", "stat_card", "svg_chart", "source_url"] = "caption"
-    content: str = ""                          # texto o ref al SVG
-    start_s: float = 0.0
-    duration_s: float = 4.0
-    position: Literal["top", "bottom", "left", "right", "center"] = "bottom"
-
-
-class SceneSpec(BaseModel):
-    """Una escena del video: lo que dice el avatar + overlays."""
-    scene_id: str
-    narration: str                             # texto que lee el avatar
-    duration_s: float = 8.0
-    avatar_style: Literal["talking", "reading", "authoritative"] = "talking"
-    background: Literal["studio", "solid", "newsroom", "brief"] = "studio"
-    background_value: str = "#0f4f4b"          # hex color si background=solid
-    overlays: List[OverlaySpec] = Field(default_factory=list)
-    b_roll_hint: Optional[str] = None          # descripción para B-roll futuro
-
-
-class VideoPlan(BaseModel):
-    """Plan completo producido por el Director-Claude."""
-    scenes: List[SceneSpec] = Field(default_factory=list)
-    total_duration_s: float = 0.0
-    intro_hint: Optional[str] = None
-    outro_hint: Optional[str] = None
-
-
-# ── Request de producción completa ───────────────────────────────────────
-class VideoJobRequest(BaseModel):
-    """Solicitud end-to-end: genera guión + plan + renderiza con HeyGen."""
     country_code: str = "PER"
     period_days: int = 7
     severity_min: str = "high"
@@ -73,41 +31,116 @@ class VideoJobRequest(BaseModel):
     style: Literal["sober", "urgent", "explainer"] = "sober"
     target_duration_s: int = 75
 
-    # HeyGen — opcionales, usan defaults si no se pasan
-    avatar_id: Optional[str] = None
-    voice_id: Optional[str] = None
-    dimension_w: int = 1280
-    dimension_h: int = 720
-    title: Optional[str] = None                # para el archivo/entrega
 
-    # Comportamiento
+class VideoScript(BaseModel):
+    hook: str
+    context: str
+    findings_narrative: str
+    closing: str
+    word_count: int = 0
+    estimated_duration_s: float = 0.0
+    full_text: str = ""
+    sources_cited: List[str] = Field(default_factory=list)
+    language: str = "es"
+    tone: str = "sober"
+
+
+# ── Storyboard ────────────────────────────────────────────────────────────
+
+class Overlay(BaseModel):
+    """Elemento gráfico compuesto sobre el frame."""
+    kind: Literal[
+        "title",            # título de pantalla completa
+        "lower_third",      # tercio inferior con nombre + fuente
+        "stat_card",        # card con número destacado
+        "quote",            # cita con comillas y atribución
+        "source",           # "Fuente: IDL-Reporteros"
+        "timeline_event",   # hito en timeline
+        "cta",              # call-to-action final
+    ] = "lower_third"
+    text: str = ""
+    secondary_text: str = ""                 # p.ej. fuente de una cita
+    position: Literal["top", "center", "bottom", "left", "right"] = "bottom"
+    start_s: float = 0.0
+    duration_s: float = 4.0
+
+
+class Beat(BaseModel):
+    """Unidad narrativa del storyboard: narración + composición visual + overlays."""
+    beat_id: str
+    kind: Literal[
+        "intro",        # logo + título
+        "stat",         # KPIs / gráfico de dato
+        "incident",     # descripción de un hallazgo
+        "timeline",     # timeline animado
+        "quote",        # cita destacada
+        "outro",        # CTA final
+    ] = "incident"
+    narration: str = ""
+    duration_s: float = 5.0
+    visual: Literal[
+        "solid_bg",
+        "kpi_grid",
+        "bar_chart",
+        "donut_chart",
+        "map_regions",
+        "timeline",
+        "quote_panel",
+    ] = "solid_bg"
+    visual_data: Dict[str, Any] = Field(default_factory=dict)
+    overlays: List[Overlay] = Field(default_factory=list)
+    bg_color_hex: str = "#0B1F2A"             # teal institucional oscuro
+    accent_color_hex: str = "#D97706"         # naranja institucional
+
+
+class Storyboard(BaseModel):
+    preset: VideoPreset
+    beats: List[Beat] = Field(default_factory=list)
+    total_duration_s: float = 0.0
+    width: int = 1080
+    height: int = 1920                         # 9:16 por default (Reels/TikTok/Shorts)
+    fps: int = 30
+
+
+# ── Job ────────────────────────────────────────────────────────────────────
+
+class VideoJobRequest(BaseModel):
+    """Solicitud end-to-end: filtros + preset → guión + storyboard + render."""
+    country_code: str = "PER"
+    preset: VideoPreset = VideoPreset.ALERT_30S
+    period_days: int = 7
+    severity_min: str = "high"
+    max_findings: int = 5
+    language: Literal["es", "en", "pt", "qu"] = "es"
+    style: Literal["sober", "urgent", "explainer"] = "sober"
+    title: Optional[str] = None
     use_llm: bool = True
-    dry_run: bool = False                      # no llama a HeyGen, sólo genera guión+plan
+    dry_run: bool = False                      # si True: solo guión + storyboard, no render
 
 
-# ── Resultado de un trabajo ──────────────────────────────────────────────
 class VideoJobResult(BaseModel):
-    """Estado de un job de video."""
     job_id: str
     country_code: str
-    status: Literal["pending", "scripting", "planning", "rendering", "completed", "failed"] = "pending"
-    script: Optional[VideoScript] = None
-    plan: Optional[VideoPlan] = None
+    preset: str = "alert_30s"
+    status: Literal[
+        "pending", "scripting", "storyboarding",
+        "storyboard_ready", "rendering", "completed", "failed",
+    ] = "pending"
 
-    heygen_video_id: Optional[str] = None
-    heygen_status: Optional[str] = None
+    script: Optional[VideoScript] = None
+    storyboard: Optional[Storyboard] = None
+
     video_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    duration_s: float = 0.0
 
     tokens_used: Dict[str, int] = Field(default_factory=lambda: {"input": 0, "output": 0})
     estimated_cost_usd: float = 0.0
 
     generated_at: str = ""
-    duration_s: float = 0.0
-
-    error: Optional[str] = None
-    warnings: List[str] = Field(default_factory=list)
-    # Metadata para UI
     findings_count: int = 0
     language: str = "es"
     style: str = "sober"
+
+    error: Optional[str] = None
+    warnings: List[str] = Field(default_factory=list)

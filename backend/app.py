@@ -234,7 +234,7 @@ async def _require_observer_key(api_key: str = Security(_obs_key_header)):
     return api_key
 
 
-# ── Hardening: rate limit en endpoints caros (Claude + HeyGen + render) ─────
+# ── Hardening: rate limit en endpoints caros (Claude + render) ─────────────
 # In-memory por IP. Es best-effort (no persiste entre reinicios ni entre replicas
 # en Railway multi-instance), pero mitiga el riesgo de burn-in por abuso casual.
 # Para producción seria considerar Redis como backing store.
@@ -8950,31 +8950,26 @@ async def get_country_alerts(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PEIRS Video Producer — endpoints (HeyGen + Guionista Claude + Director Claude)
+# PEIRS Video Producer — endpoints (pipeline data-driven, sin avatar IA)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class VideoGenerateInput(BaseModel):
-    """Request para generar un video corto tipo noticia desde los findings."""
+    """Request para generar un video corto data-driven desde los findings."""
     country_code: str = "PER"
+    preset: str = "alert_30s"          # alert_30s | weekly_90s | brief_5min | explainer_60s
     period_days: int = 7
-    severity_min: str = "high"        # high | critical
+    severity_min: str = "high"         # high | critical
     max_findings: int = 5
-    language: str = "es"              # es | en | pt | qu
-    style: str = "sober"              # sober | urgent | explainer
-    target_duration_s: int = 75
-
-    avatar_id: Optional[str] = None
-    voice_id: Optional[str] = None
-    dimension_w: int = 1280
-    dimension_h: int = 720
+    language: str = "es"               # es | en | pt | qu
+    style: str = "sober"               # sober | urgent | explainer
     title: Optional[str] = None
 
     use_llm: bool = True
-    dry_run: bool = False
+    dry_run: bool = False              # si True: solo guión + storyboard, sin render
 
 
 def _ensure_video_jobs_table():
-    """Crea tabla video_jobs si no existe."""
+    """Crea tabla video_jobs si no existe y migra columnas nuevas de Phase A."""
     if not DB_AVAILABLE:
         return
     try:
@@ -8983,11 +8978,10 @@ def _ensure_video_jobs_table():
                 CREATE TABLE IF NOT EXISTS video_jobs (
                     job_id             TEXT PRIMARY KEY,
                     country_code       TEXT NOT NULL,
+                    preset             TEXT,
                     language           TEXT,
                     style              TEXT,
                     status             TEXT,
-                    heygen_video_id    TEXT,
-                    heygen_status      TEXT,
                     video_url          TEXT,
                     thumbnail_url      TEXT,
                     duration_s         REAL,
@@ -8998,7 +8992,7 @@ def _ensure_video_jobs_table():
                     findings_count     INTEGER,
                     title              TEXT,
                     script_json        TEXT,
-                    plan_json          TEXT,
+                    storyboard_json    TEXT,
                     error              TEXT
                 )
             """)
@@ -9006,6 +9000,16 @@ def _ensure_video_jobs_table():
                 "CREATE INDEX IF NOT EXISTS idx_video_country_date "
                 "ON video_jobs(country_code, generated_at DESC)"
             )
+            # Migración idempotente: columnas agregadas en Phase A.
+            # Si ya existen, ALTER TABLE falla y lo ignoramos.
+            for col_ddl in (
+                "ALTER TABLE video_jobs ADD COLUMN preset TEXT",
+                "ALTER TABLE video_jobs ADD COLUMN storyboard_json TEXT",
+            ):
+                try:
+                    conn.execute(col_ddl)
+                except Exception:
+                    pass
             conn.commit()
     except Exception as e:
         print(f"[Video] No se pudo crear tabla video_jobs: {e}")
@@ -9019,28 +9023,27 @@ def _persist_video_job(res) -> None:
     try:
         import json as _json
         script_json = _json.dumps(res.script.model_dump(), ensure_ascii=False) if res.script else None
-        plan_json = _json.dumps(res.plan.model_dump(), ensure_ascii=False) if res.plan else None
+        storyboard_json = _json.dumps(res.storyboard.model_dump(), ensure_ascii=False) if res.storyboard else None
         with _get_db() as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO video_jobs (
-                    job_id, country_code, language, style, status,
-                    heygen_video_id, heygen_status, video_url, thumbnail_url,
+                    job_id, country_code, preset, language, style, status,
+                    video_url, thumbnail_url,
                     duration_s, tokens_input, tokens_output, estimated_cost_usd,
-                    generated_at, findings_count, title, script_json, plan_json, error
+                    generated_at, findings_count, title, script_json, storyboard_json, error
                 ) VALUES (
-                    :jid, :cc, :lang, :style, :status,
-                    :hvid, :hstatus, :vurl, :turl,
+                    :jid, :cc, :preset, :lang, :style, :status,
+                    :vurl, :turl,
                     :dur, :ti, :to_, :cost,
-                    :gen, :fc, :title, :script, :plan, :err
+                    :gen, :fc, :title, :script, :storyboard, :err
                 )
             """, {
                 "jid": res.job_id,
                 "cc": res.country_code,
+                "preset": res.preset,
                 "lang": res.language,
                 "style": res.style,
                 "status": res.status,
-                "hvid": res.heygen_video_id,
-                "hstatus": res.heygen_status,
                 "vurl": res.video_url,
                 "turl": res.thumbnail_url,
                 "dur": res.duration_s,
@@ -9051,7 +9054,7 @@ def _persist_video_job(res) -> None:
                 "fc": res.findings_count,
                 "title": (res.script.full_text[:80] if res.script else None),
                 "script": script_json,
-                "plan": plan_json,
+                "storyboard": storyboard_json,
                 "err": res.error,
             })
             conn.commit()
@@ -9066,14 +9069,13 @@ async def generate_video(
     _ip: str = Depends(_rate_limit_expensive),
 ):
     """Orquestador del Video Producer.
-    Pipeline: findings → Guionista Claude → Director Claude → HeyGen render.
+    Pipeline: findings → Guionista Claude → StoryboardBuilder → [Render].
 
-    El render de HeyGen toma 30-120s y se ejecuta de forma asíncrona en su cola.
-    Este endpoint devuelve inmediatamente con status 'rendering' y un
-    heygen_video_id que el frontend usa para polling vía /api/video/{job_id}/status.
-    Si dry_run=True, no llama a HeyGen (sólo guión + plan para preview).
+    Fase A devuelve hasta status='storyboard_ready' con guión + storyboard para
+    preview en el frontend. El render a MP4 (frames + TTS + ffmpeg) se agrega en
+    Fases B-D.
 
-    Costos aprox: Claude ~$0.10-0.15 + HeyGen ~$0.30-0.60 por video 60-90s.
+    Costo actual: Claude ~$0.02-0.05 por guión. Sin costo de render ni TTS.
 
     Seguridad:
     - Requiere header X-Observer-Key (un valor de OBSERVER_API_KEYS).
@@ -9083,23 +9085,28 @@ async def generate_video(
     _check_daily_budget(req.country_code, "video")
 
     try:
-        from agents.video_producer import VideoProducer, VideoJobRequest
+        from agents.video_producer import VideoProducer, VideoJobRequest, VideoPreset
     except ImportError as e:
         raise HTTPException(status_code=503, detail=f"Video Producer no disponible: {e}")
 
     try:
+        preset = VideoPreset(req.preset)
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail=f"preset inválido: {req.preset!r}. Valores válidos: "
+                   f"{[p.value for p in VideoPreset]}",
+        )
+
+    try:
         vr = VideoJobRequest(
             country_code=req.country_code,
+            preset=preset,
             period_days=req.period_days,
             severity_min=req.severity_min,
             max_findings=req.max_findings,
             language=req.language,
             style=req.style,
-            target_duration_s=req.target_duration_s,
-            avatar_id=req.avatar_id,
-            voice_id=req.voice_id,
-            dimension_w=req.dimension_w,
-            dimension_h=req.dimension_h,
             title=req.title,
             use_llm=req.use_llm,
             dry_run=req.dry_run,
@@ -9117,7 +9124,6 @@ async def generate_video(
 
     producer = VideoProducer(
         llm=llm if req.use_llm else None,
-        heygen_api_key=os.environ.get("HEYGEN_API_KEY"),
         alerts_loader=_alerts_loader,
     )
 
@@ -9128,7 +9134,6 @@ async def generate_video(
         tb = traceback.format_exc()[-600:]
         raise HTTPException(status_code=500, detail=f"Video pipeline error: {type(e).__name__}: {e}\n{tb}")
 
-    # Persistir estado inicial (heygen_video_id existe aunque status sea rendering)
     try:
         _persist_video_job(result)
     except Exception as e:
@@ -9146,8 +9151,8 @@ async def list_videos(country_code: str = "PER", limit: int = 20):
         _ensure_video_jobs_table()
         with _get_db() as conn:
             rows = conn.execute(
-                "SELECT job_id, country_code, language, style, status, "
-                "heygen_video_id, heygen_status, video_url, thumbnail_url, "
+                "SELECT job_id, country_code, preset, language, style, status, "
+                "video_url, thumbnail_url, "
                 "duration_s, estimated_cost_usd, generated_at, findings_count, "
                 "title, error "
                 "FROM video_jobs WHERE country_code=? "
@@ -9162,7 +9167,7 @@ async def list_videos(country_code: str = "PER", limit: int = 20):
 
 @app.get("/api/video/{job_id}/status")
 async def video_status(job_id: str):
-    """Consulta estado del video. Si está 'rendering', consulta HeyGen y actualiza SQLite."""
+    """Consulta el estado persistido del video. Sin polling externo en Phase A."""
     if not DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="DB no disponible.")
 
@@ -9175,72 +9180,19 @@ async def video_status(job_id: str):
     if not row:
         raise HTTPException(status_code=404, detail=f"job_id {job_id} no encontrado.")
 
-    data = dict(row)
+    return dict(row)
 
-    # Si ya está completado o fallido, devolvemos lo cacheado
-    if data.get("status") in ("completed", "failed"):
-        return data
 
-    hvid = data.get("heygen_video_id")
-    if not hvid:
-        return data
-
-    # Consultar HeyGen
+@app.get("/api/video/presets")
+async def list_video_presets():
+    """Lista los 4 presets de video (alert_30s, weekly_90s, brief_5min, explainer_60s).
+    Cada preset expone duración objetivo, dimensiones, estilo default y plataformas target.
+    """
     try:
-        from agents.video_producer.heygen_client import HeyGenClient
-        hg = HeyGenClient(api_key=os.environ.get("HEYGEN_API_KEY"))
-        st = hg.get_status(hvid)
+        from agents.video_producer import list_presets
+        return {"presets": list_presets()}
     except Exception as e:
-        return {**data, "poll_error": f"{type(e).__name__}: {e}"}
-
-    hg_status = str(st.get("status", "unknown")).lower()
-    # HeyGen estados: processing, completed, failed, pending
-    mapped = {
-        "completed": "completed",
-        "processing": "rendering",
-        "pending": "rendering",
-        "failed": "failed",
-    }.get(hg_status, "rendering")
-
-    updates = {
-        "heygen_status": hg_status,
-        "status": mapped,
-        "video_url": st.get("video_url"),
-        "thumbnail_url": st.get("thumbnail_url"),
-        "duration_s": st.get("duration_s") or data.get("duration_s"),
-        "error": st.get("error"),
-    }
-    try:
-        with _get_db() as conn:
-            conn.execute(
-                "UPDATE video_jobs SET heygen_status=?, status=?, video_url=?, "
-                "thumbnail_url=?, duration_s=?, error=? WHERE job_id=?",
-                (
-                    updates["heygen_status"], updates["status"], updates["video_url"],
-                    updates["thumbnail_url"], updates["duration_s"], updates["error"],
-                    job_id,
-                ),
-            )
-            conn.commit()
-    except Exception:
-        pass
-
-    return {**data, **updates}
-
-
-@app.get("/api/video/avatars")
-async def list_avatars(language: Optional[str] = None):
-    """Lista los avatares disponibles en HeyGen (para poblar el selector del frontend)."""
-    try:
-        from agents.video_producer.heygen_client import HeyGenClient
-        hg = HeyGenClient(api_key=os.environ.get("HEYGEN_API_KEY"))
-        if not hg.is_configured():
-            return {"configured": False, "avatars": [], "voices": []}
-        avatars = hg.list_avatars()
-        voices = hg.list_voices(language=language)
-        return {"configured": True, "avatars": avatars, "voices": voices}
-    except Exception as e:
-        return {"configured": False, "error": str(e), "avatars": [], "voices": []}
+        return {"presets": [], "error": f"{type(e).__name__}: {e}"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
