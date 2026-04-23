@@ -83,8 +83,8 @@ def fetch_web_anomalies(
     if ck in _cache and _is_cache_valid(_cache[ck]):
         return _cache[ck]["data"]
 
-    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%dT00:00:00")
-    until = datetime.now(timezone.utc).strftime("%Y-%m-%dT23:59:59")
+    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    until = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     data = _get(
         f"{OONI_BASE_URL}/measurements",
@@ -139,8 +139,8 @@ def fetch_aggregated_blocking(
     if ck in _cache and _is_cache_valid(_cache[ck]):
         return _cache[ck]["data"]
 
-    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%dT00:00:00")
-    until = datetime.now(timezone.utc).strftime("%Y-%m-%dT23:59:59")
+    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    until = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     data = _get(
         f"{OONI_BASE_URL}/aggregation",
@@ -191,8 +191,8 @@ def fetch_network_interference(
     if ck in _cache and _is_cache_valid(_cache[ck]):
         return _cache[ck]["data"]
 
-    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%dT00:00:00")
-    until = datetime.now(timezone.utc).strftime("%Y-%m-%dT23:59:59")
+    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    until = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     data = _get(
         f"{OONI_BASE_URL}/aggregation",
