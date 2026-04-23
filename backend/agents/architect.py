@@ -274,7 +274,7 @@ async def run_architect(
             permission_mode="acceptEdits",
             system_prompt=ARCHITECT_SYSTEM_PROMPT,
             max_turns=max_turns,
-            model="claude-opus-4-6",
+            model="claude-opus-4-7",
         )
     ):
         if isinstance(message, SystemMessage) and message.subtype == "init":
