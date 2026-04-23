@@ -16,18 +16,26 @@ def pytest_configure(config):
         "network: marca test que hace llamadas reales a servicios externos. "
         "Skippeado por default; correr con `pytest -m network`."
     )
+    config.addinivalue_line(
+        "markers",
+        "ffmpeg: marca test que ejecuta ffmpeg real (lento: ~2-10s). "
+        "Skippeado por default; correr con `pytest -m ffmpeg`."
+    )
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip @network tests a menos que se pase `-m network` explícitamente."""
-    # Si el usuario pidió explícitamente network, no deselectamos.
+    """Skip @network y @ffmpeg a menos que se los pida explícitamente via `-m`."""
     expr = config.getoption("-m", default=None) or ""
-    if "network" in expr:
-        return
-    skip_network = pytest.mark.skip(reason="test de red — correr con `pytest -m network`")
-    for item in items:
-        if "network" in item.keywords:
-            item.add_marker(skip_network)
+    for marker_name, reason in (
+        ("network", "test de red — correr con `pytest -m network`"),
+        ("ffmpeg",  "test con ffmpeg real — correr con `pytest -m ffmpeg`"),
+    ):
+        if marker_name in expr:
+            continue
+        skip_mark = pytest.mark.skip(reason=reason)
+        for item in items:
+            if marker_name in item.keywords:
+                item.add_marker(skip_mark)
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

@@ -59,3 +59,7 @@ entries_dump.json
 
 # Claude Code runtime (ephemeral lockfile de scheduled_tasks)
 .claude/scheduled_tasks.lock
+
+# Video Producer v2 runtime artifacts — regenerables del pipeline
+data/video_audio/
+data/video_mp4/

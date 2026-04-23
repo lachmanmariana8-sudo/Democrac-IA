@@ -8501,7 +8501,8 @@ function PeruSituationRoom() {
                     )}
                     {" · Estado: "}
                     <strong style={{ color:
-                      videoResult.status === "storyboard_ready" ? COLORS.accent :
+                      videoResult.status === "completed" ? COLORS.accent :
+                      videoResult.status === "storyboard_ready" ? COLORS.info :
                       videoResult.status === "failed" ? COLORS.danger :
                       COLORS.warning
                     }}>
@@ -8509,6 +8510,29 @@ function PeruSituationRoom() {
                     </strong>
                   </div>
                 </Card>
+
+                {/* Video player — visible cuando el pipeline compuso el MP4 final */}
+                {videoResult.video_url && (
+                  <Card className="peru-card" style={{ padding: 0, marginBottom: 12, overflow: "hidden" }}>
+                    <div style={{ padding: "8px 14px", background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}`, fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span>🎬 MP4 generado · {videoResult.storyboard?.width}×{videoResult.storyboard?.height} · {(videoResult.storyboard?.total_duration_s || 0).toFixed(1)}s</span>
+                      <a href={`${API_BASE}${videoResult.video_url}`} target="_blank" rel="noopener noreferrer"
+                        style={{ color: COLORS.accent, textDecoration: "none", fontWeight: 700 }}>
+                        ⬇ Descargar MP4
+                      </a>
+                    </div>
+                    <video
+                      controls
+                      src={`${API_BASE}${videoResult.video_url}`}
+                      style={{
+                        width: "100%",
+                        maxHeight: 640,
+                        background: "#000",
+                        display: "block",
+                      }}
+                    />
+                  </Card>
+                )}
 
                 {/* Guión */}
                 {videoResult.script && (
@@ -8624,12 +8648,13 @@ function PeruSituationRoom() {
                 <strong style={{ color: COLORS.text }}>Video Producer — data briefs sin avatar IA</strong>
                 <br /><br />
                 Seleccioná un <strong>preset</strong> según el uso (alerta crítica, resumen semanal,
-                brief institucional o explainer técnico). El pipeline arma un guión periodístico y un
-                storyboard con datos, citas y fuentes visibles — sin avatares IA, coherente con una
-                misión anti-desinformación.
+                brief institucional o explainer técnico). El pipeline arma un guión periodístico, un
+                storyboard con datos, citas y fuentes visibles, narra el guión con voz peruana
+                (TTS gratuito), y compone un MP4 listo para redes — sin avatares IA, coherente con
+                una misión anti-desinformación.
                 <br /><br />
-                En esta etapa (Fase A) se entrega <strong>guión + storyboard</strong> para preview.
-                El render a MP4 (frames + TTS + ffmpeg) entra en las próximas fases.
+                Pipeline: <strong>findings → Scriptwriter (Claude) → Storyboard → TTS →
+                ffmpeg → MP4</strong>. Costo: ~$0.02-0.05 por guión.
               </Card>
             )}
           </div>

@@ -98,6 +98,16 @@ class TestVideoProducerAudio:
         assert all(not b.has_audio for b in result.storyboard.beats)
         assert any("dry_run" in w.lower() for w in result.warnings)
 
+    @staticmethod
+    def _skip_composer(monkeypatch):
+        """Evita que el composer MP4 corra durante tests de TTS (mantiene el
+        pipeline detenido en `storyboard_ready` y no invoca ffmpeg real)."""
+        try:
+            import agents.video_producer.composer as comp_mod
+            monkeypatch.setattr(comp_mod, "is_available", lambda: False)
+        except ImportError:
+            pass  # composer no importable → ya no corre
+
     def test_persiste_mp3_con_engine_mockeado(self, tmp_path, monkeypatch):
         """Path completo: un beat con narración → archivo MP3 en audio_root."""
         from agents.video_producer import VideoProducer, VideoJobRequest, VideoPreset
@@ -116,6 +126,7 @@ class TestVideoProducerAudio:
                 )
 
         monkeypatch.setattr(tts_mod, "TTSEngine", _FakeEngine)
+        self._skip_composer(monkeypatch)
 
         producer = VideoProducer(llm=None, alerts_loader=None, audio_root=tmp_path)
         req = VideoJobRequest(
@@ -155,6 +166,7 @@ class TestVideoProducerAudio:
             async def synthesize(self, *a, **kw): raise AssertionError("should not be called")
 
         monkeypatch.setattr(tts_mod, "TTSEngine", _DeadEngine)
+        self._skip_composer(monkeypatch)
 
         producer = VideoProducer(llm=None, alerts_loader=None, audio_root=tmp_path)
         req = VideoJobRequest(country_code="PER", preset=VideoPreset.ALERT_30S, dry_run=False)

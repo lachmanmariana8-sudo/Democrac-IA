@@ -63,6 +63,22 @@ except ImportError:
     pick_voice = None                 # type: ignore[assignment]
     synthesize_beat_audio = None      # type: ignore[assignment]
 
+# Composer MP4 — opcional (requiere imageio-ffmpeg + PIL).
+try:
+    from agents.video_producer.composer import (
+        VideoComposer,
+        ComposerError,
+        compose_storyboard,
+        is_available as composer_available,
+    )
+    COMPOSER_AVAILABLE = True
+except ImportError:
+    COMPOSER_AVAILABLE = False
+    VideoComposer = None              # type: ignore[assignment]
+    ComposerError = Exception         # type: ignore[assignment]
+    compose_storyboard = None         # type: ignore[assignment]
+    composer_available = lambda: False  # type: ignore[assignment]
+
 
 __all__ = [
     # models
@@ -92,4 +108,10 @@ __all__ = [
     "pick_voice",
     "synthesize_beat_audio",
     "TTS_AVAILABLE",
+    # Composer MP4 (Fase D)
+    "VideoComposer",
+    "ComposerError",
+    "compose_storyboard",
+    "composer_available",
+    "COMPOSER_AVAILABLE",
 ]

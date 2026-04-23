@@ -9247,6 +9247,45 @@ async def preview_video_beat(job_id: str, beat_idx: int):
     return Response(content=png_bytes, media_type="image/png")
 
 
+@app.get("/api/video/{job_id}/download")
+async def video_download(job_id: str):
+    """Sirve el MP4 final compuesto para un job (Fase D).
+
+    El archivo se generó durante POST /api/video/generate al finalizar el pipeline
+    (Guionista → Storyboard → TTS → Composer ffmpeg) y vive en
+    {VIDEO_MP4_ROOT}/{job_id}/final.mp4.
+    """
+    if not DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="DB no disponible.")
+
+    _ensure_video_jobs_table()
+    with _get_db() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM video_jobs WHERE job_id=?", (job_id,)
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"job_id {job_id} no encontrado.")
+
+    try:
+        from agents.video_producer.video_producer import video_mp4_root
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Video MP4 no disponible: {e}")
+
+    mp4_path = video_mp4_root() / job_id / "final.mp4"
+    if not mp4_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"MP4 del job {job_id} no disponible (render falló o todavía no ejecutado).",
+        )
+
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=mp4_path,
+        media_type="video/mp4",
+        filename=f"{job_id}.mp4",
+    )
+
+
 @app.get("/api/video/{job_id}/audio/{beat_idx}")
 async def video_beat_audio(job_id: str, beat_idx: int):
     """Sirve el MP3 del beat <beat_idx> de un job (Fase C).

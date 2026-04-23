@@ -27,3 +27,8 @@ pillow>=10.0
 # Soporta ES (es-PE-Alex/Camila), EN (en-US-Aria), PT (pt-BR-Antonio). Sin auth.
 # Audio output MP3 ~24kbps. Pure Python, liviano.
 edge-tts>=7.0
+
+# imageio-ffmpeg — provee un binario ffmpeg portable vía pip (Fase D).
+# Evita depender de `ffmpeg` en el sistema / nixpacks — auto-instala un
+# ffmpeg estático funcionando en Linux/Windows/macOS. Adds ~25MB a la imagen.
+imageio-ffmpeg>=0.5

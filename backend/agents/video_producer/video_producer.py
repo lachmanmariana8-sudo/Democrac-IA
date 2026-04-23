@@ -44,6 +44,18 @@ def video_audio_root() -> Path:
         return Path(__file__).resolve().parents[3] / "data" / "video_audio"
 
 
+def video_mp4_root() -> Path:
+    """Directorio donde guardamos MP4 finales compuestos (Fase D)."""
+    override = os.getenv("VIDEO_MP4_ROOT")
+    if override:
+        return Path(override)
+    try:
+        from db.crud import get_db_path
+        return get_db_path().parent / "video_mp4"
+    except Exception:
+        return Path(__file__).resolve().parents[3] / "data" / "video_mp4"
+
+
 COUNTRY_NAMES = {"PER": "Perú", "ARG": "Argentina", "BOL": "Bolivia", "CHL": "Chile"}
 
 CLAUDE_INPUT_COST_PER_MTOK = 3.0
@@ -125,16 +137,42 @@ class VideoProducer:
 
         result.status = "storyboard_ready"
 
-        # 5. RENDER MP4 — Fase D (moviepy/ffmpeg).
+        # 5. RENDER MP4 — Fase D (ffmpeg via imageio-ffmpeg).
         if req.dry_run:
             result.duration_s = round(time.monotonic() - t0, 2)
             result.warnings.append("dry_run=True — se entrega guión + storyboard, sin TTS ni render.")
             return result
 
-        result.warnings.append(
-            "Render MP4 en desarrollo (Fase D). Por ahora se entrega guión + storyboard + audio por beat."
-        )
-        result.duration_s = round(time.monotonic() - t0, 2)
+        try:
+            from agents.video_producer.composer import VideoComposer, is_available
+        except ImportError as e:
+            result.warnings.append(f"composer no disponible: {e}")
+            result.duration_s = round(time.monotonic() - t0, 2)
+            return result
+
+        if not is_available():
+            result.warnings.append(
+                "imageio-ffmpeg no instalado/operativo — storyboard entregado sin MP4."
+            )
+            result.duration_s = round(time.monotonic() - t0, 2)
+            return result
+
+        result.status = "rendering"
+        try:
+            composer = VideoComposer()
+            # ffmpeg es CPU-bound — a thread para no bloquear el event loop.
+            mp4_path = await asyncio.to_thread(
+                composer.compose, storyboard, job_id,
+            )
+            result.video_url = f"/api/video/{job_id}/download"
+            result.duration_s = round(time.monotonic() - t0, 2)
+            result.status = "completed"
+        except Exception as e:
+            result.warnings.append(f"render MP4 falló: {type(e).__name__}: {e}")
+            result.status = "failed"
+            result.error = f"{type(e).__name__}: {e}"
+            result.duration_s = round(time.monotonic() - t0, 2)
+
         return result
 
     # ── TTS pipeline (Fase C) ──────────────────────────────────────────
