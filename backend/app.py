@@ -9195,6 +9195,58 @@ async def list_video_presets():
         return {"presets": [], "error": f"{type(e).__name__}: {e}"}
 
 
+@app.get("/api/video/{job_id}/preview/{beat_idx}")
+async def preview_video_beat(job_id: str, beat_idx: int):
+    """Renderiza el beat <beat_idx> de un job como PNG (Fase B1).
+
+    El frontend puede embeberlo con <img src="/api/video/{job_id}/preview/0" />
+    para previsualizar el storyboard antes del render MP4 completo (Fases C-D).
+    """
+    if not DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="DB no disponible.")
+
+    _ensure_video_jobs_table()
+    with _get_db() as conn:
+        row = conn.execute(
+            "SELECT storyboard_json FROM video_jobs WHERE job_id=?", (job_id,)
+        ).fetchone()
+
+    if not row or not row["storyboard_json"]:
+        raise HTTPException(status_code=404, detail=f"job_id {job_id} sin storyboard persistido.")
+
+    try:
+        from agents.video_producer import Storyboard, FrameRenderer, RENDERER_AVAILABLE
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Video renderer no disponible: {e}")
+
+    if not RENDERER_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Pillow no instalado en este deploy (necesario para preview de frames).",
+        )
+
+    try:
+        import json as _json
+        storyboard = Storyboard(**_json.loads(row["storyboard_json"]))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"storyboard corrupto: {e}")
+
+    if beat_idx < 0 or beat_idx >= len(storyboard.beats):
+        raise HTTPException(
+            status_code=404,
+            detail=f"beat_idx {beat_idx} fuera de rango (0..{len(storyboard.beats) - 1}).",
+        )
+
+    try:
+        renderer = FrameRenderer(width=storyboard.width, height=storyboard.height)
+        png_bytes = renderer.render_png(storyboard.beats[beat_idx])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"render falló: {type(e).__name__}: {e}")
+
+    from fastapi.responses import Response
+    return Response(content=png_bytes, media_type="image/png")
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 7. CLI — Ejecución directa para testing
 # ═══════════════════════════════════════════════════════════════════════════════

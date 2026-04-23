@@ -33,6 +33,20 @@ from agents.video_producer.presets import (
 from agents.video_producer.storyboard import StoryboardBuilder
 from agents.video_producer.video_producer import VideoProducer
 
+# Renderer — opcional (requiere Pillow).
+try:
+    from agents.video_producer.renderer import (
+        FrameRenderer,
+        render_beat_png,
+        render_beat_to_file,
+    )
+    RENDERER_AVAILABLE = True
+except ImportError:
+    RENDERER_AVAILABLE = False
+    FrameRenderer = None              # type: ignore[assignment]
+    render_beat_png = None            # type: ignore[assignment]
+    render_beat_to_file = None        # type: ignore[assignment]
+
 
 __all__ = [
     # models
@@ -51,4 +65,9 @@ __all__ = [
     # builders
     "StoryboardBuilder",
     "VideoProducer",
+    # renderer (Fase B1)
+    "FrameRenderer",
+    "render_beat_png",
+    "render_beat_to_file",
+    "RENDERER_AVAILABLE",
 ]
