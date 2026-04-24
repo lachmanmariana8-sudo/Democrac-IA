@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); echo \"$input\" | grep -qE 'curl.*(report/elite/generate|report/designer/generate|video/generate)' && printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Salvaguarda PEIRS: el comando toca un endpoint /generate que gasta Claude o HeyGen (incidente 2026-04-22, $0.60 disparados sin querer). Pedir autorizacion explicita a Mariana antes de re-intentar.\"}}'"
+            "command": "input=$(cat); echo \"$input\" | grep -qE 'curl.*(report/elite/generate|report/designer/generate)' && printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Salvaguarda PEIRS: el comando toca un endpoint /generate que gasta Claude (incidente 2026-04-22, $0.60 disparados sin querer). Pedir autorizacion explicita a Mariana antes de re-intentar.\"}}'"
           }
         ]
       }

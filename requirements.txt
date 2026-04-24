@@ -18,17 +18,3 @@ httpx>=0.27.0
 python-dotenv>=1.0.0
 # microsoft/markitdown — conversión HTML/PDF/DOCX → Markdown limpio
 markitdown>=0.0.1
-
-# Pillow — composición de frames PNG del Video Producer v2 (Fase B1).
-# Usado por backend/agents/video_producer/renderer.py. Liviano (~2MB).
-pillow>=10.0
-
-# edge-tts — síntesis TTS gratuita via Microsoft Edge, Fase C del Video Producer.
-# Soporta ES (es-PE-Alex/Camila), EN (en-US-Aria), PT (pt-BR-Antonio). Sin auth.
-# Audio output MP3 ~24kbps. Pure Python, liviano.
-edge-tts>=7.0
-
-# imageio-ffmpeg — provee un binario ffmpeg portable vía pip (Fase D).
-# Evita depender de `ffmpeg` en el sistema / nixpacks — auto-instala un
-# ffmpeg estático funcionando en Linux/Windows/macOS. Adds ~25MB a la imagen.
-imageio-ffmpeg>=0.5
