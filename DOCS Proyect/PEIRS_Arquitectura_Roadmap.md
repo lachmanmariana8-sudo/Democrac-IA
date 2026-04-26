@@ -1,5 +1,7 @@
 # DEMOCRAC.IA — DOCUMENTO DE ARQUITECTURA, DIAGNÓSTICO Y ROADMAP DE IMPLEMENTACIÓN
+
 ## Plataforma de Inteligencia Electoral con IA
+
 *Version: 0.4.5 — Fecha: 2026-03-25*
 *Clasificacion: Uso interno — Fundadora y equipo tecnico*
 
@@ -56,7 +58,7 @@ Centro Carter -- pero automatizados, escalables y disponibles en minutos, no en 
 ### Componentes Operativos
 
 | Componente | Estado | Calidad | Notas |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Pipeline LangGraph 4 agentes | Operativo | Produccion | OSINT > Politico > Legal > Informe |
 | V-Dem v15 integrado | Real | Verificado | 27.913 registros, 1789-2024 |
 | Freedom House FIW integrado | Real | Verificado | 2013-2025, 2.723 registros |
@@ -103,7 +105,7 @@ Centro Carter -- pero automatizados, escalables y disponibles en minutos, no en 
 | RSF 2025 | RSF/2025 - 2025.csv | 180 | 2025 | Libertad de prensa por pais |
 
 **Nota de reproducibilidad:** El archivo V-Dem (384MB) excede el limite de GitHub. Debe
-descargarse directamente desde https://www.v-dem.net/data/the-v-dem-dataset/
+descargarse directamente desde <https://www.v-dem.net/data/the-v-dem-dataset/>
 Los demas datasets estan en el repositorio.
 
 ---
@@ -325,30 +327,35 @@ Niveles:
 ---
 
 ### FASE v0.5.0 -- SENTINEL: INTELIGENCIA EN TIEMPO REAL
+
 *Objetivo: La plataforma "ve" lo que pasa ahora, no solo lo que paso.*
 *Estado: /api/sentinel/alerts existe como stub -- necesita datos reales.*
 
 #### Backend
 
 **`sentinel/calendar.py`**
+
 - Fuente: API Wikidata para calendario electoral global
 - Deteccion automatica de elecciones en los proximos 90 / 30 / 7 dias
 - Clasificacion: presidencial / legislativa / referendum / local
 - Actualizacion diaria via APScheduler
 
 **`sentinel/osint_feeds.py`**
+
 - RSS feeds verificados: OEA DECO, OSCE/ODIHR, HRW, Amnesty, Freedom House Alerts
 - Reuters, AP, EFE (seccion politica)
 - Extraccion de senales de riesgo por keywords (ES + EN)
 - Score OSINT: 0-10 por eleccion activa
 
 **`sentinel/alert_engine.py`**
+
 - Umbral configurable por pais
 - 3 niveles: WATCH / WARNING / CRITICAL
 - Trigger automatico: regenerar informe del pais afectado
 - Webhook: Slack/email cuando hay CRITICAL
 
 **Endpoints a completar:**
+
 ```
 GET  /api/sentinel/status           -> Estado de monitoreo global
 GET  /api/sentinel/calendar         -> Elecciones proximas 90 dias
@@ -359,22 +366,26 @@ WS   /ws/sentinel                   -> WebSocket para alertas en vivo
 ```
 
 #### Frontend
+
 - Panel de alertas en tiempo real (WebSocket)
 - Punto rojo parpadeando en CountryCard si hay alerta activa
 - Ticker de eventos electorales activos en la barra de navegacion
 
 #### Metricas de exito v0.5.0
+
 - Alertas generadas automaticamente en < 1 hora de un evento real
 - 0 falsos positivos criticos en primera semana
 
 ---
 
 ### FASE v0.6.0 -- PERSISTENCIA Y ESCALABILIDAD
+
 *Objetivo: El sistema no pierde datos entre reinicios y es reproducible.*
 
 #### Backend
 
 **SQLite como capa de persistencia primaria**
+
 - Una tabla `reports` con indice por pais + fecha + risk_score
 - Una tabla `countries` con metadata y configuracion
 - Una tabla `elections_calendar` para SENTINEL
@@ -382,20 +393,24 @@ WS   /ws/sentinel                   -> WebSocket para alertas en vivo
 - Migraciones con Alembic
 
 **Batch processing paralelo**
+
 - `/api/dashboard` con `asyncio.gather()` para analisis en paralelo
 - Cache de 24h por pais (no regenerar si datos no cambiaron)
 - Progress tracking con Server-Sent Events
 
 **Endpoint `/api/stats/global`**
+
 - Distribucion de risk levels por region
 - Ranking de paises por riesgo
 - Tendencia global 2013-2025 (V-Dem historico)
 
 #### Frontend
+
 - Tab "Global" con mapa mundial (heat map de riesgo)
 - Ranking con filtro por region y nivel de riesgo
 
 #### Metricas de exito v0.6.0
+
 - 38 paises analizados en paralelo en < 30 segundos
 - Datos persisten entre reinicios (SQLite)
 - Sin errores en consola del frontend
@@ -403,11 +418,13 @@ WS   /ws/sentinel                   -> WebSocket para alertas en vivo
 ---
 
 ### FASE v0.7.0 -- AGENTE DE MEJORA CONTINUA
+
 *Objetivo: La plataforma se mejora sola. El arquitecto experto nunca duerme.*
 
 **`agents/improvement_agent.py`**
 
 Corre semanalmente (cron job APScheduler) y:
+
 1. Diagnostica: errores en logs, endpoints lentos, datos desactualizados
 2. Benchmarks: calidad de informes vs. version anterior
 3. Detecta: gaps de datos (paises sin datos recientes, datasets vencidos)
@@ -416,6 +433,7 @@ Corre semanalmente (cron job APScheduler) y:
 6. Crea: GitHub Issues automaticamente si prioridad = CRITICAL o HIGH
 
 **Endpoints:**
+
 ```
 GET  /api/improvement/latest        -> Ultimo reporte de mejora
 POST /api/improvement/run           -> Forzar ejecucion manual
@@ -427,11 +445,13 @@ GET  /api/improvement/history       -> Historial de reportes
 ### FASE v0.8.0 -- EXPORTACION Y API PUBLICA
 
 **PDF Export profesional**
+
 - WeasyPrint (Python): carátula, indice, graficos embebidos, bibliografia
 - Firmado con timestamp y hash de integridad
 - Endpoint: `GET /api/report/{run_id}/pdf`
 
 **API REST publica**
+
 - Autenticacion via API key
 - Rate limiting por tier (free / professional / enterprise)
 - Documentacion OpenAPI auto-generada (FastAPI lo hace nativo)
@@ -439,14 +459,17 @@ GET  /api/improvement/history       -> Historial de reportes
 ---
 
 ### FASE v1.0 -- PLATAFORMA ELITE INTEGRADA
+
 *Objetivo: Todo corriendo junto. Lista para usuarios externos.*
 
 #### Integraciones adicionales
+
 - Multi-idioma: ES (principal) / EN / FR (Africa francofona)
 - Sistema de usuarios: observador / analista / admin
 - Notificaciones: email + Slack webhook + RSS feed
 
 #### Infraestructura
+
 - Docker + docker-compose (backend + frontend + PostgreSQL)
 - Nginx como reverse proxy
 - GitHub Actions: tests automaticos en cada PR
@@ -556,14 +579,17 @@ cd D:\DemocracIA
 ## PROXIMA SESION RECOMENDADA
 
 ### Opcion A -- SENTINEL datos reales (impacto alto, visible)
+
 Completar `/api/sentinel/alerts` con RSS feeds reales de OEA y HRW.
 El frontend ya tiene la tab SENTINEL lista -- solo falta conectar datos.
 
 ### Opcion B -- SQLite persistencia (fundacion solida)
+
 Migrar JSON a SQLite con SQLAlchemy.
 Resuelve el issue #007 definitivamente y habilita queries complejas.
 
 ### Opcion C -- Continuar Peru (profundidad de contenido)
+
 Enriquecer Cap. 5 (Campana y Medios) con datos PEI especificos de Peru.
 Agregar seccion de candidatos presidenciales 2026 en /api/peru/actors.
 

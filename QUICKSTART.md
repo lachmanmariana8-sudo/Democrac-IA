@@ -35,12 +35,14 @@ npm --version
 ### Step 2: Start the Full Stack
 
 **Option A: PowerShell (Recommended)**
+
 ```powershell
 # From the d:\DemocracIA directory:
 .\arrange_all.ps1
 ```
 
 **Option B: Command Prompt (Windows)**
+
 ```cmd
 # From the d:\DemocracIA directory:
 arrange_all.bat
@@ -49,12 +51,14 @@ arrange_all.bat
 **Option C: Manual (Two terminals)**
 
 Terminal 1 — Backend:
+
 ```powershell
 cd d:\DemocracIA\backend
 C:/Python314/python.exe -m uvicorn app:app --reload --port 8000
 ```
 
 Terminal 2 — Frontend:
+
 ```powershell
 cd d:\DemocracIA\frontend
 npm run dev
@@ -63,15 +67,17 @@ npm run dev
 ### Step 3: Open Dashboard
 
 Once both servers are running:
-- **Backend:** http://localhost:8000
-- **Dashboard:** http://localhost:5173
-- **API Docs:** http://localhost:8000/docs (Swagger)
+
+- **Backend:** <http://localhost:8000>
+- **Dashboard:** <http://localhost:5173>
+- **API Docs:** <http://localhost:8000/docs> (Swagger)
 
 ---
 
 ## 📊 What's Ready to Analyze
 
 ### Supported Countries (38 available)
+
 - **Peru 2026** ← Primary focus
 - Argentina, Bolivia, Brazil, Chile, Colombia, Costa Rica
 - Mexico, Panama, Paraguay, Uruguay, Venezuela
@@ -171,12 +177,14 @@ d:\DemocracIA\
 ```
 
 **4-Agent Pipeline** (LangGraph):
+
 1. **Architect Agent** — Frame analysis, validate inputs
 2. **Auditor Agent** — Electoral integrity checks
 3. **Hunter Agent** — Pattern detection, risk scoring
 4. **Alert Agent** — Dispatch findings
 
 **Data Connections:**
+
 - V-Dem, Freedom House, PEI datasets
 - OONI real-time API (censorship alerts)
 - Peru-specific electoral data
@@ -201,21 +209,25 @@ Currently **NOT RUNNING** — needs Node.js. Once installed:
 ## ❓ Troubleshooting
 
 ### "npm: command not found"
+
 **Solution:** Node.js is not in your system PATH
+
 1. Uninstall Node.js
-2. Download fresh from https://nodejs.org/
+2. Download fresh from <https://nodejs.org/>
 3. Install with "Add to PATH" option checked
 4. Restart terminal/PowerShell
 5. Verify: `npm --version`
 
 ### "Backend on port 8000 already in use"
+
 ```powershell
 # Find and kill process using port 8000
 netstat -ano | findstr :8000
 taskkill /PID <PID> /F
 ```
 
-### "Cannot find module 'anthropic'" 
+### "Cannot find module 'anthropic'"
+
 ```powershell
 # Reinstall Python dependencies
 cd d:\DemocracIA
@@ -223,6 +235,7 @@ C:/Python314/python.exe -m pip install -r backend/requirements.txt
 ```
 
 ### Dashboard shows "Cannot connect to backend"
+
 ```powershell
 # Verify backend is running:
 curl http://localhost:8000/api/health
@@ -251,6 +264,7 @@ C:/Python314/python.exe -m uvicorn app:app --reload --port 8000
 ## 🔐 Configuration
 
 ### Required Environment Variables (Optional)
+
 ```env
 # .env file in d:\DemocracIA\
 
@@ -262,6 +276,7 @@ OBSERVER_API_KEYS=democracia-obs-dev-2026  # Observer network auth
 ```
 
 ### Optional: Alert Channels
+
 ```env
 SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 SMTP_SERVER=smtp.gmail.com
@@ -275,7 +290,7 @@ SMTP_PASSWORD=...
 ## 📚 Documentation
 
 - [Full Status Report](STATUS_REPORT.md) — Comprehensive diagnostics
-- API Docs — http://localhost:8000/docs (when running)
+- API Docs — <http://localhost:8000/docs> (when running)
 - [Whitepaper](docs/whitepaper_2026_v2.md) — PEIRS methodology
 - [Architecture](docs/architecture_2026_v1.4.md) — System design
 
@@ -283,17 +298,18 @@ SMTP_PASSWORD=...
 
 ## ✨ Next Steps
 
-1. **[IMMEDIATE]** Install Node.js from https://nodejs.org/
+1. **[IMMEDIATE]** Install Node.js from <https://nodejs.org/>
 2. **[THEN]** Run `.\arrange_all.ps1` to start both servers
-3. **[VERIFY]** Open http://localhost:5173 in browser
+3. **[VERIFY]** Open <http://localhost:5173> in browser
 4. **[TEST]** Analyze Peru 2026 via dashboard
-5. **[EXPLORE]** Check API docs at http://localhost:8000/docs
+5. **[EXPLORE]** Check API docs at <http://localhost:8000/docs>
 
 ---
 
 **Status:** April 4, 2026 | **System Ready:** Backend ✅ | **Waiting for:** Node.js installation 🕐
 
 For questions or issues, see [STATUS_REPORT.md](STATUS_REPORT.md) or run the diagnostic:
+
 ```powershell
 C:/Python314/python.exe backend/agents/architect.py --audit
 ```

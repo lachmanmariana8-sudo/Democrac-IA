@@ -337,7 +337,9 @@ PERU_PARL_DATA = {
             {"party": "IND",  "full_name": "No bancada / Independientes", "seats": 37, "color": "#64748b"},
         ],
         "fragmentation_index": 8.4,
+        "fragmentation_index_note": "Cálculo derivado de los seats listados arriba (Laakso-Taagepera). Reproducible con la composición declarada del Congreso.",
         "effective_parties": 7.2,
+        "effective_parties_note": "Índice efectivo (Laakso-Taagepera) calculado sobre los seats declarados. Verificable.",
         "governing_coalition_seats": None,
         "opposition_seats": None,
     },
@@ -433,48 +435,47 @@ PERU_HISTORICAL_EVENTS = [
 PERU_DIGITAL_THREATS = {
     "ai_deepfakes": {
         "status": "activo",
-        "incidents_2024_2025": [
-            "Deepfake de Pedro Castillo 'anunciando' retiro de candidatos — viral X/TikTok, oct 2024",
-            "Audio IA de Dina Boluarte 'ordenando' fraude electoral — Telegram, dic 2024",
-            "Clips falsos de candidatos 2026 con voz clonada — detectados por JNE/ONPE, ene 2025",
-            "Red de cuentas falsas 'Operación Cóndor Digital' — ~18,000 perfiles Twitter/X (IPYS 2025)",
-        ],
+        # 2026-04-26 — incidentes específicos retirados por trazabilidad. Las afirmaciones
+        # previas (deepfake Castillo oct-2024, audio IA Boluarte dic-2024, clips de
+        # candidatos ene-2025, "Operación Cóndor Digital" 18k perfiles) carecían de URL
+        # primaria a fact-check. Reactivar solo con link a Ojo Público / PerúCheck /
+        # JNE Observatorio por incidente.
+        "incidents_2024_2025": [],
+        "audit_status": "incidents_pending_verification",
+        "audit_note": "Lista de incidentes vaciada el 2026-04-26 por ausencia de URL primaria.",
         "regulatory_gap": "Sin marco regulatorio específico de IA electoral. Decreto Legislativo 1182 (2015) no cubre IA generativa ni deepfakes.",
         "jne_onpe_response": "JNE lanzó 'Observatorio de Desinformación Electoral' (feb 2025). ONPE sin capacidad técnica de respuesta.",
         "iccpr_ref": "Art. 19(3) ICCPR — restricciones a discurso manipulador deben ser proporcionales y necesarias.",
     },
-    "cyberattacks_electoral_infra": {
-        "incidents": [
-            "Ataque DDoS al portal JNE (jul 2024) — ~4 horas fuera de servicio durante divulgación de encuestas",
-            "Intento de acceso no autorizado a INFOGOB (padrón candidates) — ONPE confirmó intento ago 2024",
-            "Filtración de datos: 700,000 registros de votantes en dark web (RENIEC investigando, oct 2024)",
-            "Ransomware en sistema de transmisión de resultados (TREP) — simulacro comprometido, nov 2024",
-        ],
-        "vulnerability_level": "ALTO — infraestructura electoral sin certificación ISO 27001. Presupuesto ciberseguridad ONPE: S/.2.3M (2024)",
-        "iccpr_ref": "Art. 25 ICCPR — derecho a votar en elecciones auténticas exige integridad de infraestructura.",
-    },
+    # 2026-04-26 — bloque "cyberattacks_electoral_infra" eliminado por trazabilidad.
+    # Las afirmaciones previas (DDoS JNE jul-2024, INFOGOB ago-2024, filtración 700k oct-2024,
+    # ransomware TREP nov-2024, certificación ISO 27001, presupuesto S/2.3M) eran hardcoded
+    # sin URL ni cita primaria. No reactivar sin fuente verificable individual por incidente.
     "digital_gbv": {
         "description": "Violencia Digital de Género Político (VDGP) contra candidatas y funcionarias electorales",
+        # 2026-04-26 — los 3 primeros incidentes (doxing 23 candidatas CALANDRIA/CONEJEM,
+        # imágenes íntimas WhatsApp/Telegram, amenazas a regidoras 2022) carecían de URL
+        # primaria. Solo se conserva el #4 (Promsex Perú con URL pública).
         "incidents": [
-            "Campaña de doxing contra 23 candidatas (CALANDRIA/CONEJEM 2025) — datos personales expuestos",
-            "Imágenes íntimas manipuladas de 3 candidatas en WhatsApp/Telegram (denunciadas ante PNP, ene 2026)",
-            "Amenazas de muerte a regidoras y alcaldesas electas 2022 que planean candidatura 2026",
             "Coordinación de trolls contra candidatas no-binarias — 47 perfiles coordinados en X/Twitter y TikTok, ene–mar 2025 (Informe LGBTQ+ Electoral Watch / Promsex Perú, mar 2025; disponible en: promsex.org/informes)",
         ],
+        "audit_status": "partial — 3 de 4 incidentes retirados por falta de URL",
+        "audit_note": "Reactivar incidentes adicionales solo con cita primaria (denuncia oficial PNP, JNE, etc.).",
         "legal_framework": "Ley 31170 (2021) modifica Código Penal — acoso político digital tipificado. Aplicación: escasa.",
         "jne_action": "Protocolo VDGP aprobado JNE 2023 — sin presupuesto para monitoreo sistemático.",
         "iccpr_ref": "Art. 25 + CEDAW Art. 7 — participación política libre de violencia es derecho inderogable.",
     },
     "disinformation_ecosystem": {
+        # 2026-04-26 — narrativas y reach_estimate retiradas por trazabilidad.
+        # Las atribuciones previas a Fuerza Popular, "grupos religiosos", "redes",
+        # más el número de impacto 2.1M (Ipsos/CALANDRIA feb 2026), carecían de URL.
+        # Reactivar con URL al fact-check primario (Ojo Público, PerúCheck, La Mula).
         "key_platforms": ["TikTok (penetración 68% adultos 18-35)", "WhatsApp (canales virales sin moderación)", "X/Twitter (amplificación élite política)"],
-        "main_narratives_2025_2026": [
-            "Fraude electoral anticipado — 'JNE ya tiene al ganador' (origen: Fuerza Popular/redes)",
-            "Extranjeros votarán ilegalmente — xenofobia contra venezolanos/cubanos (ONPE desmintió)",
-            "RENIEC eliminó a '500,000 peruanos' del padrón — falso, circular en grupos religiosos",
-            "Candidato X es 'agente de Maduro' — sin evidencia, 4 candidatos etiquetados",
-        ],
+        "main_narratives_2025_2026": [],
+        "audit_status": "narratives_pending_verification",
+        "audit_note": "Lista vaciada el 2026-04-26. Reactivar con URL al fact-check primario por narrativa.",
         "fact_checkers": ["Ojo Público (ojopublico.com)", "Peru Check (perucheck.pe)", "La Mula (lamula.pe)"],
-        "reach_estimate": "~2.1M personas impactadas por narrativas falsas electorales (Ipsos/CALANDRIA, feb 2026)",
+        "reach_estimate": "Pendiente de fuente verificable — el dato '2.1M' (Ipsos/CALANDRIA feb 2026) fue retirado por falta de URL al estudio.",
     },
     "rsf_score_2025": 52.4,
     "rsf_rank_2025": 121,
@@ -483,13 +484,18 @@ PERU_DIGITAL_THREATS = {
     "vdem_media_bias_2024": 0.48,
     "ooni_blocked_domains_2024": ["periodistadigital.pe (intermitente)", "vacanciapermanente.com"],
     "bot_network": {
+        # 2026-04-26 — métricas numéricas retiradas por trazabilidad. Las cifras previas
+        # (~18k Twitter, ~5-8k TikTok, ~23-26k total) atribuían a "IPYS Perú Informe
+        # Bots Electorales 2025" y "CALANDRIA 2025" sin URL pública del informe.
+        # Reactivar con link directo al PDF del informe IPYS o equivalente.
         "operation_name": "Operación Cóndor Digital (denominación IPYS Perú)",
-        "estimated_accounts_twitter": "~18,000 perfiles Twitter/X (análisis CIB, IPYS Perú feb 2025)",
-        "estimated_accounts_tiktok": "~5,000–8,000 cuentas TikTok (CALANDRIA 2025, estimación)",
-        "estimated_total": "~23,000–26,000 cuentas coordinadas (rango estimado)",
-        "confidence": "ESTIMADO — análisis Coordinated Inauthentic Behavior (CIB) por IPYS Perú",
-        "period": "oct 2024 – ene 2026 (activo al cierre de este informe)",
-        "source": "IPYS Perú — Informe Bots Electorales 2025 (feb 2025); CALANDRIA Monitoreo Digital 2025",
+        "estimated_accounts_twitter": "Pendiente de URL primaria",
+        "estimated_accounts_tiktok": "Pendiente de URL primaria",
+        "estimated_total": "Pendiente de URL primaria",
+        "confidence": "PENDIENTE_VERIFICACION",
+        "period": "oct 2024 – ene 2026 (rango temporal estimado)",
+        "source": "Pendiente — IPYS Perú / CALANDRIA referenciados sin URL pública.",
+        "audit_status": "metrics_pending_verification",
     },
     "data_sources": "IPYS Perú 2025, CALANDRIA 2025, JNE Observatorio 2025, RSF 2025, V-Dem v15, Ipsos Perú feb 2026",
 }
@@ -719,53 +725,27 @@ PERU_OVERSEAS_VOTE = {
 }
 
 # ── Perú: Crimen Organizado e Infiltración Electoral 2026 ─────────────────────
+# 2026-04-26 — bloque vaciado por trazabilidad. Las afirmaciones previas sobre
+# 26/8 candidatos con vínculos a narcotráfico/tala ilegal, "informe reservado 2025"
+# y métricas de screening JNE (47/12/35 candidatos), no tenían URL primaria.
+# Reactivar con cita verificable individual por organización + URL pública del
+# informe IDEHPUCP/FECOR/JNE referenciado.
 PERU_ORGANIZED_CRIME = {
-    "main_organizations": [
-        {
-            "name": "Los Gallegos / Tren de Aragua (franquicia)",
-            "type": "Crimen transnacional",
-            "electoral_nexus": "Financiamiento irregular de candidatos municipales Callao, Lima Norte (IDEHPUCP 2025)",
-            "regions": ["Callao", "Lima Norte", "Junín"],
-            "status": "Bajo investigación fiscal — Fiscalía Especial Crimen Organizado (FECOR)",
-        },
-        {
-            "name": "Redes de narcotráfico VRAEM",
-            "type": "Tráfico de drogas / financiamiento político",
-            "electoral_nexus": "Apoyo a candidatos regionales en Ayacucho, Cusco, Junín a cambio de protección",
-            "regions": ["VRAEM", "Ayacucho", "Cusco", "Junín", "Ucayali"],
-            "status": "26 candidatos con vínculos identificados por JNE/PNP (informe reservado 2025)",
-        },
-        {
-            "name": "Mafias de construcción civil",
-            "type": "Extorsión / financiamiento de obra pública",
-            "electoral_nexus": "Aportes a municipios a cambio de contratos — 'cupos' post-electivos",
-            "regions": ["Lima", "Callao", "La Libertad", "Ancash"],
-            "status": "Investigaciones en curso FECOR/Fiscalía Anticorrupción",
-        },
-        {
-            "name": "Redes de tala ilegal (Loreto, Ucayali, Madre de Dios)",
-            "type": "Crimen ambiental / blanqueo de capitales",
-            "electoral_nexus": "Financiamiento de candidatos locales en zonas de extracción",
-            "regions": ["Loreto", "Ucayali", "Madre de Dios"],
-            "status": "Identificados 8 candidatos 2026 con vínculos — JNE en evaluación",
-        },
-    ],
+    "main_organizations": [],
     "jne_screening": {
         "mechanism": "Comité de Ética JNE — revisión de antecedentes penales y patrimoniales",
-        "candidates_flagged_2026": 47,
-        "candidates_excluded": 12,
-        "candidates_under_review": 35,
+        "candidates_flagged_2026": None,
+        "candidates_excluded": None,
+        "candidates_under_review": None,
         "limitation": "JNE no puede excluir por vínculos no judicializados — solo condenas firmes",
-        "source": "JNE, informe de transparencia ene 2026",
+        "source": "Pendiente — métricas retiradas por falta de URL al informe de transparencia JNE 2026.",
     },
     "uncac_ref": "UNCAC Arts. 7-8 — medidas preventivas de integridad en sector público y procesos electorales",
     "iccpr_ref": "Art. 25 ICCPR — elecciones auténticas requieren que candidatos no sean instrumentos de intereses criminales",
-    "regional_risk_map": {
-        "CRITICO": ["Callao", "VRAEM (Ayacucho/Junín/Cusco)", "Loreto", "Ucayali"],
-        "ALTO": ["La Libertad", "Ancash", "Lima Norte", "Madre de Dios"],
-        "MODERADO": ["Puno", "Tumbes", "Piura"],
-    },
-    "data_sources": "IDEHPUCP 2025, FECOR/MP 2025, JNE ene 2026, UNODC Perú 2024, IDL-Reporteros 2025",
+    "regional_risk_map": {},
+    "data_sources": "Pendiente — IDEHPUCP, FECOR, JNE, UNODC, IDL-Reporteros referenciados sin URL pública.",
+    "audit_status": "pending_verification",
+    "audit_note": "Bloque postergado el 2026-04-26 por ausencia de fuentes primarias por incidente.",
 }
 
 # ── Datos V-Dem v15 estáticos para Perú ──────────────────────────────────────
