@@ -2974,6 +2974,14 @@ def _generate_political_context(context: dict, country_code: str = "") -> str:  
         if oc_audit_pending:
             crime_org_rows = "| _Sección postergada_ | _ver aviso debajo_ | — | — | — |"
             risk_map_rows = "| _Pendiente_ | _Mapa retirado por trazabilidad_ |"
+            section_24_content = (
+                "⚠️ **Sección postergada (2026-04-26).** Las afirmaciones previas sobre "
+                "organizaciones criminales con nexo electoral, métricas de screening JNE "
+                "(candidatos marcados/excluidos/en revisión) y mapa regional de riesgo "
+                "**fueron retiradas por ausencia de fuentes verificables individuales**. "
+                "La sección se reactivará únicamente con citas primarias por organización "
+                "(URL pública del informe IDEHPUCP/FECOR/JNE referenciado)."
+            )
         else:
             crime_org_rows = "\n".join(
                 f"| **{o['name']}** | {o['type']} | {o['electoral_nexus'][:80]}{'...' if len(o['electoral_nexus']) > 80 else ''} | "
@@ -2983,6 +2991,19 @@ def _generate_political_context(context: dict, country_code: str = "") -> str:  
             risk_map_rows = "\n".join(
                 f"| **{level}** | {', '.join(regions)} |"
                 for level, regions in oc["regional_risk_map"].items()
+            )
+            section_24_content = (
+                f"> **Candidatos marcados JNE (ene 2026):** {jne_sc.get('candidates_flagged_2026')} identificados | "
+                f"{jne_sc.get('candidates_excluded')} excluidos | "
+                f"{jne_sc.get('candidates_under_review')} en revisión\n"
+                f"> **Limitación JNE:** {jne_sc.get('limitation')}\n\n"
+                "| Organización | Tipo | Nexo electoral | Regiones | Estado |\n"
+                "|---|---|---|---|---|\n"
+                f"{crime_org_rows}\n\n"
+                "**Mapa de Riesgo Regional:**\n"
+                "| Nivel | Regiones |\n"
+                "|---|---|\n"
+                f"{risk_map_rows}"
             )
 
         peru_block = f"""
@@ -3018,19 +3039,7 @@ El índice V-Dem registra deterioro sostenido (v2x_libdem: 0.59 en 2015 → 0.42
 
 ### 2.4 Crimen Organizado e Infiltración Electoral
 
-{("⚠️ **Sección postergada (2026-04-26).** Las afirmaciones previas sobre organizaciones criminales con nexo electoral, métricas de screening JNE (candidatos marcados/excluidos/en revisión) y mapa regional de riesgo **fueron retiradas por ausencia de fuentes verificables individuales**. La sección se reactivará únicamente con citas primarias por organización (URL pública del informe IDEHPUCP/FECOR/JNE referenciado).")
-if oc_audit_pending else
-f"""> **Candidatos marcados JNE (ene 2026):** {jne_sc.get("candidates_flagged_2026")} identificados | {jne_sc.get("candidates_excluded")} excluidos | {jne_sc.get("candidates_under_review")} en revisión
-> **Limitación JNE:** {jne_sc.get("limitation")}
-
-| Organización | Tipo | Nexo electoral | Regiones | Estado |
-|---|---|---|---|---|
-{crime_org_rows}
-
-**Mapa de Riesgo Regional:**
-| Nivel | Regiones |
-|---|---|
-{risk_map_rows}"""}
+{section_24_content}
 
 *UNCAC: {oc["uncac_ref"]}*
 *ICCPR: {oc["iccpr_ref"]}*
