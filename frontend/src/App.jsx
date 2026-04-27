@@ -4628,12 +4628,15 @@ const MethodologyView = () => {
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {[
-              { icon: "🤖", title: "Pipeline de Agentes IA (LangGraph)", desc: "4 agentes especializados operan en secuencia: Ingesta OSINT → Análisis Político-Digital → Cumplimiento Legal → Generación de Informes VIP. Orquestados por LangGraph con estado compartido ElectionRiskState." },
-              { icon: "🔍", title: "Fuentes OSINT Verificables", desc: "V-Dem v15 (Varieties of Democracy), Freedom House FIW 2025 (Freedom in the World), PEI 10.0 (Perceptions of Electoral Integrity). Todos los datos son open source, citados con DOI, y trazables a su fuente primaria. Sin observadores físicos: análisis 100% remoto y auditable." },
-              { icon: "⚖️", title: "Base Legal: Pacto Internacional de Derechos Civiles y Políticos + Convención Americana sobre Derechos Humanos + Carta Democrática Interamericana", desc: "Cada hallazgo se vincula a artículos específicos del Pacto Internacional de Derechos Civiles y Políticos (ICCPR), la Convención Americana sobre Derechos Humanos (CADH) y la Carta Democrática Interamericana (CDI). Las violaciones se clasifican por severidad (critical/high/moderate) y nivel de verificación (confirmed/mock)." },
-              { icon: "📊", title: "Índice Predictivo de Riesgo (0-100)", desc: "8 dimensiones ponderadas: FH (15%) + V-Dem (15%) + EMB (15%) + Medios (10%) + Financiamiento (10%) + Digital (10%) + Violaciones (15%) + Observación (10%)." },
-              { icon: "🔐", title: "Trazabilidad Total", desc: "Cada dato tiene: source_id, confidence, data_hash SHA-256 e is_publishable. Los informes incluyen anexo de trazabilidad con Run ID, timestamp y versión del sistema." },
-              { icon: "🚫", title: "Principio de No-Legitimación", desc: "PEIRS NO valida ni legitima resultados electorales. Emite un índice de riesgo predictivo para analistas, inversores y gobiernos. Los datos son para fines analíticos exclusivamente." },
+              { icon: "🤖", title: "Pipeline de Agentes IA (LangGraph + Claude)", desc: "Pipeline LangGraph multi-agente: OSINT → Político → Legal → Informe → MOE Brief. Modelo principal Claude Sonnet 4 para clasificación y composición; Claude Opus 4.7 para el Architect Agent autónomo (claude-agent-sdk con acceso al codebase para refactor iterativo). Estado compartido ElectionRiskState." },
+              { icon: "📡", title: "Hunter — Monitoreo OSINT 24/7", desc: "Scheduler persistente que corre cada 4 horas (intervalo configurable). Ingesta de 8 fuentes RSS priorizadas por fase electoral (Andina, RPP, El Comercio, Gestión, IDL-Reporteros, Wayka, JNE, ONPE) + integración OONI para censura de internet. Clasificación con LLM en 18 categorías propias y 5 niveles de severidad. Dedupe semántico por (categoría, URL, fecha). Alertas Discord vía webhook para severidad ≥ high. Operación real para Perú 2026: 1.685 entries clasificadas a 27-abr (34 critical, 438 high)." },
+              { icon: "🔍", title: "Fuentes Verificables — Datasets + RAG Legal", desc: "Datasets cuantitativos: V-Dem v15 (27.913 obs. país-año, 1789-2024), Freedom House FIW (2.723 filas, 2013-2025), Perceptions of Electoral Integrity 10.0 (586 elecciones, 2012-2023), RSF Press Freedom Index 2025 (180 países). Corpus RAG legal: 23 documentos en ChromaDB con embeddings sentence-transformers. Todos open-source, citados con DOI/URL, trazables a fuente primaria." },
+              { icon: "⚖️", title: "Base Legal — 14 instrumentos en taxonomía propia", desc: "Cada hallazgo se vincula a artículos específicos del derecho internacional aplicable: ICCPR Art. 25 + Observación General 25, CADH Art. 23, Carta Democrática Interamericana, CEDAW, OSCE/ODIHR Election Standards, jurisprudencia CIDH, ECHR Protocolo 1, Carta Africana, UNDRIP. Para Perú: Constitución 1993 (Arts. electorales), LOE 26859, LOP 28094, Resoluciones JNE (incluida Res. 0891-2025 sobre voto electrónico). Severidades critical/high/medium/low/info." },
+              { icon: "📊", title: "Índice Predictivo de Riesgo (0-100) + Motor Predictivo", desc: "Risk score: 8 dimensiones ponderadas — FH (15%) + V-Dem (15%) + EMB (15%) + Medios (10%) + Financiamiento (10%) + Digital (10%) + Violaciones (15%) + Observación (10%). Motor predictivo híbrido reglas + LLM con 6 escenarios electorales con confidence intervals y early-warning meter de 4 niveles (green/amber/orange/red)." },
+              { icon: "🔐", title: "Trazabilidad APA 7 + Auditoría Continua", desc: "Cada dato tiene source/url/date/confidence_level. Los informes incluyen anexo de trazabilidad con Run ID, timestamp y versión del sistema. Política estricta del Architect Agent: bloques sin URL primaria se postergan antes que publicarse (caso real: auditoría de abril 2026 retiró afirmaciones sobre crimen organizado y deepfakes hasta verificar fuentes individuales)." },
+              { icon: "📘", title: "Elite Report — 12 capítulos institucionales", desc: "Informe de nivel internacional con composición Claude Sonnet 4 + prompt caching de Anthropic. Cuatro audiencias (institucional, ejecutivo, prensa, internacional), bilingüe ES/EN, 21 visualizaciones SVG artesanales server-side (sin matplotlib), citas APA 7. Output en HTML, Markdown y PDF (xhtml2pdf con @page A4 + @media print). Costo ~$0.40-0.80 por informe con cap diario por país." },
+              { icon: "🛡️", title: "Hardening de producción", desc: "Autenticación X-Observer-Key, rate-limiting por IP en endpoints caros, budget diario por país (cap configurable), fallbacks gráciles cuando un componente externo falla (HuggingFace, Anthropic, OONI, RSS). Persistencia SQLite que sobrevive reinicios. Deploy en Railway con healthcheck y volumen persistente; frontend en Netlify con auto-deploy en cada push a main." },
+              { icon: "🚫", title: "Principio de No-Legitimación", desc: "DEMOCRAC.IA NO valida ni legitima resultados electorales. Emite inteligencia electoral con trazabilidad verificable bajo estándares de la Comisión de Venecia, OEA/DECO, OSCE/ODIHR y Carter Center, sin sesgo político-partidario. Los datos son para uso analítico de autoridades electorales, organismos multilaterales y observadores acreditados." },
             ].map((item, i) => (
               <Card key={i}>
                 <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -4706,7 +4709,14 @@ const MethodologyView = () => {
             <div style={{ textAlign: "center", padding: 16 }}>
               <div style={{ fontSize: 13, color: COLORS.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: 3, marginBottom: 8 }}>Stack Tecnológico</div>
               <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
-                {["LangGraph", "Claude Sonnet", "FastAPI", "V-Dem v15", "Freedom House", "PEI 10.0", "React + Vite"].map((t, i) => (
+                {[
+                  "Python 3.11", "FastAPI", "LangGraph", "LangChain",
+                  "Claude Sonnet 4", "Claude Opus 4.7", "claude-agent-sdk",
+                  "ChromaDB", "sentence-transformers", "SQLite",
+                  "V-Dem v15", "Freedom House FIW", "PEI 10.0", "RSF 2025", "OONI",
+                  "React + Vite", "Recharts", "xhtml2pdf",
+                  "Railway (Nixpacks)", "Netlify",
+                ].map((t, i) => (
                   <Tag key={i} color={COLORS.accent}>{t}</Tag>
                 ))}
               </div>

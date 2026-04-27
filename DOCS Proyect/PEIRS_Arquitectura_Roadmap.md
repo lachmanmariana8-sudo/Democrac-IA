@@ -2,8 +2,14 @@
 
 ## Plataforma de Inteligencia Electoral con IA
 
-*Version: 0.4.5 — Fecha: 2026-03-25*
+*Version: 0.5.0 — Fecha: 2026-04-27*
 *Clasificacion: Uso interno — Fundadora y equipo tecnico*
+
+> **Nota de versionado:** Esta version refleja la arquitectura real al 27-abr-2026.
+> Las fases v0.5.0 (SENTINEL), v0.6.0 (persistencia) y v0.8.0 (PDF + API auth)
+> del roadmap original ya estan operativas. Se sumaron tres modulos no
+> previstos: Hunter scheduler, Constitucionalista RAG, Architect Agent autonomo,
+> Elite Report 12-capitulos y ReportDesigner sub-agente.
 
 ---
 
@@ -53,45 +59,51 @@ Centro Carter -- pero automatizados, escalables y disponibles en minutos, no en 
 
 ---
 
-## ESTADO ACTUAL (v0.4.5 -- 2026-03-25)
+## ESTADO ACTUAL (v0.5.0 -- 2026-04-27)
 
-### Componentes Operativos
+### Componentes Operativos en Produccion
 
-| Componente | Estado | Calidad | Notas |
-| --- | --- | --- | --- |
-| Pipeline LangGraph 4 agentes | Operativo | Produccion | OSINT > Politico > Legal > Informe |
-| V-Dem v15 integrado | Real | Verificado | 27.913 registros, 1789-2024 |
-| Freedom House FIW integrado | Real | Verificado | 2013-2025, 2.723 registros |
-| PEI 10.0 integrado | Real | Verificado | 586 elecciones, 2012-2023 |
-| RSF 2025 integrado | Real | Verificado | 180 paises, index libertad de prensa |
-| Informes VIP 9 capitulos | Operativo | Produccion | Caps. 1-9, mix real/mock segun pais |
-| Cap. 2 Peru enriquecido | Operativo | Produccion | Fuerzas politicas, crisis, ICCPR por actor |
-| Cap. 7 Dia de Votacion | Operativo | Tiempo real | Via /api/analyze/voting-day |
-| Dashboard React multi-tab | Operativo | Produccion | Overview / Detalle / Sentinel / Peru / Metodologia |
-| Peru Situation Room | Operativo | Produccion | 6 tabs: Inteligencia / Actores / Parlamento / MOE Brief / Jornada / Informe |
-| MOE Brief | Operativo | Produccion | /api/moe/brief/{code} + descarga markdown |
-| Traceability framework | Operativo | Produccion | Cada dato con fuente + confidence level |
-| Marco legal internacional | Operativo | Produccion | 14 instrumentos: ICCPR, CADH, CDI, UNDRIP, etc. |
-| Persistencia en disco (JSON) | Operativo | Funcional | /data/reports/ + indice por pais |
-| 38 paises en catalogo | Operativo | Produccion | Americas, Europa del Este, Africa, Asia |
-| /api/country/{code} | Operativo | Produccion | Datos por pais con cache 24h |
-| /api/peru/actors | Operativo | Produccion | 8 fuerzas politicas 2026 con perfiles ICCPR |
-| /api/peru/scenarios | Operativo | Produccion | 4 escenarios parlamentarios + datos regionales |
-| /api/sentinel/alerts | Operativo (stub) | Funcional | Datos estaticos, OSINT real pendiente |
-| Scripts PowerShell | Operativo | Produccion | iniciar_backend.ps1, iniciar_frontend.ps1, actualizar.ps1 |
+| Componente | Estado | Notas |
+| --- | --- | --- |
+| **Pipeline LangGraph 4 agentes** | Operativo | OSINT > Politico > Legal > Informe |
+| **Hunter scheduler 24/7** | Operativo | Intervalo configurable (default 4h), persistente en volumen Railway con auto-recovery. 1.685 entries reales clasificadas para Peru 2026 al 27-abr |
+| **Constitucionalista RAG** | Operativo | ChromaDB + sentence-transformers all-MiniLM-L6-v2. Corpus de 23 instrumentos juridico-electorales |
+| **Architect Agent autonomo** | Operativo | claude-agent-sdk con Claude Opus 4.7. Acceso al codebase para refactor iterativo bajo regla de trazabilidad estricta |
+| **Elite Report 12 capitulos** | Operativo | Claude Sonnet 4 con prompt caching, 4 audiencias (institutional/executive/press/international), motor predictivo con 6 escenarios + early-warning meter, 21 visualizaciones SVG server-side, citas APA 7. Costo ~$0.40-0.80 por informe |
+| **ReportDesigner sub-agente** | Operativo | Pipeline Structurer > Visualizer > Composer. 4 audiencias, ES/EN, dedupe semantico (category+URL+date), priorizacion ponderada |
+| **Observer Protocol** | Operativo | Sesiones multi-fase con 9 fases electorales (preparatoria > pre-campaña > campaña > silencio > jornada > escrutinio > post-electoral > resolucion de disputas > completada) |
+| **MOE Brief** | Operativo | /api/moe/brief/{code} + descarga markdown |
+| V-Dem v15 integrado | Operativo | 27.913 observaciones pais-año, 1789-2024 |
+| Freedom House FIW integrado | Operativo | 2.723 filas, ediciones 2013-2025 |
+| PEI 10.0 integrado | Operativo | 586 elecciones, 2012-2023 |
+| RSF 2025 integrado | Operativo | 180 paises, index libertad de prensa |
+| Marco legal | Operativo | 14 instrumentos en taxonomia propia: ICCPR, CADH, CDI, CEDAW, OSCE/ODIHR, UNDRIP, jurisprudencia CIDH, Constitucion Peru 1993, LOE 26859, LOP 28094, Resoluciones JNE |
+| **8 fuentes RSS Peru** | Operativo | Andina, RPP, El Comercio, Gestion, IDL-Reporteros, Wayka, JNE, ONPE — mapeadas a fases electorales |
+| **OONI integration** | Operativo | Censura de internet (date-only since/until tras fix 22-abr) |
+| **Discord webhook alerts** | Operativo | Severidad >= high dispara notificacion |
+| **SQLite persistencia** | Operativo | reports + sessions + entries + reportes elite. Sobrevive reinicios. |
+| **Hardening produccion** | Operativo | Auth X-Observer-Key, rate-limit por IP, budget diario por pais (cap configurable), fallbacks gracias |
+| **PDF export Elite** | Operativo | xhtml2pdf con CSS @page A4 + @media print. Firma con run_id + timestamp |
+| **Markdown export** | Operativo | MOE Brief + informe completo |
+| Dashboard React multi-tab | Operativo | Overview / Detalle / Sentinel / Peru Situation Room / Metodologia |
+| Peru Situation Room | Operativo | 11 tabs: Alertas / Calendario / Datos / Series V-Dem / Actores / Parlamento / MOE Brief / Jornada / Evaluacion / Metodologia / Informe Elite + Consulta constitucional |
+| Catalogo paises | Operativo | 38 paises (Americas, Europa Este, Africa, Asia) |
+| /api/country/{code} | Operativo | Datos por pais con cache 24h |
+| /api/peru/actors | Operativo | 8 fuerzas politicas 2026 con perfiles ICCPR |
+| /api/peru/scenarios | Operativo | 4 escenarios parlamentarios + datos regionales |
+| Trazabilidad APA 7 | Operativo | Cada dato con source/url/date/confidence_level. Bloques sin URL primaria son postergados antes que publicarse (politica del Architect Agent) |
+| **Deploy Railway + Netlify** | Operativo | Auto-deploy con git push, healthcheck /api/health (timeout 300s), volumen persistente. Frontend en democracia.ar |
 
 ### Componentes Pendientes
 
 | Componente | Estado | Prioridad |
 |---|---|---|
-| SQLite/PostgreSQL | JSON files en disco | Alta |
-| SENTINEL OSINT real | Stub estatico | Alta |
-| WebSocket alertas en vivo | No existe | Media |
-| PDF export profesional | Solo markdown | Media |
+| WebSocket alertas en vivo | No existe (Discord webhook lo cubre parcialmente) | Baja |
 | Mapa mundial interactivo | No existe | Media |
-| Agente Mejora Continua | No existe | Media |
-| API publica con auth | No existe | Baja |
-| Multi-idioma (EN/FR) | Solo ES | Baja |
+| Multi-idioma (FR para Africa) | Solo ES + EN | Baja |
+| Detección estadística de anomalías ML | Hunter clasifica pero no detecta anomalias temporales | Media |
+| API publica externa con tiers | Solo X-Observer-Key interna | Baja |
+| Sistema de usuarios (observador/analista/admin) | No existe | Baja |
 
 ---
 
@@ -526,16 +538,24 @@ GET  /api/improvement/history       -> Historial de reportes
 
 | Capa | Tecnologia | Version | Estado |
 |---|---|---|---|
-| Backend | Python + FastAPI | 3.x + 0.115 | Operativo |
-| IA / Agentes | LangGraph + Claude Sonnet 4.6 | 0.2 + claude-sonnet-4 | Operativo |
-| Base de datos | JSON en disco (-> SQLite pendiente) | -- | Funcional |
+| Backend | Python + FastAPI | 3.11 + 0.115 | Operativo |
+| LLM analista | Claude Sonnet 4 (clasificacion + composicion) | claude-sonnet-4-20250514 | Operativo |
+| LLM autonomo | Claude Opus 4.7 (Architect Agent) | claude-opus-4-7 + claude-agent-sdk | Operativo |
+| Orquestacion agentes | LangGraph + LangChain | 0.2 + 0.3 | Operativo |
+| RAG | ChromaDB + sentence-transformers | all-MiniLM-L6-v2 | Operativo |
+| Base de datos | SQLite (persistencia primaria) | -- | Operativo |
+| Scheduler | Hunter loop async + APScheduler | intervalo 4h configurable | Operativo |
+| OSINT feeds | RSS via httpx + xml stdlib | 8 fuentes Peru por fase | Operativo |
+| Censura internet | OONI API | date-only since/until | Operativo |
+| Alertas | Discord webhook | severidad >= high | Operativo |
 | Frontend | Vite + React + Recharts | 7.x + 18 + 2.x | Operativo |
 | CSS/Fonts | DM Sans, DM Mono, Fraunces | CDN | Operativo |
-| PDF | -- | -- | Pendiente |
-| Scheduler | APScheduler (pendiente SENTINEL) | -- | Pendiente |
-| WebSocket | -- | -- | Pendiente |
-| Deploy | Local (-> Docker + VPS pendiente) | -- | Pendiente |
-| CI/CD | GitHub (manual) | -- | Pendiente automatizacion |
+| PDF | xhtml2pdf con CSS @page A4 + @media print | -- | Operativo |
+| Deploy backend | Railway (Nixpacks) con volumen persistente + healthcheck | -- | Operativo |
+| Deploy frontend | Netlify auto-deploy con git push | democracia.ar | Operativo |
+| Auth | X-Observer-Key + rate-limit + budget diario por pais | -- | Operativo |
+| WebSocket | -- (Discord webhook lo cubre parcialmente) | -- | No prioritario |
+| CI/CD | GitHub (manual + Railway auto-deploy) | -- | Parcial |
 
 ---
 
@@ -595,5 +615,6 @@ Agregar seccion de candidatos presidenciales 2026 en /api/peru/actors.
 
 ---
 
-*Documento actualizado por Democrac.IA -- Claude Sonnet 4.6 -- 2026-03-25*
+*Documento actualizado por Democrac.IA -- Claude Opus 4.7 -- 2026-04-27 (v0.5.0)*
+*Refleja la arquitectura real al 27-abr-2026, despues de los sprints SENTINEL/Hunter, RAG Constitucionalista, Architect Agent autonomo, Elite Report 12-capitulos, ReportDesigner, hardening de produccion y migracion a SQLite.*
 *Clasificacion: Uso interno -- Fundadora y equipo tecnico*
