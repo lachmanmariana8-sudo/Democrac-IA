@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from agents.elite_report.visualizer import renderers as elite
+from agents.elite_report.visualizer import renderers_5b as elite_5b
 from agents.elite_report.visualizer.palette import COLORS, FONT_SANS
 
 
@@ -25,14 +26,29 @@ except ImportError:
 
 # Mapa kind → función
 _ELITE_MAP = {
-    "timeseries_multi":     elite.render_timeseries_multi,
-    "phase_timeline":       elite.render_phase_timeline,
-    "forecast_chart":       elite.render_forecast_chart,
-    "scenario_probability": elite.render_scenario_probability,
-    "heatmap_rights":       elite.render_heatmap_rights,
-    "semaphore_institutional": elite.render_semaphore_institutional,
-    "dimensions_radar":     elite.render_dimensions_radar,
-    "matrix_normativa":     elite.render_matrix_normativa,
+    # Sprint 5a
+    "timeseries_multi":         elite.render_timeseries_multi,
+    "phase_timeline":           elite.render_phase_timeline,
+    "forecast_chart":           elite.render_forecast_chart,
+    "scenario_probability":     elite.render_scenario_probability,
+    "heatmap_rights":           elite.render_heatmap_rights,
+    "semaphore_institutional":  elite.render_semaphore_institutional,
+    "dimensions_radar":         elite.render_dimensions_radar,
+    "matrix_normativa":         elite.render_matrix_normativa,
+    # Sprint 5b
+    "events_timeline":          elite_5b.render_events_timeline,
+    "flow_chart_voting":        elite_5b.render_flow_chart_voting,
+    "network_institutions":     elite_5b.render_network_institutions,
+    "hourly_timeline":          elite_5b.render_hourly_timeline,
+    "map_regions_affected":     elite_5b.render_map_regions_affected,
+    "progress_chart":           elite_5b.render_progress_chart,
+    "integrity_incidents_grid": elite_5b.render_integrity_incidents_grid,
+    "actor_network":            elite_5b.render_actor_network,
+    "judicial_timeline":        elite_5b.render_judicial_timeline,
+    "compliance_matrix":        elite_5b.render_compliance_matrix,
+    "early_warning_meter":      elite_5b.render_early_warning_meter,
+    "matrix_recommendations":   elite_5b.render_matrix_recommendations,
+    "system_architecture":      elite_5b.render_system_architecture,
 }
 
 # Kinds del ReportDesigner que se delegan al módulo legacy
