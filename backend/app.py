@@ -7095,49 +7095,97 @@ async def list_elite_reports(country_code: str = "PER", limit: int = 20):
 async def download_elite_report(report_id: str, format: str = "html"):
     """Descarga el archivo generado. format: pdf|html|md
 
-    Los archivos se guardan en {raíz-del-proyecto}/reports/elite/{report_id}/.
-    Railway corre uvicorn desde backend/ (CWD != raíz), por eso usamos path
-    absoluto derivado del módulo del elite_report para ubicarlos.
+    Estrategia de resolución:
+      1. Filesystem (rápido, sirve archivo directo) → reports/elite/{id}/report.{ext}
+      2. SQLite (resiliente) → columnas md_content/html_content de elite_reports
+      3. Para PDF: si filesystem miss y hay html_content en SQLite, render on-demand
+         con xhtml2pdf y entregar como bytes.
     """
     from fastapi.responses import FileResponse, Response
-    # Base absoluto: raíz del proyecto → reports/elite/{report_id}/
-    try:
-        from agents.elite_report.elite_report import REPORTS_DIR as ELITE_DIR
-        base_dir = ELITE_DIR / report_id
-    except Exception:
-        # Fallback: try relative resolution
-        base_dir = os.path.join("reports", "elite", report_id)
+    fmt = format.lower()
+    if fmt not in ("pdf", "html", "md"):
+        raise HTTPException(status_code=400, detail=f"format inválido: {format}. Usá pdf|html|md.")
 
-    base_dir = str(base_dir)
-    paths = {
-        "pdf":  os.path.join(base_dir, "report.pdf"),
-        "html": os.path.join(base_dir, "report.html"),
-        "md":   os.path.join(base_dir, "report.md"),
-    }
-    p = paths.get(format.lower())
-    if not p or not os.path.exists(p):
-        # Si no hay archivo en disco pero es html/md, podemos regenerarlo on-the-fly
-        # desde la base de datos SQLite si tenemos el informe cacheado.
-        raise HTTPException(
-            status_code=404,
-            detail=f"Archivo {format} no encontrado para {report_id}. "
-                   f"Path buscado: {p}. CWD={os.getcwd()}. "
-                   f"Tip: regenerá el informe — los archivos se persisten al generarlo."
-        )
     media = {
         "pdf":  "application/pdf",
         "html": "text/html; charset=utf-8",
         "md":   "text/markdown; charset=utf-8",
     }
-    return FileResponse(
-        p,
-        media_type=media[format.lower()],
-        filename=f"elite-{report_id}.{format.lower()}",
+
+    # 1. Filesystem primero (path absoluto desde el módulo, no relativo al CWD)
+    try:
+        from agents.elite_report.elite_report import REPORTS_DIR as ELITE_DIR
+        base_dir = ELITE_DIR / report_id
+    except Exception:
+        base_dir = os.path.join("reports", "elite", report_id)
+    base_dir = str(base_dir)
+    file_path = os.path.join(base_dir, f"report.{fmt}")
+    if os.path.exists(file_path):
+        return FileResponse(
+            file_path,
+            media_type=media[fmt],
+            filename=f"elite-{report_id}.{fmt}",
+        )
+
+    # 2. Fallback SQLite — md/html viven como TEXT, PDF se regenera on-demand.
+    if DB_AVAILABLE:
+        try:
+            with _get_db() as conn:
+                row = conn.execute(
+                    "SELECT md_content, html_content FROM elite_reports WHERE report_id=?",
+                    (report_id,),
+                ).fetchone()
+        except Exception:
+            row = None
+        if row:
+            md_content, html_content = row[0], row[1]
+            if fmt == "md" and md_content:
+                return Response(
+                    content=md_content,
+                    media_type=media["md"],
+                    headers={"Content-Disposition": f'attachment; filename="elite-{report_id}.md"'},
+                )
+            if fmt == "html" and html_content:
+                return Response(
+                    content=html_content,
+                    media_type=media["html"],
+                    headers={"Content-Disposition": f'attachment; filename="elite-{report_id}.html"'},
+                )
+            if fmt == "pdf" and html_content:
+                # Re-render PDF on-the-fly desde el HTML guardado en SQLite.
+                try:
+                    import io
+                    from xhtml2pdf import pisa  # type: ignore
+                    buf = io.BytesIO()
+                    pisa.CreatePDF(src=html_content, dest=buf, encoding="utf-8")
+                    buf.seek(0)
+                    return Response(
+                        content=buf.getvalue(),
+                        media_type=media["pdf"],
+                        headers={"Content-Disposition": f'attachment; filename="elite-{report_id}.pdf"'},
+                    )
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"PDF on-demand falló: {type(e).__name__}: {e}. "
+                               f"HTML está disponible en /download?format=html.",
+                    )
+
+    # 3. No está en disco ni en SQLite — informe realmente perdido.
+    raise HTTPException(
+        status_code=404,
+        detail=f"Archivo {fmt} no encontrado para {report_id} (ni en disco ni en SQLite). "
+               f"Tip: regenerá el informe — los nuevos quedan persistidos en SQLite."
     )
 
 
 def _ensure_elite_table():
-    """Crea tabla elite_reports si no existe."""
+    """Crea tabla elite_reports si no existe + migra columnas md_content/html_content
+    si la tabla existe pero esas columnas faltan.
+
+    md_content/html_content guardan el cuerpo del informe en SQLite para que sobreviva
+    pérdidas del volumen Railway (donde antes se confiaba en archivos en disco).
+    """
     if not DB_AVAILABLE:
         return
     try:
@@ -7163,20 +7211,34 @@ def _ensure_elite_table():
                     md_path           TEXT,
                     html_path         TEXT,
                     pdf_path          TEXT,
-                    stats_json        TEXT
+                    stats_json        TEXT,
+                    md_content        TEXT,
+                    html_content      TEXT
                 )
             """)
+            # Migración para DBs preexistentes: agregar columnas que pueden faltar.
+            existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(elite_reports)")}
+            if "md_content" not in existing_cols:
+                conn.execute("ALTER TABLE elite_reports ADD COLUMN md_content TEXT")
+            if "html_content" not in existing_cols:
+                conn.execute("ALTER TABLE elite_reports ADD COLUMN html_content TEXT")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_elite_country_date "
                 "ON elite_reports(country_code, generated_at DESC)"
             )
             conn.commit()
     except Exception as e:
-        print(f"[Elite] No se pudo crear tabla elite_reports: {e}")
+        print(f"[Elite] No se pudo crear/migrar tabla elite_reports: {e}")
 
 
 def _persist_elite_metadata(output):
-    """Inserta metadata del informe Elite en SQLite."""
+    """Inserta metadata + cuerpo del informe Elite en SQLite.
+
+    A partir de 2026-04-28: además de las paths a archivos (compat) guardamos el
+    markdown y el HTML completos como TEXT en SQLite. Esto vuelve los informes
+    inmortales — sobreviven a pérdidas del volumen Railway (donde antes los
+    archivos físicos se evaporaban dejando entries huérfanos en /api/list).
+    """
     if not DB_AVAILABLE:
         return
     _ensure_elite_table()
@@ -7189,13 +7251,15 @@ def _persist_elite_metadata(output):
                     report_number, classification, audience, language, report_type,
                     generated_at, generation_time_s, tokens_input, tokens_output,
                     estimated_cost_usd, total_findings, status,
-                    md_path, html_path, pdf_path, stats_json
+                    md_path, html_path, pdf_path, stats_json,
+                    md_content, html_content
                 ) VALUES (
                     :rid, :cc, :mn, :lo,
                     :rn, :cl, :au, :la, :rt,
                     :gen, :gt, :ti, :to_,
                     :cost, :tf, :status,
-                    :mp, :hp, :pp, :sj
+                    :mp, :hp, :pp, :sj,
+                    :mc, :hc
                 )
             """, {
                 "rid": output.report_id,
@@ -7218,6 +7282,8 @@ def _persist_elite_metadata(output):
                 "hp":  os.path.join(base, "report.html") if output.html else None,
                 "pp":  output.pdf_path,
                 "sj":  json.dumps(output.stats, ensure_ascii=False),
+                "mc":  output.markdown or None,
+                "hc":  output.html or None,
             })
             conn.commit()
     except Exception as e:
