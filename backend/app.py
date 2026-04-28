@@ -4711,16 +4711,37 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# En producción restringir a los dominios de democracia.ar
-_RAW_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
-if _RAW_ORIGINS == "*":
-    _ALLOWED_ORIGINS: list[str] = ["*"]
+# CORS — IMPORTANTE: con allow_credentials=True (necesario para que el frontend
+# pueda mandar X-Observer-Key + cookies si se agregan en el futuro), el spec
+# CORS PROHIBE usar "*" como wildcard. Si lo usás, Starlette no emite el header
+# Access-Control-Allow-Origin y el browser bloquea todos los requests.
+#
+# Solución: default a una lista explícita de dominios conocidos. Si querés
+# aceptar cualquier origin, seteá ALLOWED_ORIGINS=* y se mappea a un regex
+# (".*") que sí es compatible con credentials.
+_DEFAULT_ORIGINS = (
+    "https://democracia.ar,"
+    "https://www.democracia.ar,"
+    "https://api.democracia.ar,"
+    "http://localhost:5173,"
+    "http://localhost:3000,"
+    "http://localhost:8000"
+)
+_RAW_ORIGINS = os.getenv("ALLOWED_ORIGINS", _DEFAULT_ORIGINS)
+
+_ALLOWED_ORIGINS: list[str]
+_ORIGIN_REGEX: str | None
+if _RAW_ORIGINS.strip() == "*":
+    _ALLOWED_ORIGINS = []
+    _ORIGIN_REGEX = ".*"
 else:
     _ALLOWED_ORIGINS = [o.strip() for o in _RAW_ORIGINS.split(",") if o.strip()]
+    _ORIGIN_REGEX = None
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
+    allow_origin_regex=_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
