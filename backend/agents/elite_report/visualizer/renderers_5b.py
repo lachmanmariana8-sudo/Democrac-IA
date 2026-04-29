@@ -1163,3 +1163,144 @@ def render_system_architecture(data: Dict[str, Any]) -> str:
 
     svg.append('</svg>')
     return "".join(svg)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 14. parliament_scenarios — escenarios parlamentarios proyectados (Cap. 9)
+# ═══════════════════════════════════════════════════════════════════════
+def render_parliament_scenarios(data: Dict[str, Any]) -> str:
+    """Data:
+        {
+          "scenarios": [
+            {
+              "id": "A", "label": "Hiperfragmentación",
+              "probability_pct": 52,
+              "governance_risk": "Alto",
+              "description": "Ningún partido supera 20 escaños...",
+              "seats": [{"party": "APP", "seats": 22, "color": "#f97316"}, ...],
+            },
+            ...  (típicamente 3 escenarios)
+          ],
+          "total_seats": 130
+        }
+
+    Layout: una columna por escenario con barras stacked (composición de bancas),
+    probabilidad destacada, governance risk con color, descripción corta debajo.
+    """
+    scenarios = data.get("scenarios", [])
+    if not scenarios:
+        return _render_empty_state("Escenarios parlamentarios no disponibles")
+
+    scenarios = scenarios[:4]
+    total_seats = data.get("total_seats", 130)
+    n = len(scenarios)
+    W = 680
+    col_w = (W - 60) / n
+    bar_x_offset = 12
+    bar_w = col_w - 24
+    H = 460
+
+    risk_color = {
+        "Alto":      COLORS["critical"],
+        "Moderado":  COLORS["high"],
+        "Bajo":      COLORS["low"],
+    }
+
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
+           f'role="img" aria-label="Escenarios parlamentarios proyectados">']
+    svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
+
+    svg.append(f'<text x="20" y="26" font-family="{FONT_SANS}" font-size="11" '
+               f'font-weight="700" letter-spacing="1.5" '
+               f'fill="{COLORS["teal_dark"]}">ESCENARIOS PARLAMENTARIOS PROYECTADOS</text>')
+    svg.append(f'<text x="20" y="42" font-family="{FONT_MONO}" font-size="9" '
+               f'fill="{COLORS["text_muted"]}">{total_seats} escaños · '
+               f'mayoría simple = {total_seats // 2 + 1}</text>')
+
+    bar_top = 90
+    bar_bottom = 290
+    bar_h = bar_bottom - bar_top
+
+    for i, sc in enumerate(scenarios):
+        x = 30 + i * col_w
+        bar_x = x + bar_x_offset
+        # Header del escenario
+        sc_label = _esc(sc.get("label", sc.get("id", "?")))[:30]
+        prob = sc.get("probability_pct", 0)
+        risk_label_short = _esc(sc.get("governance_risk", ""))[:60]
+        # Determinar color de risk a partir de la primera palabra del risk text
+        first_word = sc.get("governance_risk", "").split()[0] if sc.get("governance_risk") else ""
+        rcolor = risk_color.get(first_word, COLORS["text_muted"])
+
+        # Probabilidad
+        svg.append(f'<text x="{x+col_w/2:.1f}" y="62" text-anchor="middle" '
+                   f'font-family="{FONT_MONO}" font-size="22" font-weight="700" '
+                   f'fill="{COLORS["teal_dark"]}">{prob}%</text>')
+        # Label
+        svg.append(f'<text x="{x+col_w/2:.1f}" y="80" text-anchor="middle" '
+                   f'font-family="{FONT_SANS}" font-size="11" font-weight="700" '
+                   f'fill="{COLORS["text"]}">{sc_label}</text>')
+
+        # Barra stacked (composición)
+        seats_list = sc.get("seats", [])
+        scenario_total = sum(s.get("seats", 0) for s in seats_list) or 1
+        running_y = bar_top
+        for s in seats_list:
+            seats_count = s.get("seats", 0)
+            seg_h = bar_h * seats_count / scenario_total
+            color = s.get("color", COLORS["text_muted"])
+            svg.append(f'<rect x="{bar_x:.1f}" y="{running_y:.1f}" '
+                       f'width="{bar_w:.1f}" height="{seg_h:.1f}" '
+                       f'fill="{color}" opacity="0.85"/>')
+            # Label dentro del segmento si es lo suficientemente grande
+            if seg_h >= 14:
+                txt = f'{_esc(s.get("party", ""))[:5]} {seats_count}'
+                svg.append(f'<text x="{bar_x+bar_w/2:.1f}" y="{running_y+seg_h/2+4:.1f}" '
+                           f'text-anchor="middle" font-family="{FONT_MONO}" '
+                           f'font-size="9" font-weight="700" fill="{COLORS["bg"]}">{txt}</text>')
+            running_y += seg_h
+
+        # Línea de mayoría simple (66 escaños = 50.7%)
+        majority_y = bar_top + bar_h * (total_seats // 2 + 1) / total_seats
+        svg.append(f'<line x1="{bar_x-4:.1f}" y1="{majority_y:.1f}" '
+                   f'x2="{bar_x+bar_w+4:.1f}" y2="{majority_y:.1f}" '
+                   f'stroke="{COLORS["text"]}" stroke-width="1" stroke-dasharray="4,3"/>')
+
+        # Governance risk badge
+        svg.append(f'<rect x="{x+12:.1f}" y="{bar_bottom+12}" width="{col_w-24:.1f}" '
+                   f'height="22" rx="3" fill="{rcolor}" opacity="0.18" '
+                   f'stroke="{rcolor}" stroke-width="1"/>')
+        svg.append(f'<text x="{x+col_w/2:.1f}" y="{bar_bottom+27}" text-anchor="middle" '
+                   f'font-family="{FONT_MONO}" font-size="9" font-weight="700" '
+                   f'fill="{rcolor}">RIESGO {first_word.upper()[:14]}</text>')
+
+        # Descripción (multi-line wrapping manual)
+        desc = sc.get("description", "")
+        words = desc.split()
+        line_max = 32
+        cur = ""
+        line_y = bar_bottom + 50
+        for w in words:
+            tentative = (cur + " " + w).strip()
+            if len(tentative) > line_max:
+                svg.append(f'<text x="{x+col_w/2:.1f}" y="{line_y:.1f}" text-anchor="middle" '
+                           f'font-family="{FONT_SANS}" font-size="9" '
+                           f'fill="{COLORS["text_muted"]}">{_esc(cur)}</text>')
+                line_y += 12
+                cur = w
+                if line_y > H - 18:
+                    break
+            else:
+                cur = tentative
+        if cur and line_y <= H - 18:
+            svg.append(f'<text x="{x+col_w/2:.1f}" y="{line_y:.1f}" text-anchor="middle" '
+                       f'font-family="{FONT_SANS}" font-size="9" '
+                       f'fill="{COLORS["text_muted"]}">{_esc(cur)}</text>')
+
+    # Caption explicativa de la línea punteada
+    svg.append(f'<text x="{W/2:.1f}" y="{bar_top - 6}" text-anchor="middle" '
+               f'font-family="{FONT_SANS}" font-size="8" font-style="italic" '
+               f'fill="{COLORS["text_muted"]}">— — línea = umbral mayoría simple</text>')
+
+    svg.append('</svg>')
+    return "".join(svg)
