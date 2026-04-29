@@ -105,6 +105,10 @@ class FindingRef(BaseModel):
     themes: List[str] = Field(default_factory=list)
     priority_score: Optional[float] = None
     phase: Optional[str] = None
+    # Agregado 2026-04-29 — location se setea por hunter_loader cuando está
+    # disponible en el ObservationEntry original. Sirve para mapping a regiones
+    # en map_regions_affected / integrity_incidents_grid.
+    location: Optional[str] = None
 
 
 class PhaseEvidence(BaseModel):

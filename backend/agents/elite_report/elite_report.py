@@ -424,12 +424,12 @@ class PEIRSEliteReport:
         ranked_findings = sorted(
             bundle.hunter_entries,
             key=lambda f: (-sev_rank.get((f.severity or "info").lower(), 0),
-                           f.timestamp or ""),
+                           f.recorded_at or ""),
         )
         events_timeline_data = {
             "events": [
                 {
-                    "date": (f.timestamp or "")[:10],
+                    "date": (f.recorded_at or "")[:10],
                     "label": (f.finding or "")[:46],
                     "severity": (f.severity or "info").lower(),
                 }
@@ -438,12 +438,10 @@ class PEIRSEliteReport:
         }
 
         # hourly_timeline: eventos por hora del día electoral (cap 5)
-        # Filtrar findings de jornada_date y agrupar por hora
-        from collections import Counter as _Counter
-        jornada = bundle.country_code  # placeholder; el jornada real vive en req
+        # Filtrar findings de jornada_date y agrupar por hora.
         hourly_buckets: Dict[int, Dict[str, Any]] = {}
         for f in bundle.hunter_entries:
-            ts = f.timestamp or ""
+            ts = f.recorded_at or ""
             if "T" in ts:
                 try:
                     h = int(ts.split("T")[1][:2])
@@ -486,7 +484,13 @@ class PEIRSEliteReport:
             PERU_REGIONS_DATA = []
             PERU_PARL_DATA = {}
 
-        if bundle.country_code == "PER" and _peru_data_available:
+        # Verificar si tenemos datos de location en el bundle (campo opcional
+        # en FindingRef desde 2026-04-29; antes era None para todos los findings).
+        has_locations = any(
+            (f.location or "").strip() for f in bundle.hunter_entries
+        )
+
+        if bundle.country_code == "PER" and _peru_data_available and has_locations:
             top_regions_per = [r["region"] for r in PERU_REGIONS_DATA[:8]]
         else:
             top_regions_per = []
@@ -507,8 +511,10 @@ class PEIRSEliteReport:
         }
 
         # map_regions_affected: intensidad por región (cap 5)
+        # Sólo se popula si hay location data en el bundle. Caso contrario,
+        # el viz cae en empty_state placeholder en el renderer.
         regions_affected_data: Dict[str, Any] = {"regions": []}
-        if bundle.country_code == "PER" and _peru_data_available:
+        if bundle.country_code == "PER" and _peru_data_available and has_locations:
             for r in PERU_REGIONS_DATA[:24]:
                 # Contar findings cuya location coincide con la región
                 count = sum(1 for f in bundle.hunter_entries
@@ -554,8 +560,8 @@ class PEIRSEliteReport:
         judicial_data = {
             "actions": [
                 {
-                    "date": (f.timestamp or "")[:10],
-                    "actor": (f.source_org or f.source_name or "—")[:24],
+                    "date": (f.recorded_at or "")[:10],
+                    "actor": (f.source_name or "—")[:24],
                     "action": (f.finding or "")[:80],
                     "severity": (f.severity or "info").lower(),
                 }
