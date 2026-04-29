@@ -7232,12 +7232,97 @@ async def download_elite_report(report_id: str, format: str = "html"):
     )
 
 
-def _ensure_elite_table():
-    """Crea tabla elite_reports si no existe + migra columnas md_content/html_content
-    si la tabla existe pero esas columnas faltan.
+@app.get("/api/report/elite/{report_id}/structured")
+async def get_elite_report_structured(report_id: str, dim: str | None = None):
+    """Devuelve el informe Elite como JSON estructurado para extracción / análisis.
 
-    md_content/html_content guardan el cuerpo del informe en SQLite para que sobreviva
-    pérdidas del volumen Railway (donde antes se confiaba en archivos en disco).
+    Forma del payload (output_json persistido en SQLite al generar):
+      {
+        report_id, country_code, mission, audience, language, report_type,
+        generated_at, status,
+        chapters: [{number, chapter_id, title, narrative, findings[],
+                    cross_references[], visualizations[], ...}],
+        forecast: {scenarios[], early_warning_level, drivers, ...},
+        citations: [{citation_id, type, formatted_apa, ...}],
+        all_findings: [...],   # universo completo del Hunter para anexo C
+        stats: {total, by_severity, by_phase, ...},
+        warnings, tokens_used, estimated_cost_usd, generation_time_seconds,
+      }
+
+    Query params:
+      dim: opcional. Si se especifica, devuelve solo esa dimension. Valores soportados:
+        - chapters | forecast | citations | findings | stats | warnings | mission
+        Cualquier otro valor → 400.
+
+    Errores:
+      - 404 si el informe no existe en SQLite.
+      - 410 si el informe existe pero output_json no fue guardado (informes
+        previos a 2026-04-29). En ese caso usar /download?format=md como
+        fallback.
+      - 503 si SQLite no esta disponible.
+    """
+    if not DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="SQLite no disponible.")
+    try:
+        with _get_db() as conn:
+            row = conn.execute(
+                "SELECT output_json, generated_at FROM elite_reports WHERE report_id=?",
+                (report_id,),
+            ).fetchone()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB error: {type(e).__name__}: {e}")
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Informe {report_id} no existe.")
+
+    output_json_str, generated_at = row[0], row[1]
+    if not output_json_str:
+        raise HTTPException(
+            status_code=410,
+            detail=(
+                f"Informe {report_id} (generado {generated_at}) fue creado antes "
+                f"de 2026-04-29 y no tiene output_json persistido. Regenerá el "
+                f"informe para obtener la version estructurada, o usá "
+                f"/api/report/elite/{report_id}/download?format=md."
+            ),
+        )
+
+    try:
+        payload = json.loads(output_json_str)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"output_json corrupto: {e}")
+
+    if not dim:
+        return payload
+
+    # Filtro por dimension
+    dim_map = {
+        "chapters":   "chapters",
+        "forecast":   "forecast",
+        "citations":  "citations",
+        "findings":   "all_findings",
+        "stats":      "stats",
+        "warnings":   "warnings",
+        "mission":    "mission",
+    }
+    key = dim_map.get(dim.lower())
+    if key is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"dim inválido: {dim}. Valores soportados: {sorted(dim_map.keys())}.",
+        )
+    return {"report_id": report_id, "dim": dim, "value": payload.get(key)}
+
+
+def _ensure_elite_table():
+    """Crea tabla elite_reports si no existe + migra columnas faltantes.
+
+    Columnas agregadas en versiones posteriores (28-abr-2026):
+      - md_content / html_content: cuerpo del informe en SQLite para sobrevivir
+        pérdidas del volumen Railway.
+      - output_json: dump estructurado de EliteReportOutput (chapters, forecast,
+        citations, findings, cross_refs, stats) para extracción dinámica via
+        /structured. Excluye md/html/pdf que ya viven en sus propias columnas.
     """
     if not DB_AVAILABLE:
         return
@@ -7266,7 +7351,8 @@ def _ensure_elite_table():
                     pdf_path          TEXT,
                     stats_json        TEXT,
                     md_content        TEXT,
-                    html_content      TEXT
+                    html_content      TEXT,
+                    output_json       TEXT
                 )
             """)
             # Migración para DBs preexistentes: agregar columnas que pueden faltar.
@@ -7275,6 +7361,8 @@ def _ensure_elite_table():
                 conn.execute("ALTER TABLE elite_reports ADD COLUMN md_content TEXT")
             if "html_content" not in existing_cols:
                 conn.execute("ALTER TABLE elite_reports ADD COLUMN html_content TEXT")
+            if "output_json" not in existing_cols:
+                conn.execute("ALTER TABLE elite_reports ADD COLUMN output_json TEXT")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_elite_country_date "
                 "ON elite_reports(country_code, generated_at DESC)"
@@ -7285,18 +7373,28 @@ def _ensure_elite_table():
 
 
 def _persist_elite_metadata(output):
-    """Inserta metadata + cuerpo del informe Elite en SQLite.
+    """Inserta metadata + cuerpo + dump estructurado del informe Elite en SQLite.
 
-    A partir de 2026-04-28: además de las paths a archivos (compat) guardamos el
-    markdown y el HTML completos como TEXT en SQLite. Esto vuelve los informes
-    inmortales — sobreviven a pérdidas del volumen Railway (donde antes los
-    archivos físicos se evaporaban dejando entries huérfanos en /api/list).
+    Tres capas de persistencia (28-abr-2026):
+      1. Metadata escalar (paths, audience, costo, etc.) — para queries rápidas.
+      2. md_content / html_content — cuerpo renderizado, sobrevive volumen perdido.
+      3. output_json — dump estructurado de EliteReportOutput para extracción
+         dinámica via /structured. Excluye md/html/pdf (ya viven en sus columnas)
+         para no duplicar payload.
     """
     if not DB_AVAILABLE:
         return
     _ensure_elite_table()
     try:
         base = os.path.join("reports", "elite", output.report_id)
+        # Dump estructurado: chapters, forecast, citations, findings, stats, etc.
+        # Excluimos los outputs renderizados que ya viven en md_content/html_content/pdf_path.
+        try:
+            output_dict = output.model_dump(exclude={"markdown", "html", "pdf_path"})
+            output_json_str = json.dumps(output_dict, ensure_ascii=False, default=str)
+        except Exception as _ser_err:
+            output_json_str = None
+            print(f"[Elite] No se pudo serializar output_json: {_ser_err}")
         with _get_db() as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO elite_reports (
@@ -7305,14 +7403,14 @@ def _persist_elite_metadata(output):
                     generated_at, generation_time_s, tokens_input, tokens_output,
                     estimated_cost_usd, total_findings, status,
                     md_path, html_path, pdf_path, stats_json,
-                    md_content, html_content
+                    md_content, html_content, output_json
                 ) VALUES (
                     :rid, :cc, :mn, :lo,
                     :rn, :cl, :au, :la, :rt,
                     :gen, :gt, :ti, :to_,
                     :cost, :tf, :status,
                     :mp, :hp, :pp, :sj,
-                    :mc, :hc
+                    :mc, :hc, :oj
                 )
             """, {
                 "rid": output.report_id,
@@ -7337,6 +7435,7 @@ def _persist_elite_metadata(output):
                 "sj":  json.dumps(output.stats, ensure_ascii=False),
                 "mc":  output.markdown or None,
                 "hc":  output.html or None,
+                "oj":  output_json_str,
             })
             conn.commit()
     except Exception as e:
