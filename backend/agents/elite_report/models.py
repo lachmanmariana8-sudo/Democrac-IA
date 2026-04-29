@@ -219,6 +219,8 @@ VizKind = Literal[
     "heatmap_rights", "compliance_matrix", "forecast_chart",
     "scenario_probability", "early_warning_meter", "semaphore_institutional",
     "dimensions_radar", "matrix_recommendations", "system_architecture",
+    # Agregado 2026-04-29 — escenarios parlamentarios proyectados (Cap 9, PER-only).
+    "parliament_scenarios",
 ]
 
 
