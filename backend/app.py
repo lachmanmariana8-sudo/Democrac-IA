@@ -51,7 +51,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Security, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import hashlib
 import pandas as pd
 
@@ -6971,6 +6971,19 @@ async def ask_constitutionalist(query: ConstitutionalistQuery):
 # PEIRS Elite Report — endpoints (Sprint 6 del blueprint ELITE_REPORT.md)
 # ═════════════════════════════════════════════════════════════════════
 
+# Dynamic-date factories para EliteMissionInput.
+# Antes era hardcoded "2026-04-20" en period_end → al regenerar dejaba afuera
+# todas las entries posteriores a esa fecha. Ahora cada nueva request usa
+# fechas relativas a "ahora", a menos que el cliente las especifique
+# explicitamente (lo cual sigue siendo posible para auditorias retroactivas).
+def _default_period_end() -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+
+
+def _default_period_start() -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+
+
 class EliteMissionInput(BaseModel):
     """Metadata de misión para el Elite Report."""
     mission_name: str = "DemocracIA — Observación Electoral PEIRS"
@@ -6978,8 +6991,8 @@ class EliteMissionInput(BaseModel):
     organization: str = "DemocracIA"
     report_number: str = "DMC-PER-2026-001"
     classification: str = "public"  # public | restricted | confidential
-    period_start: str = "2026-04-09"
-    period_end: str = "2026-04-20"
+    period_start: str = Field(default_factory=_default_period_start)
+    period_end: str = Field(default_factory=_default_period_end)
     jornada_date: str = "2026-04-12"
 
 
@@ -7021,6 +7034,25 @@ async def generate_elite_report(
     Returns: EliteReportOutput completo con chapters, html, markdown, pdf_path.
     """
     _check_daily_budget(req.country_code, "elite")
+
+    # Pre-check: si use_llm=True pero el LLM no responde (rate limit, spending
+    # cap, key invalida, overload), abortar AHORA en vez de generar un informe
+    # sin narrativa. Esto evita el bug "informe vacio silencioso" que vimos
+    # cuando Anthropic devolvio 400 en cada uno de los 13 chapter calls.
+    # _check_llm_alive esta cacheado 5min, asi que el costo es despreciable.
+    if req.use_llm:
+        llm_status = await _check_llm_alive()
+        if not llm_status.get("ok", False):
+            err = llm_status.get("error", "LLM no disponible")
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"LLM no disponible — la generacion se abortaria con narrativa "
+                    f"vacia. Detalle: {err}. Si querés generar un informe sin "
+                    f"narrativa LLM, mandalo con use_llm=false."
+                ),
+            )
+
     try:
         from agents.elite_report import (
             PEIRSEliteReport,
