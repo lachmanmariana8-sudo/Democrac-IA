@@ -663,15 +663,17 @@ def _render_toc(chapters: List[EliteChapter], req: EliteReportRequest) -> str:
     for ch in chapters:
         num = ch.number
         num_str = f"Cap. {num}" if num > 0 else ("Declaración" if num == -2 else "—")
+        # Espacio explicito entre <span> y <a> para que la conversion HTML→MD
+        # (markitdown) no los fusione: "Declaracion[Declaracion preliminar]".
         items.append(
-            f'<li><span class="num">{num_str}</span>'
+            f'<li><span class="num">{num_str}</span> '
             f'<a href="#chapter-{ch.chapter_id}">{_esc(ch.title)}</a></li>'
         )
     # Anexos
-    items.append('<li><span class="num">A</span><a href="#appendix-a">Metodología técnica</a></li>')
-    items.append('<li><span class="num">B</span><a href="#appendix-b">Bibliografía APA</a></li>')
+    items.append('<li><span class="num">A</span> <a href="#appendix-a">Metodología técnica</a></li>')
+    items.append('<li><span class="num">B</span> <a href="#appendix-b">Bibliografía APA</a></li>')
     if req.include_appendix_c:
-        items.append('<li><span class="num">C</span><a href="#appendix-c">Hallazgos completos</a></li>')
+        items.append('<li><span class="num">C</span> <a href="#appendix-c">Hallazgos completos</a></li>')
 
     return f"""<nav class="toc">
 <h2>Tabla de contenidos</h2>
@@ -726,8 +728,13 @@ def _render_chapter(ch: EliteChapter, req: EliteReportRequest) -> str:
             f'</div>'
         )
 
+    # Separador explicito entre el span de numeracion y el titulo. En HTML el
+    # margin-right del span lo disimula, pero la conversion a MD via markitdown
+    # los fusiona ("Cap. 01Contexto historico"). Un espacio ASCII entre tags
+    # se preserva en MD y no afecta el render HTML.
+    sep = " " if ch_num_label else ""
     return f"""<section class="{section_class}" id="chapter-{ch.chapter_id}">
-<h2>{ch_num_label}{_esc(ch.title)}</h2>
+<h2>{ch_num_label}{sep}{_esc(ch.title)}</h2>
 {narrative_html}
 {viz_html}
 {findings_html}

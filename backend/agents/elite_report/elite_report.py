@@ -812,13 +812,11 @@ class PEIRSEliteReport:
                     caption="Nivel actual de riesgo según severidad agregada y forecast.",
                     data=early_warning_data,
                 ))
-                if parliament_data:
-                    ch.visualizations.append(VizSpec(
-                        kind="parliament_scenarios",
-                        title="Escenarios parlamentarios proyectados — Perú 2026",
-                        caption="Composición del Congreso bajo cada escenario electoral, con probabilidad y riesgo de gobernabilidad.",
-                        data=parliament_data,
-                    ))
+                # Cableado de parliament_scenarios retirado 2026-04-29 a pedido
+                # de Mariana — la comparativa de parlamentos hardcoded competia
+                # visualmente con los escenarios probabilisticos del forecast.
+                # El renderer + el VizKind quedan disponibles si en el futuro
+                # se quiere reactivar con data dinamica del bundle.
             elif ch.chapter_id == "conclusiones":
                 ch.visualizations.append(VizSpec(
                     kind="semaphore_institutional",
