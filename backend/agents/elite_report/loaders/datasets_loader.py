@@ -55,35 +55,81 @@ class DatasetsLoader:
 
     # ── V-Dem ───────────────────────────────────────────────────────────
     def _load_vdem_series(self, cc: str, up_to_year: Optional[int] = None) -> Optional[HistoricalSeries]:
+        """Carga la serie V-Dem Liberal Democracy Index.
+
+        Estrategia 2-tier:
+          1. CSV completo via load_vdem_data() — solo disponible en local
+             (data/V-Dem-CY-Full+Others-v15.csv son 384MB, gitignored).
+          2. Fallback: VDEM_STATIC dict pre-procesado en modules/vdem_static.py
+             — 38 paises x 1985-2024 x 25 indicadores, tracked en git, ~682KB.
+             Es lo que efectivamente corre en Railway.
+        """
+        from modules.data_loaders import VDEM_LAST_YEAR
+        last_year = up_to_year or VDEM_LAST_YEAR
+        first_year = last_year - self.years_window + 1
+
+        # ── Tier 1: CSV ─────────────────────────────────────────────────
         try:
-            from modules.data_loaders import load_vdem_data, VDEM_LAST_YEAR
+            from modules.data_loaders import load_vdem_data
             df = load_vdem_data()
-            if df is None:
-                return None
+            if df is not None:
+                rows = df[
+                    (df["country_text_id"] == cc) &
+                    (df["year"] >= first_year) &
+                    (df["year"] <= last_year)
+                ].sort_values("year")
 
-            last_year = up_to_year or VDEM_LAST_YEAR
-            first_year = last_year - self.years_window + 1
-
-            rows = df[
-                (df["country_text_id"] == cc) &
-                (df["year"] >= first_year) &
-                (df["year"] <= last_year)
-            ].sort_values("year")
-
-            if rows.empty:
-                return None
-
-            datapoints: List[HistoricalDatapoint] = []
-            for _, r in rows.iterrows():
-                val = r.get("v2x_libdem")
-                try:
+                if not rows.empty:
+                    datapoints: List[HistoricalDatapoint] = []
                     import pandas as pd
-                    if pd.isna(val):
-                        continue
+                    for _, r in rows.iterrows():
+                        val = r.get("v2x_libdem")
+                        if pd.isna(val):
+                            continue
+                        try:
+                            datapoints.append(HistoricalDatapoint(
+                                year=int(r["year"]),
+                                value=round(float(val), 4),
+                                source="V-Dem Institute v15",
+                            ))
+                        except Exception:
+                            continue
+
+                    if datapoints:
+                        trend = self._compute_trend([d.value for d in datapoints])
+                        return HistoricalSeries(
+                            indicator="vdem_libdem",
+                            indicator_label="Liberal Democracy Index (V-Dem)",
+                            source="V-Dem Institute, University of Gothenburg",
+                            source_citation="V-Dem Institute. (2025). *Varieties of Democracy (V-Dem) Dataset v15*. University of Gothenburg.",
+                            unit="0.0–1.0",
+                            datapoints=datapoints,
+                            trend_direction=trend[0],
+                            trend_note=trend[1],
+                        )
+        except Exception:
+            pass  # Cae a tier 2
+
+        # ── Tier 2: VDEM_STATIC pre-procesado ───────────────────────────
+        try:
+            from modules.vdem_static import VDEM_STATIC
+            country_data = VDEM_STATIC.get(cc, {})
+            if not country_data:
+                return None
+
+            datapoints = []
+            for y in range(first_year, last_year + 1):
+                year_block = country_data.get(str(y))
+                if not year_block:
+                    continue
+                val = year_block.get("v2x_libdem")
+                if val is None:
+                    continue
+                try:
                     datapoints.append(HistoricalDatapoint(
-                        year=int(r["year"]),
+                        year=y,
                         value=round(float(val), 4),
-                        source="V-Dem Institute v15",
+                        source="V-Dem Institute v15 (static)",
                     ))
                 except Exception:
                     continue
@@ -109,29 +155,40 @@ class DatasetsLoader:
     def _load_fh_series(self, cc: str, up_to_year: Optional[int] = None) -> Optional[HistoricalSeries]:
         try:
             from modules.data_loaders import load_freedom_house_data
+            from modules.config import FH_COUNTRY_NAMES
             df = load_freedom_house_data()
             if df is None:
                 return None
 
-            rows = df[df["country_code"] == cc].sort_values("year") if "country_code" in df.columns else None
+            # FH usa nombre en ingles en columna Country/Territory.
+            # Mapeamos cc (ISO-3) -> nombre via FH_COUNTRY_NAMES; fallback a cc literal.
+            country_name = FH_COUNTRY_NAMES.get(cc, cc)
+
+            rows = None
+            if "Country/Territory" in df.columns:
+                rows = df[df["Country/Territory"] == country_name].sort_values("Edition")
             if rows is None or rows.empty:
-                # Intentar con columna alternativa
-                rows = df[df.get("Country", "") == cc] if "Country" in df.columns else None
-                if rows is None or rows.empty:
-                    return None
+                # Backstop: case-insensitive contains
+                if "Country/Territory" in df.columns:
+                    rows = df[df["Country/Territory"].astype(str).str.contains(
+                        country_name, case=False, na=False)]
+            if rows is None or rows.empty:
+                return None
 
             datapoints: List[HistoricalDatapoint] = []
             import pandas as pd
             for _, r in rows.iterrows():
-                year_val = r.get("year") or r.get("Edition") or r.get("Year")
-                if not year_val or pd.isna(year_val):
+                year_val = r.get("Edition") or r.get("year") or r.get("Year")
+                if year_val is None or pd.isna(year_val):
                     continue
                 try:
                     year_int = int(year_val)
                 except Exception:
                     continue
 
-                total = r.get("total_score") or r.get("Total") or r.get("Total Score")
+                total = r.get("Total")
+                if total is None or pd.isna(total):
+                    total = r.get("total_score") or r.get("Total Score")
                 if total is None or pd.isna(total):
                     continue
                 datapoints.append(HistoricalDatapoint(
@@ -141,6 +198,7 @@ class DatasetsLoader:
                 ))
 
             # Filtrar ventana
+            datapoints.sort(key=lambda d: d.year)
             if up_to_year:
                 first_year = up_to_year - self.years_window + 1
                 datapoints = [d for d in datapoints if first_year <= d.year <= up_to_year]
@@ -237,7 +295,8 @@ class DatasetsLoader:
 
     # ── RSF ─────────────────────────────────────────────────────────────
     def _load_rsf_series(self, cc: str) -> Optional[HistoricalSeries]:
-        """RSF típicamente 1 dato por año."""
+        """RSF típicamente 1 snapshot por año (no series larga). El dataset 2025
+        trae Score 2025 y Score N-1 — extraemos ambos para tener al menos 2 puntos."""
         try:
             from modules.data_loaders import load_rsf_data
             df = load_rsf_data()
@@ -258,15 +317,26 @@ class DatasetsLoader:
             datapoints: List[HistoricalDatapoint] = []
             import pandas as pd
             for _, r in rows.iterrows():
-                year = r.get("year") or r.get("Year")
-                score = r.get("score") or r.get("Score") or r.get("Global Score 2025")
-                if year is None or score is None or pd.isna(year) or pd.isna(score):
-                    continue
-                datapoints.append(HistoricalDatapoint(
-                    year=int(year),
-                    value=float(score),
-                    source="Reporters Without Borders",
-                ))
+                # RSF 2025 dataset: columna 'Score 2025' (snapshot) + 'Score N-1' (anterior).
+                # Usamos ambos para tener serie minima de 2 puntos (2024 y 2025).
+                score_curr = r.get("Score 2025") or r.get("Global Score 2025")
+                score_prev = r.get("Score N-1")
+                year_curr = 2025
+                # Si hay columna 'Year (N)' tomar de ahi, sino hardcoded
+                yn = r.get("Year (N)")
+                if yn is not None and not pd.isna(yn):
+                    try: year_curr = int(yn)
+                    except Exception: pass
+                if score_prev is not None and not pd.isna(score_prev):
+                    datapoints.append(HistoricalDatapoint(
+                        year=year_curr - 1, value=float(score_prev),
+                        source="Reporters Without Borders",
+                    ))
+                if score_curr is not None and not pd.isna(score_curr):
+                    datapoints.append(HistoricalDatapoint(
+                        year=year_curr, value=float(score_curr),
+                        source="Reporters Without Borders",
+                    ))
 
             datapoints.sort(key=lambda d: d.year)
             datapoints = datapoints[-self.years_window:]
