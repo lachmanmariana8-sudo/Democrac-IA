@@ -5331,19 +5331,34 @@ async def _hunter_scheduler_loop() -> None:
         await asyncio.sleep(interval_min * 60)
 
 
+async def _init_rag_background():
+    """Corre init_rag() en un thread aparte para no bloquear el event loop.
+
+    init_rag() es sincrono (load ChromaDB + sentence-transformers all-MiniLM-L6-v2,
+    descargando ~90MB de HuggingFace en cold start). Si lo llamamos directamente
+    en on_startup, bloquea > healthcheck timeout (300s) cuando HF esta lento o
+    el volumen Railway hace cold-rotation. Patron similar al fix del 11-abr para
+    _auto_observe_bootstrap (asyncio.to_thread).
+    """
+    try:
+        rag_ok = await asyncio.to_thread(init_rag)
+        if rag_ok:
+            print("[RAG] Sistema RAG legal inicializado correctamente (background).")
+    except Exception as _rag_err:
+        print(f"[RAG] No disponible en este arranque: {_rag_err}")
+
+
 @app.on_event("startup")
 async def on_startup():
     _init_db()
     _migrate_json_to_sqlite()
     _preload_reports_on_startup()
     _preload_sessions_on_startup()  # R2: rehidrata sesiones de observacion activas
-    # Inicializar RAG en background (no bloquea el startup si falla)
-    try:
-        rag_ok = init_rag()
-        if rag_ok:
-            print("[RAG] Sistema RAG legal inicializado correctamente.")
-    except Exception as _rag_err:
-        print(f"[RAG] No disponible en este arranque: {_rag_err}")
+    # RAG en background — el comentario decia "no bloquea el startup" pero la
+    # implementacion previa SI bloqueaba (init_rag synchronous). Movido a
+    # asyncio.to_thread via create_task para liberar el event loop. Healthcheck
+    # responde rapido; RAG queda listo ~30-90s despues sin afectar otros endpoints.
+    asyncio.create_task(_init_rag_background())
     # Verificar conectividad OONI (warm-up silencioso)
     try:
         import httpx as _httpx_test  # noqa
