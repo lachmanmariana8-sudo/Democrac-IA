@@ -18,8 +18,9 @@ httpx>=0.27.0
 python-dotenv>=1.0.0
 # microsoft/markitdown — conversión HTML/PDF/DOCX → Markdown limpio
 markitdown>=0.0.1
-# xhtml2pdf — render PDF on-demand desde HTML del Elite Report.
-# Pure-Python (sin libs de sistema), funciona en Nixpacks sin extra config.
-# Necesario para /api/report/elite/{id}/download?format=pdf cuando el archivo
-# fisico no esta en disco (caso normal post-volume-crash, fallback desde SQLite).
-xhtml2pdf>=0.2.16
+# xhtml2pdf SE QUITO el 2-may-2026 porque su dependencia transitiva pycairo
+# (via svglib > rlpycairo) requiere libcairo headers que Nixpacks no provee
+# de forma confiable. Cada deploy intentado con xhtml2pdf fallo en build.
+# PDF on-demand desde SQLite responde 503 con mensaje claro hasta que
+# encontremos un PDF builder pure-python sin pycairo (reportlab nativo,
+# pyfpdf, etc.).
