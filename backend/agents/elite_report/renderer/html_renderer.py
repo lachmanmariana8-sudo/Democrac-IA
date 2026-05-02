@@ -184,17 +184,23 @@ nav.toc li {
   padding: 6px 0;
   border-bottom: 1px dashed var(--border-dim);
   font-size: 13px;
+  /* Flexbox para que .num y <a> nunca se solapen aunque el numerador sea
+     largo (ej. "Declaración" o "Cap. 12"). El gap garantiza separacion. */
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
 }
 
 nav.toc li .num {
-  display: inline-block;
-  width: 32px;
+  flex-shrink: 0;          /* nunca se comprime */
+  min-width: 92px;         /* cubre "Declaración" + "Cap. 12" sin overlap */
   font-family: 'DM Mono', monospace;
   color: var(--teal);
   font-weight: 700;
 }
 
 nav.toc li a {
+  flex: 1;                 /* el titulo ocupa el espacio restante */
   color: var(--text);
   text-decoration: none;
 }

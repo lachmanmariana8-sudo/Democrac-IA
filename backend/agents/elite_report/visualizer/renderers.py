@@ -172,9 +172,14 @@ def render_phase_timeline(data: Dict[str, Any]) -> str:
             "El período no contiene hallazgos asignables a las 9 fases del ciclo electoral.",
         )
 
-    W, H = 680, 280
-    ml, mr, mt, mb = 50, 20, 16, 70
+    W, H = 680, 320
+    ml, mr, mt, mb = 50, 20, 16, 110
     pw, ph = W - ml - mr, H - mt - mb
+
+    # Saltar fases con total=0: si todas las fases vacias se grafican, las
+    # 2 con datos quedan ahogadas. Mantenemos el orden cronologico original
+    # pero solo mostramos las que tienen al menos 1 hallazgo.
+    phases = [p for p in phases if p.get("total", 0) > 0] or phases
 
     # Total por fase para escala
     totals = [p.get("total", 0) for p in phases]
@@ -216,27 +221,34 @@ def render_phase_timeline(data: Dict[str, Any]) -> str:
                        f'fill="{COLORS[sev]}" opacity="0.85"/>')
             cumul += bh
 
-        # Label fase (rotado)
+        # Label fase rotado -35° para evitar superposicion entre fases vecinas
+        # cuando step es chico (9 fases x ~67px = labels de 18 chars chocan).
         label = p.get("label", p.get("phase", ""))
-        # Tomar solo primera parte antes de emoji si aplica
         label_clean = label.replace("📋", "").replace("📣", "").replace("🗣️", "").replace("🤫", "") \
                            .replace("🗳️", "").replace("🔢", "").replace("📊", "") \
-                           .replace("⚖️", "").replace("✅", "").strip()[:18]
+                           .replace("⚖️", "").replace("✅", "").strip()[:22]
+        # Total arriba (centrado, no rotado, mas legible)
         svg.append(f'<text x="{cx}" y="{mt+ph+16}" text-anchor="middle" '
-                   f'font-family="{FONT_SANS}" font-size="9" '
-                   f'fill="{COLORS["text_muted"]}">{_esc(label_clean)}</text>')
-        svg.append(f'<text x="{cx}" y="{mt+ph+30}" text-anchor="middle" '
-                   f'font-family="{FONT_MONO}" font-size="10" font-weight="700" '
+                   f'font-family="{FONT_MONO}" font-size="11" font-weight="700" '
                    f'fill="{COLORS["text"]}">{p.get("total", 0)}</text>')
+        # Label rotado debajo
+        svg.append(f'<text x="{cx}" y="{mt+ph+32}" text-anchor="end" '
+                   f'font-family="{FONT_SANS}" font-size="9" '
+                   f'transform="rotate(-35 {cx} {mt+ph+32})" '
+                   f'fill="{COLORS["text_muted"]}">{_esc(label_clean)}</text>')
 
-    # Leyenda
+    # Leyenda — etiquetas en español, mas espacio entre items, en linea
+    # superior (mt-2) para no chocar con los labels rotados del eje X.
+    legend_y = 12
+    legend_labels = {"info": "info", "low": "bajo", "medium": "medio",
+                     "high": "alto", "critical": "crítico"}
     lx = ml
-    ly = H - 18
     for sev in sev_order:
-        svg.append(f'<rect x="{lx}" y="{ly-8}" width="10" height="10" fill="{COLORS[sev]}"/>')
-        svg.append(f'<text x="{lx+14}" y="{ly}" font-family="{FONT_SANS}" '
-                   f'font-size="9" fill="{COLORS["text_muted"]}">{sev}</text>')
-        lx += 80
+        svg.append(f'<rect x="{lx}" y="{legend_y-8}" width="10" height="10" fill="{COLORS[sev]}"/>')
+        svg.append(f'<text x="{lx+14}" y="{legend_y}" font-family="{FONT_SANS}" '
+                   f'font-size="9" font-weight="600" '
+                   f'fill="{COLORS["text"]}">{legend_labels[sev]}</text>')
+        lx += 70
 
     svg.append('</svg>')
     return "".join(svg)
@@ -411,7 +423,21 @@ def render_heatmap_rights(data: Dict[str, Any]) -> str:
         cell_w = max(30, (W - 20 - ml) // max(len(categories), 1))
         pw = cell_w * len(categories)
 
-    max_val = max((max(row[:len(categories)]) for row in matrix), default=1) or 1
+    # Si toda la matriz es ceros (no hay cross_references que linkeen
+    # findings con la categoria + articulo), preferimos un empty state
+    # explicito a un grid de celdas blancas que confunde al lector.
+    flat_max = max((max(row[:len(categories)] or [0]) for row in matrix if row),
+                   default=0)
+    if flat_max == 0:
+        return _render_empty_state(
+            "Sin cruces derecho × categoría detectados en el período",
+            "El motor de cross-references no asoció hallazgos del Hunter con "
+            "los artículos ICCPR/CADH/CDI listados. Esto puede indicar (a) que "
+            "los hallazgos del período no invocan los derechos top-6, o (b) que "
+            "el mapeo categoría→derecho del CrossReferenceBuilder requiere "
+            "ajuste para esta cobertura específica.",
+        )
+    max_val = flat_max
 
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
            f'role="img" aria-label="Heatmap derechos por categoría">']

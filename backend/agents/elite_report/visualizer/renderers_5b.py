@@ -76,9 +76,11 @@ def render_events_timeline(data: Dict[str, Any]) -> str:
     if not events:
         return _render_empty_state("Timeline de eventos vacío")
 
-    events = events[:14]
-    W, H = 680, 240
-    ml, mr, mt, mb = 40, 40, 30, 60
+    # 28-abr-2026 reducimos a 8 eventos max (antes 14) con labels truncados
+    # a 24 chars y layout 3-nivel vertical para que no se solapen.
+    events = events[:8]
+    W, H = 680, 320
+    ml, mr, mt, mb = 40, 40, 36, 84
     pw = W - ml - mr
 
     # Eje temporal: ordinal por índice (no fechas reales) para simplicidad
@@ -93,24 +95,27 @@ def render_events_timeline(data: Dict[str, Any]) -> str:
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
     # Línea base
-    base_y = mt + 60
+    base_y = mt + 80
     svg.append(f'<line x1="{ml}" y1="{base_y}" x2="{ml+pw}" y2="{base_y}" '
                f'stroke="{COLORS["border"]}" stroke-width="1.5"/>')
+
+    # Niveles verticales escalonados (3 niveles) para evitar superposicion
+    levels = [0, 28, 56]
 
     for i, (ev, x) in enumerate(zip(events, positions)):
         sev = ev.get("severity", "info")
         color = _severity_color(sev)
         date = _esc(ev.get("date", ""))
-        label = _esc(ev.get("label", ""))[:42]
+        label = _esc(ev.get("label", ""))[:24]
         # Marcador
         svg.append(f'<circle cx="{x:.1f}" cy="{base_y}" r="6" '
                    f'fill="{color}" stroke="{COLORS["bg"]}" stroke-width="2"/>')
         # Fecha (arriba)
         svg.append(f'<text x="{x:.1f}" y="{base_y-14}" text-anchor="middle" '
-                   f'font-family="{FONT_MONO}" font-size="8" '
+                   f'font-family="{FONT_MONO}" font-size="9" '
                    f'fill="{COLORS["text_muted"]}">{date}</text>')
-        # Label (debajo, alternando vertical para evitar choque)
-        ly = base_y + 22 + (24 if i % 2 == 1 else 0)
+        # Label (debajo, escalonado en 3 niveles)
+        ly = base_y + 22 + levels[i % 3]
         svg.append(f'<line x1="{x:.1f}" y1="{base_y+8}" x2="{x:.1f}" y2="{ly-12}" '
                    f'stroke="{color}" stroke-width="0.8" opacity="0.5"/>')
         svg.append(f'<text x="{x:.1f}" y="{ly}" text-anchor="middle" '
@@ -278,7 +283,8 @@ def render_network_institutions(data: Dict[str, Any]) -> str:
                f'font-weight="700" letter-spacing="1.5" '
                f'fill="{COLORS["teal_dark"]}">RED INSTITUCIONAL ELECTORAL</text>')
 
-    # Edges
+    # Edges (lineas primero, despues labels con background para legibilidad)
+    edge_labels: List[tuple] = []
     for ed in edges[:12]:
         a = positions.get(ed.get("from"))
         b = positions.get(ed.get("to"))
@@ -288,13 +294,22 @@ def render_network_institutions(data: Dict[str, Any]) -> str:
                    f'x2="{b[0]:.1f}" y2="{b[1]:.1f}" '
                    f'stroke="{COLORS["teal"]}" stroke-width="1" '
                    f'opacity="0.45"/>')
-        # Label en el medio
         lbl = _esc(ed.get("label", ""))[:14]
         if lbl:
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
-            svg.append(f'<text x="{mx:.1f}" y="{my:.1f}" text-anchor="middle" '
-                       f'font-family="{FONT_MONO}" font-size="8" '
-                       f'fill="{COLORS["text_muted"]}">{lbl}</text>')
+            edge_labels.append((mx, my, lbl))
+
+    # Edge labels con caja blanca para evitar que se confundan con las lineas
+    # y los nodos. Renderizados despues que las lineas pero antes que los nodos.
+    for mx, my, lbl in edge_labels:
+        char_w = 5.4   # estimacion ancho por char a font-size 8
+        box_w = max(28, len(lbl) * char_w + 8)
+        svg.append(f'<rect x="{mx-box_w/2:.1f}" y="{my-7:.1f}" '
+                   f'width="{box_w:.1f}" height="13" rx="2" '
+                   f'fill="{COLORS["bg"]}" opacity="0.9"/>')
+        svg.append(f'<text x="{mx:.1f}" y="{my+2:.1f}" text-anchor="middle" '
+                   f'font-family="{FONT_MONO}" font-size="8" '
+                   f'fill="{COLORS["text"]}">{lbl}</text>')
 
     # Nodes
     for node in nodes:
@@ -503,8 +518,8 @@ def render_progress_chart(data: Dict[str, Any]) -> str:
         return _render_empty_state("Sin datos de progreso de actas")
 
     points = points[:48]
-    W, H = 680, 240
-    ml, mr, mt, mb = 50, 40, 30, 50
+    W, H = 680, 280
+    ml, mr, mt, mb = 64, 40, 50, 60
     pw, ph = W - ml - mr, H - mt - mb
 
     n = len(points)
@@ -521,6 +536,17 @@ def render_progress_chart(data: Dict[str, Any]) -> str:
     svg.append(f'<text x="20" y="22" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
                f'fill="{COLORS["teal_dark"]}">PROGRESO DE ACTAS PROCESADAS</text>')
+    svg.append(f'<text x="20" y="38" font-family="{FONT_MONO}" font-size="9" '
+               f'fill="{COLORS["text_muted"]}">% acumulado del padron escrutado vs tiempo</text>')
+    # Y axis label rotado
+    svg.append(f'<text x="18" y="{mt+ph/2:.1f}" text-anchor="middle" '
+               f'font-family="{FONT_SANS}" font-size="9" font-weight="700" '
+               f'transform="rotate(-90 18 {mt+ph/2:.1f})" '
+               f'fill="{COLORS["text_muted"]}">% ACTAS</text>')
+    # X axis label
+    svg.append(f'<text x="{ml+pw/2:.1f}" y="{mt+ph+44}" text-anchor="middle" '
+               f'font-family="{FONT_SANS}" font-size="9" font-weight="700" '
+               f'fill="{COLORS["text_muted"]}">HORA (post jornada)</text>')
 
     # Grid Y
     for i in range(5):
