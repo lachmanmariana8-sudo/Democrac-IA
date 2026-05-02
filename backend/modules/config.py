@@ -19,8 +19,11 @@ OBSERVER_API_KEYS: set = set(k.strip() for k in _raw_keys.split(",") if k.strip(
 obs_key_header = APIKeyHeader(name="X-Observer-Key", auto_error=False)
 
 # ── Rutas a datasets ─────────────────────────────────────────────────────────
-# V-Dem v16 disponible desde marzo 2026 — setear VDEM_CSV_PATH para usar la nueva versión
-VDEM_CSV_PATH: str = os.getenv("VDEM_CSV_PATH", "../data/V-Dem-CY-Full+Others-v15.csv")
+# V-Dem v16 instalado el 2-may-2026 (28.092 filas x 4.618 columnas, cubre
+# 1789-2025). Path por defecto apunta al CSV convertido desde el RData
+# original via skills/electoral-data-integration. Override con VDEM_CSV_PATH
+# si querés probar otra version.
+VDEM_CSV_PATH: str = os.getenv("VDEM_CSV_PATH", "../data/vdem/vdem_v16.csv")
 # FH FIW 2026 disponible desde marzo 2026 — setear FH_CSV_PATH para usar la nueva versión
 FH_CSV_PATH: str   = os.getenv("FH_CSV_PATH",   "../data/All_data_FIW_2013-2025 - Index.csv")
 RSF_CSV_PATH: str  = os.getenv("RSF_CSV_PATH",  "../data/RSF/2025 - 2025.csv")
@@ -36,9 +39,9 @@ VDEM_COLUMNS = [
     "v2smgovdom", "v2smgovfilcap", "v2smregcap",
     "v2psbars", "v2psoppaut", "v2jureview",
 ]
-# V-Dem v16 cubre hasta 2025 — actualizar a v16 cuando el CSV esté disponible localmente
-VDEM_LAST_YEAR = int(os.getenv("VDEM_LAST_YEAR", "2024"))
-VDEM_VERSION   = os.getenv("VDEM_VERSION", "v15")
+# V-Dem v16 cubre hasta 2025 (verificado 2-may-2026: PER tiene 237 obs 1789-2025).
+VDEM_LAST_YEAR = int(os.getenv("VDEM_LAST_YEAR", "2025"))
+VDEM_VERSION   = os.getenv("VDEM_VERSION", "v16")
 VDEM_CITATION  = (
     f"Coppedge et al. 2026. 'V-Dem Country-Year Dataset {VDEM_VERSION}' "
     f"Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds25"

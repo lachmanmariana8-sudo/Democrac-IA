@@ -28,11 +28,11 @@ logger = logging.getLogger("peirs_data")
 # URLs oficiales. Verificar periódicamente con verify_cache.py.
 DATASET_SOURCES = {
     "vdem": {
-        "url": "https://raw.githubusercontent.com/vdeminstitute/vdemdata/master/data/vdem.rda",
+        "url": "https://raw.githubusercontent.com/vdeminstitute/vdemdata/master/data/vdem.RData",
         "filename": "vdem_v16.csv",
         "folder": "vdem",
         "version": "v16",
-        "raw_filename": "vdem.rda",
+        "raw_filename": "vdem.RData",
         "needs_conversion": True,
     },
     "fh": {

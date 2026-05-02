@@ -20,6 +20,11 @@ backend/peirs_report_*.md
 # Archivos de datos grandes (>100MB — no soportados por GitHub)
 data/V-Dem-CY-Full+Others-v15.csv
 data/Coder-Level-Dataset-v16.csv
+# V-Dem v16 descargado via skills/electoral-data-integration (2-may-2026):
+# vdem_v16.csv 445MB + vdem.RData 33MB. El static pre-procesado vive en
+# backend/modules/vdem_static.py (618KB tracked). Regenerar:
+#   python scripts/generate_vdem_static.py
+data/vdem/
 data/*.dta
 data/**/*.dta
 data/**/*.xlsx

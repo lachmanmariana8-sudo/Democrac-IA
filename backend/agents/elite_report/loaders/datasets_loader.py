@@ -14,6 +14,13 @@ from agents.elite_report.models import HistoricalSeries, HistoricalDatapoint
 
 DEFAULT_YEARS_WINDOW = 10
 
+# Version V-Dem usada en source_citation. Se importa al top-level
+# para evitar reimports dentro de los try/except de cada tier.
+try:
+    from modules.config import VDEM_VERSION as _VDEM_VER_FOR_CITATION
+except Exception:
+    _VDEM_VER_FOR_CITATION = "v16"
+
 
 class DatasetsLoader:
     """Carga 4 series históricas del país para informe Elite."""
@@ -87,10 +94,11 @@ class DatasetsLoader:
                         if pd.isna(val):
                             continue
                         try:
+                            from modules.config import VDEM_VERSION as _v
                             datapoints.append(HistoricalDatapoint(
                                 year=int(r["year"]),
                                 value=round(float(val), 4),
-                                source="V-Dem Institute v15",
+                                source=f"V-Dem Institute {_v}",
                             ))
                         except Exception:
                             continue
@@ -101,7 +109,7 @@ class DatasetsLoader:
                             indicator="vdem_libdem",
                             indicator_label="Liberal Democracy Index (V-Dem)",
                             source="V-Dem Institute, University of Gothenburg",
-                            source_citation="V-Dem Institute. (2025). *Varieties of Democracy (V-Dem) Dataset v15*. University of Gothenburg.",
+                            source_citation=f"V-Dem Institute. (2026). *Varieties of Democracy (V-Dem) Dataset {_VDEM_VER_FOR_CITATION}*. University of Gothenburg.",
                             unit="0.0–1.0",
                             datapoints=datapoints,
                             trend_direction=trend[0],
@@ -126,10 +134,11 @@ class DatasetsLoader:
                 if val is None:
                     continue
                 try:
+                    from modules.config import VDEM_VERSION as _v
                     datapoints.append(HistoricalDatapoint(
                         year=y,
                         value=round(float(val), 4),
-                        source="V-Dem Institute v15 (static)",
+                        source=f"V-Dem Institute {_v} (static)",
                     ))
                 except Exception:
                     continue
@@ -142,7 +151,7 @@ class DatasetsLoader:
                 indicator="vdem_libdem",
                 indicator_label="Liberal Democracy Index (V-Dem)",
                 source="V-Dem Institute, University of Gothenburg",
-                source_citation="V-Dem Institute. (2025). *Varieties of Democracy (V-Dem) Dataset v15*. University of Gothenburg.",
+                source_citation=f"V-Dem Institute. (2026). *Varieties of Democracy (V-Dem) Dataset {_VDEM_VER_FOR_CITATION}*. University of Gothenburg.",
                 unit="0.0–1.0",
                 datapoints=datapoints,
                 trend_direction=trend[0],
