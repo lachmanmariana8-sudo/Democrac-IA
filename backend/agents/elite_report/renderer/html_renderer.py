@@ -405,27 +405,30 @@ ol.bibliography {
   counter-reset: bib;
 }
 
+/* Antes habia conflicto: padding shorthand 8px ... 32px y luego
+   padding-left: 2em (~22px) lo sobreescribia, dejando que el [N]
+   absoluto se solapara con el texto. Ahora padding-left consistente
+   y sin text-indent negativo. */
 ol.bibliography li {
   counter-increment: bib;
-  padding: 8px 0 8px 32px;
+  padding: 10px 0 10px 44px;       /* 44px de espacio para el [NN] absoluto */
   position: relative;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
   border-bottom: 1px solid var(--border-dim);
-  text-indent: -1.2em;
-  padding-left: 2em;
 }
 
 ol.bibliography li::before {
-  content: "[" counter(bib, decimal) "] ";
+  content: "[" counter(bib, decimal) "]";
   position: absolute;
   left: 0;
+  top: 10px;
+  width: 36px;                     /* numero contenido en 36px, deja 8px de gap */
   color: var(--teal);
   font-family: 'DM Mono', monospace;
   font-weight: 700;
-  font-size: 10px;
-  width: 2em;
-  text-indent: 0;
+  font-size: 11px;
+  text-align: left;
 }
 
 /* ── Tabla anexo C (hallazgos) ──────────────────────────────────── */
