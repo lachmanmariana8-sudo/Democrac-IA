@@ -42,6 +42,12 @@ Tu tarea es redactar UN capítulo específico del informe. El resto del informe 
 
 {historical_series_formatted}
 
+# INDICADORES V-DEM CUANTITATIVOS (autonomía y capacidad EMB, estado de derecho)
+
+Estos valores son específicos del país y están disponibles para citar como evidencia cuantitativa en cualquier capítulo donde aporten contexto. **Citar siempre con su variable y año** (ej: "v2elembaut = 1.31 en 2025"). Especialmente útiles en Cap. 3 (sistema electoral, autonomía EMB), Cap. 8 (cumplimiento ICCPR Art. 25 sobre elecciones auténticas) y Cap. 10 (conclusiones institucionales).
+
+{vdem_emb_quant_formatted}
+
 # ANÁLISIS PREDICTIVO (si disponible)
 
 {forecast_formatted}

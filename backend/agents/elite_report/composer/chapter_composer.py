@@ -154,11 +154,77 @@ class ChapterComposer:
             "{phase_evidence_formatted}": self._format_phase_evidence(phase_evidence),
             "{rag_extracts_formatted}": self._format_rag(rag_docs[:10]),
             "{historical_series_formatted}": self._format_series(historical_series),
+            "{vdem_emb_quant_formatted}": self._format_vdem_emb(req.country_code),
             "{forecast_formatted}": self._format_forecast(forecast),
         }
         for k, v in replacements.items():
             ctx = ctx.replace(k, v)
         return ctx
+
+    @staticmethod
+    def _format_vdem_emb(country_code: str, last_n: int = 5) -> str:
+        """Indicadores V-Dem cuantitativos del EMB y estado de derecho — para que
+        el cap. 3 y otros puedan citar valores específicos en lugar de descripciones
+        cualitativas vacías. Lee desde VDEM_STATIC (38 paises x 1985-2025).
+
+        Indicadores incluidos:
+          - v2elembaut: autonomía órganos electorales (escala -3 a +3, mas alto = mas autonomía)
+          - v2elembcap: capacidad órganos electorales (escala -3 a +3)
+          - v2elirreg: irregularidades electorales (escala -3 a +3, mas BAJO = menos irregularidades)
+          - v2elintim: intimidación electoral (escala -3 a +3)
+          - v2xcl_rol: estado de derecho (rango 0-1)
+          - v2jureview: revisión judicial (escala -3 a +3)
+        """
+        try:
+            from modules.vdem_static import VDEM_STATIC
+        except Exception:
+            return "(V-Dem static no disponible)"
+
+        country = VDEM_STATIC.get(country_code, {})
+        if not country:
+            return f"(V-Dem sin datos para {country_code})"
+
+        years = sorted(country.keys(), key=int)
+        if not years:
+            return f"(V-Dem sin años para {country_code})"
+
+        latest_year = years[-1]
+        latest = country[latest_year]
+        # Indicadores que vamos a citar en cap 3.1 y cap 3.4
+        ind_meta = [
+            ("v2elembaut",      "Autonomía EMB",         "−3 a +3, mayor = más autónomo"),
+            ("v2elembcap",      "Capacidad EMB",         "−3 a +3, mayor = más capaz"),
+            ("v2elirreg",       "Irregularidades elect.", "−3 a +3, menor = menos irregularidades"),
+            ("v2elintim",       "Intimidación electoral", "−3 a +3, menor = menos intimidación"),
+            ("v2xcl_rol",       "Estado de derecho",     "0 a 1, mayor = más rule of law"),
+            ("v2jureview",      "Revisión judicial",     "−3 a +3, mayor = más independencia judicial"),
+        ]
+
+        lines = [f"**Valores actuales V-Dem v16 para {country_code} ({latest_year}):**\n"]
+        for code, label, scale in ind_meta:
+            v = latest.get(code)
+            if v is None:
+                lines.append(f"- {label} (`{code}`): N/D ({scale})")
+            else:
+                lines.append(f"- {label} (`{code}`): **{v:.3f}** ({scale})")
+
+        # Tendencia últimos N años para los 4 EMB-críticos
+        trend_codes = ["v2elembaut", "v2elembcap", "v2elirreg", "v2elintim"]
+        trend_years = years[-last_n:] if len(years) >= last_n else years
+        if len(trend_years) >= 2:
+            lines.append(f"\n**Tendencia últimos {len(trend_years)} años:**\n")
+            for code in trend_codes:
+                values = []
+                for y in trend_years:
+                    block = country.get(y, {})
+                    val = block.get(code)
+                    if val is not None:
+                        values.append(f"{y}={val:.2f}")
+                    else:
+                        values.append(f"{y}=N/D")
+                lines.append(f"- `{code}`: {' → '.join(values)}")
+
+        return "\n".join(lines)
 
     @staticmethod
     def _format_sev_dist(stats: Dict[str, Any]) -> str:
