@@ -45,9 +45,15 @@ class PredictiveEngine:
         candidates = self._evaluate_rules(bundle)
 
         # 2. Ajustar con Claude (si disponible)
+        # llm_meta guarda dominant_pattern + early_warning_level que vienen
+        # del JSON del LLM. Antes se intentaba monkey-patch sobre la lista
+        # (updated.append_pattern = ...) lo cual es ilegal en Python (list
+        # no acepta atributos arbitrarios) -> AttributeError siempre.
+        # Fix 2-may-2026: pasarlo explicito via dict.
+        llm_meta: dict = {}
         if self.llm is not None and candidates:
             try:
-                candidates = await self._refine_with_llm(candidates, bundle)
+                candidates, llm_meta = await self._refine_with_llm(candidates, bundle)
             except Exception as e:
                 # Fallback: mantener candidatos con base_probability
                 bundle.warnings.append(
@@ -55,8 +61,8 @@ class PredictiveEngine:
                 )
 
         # 3. Ensamblar payload
-        dominant_pattern = self._describe_dominant_pattern(bundle, candidates)
-        early_warning = self._compute_early_warning(candidates, bundle)
+        dominant_pattern = self._describe_dominant_pattern(bundle, candidates, llm_meta)
+        early_warning = self._compute_early_warning(candidates, bundle, llm_meta)
 
         return ForecastPayload(
             horizon_days=horizon_days,
@@ -230,9 +236,10 @@ class PredictiveEngine:
         self,
         candidates: List[ForecastScenario],
         bundle: EvidenceBundle,
-    ) -> List[ForecastScenario]:
+    ) -> tuple[List[ForecastScenario], dict]:
         """Pide a Claude que ajuste probabilidades y genere implications
-        específicas. Retorna escenarios actualizados."""
+        específicas. Retorna (escenarios actualizados, llm_meta_dict) donde
+        llm_meta tiene dominant_pattern + early_warning_level + note."""
         from langchain_core.messages import HumanMessage, SystemMessage
 
         # Evidencia compacta
@@ -302,11 +309,11 @@ early_warning_level global."""
         # Extraer JSON
         m = re.search(r"\{[\s\S]*\}", raw)
         if not m:
-            return candidates
+            return candidates, {}
         try:
             parsed = json.loads(m.group(0))
         except json.JSONDecodeError:
-            return candidates
+            return candidates, {}
 
         # Aplicar ajustes a los candidatos
         updates = {s["id"]: s for s in parsed.get("scenarios", [])}
@@ -329,23 +336,27 @@ early_warning_level global."""
                     c.implications = refined_impl
             updated.append(c)
 
-        # Guardar dominant_pattern y early_warning_level en el bundle warnings
-        # (el forecast retornado los usará desde el parsed)
-        updated.append_pattern = parsed.get("dominant_pattern")  # type: ignore
-        updated.append_warning = parsed.get("early_warning_level")  # type: ignore
-        updated.append_warning_note = parsed.get("early_warning_note")  # type: ignore
-        return updated
+        # Retornamos (scenarios, llm_meta) — antes intentabamos monkey-patch
+        # sobre la lista (updated.append_pattern = ...) que tiraba AttributeError
+        # porque las listas Python no aceptan atributos arbitrarios.
+        llm_meta = {
+            "dominant_pattern": parsed.get("dominant_pattern"),
+            "early_warning_level": parsed.get("early_warning_level"),
+            "early_warning_note": parsed.get("early_warning_note"),
+        }
+        return updated, llm_meta
 
     # ── 3. HELPERS GLOBALES ─────────────────────────────────────────────
     @staticmethod
     def _describe_dominant_pattern(
-        bundle: EvidenceBundle, scenarios: List[ForecastScenario]
+        bundle: EvidenceBundle,
+        scenarios: List[ForecastScenario],
+        llm_meta: Optional[dict] = None,
     ) -> str:
-        """Deriva una descripción del patrón dominante."""
-        # Si un refine_with_llm exitoso agregó el campo, usarlo
-        pattern = getattr(scenarios, "append_pattern", None)
-        if pattern:
-            return pattern
+        """Deriva una descripción del patrón dominante. Si el LLM lo proveyó
+        en llm_meta['dominant_pattern'], usar ese; fallback heuristico."""
+        if llm_meta and llm_meta.get("dominant_pattern"):
+            return llm_meta["dominant_pattern"]
 
         top = max(scenarios, key=lambda s: s.probability, default=None)
         if not top:
@@ -354,12 +365,14 @@ early_warning_level global."""
 
     @staticmethod
     def _compute_early_warning(
-        scenarios: List[ForecastScenario], bundle: EvidenceBundle
+        scenarios: List[ForecastScenario],
+        bundle: EvidenceBundle,
+        llm_meta: Optional[dict] = None,
     ) -> tuple[str, str]:
-        """Calcula nivel de alerta temprana.
-        Si Claude lo sobrescribió, usar ese."""
-        llm_level = getattr(scenarios, "append_warning", None)
-        llm_note = getattr(scenarios, "append_warning_note", None)
+        """Calcula nivel de alerta temprana. Si el LLM lo proveyó en
+        llm_meta['early_warning_level'], usar ese; fallback heuristico."""
+        llm_level = (llm_meta or {}).get("early_warning_level")
+        llm_note = (llm_meta or {}).get("early_warning_note")
         if llm_level in ("green", "amber", "orange", "red"):
             return (
                 llm_level,
