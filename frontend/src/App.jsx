@@ -8189,8 +8189,9 @@ function PeruSituationRoom() {
                 {/* Botones de descarga */}
                 <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
                   <a
-                    href={`${API_BASE}/api/report/elite/${eliteResult.report_id}/download?format=pdf`}
+                    href={`${API_BASE}/api/report/elite/${eliteResult.report_id}/printable`}
                     target="_blank" rel="noopener noreferrer"
+                    title="Abre el informe en una pestaña nueva con el diálogo de impresión. Desde ahí: Guardar como PDF (calidad editorial, A4)."
                     style={{
                       flex: 1, padding: 12, textAlign: "center",
                       background: COLORS.accent, color: "#fff",
@@ -8198,7 +8199,7 @@ function PeruSituationRoom() {
                       fontSize: 13, fontWeight: 700, textDecoration: "none",
                       fontFamily: "'DM Mono', monospace",
                     }}>
-                    ⬇ PDF (calidad editorial)
+                    🖨️ Imprimir / PDF
                   </a>
                   <a
                     href={`${API_BASE}/api/report/elite/${eliteResult.report_id}/download?format=html`}
@@ -8263,10 +8264,11 @@ function PeruSituationRoom() {
                     <div style={{ fontSize: 10, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace" }}>
                       {(h.generation_time_s || 0).toFixed(0)}s
                     </div>
-                    <a href={`${API_BASE}/api/report/elite/${h.report_id}/download?format=pdf`}
+                    <a href={`${API_BASE}/api/report/elite/${h.report_id}/printable`}
                        target="_blank" rel="noopener noreferrer"
+                       title="Abre el informe con el diálogo de impresión — Guardar como PDF desde ahí"
                        style={{ padding: "4px 10px", background: COLORS.accentDim, color: COLORS.accent, borderRadius: 4, fontSize: 10, textDecoration: "none", fontWeight: 700, fontFamily: "'DM Mono', monospace" }}>
-                      ⬇ PDF
+                      🖨️ Imprimir
                     </a>
                   </Card>
                 ))}

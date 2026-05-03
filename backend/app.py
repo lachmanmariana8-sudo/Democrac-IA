@@ -7247,6 +7247,72 @@ async def download_elite_report(report_id: str, format: str = "html"):
     )
 
 
+@app.get("/api/report/elite/{report_id}/printable")
+async def get_elite_report_printable(report_id: str):
+    """Sirve el HTML del informe con un <script> que dispara window.print()
+    al cargar. El usuario obtiene el dialog de impresion del navegador y
+    puede 'Guardar como PDF' desde alli.
+
+    Esta es la alternativa a /download?format=pdf para entornos Nixpacks
+    donde xhtml2pdf no se puede instalar (ver d7fa870 — pycairo dependency).
+    El CSS @page A4 + @media print del HTML del informe ya esta diseñado
+    para producir PDF de calidad editorial via el motor de impresion del
+    navegador.
+    """
+    from fastapi.responses import HTMLResponse, Response
+
+    html_content: Optional[str] = None
+
+    # Filesystem primero
+    try:
+        from agents.elite_report.elite_report import REPORTS_DIR as ELITE_DIR
+        base_dir = ELITE_DIR / report_id
+    except Exception:
+        base_dir = os.path.join("reports", "elite", report_id)
+    file_path = os.path.join(str(base_dir), "report.html")
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as fh:
+                html_content = fh.read()
+        except Exception:
+            html_content = None
+
+    # Fallback SQLite
+    if html_content is None and DB_AVAILABLE:
+        try:
+            with _get_db() as conn:
+                row = conn.execute(
+                    "SELECT html_content FROM elite_reports WHERE report_id=?",
+                    (report_id,),
+                ).fetchone()
+            if row and row[0]:
+                html_content = row[0]
+        except Exception:
+            pass
+
+    if html_content is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"HTML no encontrado para {report_id}. Regenerá el informe.",
+        )
+
+    # Inyectar script de auto-print justo antes de </body>. Se dispara con
+    # un pequeño delay para que webfonts y SVGs terminen de cargar.
+    print_script = (
+        "<script>"
+        "window.addEventListener('load', function() {"
+        "  setTimeout(function() { window.print(); }, 600);"
+        "});"
+        "</script>"
+    )
+    if "</body>" in html_content:
+        html_with_print = html_content.replace("</body>", f"{print_script}</body>", 1)
+    else:
+        html_with_print = html_content + print_script
+
+    return HTMLResponse(content=html_with_print)
+
+
 @app.get("/api/report/elite/{report_id}/structured")
 async def get_elite_report_structured(report_id: str, dim: str | None = None):
     """Devuelve el informe Elite como JSON estructurado para extracción / análisis.
