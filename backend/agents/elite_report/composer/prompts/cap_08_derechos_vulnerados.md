@@ -41,6 +41,7 @@
 - Cada derecho invocado debe cerrar con su artículo exacto: `(ICCPR, Art. 25)`, etc.
 - NO emitir juicio sobre intencionalidad del Estado (esa es discusión política). Sí documentar pattern empírico.
 - Incluir **al menos 1 cita** de observación general relevante (ej. Observación General N° 25 del Comité DDHH sobre Art. 25).
+- **Definir cada categoría técnica del Hunter al primer uso** según el GLOSARIO DE CATEGORÍAS DEL HUNTER en el contexto. Ejemplo correcto: "Las irregularidades clasificadas como **ballot tampering** (manipulación material o digital de cédulas de sufragio) representan 24 hallazgos críticos…" Nunca uses el término técnico crudo sin definir su contenido en español la primera vez. Esto vale para todas las categorías: ballot_tampering, voter_suppression, voter_intimidation, fraud_allegation, disinformation, gender_violence, etc.
 
 **Tono:** jurídico-internacional. Riguroso. Lenguaje de ONG de derechos humanos (HRW, Amnistía, WOLA).
 

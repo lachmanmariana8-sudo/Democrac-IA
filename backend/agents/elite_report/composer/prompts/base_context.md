@@ -42,6 +42,30 @@ Tu tarea es redactar UN capítulo específico del informe. El resto del informe 
 
 {historical_series_formatted}
 
+# GLOSARIO DE CATEGORÍAS DEL HUNTER
+
+El sistema clasifica los hallazgos en categorías técnicas. Cuando uses cualquiera de estos términos en la narrativa, **defínelos en español la primera vez que aparezcan en el capítulo**. No asumas que el lector conoce el término técnico en inglés.
+
+| Categoría | Definición breve (citar al primer uso) |
+|---|---|
+| `ballot_tampering` | Manipulación material o digital de cédulas de sufragio: alteración, sustitución, destrucción o falsificación de boletas, o intervención en su cadena de custodia. Configura violación al núcleo del derecho al voto secreto y auténtico (ICCPR Art. 25). |
+| `voter_suppression` | Supresión del electorado: prácticas que impiden, dificultan u obstaculizan el ejercicio del voto a grupos específicos (cierre de mesas, padrones depurados arbitrariamente, identificación restrictiva). |
+| `voter_intimidation` | Intimidación al elector: presión, amenaza o coerción dirigida a influir el sentido del voto o disuadir la participación, en sede de votación o entornos próximos. |
+| `fraud_allegation` | Alegación de fraude: denuncia formal o pública de irregularidades que comprometen la legitimidad de un proceso (no se prejuzga su veracidad — solo se documenta el hecho de la alegación). |
+| `disinformation` | Desinformación: contenido falso o engañoso difundido deliberadamente, distinguible de la mera inexactitud por la intención de engañar. |
+| `hate_speech` | Discurso de odio: expresiones que incitan discriminación, hostilidad o violencia contra grupos por características protegidas. |
+| `gender_violence` | Violencia de género político: hostigamiento, amenazas o agresiones dirigidas a personas en función de su género, en contexto político-electoral (Ley 31170 para PER). |
+| `campaign_violation` | Infracción de campaña: incumplimiento de normas sobre financiamiento, publicidad, plazos o silencio electoral. |
+| `media_restriction` | Restricción a medios: limitación arbitraria al ejercicio periodístico o al acceso a información de interés electoral. |
+| `irregular_procedure` | Procedimiento irregular: desviación documentada de los protocolos electorales formales (apertura tardía, cuadernillos incompletos, etc.). |
+| `logistics` | Logística electoral: hechos relativos al despliegue material del acto electoral (urnas, padrones, ubicación de mesas, transporte). |
+| `security` | Seguridad del proceso: incidentes que afectan la integridad física de personas, sedes o material electoral. |
+| `legal` | Cuestión legal: actuaciones judiciales, fiscales o administrativas relativas al proceso. |
+| `accessibility` | Accesibilidad: condiciones de acceso al voto para personas con discapacidad o en situación de vulnerabilidad geográfica. |
+| `digital` | Componente digital del proceso: ciberseguridad, sistemas STAE/SCE/SPR, voto electrónico. |
+| `counting` | Cómputo y escrutinio: irregularidades específicas en el conteo de votos. |
+| `results` | Resultados: hechos relativos a la proclamación o impugnación de resultados oficiales. |
+
 # INDICADORES V-DEM CUANTITATIVOS (autonomía y capacidad EMB, estado de derecho)
 
 Estos valores son específicos del país y están disponibles para citar como evidencia cuantitativa en cualquier capítulo donde aporten contexto. **Citar siempre con su variable y año** (ej: "v2elembaut = 1.31 en 2025"). Especialmente útiles en Cap. 3 (sistema electoral, autonomía EMB), Cap. 8 (cumplimiento ICCPR Art. 25 sobre elecciones auténticas) y Cap. 10 (conclusiones institucionales).
