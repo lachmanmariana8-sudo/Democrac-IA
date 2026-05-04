@@ -17,6 +17,10 @@ App.txt
 Gitignore.txt
 backend/peirs_report_*.md
 
+# Backups generados por scripts/backup.py — pueden ser pesados y son
+# locales por naturaleza (snapshots de prod). No se commitean a git.
+backups/
+
 # Archivos de datos grandes (>100MB — no soportados por GitHub)
 data/V-Dem-CY-Full+Others-v15.csv
 data/Coder-Level-Dataset-v16.csv
