@@ -157,6 +157,24 @@ section.cover .classification {
   border-radius: 3px;
 }
 
+section.cover .disclosure {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--bg-soft);
+  border-left: 3px solid var(--teal);
+  padding: 14px 18px;
+  margin: 28px 0 0;
+  line-height: 1.65;
+  font-style: italic;
+}
+
+section.cover .disclosure strong {
+  color: var(--teal-dark);
+  font-style: normal;
+  font-weight: 700;
+}
+
 /* ── TOC ───────────────────────────────────────────────────────────── */
 nav.toc {
   margin: 40px 0 64px;
@@ -664,6 +682,15 @@ def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
 <strong>Generado:</strong> {generated_at[:16].replace('T', ' ')} UTC<br>
 <strong>Report ID:</strong> {_esc(report_id)}
 </div>
+<div class="disclosure">
+<strong>DEMOCRAC.IA no legitima ni valida resultados electorales.</strong> Este
+informe emite inteligencia electoral con trazabilidad verificable bajo
+estándares de la Comisión de Venecia, OEA/DECO, OSCE/ODIHR y Carter Center,
+sin sesgo político-partidario. Los datos son para uso analítico de
+autoridades electorales, organismos multilaterales, observadores acreditados
+y academia. Cada hallazgo cita fuente primaria con URL pública;
+los bloques sin verificación independiente fueron postergados antes que publicados.
+</div>
 </section>"""
 
 
@@ -802,8 +829,11 @@ def _render_appendix_c_placeholder() -> str:
 
 def _render_footer(report_id: str, generated_at: str) -> str:
     return f"""<footer class="elite-footer">
-DemocracIA · PEIRS Elite Report · {report_id} · {generated_at[:16].replace('T', ' ')} UTC<br>
-Generado con pipeline de 6 etapas · SVG server-side · Citas APA 7 · Compatible con estándares OEA / EU EOM / Carter Center / IDEA
+<strong>DEMOCRAC.IA no legitima ni valida resultados electorales.</strong>
+Inteligencia electoral con trazabilidad verificable bajo estándares Comisión
+de Venecia · OEA/DECO · OSCE/ODIHR · Carter Center · IDEA Internacional.<br>
+PEIRS Elite Report · {report_id} · {generated_at[:16].replace('T', ' ')} UTC ·
+Pipeline 6 etapas · SVG server-side · Citas APA 7
 </footer>"""
 
 
