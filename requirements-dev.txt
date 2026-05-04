@@ -1,0 +1,8 @@
+# Dependencias de desarrollo — NO entran a Railway.
+# Instalar con: pip install -r requirements-dev.txt
+#
+# Railway usa requirements.txt root (sin pytest, sin tools de dev).
+# Esto mantiene la imagen de produccion liviana.
+
+# Pytest para correr la suite local + futura CI
+pytest>=8.0
