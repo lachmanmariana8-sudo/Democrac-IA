@@ -365,12 +365,12 @@ VDEM_COLUMNS = [
 ]
 
 VDEM_CITATION = (
-    "Coppedge et al. 2025. 'V-Dem Country-Year Dataset v15' "
-    "Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds25"
+    "Coppedge et al. 2026. 'V-Dem Country-Year Dataset v16' "
+    "Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds26"
 )
 VDEM_SOURCE_URL = "https://v-dem.net/data/the-v-dem-dataset/"
-VDEM_VERSION = "v15"
-VDEM_LAST_YEAR = 2024
+VDEM_VERSION = os.getenv("VDEM_VERSION", "v16")
+VDEM_LAST_YEAR = int(os.getenv("VDEM_LAST_YEAR", "2025"))
 
 
 def load_vdem_data() -> Optional[pd.DataFrame]:
@@ -5515,7 +5515,7 @@ async def health_check(deep: bool = False):
         "version": "0.4.0",
         "features": [
             "country_profile", "electoral_observation_protocol", "traceability",
-            "vdem_v15", "freedom_house", "pei_v10", "rsf_index",
+            f"vdem_{VDEM_VERSION}", "freedom_house", "pei_v10", "rsf_index",
             "ooni_live", "fraud_hate_analysis", "rag_legal", "constitutionalist",
             "report_designer", "elite_report",
         ],
