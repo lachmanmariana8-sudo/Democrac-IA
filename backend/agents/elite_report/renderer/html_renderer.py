@@ -24,6 +24,7 @@ from agents.elite_report.models import (
 )
 from agents.elite_report.visualizer import render_svg
 from agents.elite_report.i18n import t
+from agents.elite_report.section_titles import translate_section_titles
 
 
 # ── CSS institucional ──────────────────────────────────────────────────
@@ -735,7 +736,10 @@ def _render_chapter(ch: EliteChapter, req: EliteReportRequest) -> str:
     # Translate chapter title via i18n key chapter.{chapter_id}
     chapter_title = t(lang, f"chapter.{ch.chapter_id}", ch.title)
 
-    narrative_html = _markdown_to_html(ch.narrative) if ch.narrative else '<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>'
+    # Subchapter titles (## N.M ...) vienen en español por los prompts —
+    # post-procesamos antes de convertir a HTML hasta traducir prompts (Sprint 4).
+    narrative_md = translate_section_titles(ch.narrative, lang) if ch.narrative else ""
+    narrative_html = _markdown_to_html(narrative_md) if narrative_md else '<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>'
 
     # Visualizaciones
     viz_html_parts = []
@@ -894,7 +898,8 @@ def render_markdown(
             header = f"## {ch_title}"
         lines.append(header)
         lines.append("")
-        lines.append(ch.narrative or pending_label)
+        narrative_md = translate_section_titles(ch.narrative, lang) if ch.narrative else ""
+        lines.append(narrative_md or pending_label)
         lines.append("")
         for viz in ch.visualizations:
             lines.append(f"> **[{viz_label} — {viz.kind}]** {viz.title}")
