@@ -2,14 +2,20 @@
 
 ## Plataforma de Inteligencia Electoral con IA
 
-*Version: 0.5.0 — Fecha: 2026-04-27*
+*Version: 0.5.1 — Fecha: 2026-05-04*
 *Clasificacion: Uso interno — Fundadora y equipo tecnico*
 
-> **Nota de versionado:** Esta version refleja la arquitectura real al 27-abr-2026.
+> **Nota de versionado:** Esta version refleja la arquitectura real al 4-may-2026.
 > Las fases v0.5.0 (SENTINEL), v0.6.0 (persistencia) y v0.8.0 (PDF + API auth)
 > del roadmap original ya estan operativas. Se sumaron tres modulos no
 > previstos: Hunter scheduler, Constitucionalista RAG, Architect Agent autonomo,
 > Elite Report 12-capitulos y ReportDesigner sub-agente.
+>
+> **Metodología constructiva del informe Elite:** consultar
+> [DOCS Proyect/INFORME_METODOLOGIA.md](INFORME_METODOLOGIA.md) — playbook
+> reproducible para Perú 2026 y replicable a cualquier país y ciclo electoral.
+> Incluye análisis del Architect Agent con 3 sprints recomendados antes de
+> escalar a un segundo país.
 
 ---
 
