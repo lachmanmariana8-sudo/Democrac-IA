@@ -23,6 +23,7 @@ from agents.elite_report.models import (
     VizSpec,
 )
 from agents.elite_report.visualizer import render_svg
+from agents.elite_report.i18n import t
 
 
 # ── CSS institucional ──────────────────────────────────────────────────
@@ -613,19 +614,19 @@ def render_html(
     chapters_html = "\n".join(chapters_html_parts)
 
     # Anexo A — Metodología (breve fijo)
-    appendix_a = _render_appendix_a(req, stats)
+    appendix_a = _render_appendix_a(req, stats, language=req.language or "es")
 
     # Anexo B — Bibliografía APA
-    appendix_b = _render_appendix_b(citations)
+    appendix_b = _render_appendix_b(citations, language=req.language or "es")
 
     # Anexo C — Listado de hallazgos (si incluido)
     appendix_c = ""
     if req.include_appendix_c:
         # Los findings vienen de chapters o del output; en orquestador pasamos bundle
-        appendix_c = _render_appendix_c_placeholder()
+        appendix_c = _render_appendix_c_placeholder(language=req.language or "es")
 
     # Footer
-    footer_html = _render_footer(report_id, generated_at)
+    footer_html = _render_footer(report_id, generated_at, req.language or "es")
 
     # Ensamblaje
     return f"""<!DOCTYPE html>
@@ -651,68 +652,70 @@ def render_html(
 
 def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
     mm = req.mission_metadata
-    type_labels = {
-        "pre_electoral": "Informe Pre-Electoral",
-        "jornada": "Informe de Jornada",
-        "preliminary": "Informe Preliminar",
-        "final": "Informe Final",
-        "ad_hoc": "Informe Ad-hoc",
-    }
-    type_label = type_labels.get(req.report_type, req.report_type.title())
+    lang = req.language or "es"
+    type_label = t(lang, f"report_type.{req.report_type}", req.report_type.title())
+    # Conector "a" entre fechas: "Apr 1 to Apr 30" / "1 abr a 30 abr"
+    period_sep = {"es": "a", "en": "to", "pt": "a"}.get(lang, "a")
 
     return f"""<section class="cover">
 <div class="classification">{_esc(mm.classification).upper()}</div>
-<p class="pretitle">Misión de Observación Electoral · PEIRS</p>
+<p class="pretitle">{t(lang, "cover.pretitle")}</p>
 <h1>{_esc(country_name)} — {_esc(type_label)}</h1>
-<p class="subtitle">Elecciones {mm.jornada_date[:4]} · Jornada del {_esc(mm.jornada_date)}</p>
+<p class="subtitle">{t(lang, "cover.elections_year")} {mm.jornada_date[:4]} · {t(lang, "cover.election_day")} {_esc(mm.jornada_date)}</p>
 <p class="cover-stats">
-<strong>{_esc(stats.get("total", 0))}</strong> hallazgos monitoreados ·
-<strong style="color:var(--critical);">{stats.get("critical", 0)} críticos</strong> ·
-<strong style="color:var(--high);">{stats.get("high", 0)} altos</strong> ·
-<strong>{stats.get("days_covered", 0)} días</strong> de monitoreo continuo
+<strong>{_esc(stats.get("total", 0))}</strong> {t(lang, "cover.findings_monitored")} ·
+<strong style="color:var(--critical);">{stats.get("critical", 0)} {t(lang, "cover.critical")}</strong> ·
+<strong style="color:var(--high);">{stats.get("high", 0)} {t(lang, "cover.high")}</strong> ·
+<strong>{stats.get("days_covered", 0)}</strong> {t(lang, "cover.days_monitoring")}
 </p>
 <div class="metadata">
-<strong>Misión:</strong> {_esc(mm.mission_name)}<br>
-<strong>Observadora responsable:</strong> {_esc(mm.lead_observer)}<br>
-<strong>Organización emisora:</strong> {_esc(mm.organization)}<br>
-<strong>N° de informe:</strong> {_esc(mm.report_number)}<br>
-<strong>Período cubierto:</strong> {_esc(mm.period_start)} a {_esc(mm.period_end)}<br>
-<strong>Audiencia:</strong> {_esc(req.audience)}<br>
-<strong>Idioma:</strong> {_esc(req.language)}<br>
-<strong>Generado:</strong> {generated_at[:16].replace('T', ' ')} UTC<br>
+<strong>{t(lang, "cover.mission")}</strong> {_esc(mm.mission_name)}<br>
+<strong>{t(lang, "cover.lead_observer")}</strong> {_esc(mm.lead_observer)}<br>
+<strong>{t(lang, "cover.organization")}</strong> {_esc(mm.organization)}<br>
+<strong>{t(lang, "cover.report_number")}</strong> {_esc(mm.report_number)}<br>
+<strong>{t(lang, "cover.period")}</strong> {_esc(mm.period_start)} {period_sep} {_esc(mm.period_end)}<br>
+<strong>{t(lang, "cover.audience")}</strong> {_esc(req.audience)}<br>
+<strong>{t(lang, "cover.language")}</strong> {_esc(req.language)}<br>
+<strong>{t(lang, "cover.generated")}</strong> {generated_at[:16].replace('T', ' ')} UTC<br>
 <strong>Report ID:</strong> {_esc(report_id)}
 </div>
 <div class="disclosure">
-<strong>DEMOCRAC.IA no legitima ni valida resultados electorales.</strong> Este
-informe emite inteligencia electoral con trazabilidad verificable bajo
-estándares internacionales de observación electoral, sin sesgo
-político-partidario. Los datos son para uso analítico de autoridades
-electorales, organismos multilaterales, observadores acreditados y academia.
-Cada hallazgo cita fuente primaria con URL pública; los bloques sin
-verificación independiente fueron postergados antes que publicados.
+<strong>{t(lang, "disclosure.headline")}</strong> {t(lang, "disclosure.body")}
 </div>
 </section>"""
 
 
 def _render_toc(chapters: List[EliteChapter], req: EliteReportRequest) -> str:
+    lang = req.language or "es"
+    cap_prefix = t(lang, "toc.cap_prefix")
+    decl_label = t(lang, "toc.declaration_label")
     items = []
     for ch in chapters:
         num = ch.number
-        num_str = f"Cap. {num}" if num > 0 else ("Declaración" if num == -2 else "—")
-        # Espacio explicito entre <span> y <a> para que la conversion HTML→MD
-        # (markitdown) no los fusione: "Declaracion[Declaracion preliminar]".
+        num_str = f"{cap_prefix}{num}" if num > 0 else (decl_label if num == -2 else "—")
+        # Translate chapter title via i18n key chapter.{chapter_id}
+        title_translated = t(lang, f"chapter.{ch.chapter_id}", ch.title)
         items.append(
             f'<li><span class="num">{num_str}</span> '
-            f'<a href="#chapter-{ch.chapter_id}">{_esc(ch.title)}</a></li>'
+            f'<a href="#chapter-{ch.chapter_id}">{_esc(title_translated)}</a></li>'
         )
     # Anexos
-    items.append('<li><span class="num">A</span> <a href="#appendix-a">Metodología técnica</a></li>')
-    items.append('<li><span class="num">B</span> <a href="#appendix-b">Bibliografía APA</a></li>')
+    items.append(
+        f'<li><span class="num">A</span> '
+        f'<a href="#appendix-a">{t(lang, "appendix.a.title_short")}</a></li>'
+    )
+    items.append(
+        f'<li><span class="num">B</span> '
+        f'<a href="#appendix-b">{t(lang, "appendix.b.title_short")}</a></li>'
+    )
     if req.include_appendix_c:
-        items.append('<li><span class="num">C</span> <a href="#appendix-c">Hallazgos completos</a></li>')
+        items.append(
+            f'<li><span class="num">C</span> '
+            f'<a href="#appendix-c">{t(lang, "appendix.c.title_short")}</a></li>'
+        )
 
     return f"""<nav class="toc">
-<h2>Tabla de contenidos</h2>
+<h2>{t(lang, "toc.title")}</h2>
 <ol>
 {chr(10).join(items)}
 </ol>
@@ -720,12 +723,17 @@ def _render_toc(chapters: List[EliteChapter], req: EliteReportRequest) -> str:
 
 
 def _render_chapter(ch: EliteChapter, req: EliteReportRequest) -> str:
+    lang = req.language or "es"
     # Sección especial para declaración preliminar
     is_declaration = ch.number == -2
     section_class = "declaration" if is_declaration else "chapter"
     ch_num_label = ""
     if ch.number > 0:
-        ch_num_label = f'<span class="ch-num">Cap. {ch.number:02d}</span>'
+        cap_prefix = t(lang, "toc.cap_prefix").rstrip()  # "Cap." / "Ch."
+        ch_num_label = f'<span class="ch-num">{cap_prefix} {ch.number:02d}</span>'
+
+    # Translate chapter title via i18n key chapter.{chapter_id}
+    chapter_title = t(lang, f"chapter.{ch.chapter_id}", ch.title)
 
     narrative_html = _markdown_to_html(ch.narrative) if ch.narrative else '<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>'
 
@@ -757,29 +765,31 @@ def _render_chapter(ch: EliteChapter, req: EliteReportRequest) -> str:
                 f'<li><span class="sev {_sev_class(f.severity)}">{_esc(f.severity)}</span>'
                 f'{finding_text}{link}</li>'
             )
+        heading = t(lang, "findings_cited.heading")
         findings_html = (
             f'<div class="findings-cited">'
-            f'<h4>Hallazgos citados</h4>'
+            f'<h4>{heading}</h4>'
             f'<ul>{chr(10).join(items)}</ul>'
             f'</div>'
         )
 
-    # Separador explicito entre el span de numeracion y el titulo. En HTML el
-    # margin-right del span lo disimula, pero la conversion a MD via markitdown
-    # los fusiona ("Cap. 01Contexto historico"). Un espacio ASCII entre tags
-    # se preserva en MD y no afecta el render HTML.
+    # Separador explicito entre el span de numeracion y el titulo (i18n-safe).
     sep = " " if ch_num_label else ""
     return f"""<section class="{section_class}" id="chapter-{ch.chapter_id}">
-<h2>{ch_num_label}{sep}{_esc(ch.title)}</h2>
+<h2>{ch_num_label}{sep}{_esc(chapter_title)}</h2>
 {narrative_html}
 {viz_html}
 {findings_html}
 </section>"""
 
 
-def _render_appendix_a(req: EliteReportRequest, stats: Dict[str, Any]) -> str:
+def _render_appendix_a(req: EliteReportRequest, stats: Dict[str, Any],
+                       language: str = "es") -> str:
+    # Nota: el cuerpo del Anexo A es contenido tecnico estable que solo se
+    # traduce en el titulo. Si se necesita traduccion completa al cuerpo en
+    # futuro, expandir el bloque html con t(language, "appendix.a.body.*").
     return f"""<aside class="appendix" id="appendix-a">
-<h2>Anexo A — Metodología técnica</h2>
+<h2>{t(language, "appendix.a.title")}</h2>
 <h3>Pipeline PEIRS</h3>
 <p>Este informe fue generado con el sistema DemocracIA / PEIRS (Predictive Electoral Integrity &amp; Risk System), aplicando el pipeline de 6 etapas:</p>
 <ol>
@@ -801,7 +811,7 @@ def _render_appendix_a(req: EliteReportRequest, stats: Dict[str, Any]) -> str:
 </aside>"""
 
 
-def _render_appendix_b(citations: List[CitationEntry]) -> str:
+def _render_appendix_b(citations: List[CitationEntry], language: str = "es") -> str:
     if not citations:
         return ""
     items = []
@@ -812,28 +822,27 @@ def _render_appendix_b(citations: List[CitationEntry]) -> str:
         items.append(f'<li>{_esc(c.apa_formatted)}{url_link}</li>')
 
     return f"""<aside class="appendix" id="appendix-b">
-<h2>Anexo B — Bibliografía (APA 7)</h2>
-<p style="color:var(--text-muted); font-size:11px; margin-bottom:20px;">{len(citations)} referencias ordenadas alfabéticamente.</p>
+<h2>{t(language, "appendix.b.title")}</h2>
+<p style="color:var(--text-muted); font-size:11px; margin-bottom:20px;">{len(citations)} {t(language, "appendix.b.intro")}</p>
 <ol class="bibliography">
 {chr(10).join(items)}
 </ol>
 </aside>"""
 
 
-def _render_appendix_c_placeholder() -> str:
-    return """<aside class="appendix" id="appendix-c">
-<h2>Anexo C — Hallazgos completos</h2>
-<p style="color:var(--text-muted); font-size:11px;">Listado completo de hallazgos del Hunter disponible en formato Markdown descargable. Incluye entry_id, fecha, severidad, categoría, finding, medio, URL y priority_score.</p>
+def _render_appendix_c_placeholder(language: str = "es") -> str:
+    return f"""<aside class="appendix" id="appendix-c">
+<h2>{t(language, "appendix.c.title")}</h2>
+<p style="color:var(--text-muted); font-size:11px;">{t(language, "appendix.c.placeholder")}</p>
 </aside>"""
 
 
-def _render_footer(report_id: str, generated_at: str) -> str:
+def _render_footer(report_id: str, generated_at: str, language: str = "es") -> str:
     return f"""<footer class="elite-footer">
-<strong>DEMOCRAC.IA no legitima ni valida resultados electorales.</strong>
-Inteligencia electoral con trazabilidad verificable bajo estándares
-internacionales de observación electoral.<br>
+<strong>{t(language, "disclosure.headline")}</strong>
+{t(language, "footer.disclosure_short")}<br>
 PEIRS Elite Report · {report_id} · {generated_at[:16].replace('T', ' ')} UTC ·
-Pipeline 6 etapas · SVG server-side · Citas APA 7
+{t(language, "footer.pipeline_meta")}
 </footer>"""
 
 
@@ -847,42 +856,56 @@ def render_markdown(
 ) -> str:
     """Versión Markdown del informe (para archivado/conversión)."""
     mm = req.mission_metadata
+    lang = req.language or "es"
+    period_sep = {"es": "a", "en": "to", "pt": "a"}.get(lang, "a")
+    cap_prefix = t(lang, "toc.cap_prefix").rstrip()
+    decl_label = t(lang, "toc.declaration_label")
+    viz_label = {"es": "Visualización", "en": "Visualization", "pt": "Visualização"}.get(lang, "Visualización")
+    pending_label = {"es": "*Contenido pendiente.*", "en": "*Content pending.*",
+                     "pt": "*Conteúdo pendente.*"}.get(lang, "*Contenido pendiente.*")
+
     lines = [
-        f"# PEIRS Elite Report — {country_name}",
+        f"# {t(lang, 'md.header_title')} — {country_name}",
         "",
         f"*{req.audience} · {req.language} · {req.report_type} · {mm.report_number}*",
         "",
         "---",
         "",
-        f"**Misión:** {mm.mission_name}  ",
-        f"**Observadora:** {mm.lead_observer}  ",
-        f"**Período:** {mm.period_start} a {mm.period_end}  ",
-        f"**Jornada:** {mm.jornada_date}  ",
-        f"**Clasificación:** {mm.classification}  ",
+        f"**{t(lang, 'cover.mission')}** {mm.mission_name}  ",
+        f"**{t(lang, 'cover.lead_observer')}** {mm.lead_observer}  ",
+        f"**{t(lang, 'cover.period')}** {mm.period_start} {period_sep} {mm.period_end}  ",
+        f"**{t(lang, 'cover.election_day')}** {mm.jornada_date}  ",
+        f"**{t(lang, 'md.classification_label')}** {mm.classification}  ",
         "",
-        f"**Cifras:** {stats.get('total', 0)} hallazgos · "
-        f"{stats.get('critical', 0)} críticos · {stats.get('high', 0)} altos · "
-        f"{stats.get('days_covered', 0)} días de monitoreo.",
+        f"**{stats.get('total', 0)}** {t(lang, 'cover.findings_monitored')} · "
+        f"**{stats.get('critical', 0)}** {t(lang, 'cover.critical')} · "
+        f"**{stats.get('high', 0)}** {t(lang, 'cover.high')} · "
+        f"**{stats.get('days_covered', 0)}** {t(lang, 'cover.days_monitoring')}.",
         "",
         "---",
         "",
     ]
     for ch in chapters:
-        ch_num = f"Cap. {ch.number:02d}" if ch.number > 0 else ("Declaración" if ch.number == -2 else "")
-        header = f"## {ch_num}. {ch.title}" if ch_num else f"## {ch.title}"
+        ch_title = t(lang, f"chapter.{ch.chapter_id}", ch.title)
+        if ch.number > 0:
+            header = f"## {cap_prefix} {ch.number:02d}. {ch_title}"
+        elif ch.number == -2:
+            header = f"## {decl_label} — {ch_title}"
+        else:
+            header = f"## {ch_title}"
         lines.append(header)
         lines.append("")
-        lines.append(ch.narrative or "*Contenido pendiente.*")
+        lines.append(ch.narrative or pending_label)
         lines.append("")
         for viz in ch.visualizations:
-            lines.append(f"> **[Visualización — {viz.kind}]** {viz.title}")
+            lines.append(f"> **[{viz_label} — {viz.kind}]** {viz.title}")
             if viz.caption:
                 lines.append(f"> *{viz.caption}*")
             lines.append("")
 
     lines.append("---")
     lines.append("")
-    lines.append("## Anexo B — Bibliografía")
+    lines.append(f"## {t(lang, 'appendix.b.title')}")
     lines.append("")
     for c in citations:
         lines.append(f"- {c.apa_formatted}")
