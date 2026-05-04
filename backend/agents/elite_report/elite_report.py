@@ -317,13 +317,17 @@ class PEIRSEliteReport:
                 "info": sum(1 for f in pe.findings if (f.severity or "").lower() == "info"),
             })
 
-        # Forecast viz data
+        # Forecast viz data — scenario labels via i18n key forecast.scenario.{id}.label
         forecast_data = None
         if forecast:
+            from agents.elite_report.i18n import t as _ti
+            def _scen_label(s):
+                key = f"forecast.scenario.{s.scenario_id}.label"
+                return _ti(language, key, default=s.label)
             forecast_data = {
                 "scenarios": [
                     {
-                        "label": s.label,
+                        "label": _scen_label(s),
                         "probability": s.probability,
                         "ci_low": s.confidence_interval[0] if s.confidence_interval else max(0, s.probability - 0.1),
                         "ci_high": s.confidence_interval[1] if s.confidence_interval else min(1, s.probability + 0.1),

@@ -647,6 +647,142 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "components with public audit. Structural gap: SCE/STAE without independent audit.",
         "pt": "componentes com auditoria pública. Lacuna estrutural: SCE/STAE sem auditoria independente.",
     },
+
+    # ── Forecast chart badge + severity labels ──────────────────────────
+    "viz.alert": {
+        "es": "ALERTA",
+        "en": "ALERT",
+        "pt": "ALERTA",
+    },
+    "viz.severity.info": {
+        "es": "info",
+        "en": "info",
+        "pt": "info",
+    },
+    "viz.severity.low": {
+        "es": "bajo",
+        "en": "low",
+        "pt": "baixo",
+    },
+    "viz.severity.medium": {
+        "es": "medio",
+        "en": "medium",
+        "pt": "médio",
+    },
+    "viz.severity.high": {
+        "es": "alto",
+        "en": "high",
+        "pt": "alto",
+    },
+    "viz.severity.critical": {
+        "es": "crítico",
+        "en": "critical",
+        "pt": "crítico",
+    },
+
+    # ── Forecast scenario short labels (forecast_chart, scenario_probability) ──
+    "forecast.scenario.s_dispute_prolongada.label": {
+        "es": "Disputa post-electoral prolongada",
+        "en": "Prolonged post-electoral dispute",
+        "pt": "Disputa pós-eleitoral prolongada",
+    },
+    "forecast.scenario.s_nulidad_parcial.label": {
+        "es": "Nulidad parcial por el JNE",
+        "en": "Partial nullity by JNE",
+        "pt": "Nulidade parcial pelo JNE",
+    },
+    "forecast.scenario.s_segunda_vuelta.label": {
+        "es": "Segunda vuelta con alta complejidad operativa",
+        "en": "Runoff with high operational complexity",
+        "pt": "Segundo turno com alta complexidade operacional",
+    },
+    "forecast.scenario.s_crisis_institucional.label": {
+        "es": "Crisis institucional post-escrutinio aguda",
+        "en": "Acute post-tally institutional crisis",
+        "pt": "Crise institucional aguda pós-apuração",
+    },
+    "forecast.scenario.s_reforma_legislativa.label": {
+        "es": "Reforma legislativa post-proceso sobre IA electoral",
+        "en": "Post-process legislative reform on electoral AI",
+        "pt": "Reforma legislativa pós-processo sobre IA eleitoral",
+    },
+    "forecast.scenario.s_proclamacion_sin_disputa.label": {
+        "es": "Proclamación sin disputa mayor",
+        "en": "Proclamation without major dispute",
+        "pt": "Proclamação sem disputa relevante",
+    },
+
+    # ── Appendix A body (technical methodology) ─────────────────────────
+    "appendix.a.h_pipeline": {
+        "es": "Pipeline PEIRS",
+        "en": "PEIRS Pipeline",
+        "pt": "Pipeline PEIRS",
+    },
+    "appendix.a.intro": {
+        "es": "Este informe fue generado con el sistema DemocracIA / PEIRS (Predictive Electoral Integrity &amp; Risk System), aplicando el pipeline de 6 etapas:",
+        "en": "This report was generated with the DemocracIA / PEIRS (Predictive Electoral Integrity &amp; Risk System) system, applying the 6-stage pipeline:",
+        "pt": "Este relatório foi gerado com o sistema DemocracIA / PEIRS (Predictive Electoral Integrity &amp; Risk System), aplicando o pipeline de 6 etapas:",
+    },
+    "appendix.a.li_eliteloader": {
+        "es": "<strong>EliteLoader</strong> — carga paralela de evidencia: entries del Hunter, alertas dispatchadas, corpus constitucionalista RAG filtrado por país, y series históricas V-Dem, Freedom House, PEI, RSF. Cache TTL 1 hora.",
+        "en": "<strong>EliteLoader</strong> — parallel evidence loading: Hunter entries, dispatched alerts, country-filtered constitutionalist RAG corpus, and historical series V-Dem, Freedom House, PEI, RSF. Cache TTL 1 hour.",
+        "pt": "<strong>EliteLoader</strong> — carregamento paralelo de evidência: entradas do Hunter, alertas despachados, corpus constitucionalista RAG filtrado por país e séries históricas V-Dem, Freedom House, PEI, RSF. Cache TTL 1 hora.",
+    },
+    "appendix.a.li_phaseorganizer": {
+        "es": "<strong>PhaseOrganizer</strong> — agrupa {n} hallazgos en las 9 fases del ciclo electoral según fecha y calendario electoral.",
+        "en": "<strong>PhaseOrganizer</strong> — groups {n} findings into the 9 phases of the electoral cycle by date and electoral calendar.",
+        "pt": "<strong>PhaseOrganizer</strong> — agrupa {n} registros nas 9 fases do ciclo eleitoral conforme data e calendário eleitoral.",
+    },
+    "appendix.a.li_crossref": {
+        "es": "<strong>CrossReferenceBuilder</strong> — linkea hallazgos high/critical con artículos del marco normativo (Constitución, LOE, LOP, jurisprudencia, ICCPR, CADH, CDI) mediante mapeo curado de 14 categorías.",
+        "en": "<strong>CrossReferenceBuilder</strong> — links high/critical findings to normative-framework articles (Constitution, electoral law, jurisprudence, ICCPR, ACHR, IADC) through a curated 14-category mapping.",
+        "pt": "<strong>CrossReferenceBuilder</strong> — vincula registros high/critical a artigos do marco normativo (Constituição, lei eleitoral, jurisprudência, ICCPR, CADH, CDI) por meio de mapeamento curado de 14 categorias.",
+    },
+    "appendix.a.li_predictive": {
+        "es": "<strong>PredictiveEngine</strong> — motor híbrido de reglas deterministas + Claude Sonnet 4.6 para estimar escenarios probabilísticos de dinámica institucional post-proceso.",
+        "en": "<strong>PredictiveEngine</strong> — hybrid engine combining deterministic rules + Claude Sonnet 4.6 to estimate probabilistic scenarios of post-process institutional dynamics.",
+        "pt": "<strong>PredictiveEngine</strong> — motor híbrido de regras determinísticas + Claude Sonnet 4.6 para estimar cenários probabilísticos de dinâmica institucional pós-processo.",
+    },
+    "appendix.a.li_composer": {
+        "es": "<strong>ChapterComposer</strong> — 12 prompts especializados con prompt caching de Anthropic, concurrency limit 4. Cada capítulo se genera con contexto compartido y datos específicos.",
+        "en": "<strong>ChapterComposer</strong> — 12 specialised prompts with Anthropic prompt caching, concurrency limit 4. Each chapter is generated with shared context and chapter-specific data.",
+        "pt": "<strong>ChapterComposer</strong> — 12 prompts especializados com prompt caching da Anthropic, concorrência limitada a 4. Cada capítulo é gerado com contexto compartilhado e dados específicos.",
+    },
+    "appendix.a.li_visualizer": {
+        "es": "<strong>Visualizer + Renderer</strong> — SVG server-side con paleta institucional, HTML responsive, PDF A4 con tipografía Fraunces+DM Sans+DM Mono.",
+        "en": "<strong>Visualizer + Renderer</strong> — server-side SVG with institutional palette, responsive HTML, A4 PDF with Fraunces + DM Sans + DM Mono typography.",
+        "pt": "<strong>Visualizer + Renderer</strong> — SVG server-side com paleta institucional, HTML responsivo, PDF A4 com tipografia Fraunces + DM Sans + DM Mono.",
+    },
+    "appendix.a.h_sources": {
+        "es": "Fuentes Hunter",
+        "en": "Hunter Sources",
+        "pt": "Fontes Hunter",
+    },
+    "appendix.a.p_sources": {
+        "es": "Monitoreo RSS cada 4 horas sobre medios peruanos: Andina, El Comercio, Gestión, IDL-Reporteros, RPP Noticias. Clasificación automática con Claude Sonnet 4.6. Dedupe semántico por (categoría, URL normalizada, fecha). Priorización ponderada: severidad × recencia (decay exp. 3 días) × credibilidad de fuente.",
+        "en": "RSS monitoring every 4 hours over Peruvian media: Andina, El Comercio, Gestión, IDL-Reporteros, RPP Noticias. Automatic classification with Claude Sonnet 4.6. Semantic dedupe by (category, normalised URL, date). Weighted prioritisation: severity × recency (3-day exponential decay) × source credibility.",
+        "pt": "Monitoramento RSS a cada 4 horas sobre veículos peruanos: Andina, El Comercio, Gestión, IDL-Reporteros, RPP Noticias. Classificação automática com Claude Sonnet 4.6. Dedupe semântico por (categoria, URL normalizada, data). Priorização ponderada: severidade × recência (decaimento exp. 3 dias) × credibilidade da fonte.",
+    },
+    "appendix.a.h_limits": {
+        "es": "Limitaciones reconocidas",
+        "en": "Acknowledged limitations",
+        "pt": "Limitações reconhecidas",
+    },
+    "appendix.a.li_lim_bias": {
+        "es": "Sesgo de fuentes: los medios monitoreados son mayoritariamente limeños; la cobertura regional es indirecta.",
+        "en": "Source bias: monitored media are mostly Lima-based; regional coverage is indirect.",
+        "pt": "Viés de fontes: os veículos monitorados são majoritariamente limenhos; a cobertura regional é indireta.",
+    },
+    "appendix.a.li_lim_horizon": {
+        "es": "Horizonte predictivo: las estimaciones del PredictiveEngine cubren 2-4 semanas. Más allá pierden precisión.",
+        "en": "Predictive horizon: PredictiveEngine estimates cover 2-4 weeks. Beyond that, precision degrades.",
+        "pt": "Horizonte preditivo: as estimativas do PredictiveEngine cobrem 2-4 semanas. Além disso, perdem precisão.",
+    },
+    "appendix.a.li_lim_no_replace": {
+        "es": "No reemplaza observación presencial: este informe complementa, no sustituye, las misiones oficiales de observación.",
+        "en": "Does not replace on-site observation: this report complements, but does not substitute, official observation missions.",
+        "pt": "Não substitui observação presencial: este relatório complementa, mas não substitui, as missões oficiais de observação.",
+    },
 }
 
 

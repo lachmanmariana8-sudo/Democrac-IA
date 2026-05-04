@@ -785,28 +785,27 @@ def _render_chapter(ch: EliteChapter, req: EliteReportRequest) -> str:
 
 def _render_appendix_a(req: EliteReportRequest, stats: Dict[str, Any],
                        language: str = "es") -> str:
-    # Nota: el cuerpo del Anexo A es contenido tecnico estable que solo se
-    # traduce en el titulo. Si se necesita traduccion completa al cuerpo en
-    # futuro, expandir el bloque html con t(language, "appendix.a.body.*").
+    n_findings = stats.get("total", 0)
+    li_phase = t(language, "appendix.a.li_phaseorganizer").format(n=n_findings)
     return f"""<aside class="appendix" id="appendix-a">
 <h2>{t(language, "appendix.a.title")}</h2>
-<h3>Pipeline PEIRS</h3>
-<p>Este informe fue generado con el sistema DemocracIA / PEIRS (Predictive Electoral Integrity &amp; Risk System), aplicando el pipeline de 6 etapas:</p>
+<h3>{t(language, "appendix.a.h_pipeline")}</h3>
+<p>{t(language, "appendix.a.intro")}</p>
 <ol>
-<li><strong>EliteLoader</strong> — carga paralela de evidencia: entries del Hunter, alertas dispatchadas, corpus constitucionalista RAG filtrado por país, y series históricas V-Dem, Freedom House, PEI, RSF. Cache TTL 1 hora.</li>
-<li><strong>PhaseOrganizer</strong> — agrupa {stats.get('total', 0)} hallazgos en las 9 fases del ciclo electoral según fecha y calendario electoral.</li>
-<li><strong>CrossReferenceBuilder</strong> — linkea hallazgos high/critical con artículos del marco normativo (Constitución, LOE, LOP, jurisprudencia, ICCPR, CADH, CDI) mediante mapeo curado de 14 categorías.</li>
-<li><strong>PredictiveEngine</strong> — motor híbrido de reglas deterministas + Claude Sonnet 4.6 para estimar escenarios probabilísticos de dinámica institucional post-proceso.</li>
-<li><strong>ChapterComposer</strong> — 12 prompts especializados con prompt caching de Anthropic, concurrency limit 4. Cada capítulo se genera con contexto compartido y datos específicos.</li>
-<li><strong>Visualizer + Renderer</strong> — SVG server-side con paleta institucional, HTML responsive, PDF A4 con tipografía Fraunces+DM Sans+DM Mono.</li>
+<li>{t(language, "appendix.a.li_eliteloader")}</li>
+<li>{li_phase}</li>
+<li>{t(language, "appendix.a.li_crossref")}</li>
+<li>{t(language, "appendix.a.li_predictive")}</li>
+<li>{t(language, "appendix.a.li_composer")}</li>
+<li>{t(language, "appendix.a.li_visualizer")}</li>
 </ol>
-<h3>Fuentes Hunter</h3>
-<p>Monitoreo RSS cada 4 horas sobre medios peruanos: Andina, El Comercio, Gestión, IDL-Reporteros, RPP Noticias. Clasificación automática con Claude Sonnet 4.6. Dedupe semántico por (categoría, URL normalizada, fecha). Priorización ponderada: severidad × recencia (decay exp. 3 días) × credibilidad de fuente.</p>
-<h3>Limitaciones reconocidas</h3>
+<h3>{t(language, "appendix.a.h_sources")}</h3>
+<p>{t(language, "appendix.a.p_sources")}</p>
+<h3>{t(language, "appendix.a.h_limits")}</h3>
 <ul>
-<li>Sesgo de fuentes: los medios monitoreados son mayoritariamente limeños; la cobertura regional es indirecta.</li>
-<li>Horizonte predictivo: las estimaciones del PredictiveEngine cubren 2-4 semanas. Más allá pierden precisión.</li>
-<li>No reemplaza observación presencial: este informe complementa, no sustituye, las misiones oficiales de observación.</li>
+<li>{t(language, "appendix.a.li_lim_bias")}</li>
+<li>{t(language, "appendix.a.li_lim_horizon")}</li>
+<li>{t(language, "appendix.a.li_lim_no_replace")}</li>
 </ul>
 </aside>"""
 

@@ -1228,8 +1228,7 @@ def render_system_architecture(data: Dict[str, Any]) -> str:
 
     # Caption gap auditoría
     audited_comps = [c for c in comps if c.get("audited")]
-    note = (f"{len(audited_comps)}/{len(comps)} componentes con auditoría pública. "
-            f"Gap estructural: SCE/STAE sin auditoría independiente.")
+    note = f"{len(audited_comps)}/{len(comps)} {_t(_lang(data), 'viz.audit_note')}"
     svg.append(f'<text x="{W/2:.1f}" y="{H-30}" text-anchor="middle" '
                f'font-family="{FONT_SANS}" font-size="10" font-style="italic" '
                f'fill="{COLORS["text_muted"]}">{_esc(note)}</text>')

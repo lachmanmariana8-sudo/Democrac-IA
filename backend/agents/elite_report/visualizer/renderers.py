@@ -23,6 +23,14 @@ from agents.elite_report.visualizer.palette import (
     COLORS, SERIES_PALETTE, FONT_SANS, FONT_MONO,
     DIM_INFOGRAPHIC, DIM_TIMELINE, DIM_MATRIX, DIM_RADAR,
 )
+from agents.elite_report.i18n import t as _t
+
+
+def _lang(data: Dict[str, Any]) -> str:
+    """Lee `_language` inyectado en el data dict por _attach_visualizations.
+    Cae a 'es' si no esta presente (compat con renderers que se llaman fuera
+    del pipeline normal, ej. tests). Mantiene paridad con renderers_5b._lang."""
+    return (data.get("_language") if isinstance(data, dict) else None) or "es"
 
 
 def _esc(s: str) -> str:
@@ -277,8 +285,14 @@ def render_phase_timeline(data: Dict[str, Any]) -> str:
     # Leyenda — etiquetas en español, mas espacio entre items, en linea
     # superior (mt-2) para no chocar con los labels rotados del eje X.
     legend_y = 12
-    legend_labels = {"info": "info", "low": "bajo", "medium": "medio",
-                     "high": "alto", "critical": "crítico"}
+    lang_local = _lang(data)
+    legend_labels = {
+        "info":     _t(lang_local, "viz.severity.info"),
+        "low":      _t(lang_local, "viz.severity.low"),
+        "medium":   _t(lang_local, "viz.severity.medium"),
+        "high":     _t(lang_local, "viz.severity.high"),
+        "critical": _t(lang_local, "viz.severity.critical"),
+    }
     lx = ml
     for sev in sev_order:
         svg.append(f'<rect x="{lx}" y="{legend_y-8}" width="10" height="10" fill="{COLORS[sev]}"/>')
@@ -333,7 +347,7 @@ def render_forecast_chart(data: Dict[str, Any]) -> str:
                f'fill="{warn_color}"/>')
     svg.append(f'<text x="{W-85}" y="23" text-anchor="middle" '
                f'font-family="{FONT_SANS}" font-size="10" font-weight="700" '
-               f'fill="white">ALERTA {warning_level.upper()}</text>')
+               f'fill="white">{_t(_lang(data), "viz.alert").upper()} {warning_level.upper()}</text>')
 
     # Escala 0-100%
     ml, mr, mt = 240, 60, 44
