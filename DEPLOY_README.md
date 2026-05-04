@@ -9,7 +9,7 @@
 ### Arquitectura de Producción
 ```
 www.democracia.ar     → Netlify (Frontend React)
-api.democracia.ar     → Railway (Backend FastAPI + SQLite)
+democracia-peirs-production.up.railway.app     → Railway (Backend FastAPI + SQLite)
 ```
 
 ### Estado Actual
@@ -31,13 +31,13 @@ api.democracia.ar     → Railway (Backend FastAPI + SQLite)
   ANTHROPIC_API_KEY=sk-ant-...
   OBSERVER_API_KEYS=clave-produccion-2026
   ```
-- [ ] Configurar dominio: `api.democracia.ar`
+- [ ] Configurar dominio: `democracia-peirs-production.up.railway.app`
 - [ ] (Opcional) Subir datasets CSV via Railway CLI
 
 ### Frontend (Netlify)
 - [ ] Crear sitio en https://netlify.com
 - [ ] Conectar repo GitHub
-- [ ] Agregar variable: `VITE_API_BASE=https://api.democracia.ar`
+- [ ] Agregar variable: `VITE_API_BASE=https://democracia-peirs-production.up.railway.app`
 - [ ] Configurar dominio: `www.democracia.ar`
 
 ### DNS (En registrador de democracia.ar)
@@ -74,14 +74,14 @@ A       @         75.2.60.5
 | Endpoint | Método | Descripción |
 |----------|--------|-------------|
 | `https://www.democracia.ar` | GET | Dashboard principal |
-| `https://api.democracia.ar/api/health` | GET | Estado del sistema |
-| `https://api.democracia.ar/api/countries` | GET | Lista de países (38) |
-| `https://api.democracia.ar/api/analyze` | POST | Análisis electoral completo |
-| `https://api.democracia.ar/docs` | GET | Documentación Swagger |
+| `https://democracia-peirs-production.up.railway.app/api/health` | GET | Estado del sistema |
+| `https://democracia-peirs-production.up.railway.app/api/countries` | GET | Lista de países (38) |
+| `https://democracia-peirs-production.up.railway.app/api/analyze` | POST | Análisis electoral completo |
+| `https://democracia-peirs-production.up.railway.app/docs` | GET | Documentación Swagger |
 
 ### Ejemplo de Request
 ```bash
-curl -X POST https://api.democracia.ar/api/analyze \
+curl -X POST https://democracia-peirs-production.up.railway.app/api/analyze \
   -H "Content-Type: application/json" \
   -d '{"country_code": "PER", "election_date": "2026-04-12"}'
 ```
@@ -105,7 +105,7 @@ curl -X POST https://api.democracia.ar/api/analyze \
 ### Manual
 ```powershell
 # Health check
-curl https://api.democracia.ar/api/health
+curl https://democracia-peirs-production.up.railway.app/api/health
 
 # Test completo
 .\verify_production.ps1
@@ -135,7 +135,7 @@ RSF_CSV_PATH=/data/RSF/2025 - 2025.csv
 
 **Netlify:**
 ```env
-VITE_API_BASE=https://api.democracia.ar
+VITE_API_BASE=https://democracia-peirs-production.up.railway.app
 NODE_VERSION=20
 ```
 
@@ -164,13 +164,13 @@ Los CSVs grandes (V-Dem: 384MB) no están en GitHub. Opciones:
 ```powershell
 # Verificar DNS
 nslookup www.democracia.ar
-nslookup api.democracia.ar
+nslookup democracia-peirs-production.up.railway.app
 
 # Test API
-curl https://api.democracia.ar/api/health
+curl https://democracia-peirs-production.up.railway.app/api/health
 
 # Verificar SSL
-openssl s_client -connect api.democracia.ar:443
+openssl s_client -connect democracia-peirs-production.up.railway.app:443
 ```
 
 ---

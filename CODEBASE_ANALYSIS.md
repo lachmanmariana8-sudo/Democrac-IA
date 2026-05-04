@@ -592,7 +592,7 @@ Not formally documented as ADRs, but architectural decisions evident in:
 2. Update `VDEM_VERSION`, `FH_LAST_EDITION`, etc. in `modules/config.py`
 3. Follow `docs/deploy_guide.md`: Push to GitHub → Railway detects `railway.toml`
 4. Upload datasets via Railway CLI (see deploy guide)
-5. Verify: `curl https://api.democracia.ar/api/health`
+5. Verify: `curl https://democracia-peirs-production.up.railway.app/api/health`
 
 **Scenario 5: Debug a failing test**
 1. Run: `python -m pytest backend/tests/test_name.py::test_function -v -s` (capture output)

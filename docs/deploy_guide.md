@@ -7,7 +7,7 @@
 
 ```
 www.democracia.ar          → Netlify (frontend React estático)
-api.democracia.ar          → Railway (backend FastAPI + SQLite)
+democracia-peirs-production.up.railway.app          → Railway (backend FastAPI + SQLite)
 ```
 
 ---
@@ -56,7 +56,7 @@ El informe seguirá generándose, con datos menos precisos.
 
 ### 1.4 Dominio personalizado en Railway
 1. Railway → tu servicio → Settings → Domains → Add Custom Domain
-2. Ingresar: `api.democracia.ar`
+2. Ingresar: `democracia-peirs-production.up.railway.app`
 3. Railway te da un CNAME: `xxx.railway.app`
 
 ---
@@ -73,7 +73,7 @@ El informe seguirá generándose, con datos menos precisos.
 ### 2.2 Variable de entorno en Netlify
 En Netlify → Site settings → Environment variables:
 ```
-VITE_API_BASE=https://api.democracia.ar
+VITE_API_BASE=https://democracia-peirs-production.up.railway.app
 ```
 
 ### 2.3 Dominio personalizado en Netlify
@@ -102,7 +102,7 @@ A       @         75.2.60.5                       3600   ← IP de Netlify para 
 ### Verificar propagación DNS
 ```bash
 nslookup www.democracia.ar
-nslookup api.democracia.ar
+nslookup democracia-peirs-production.up.railway.app
 ```
 La propagación DNS tarda entre 15 minutos y 48 horas.
 
@@ -134,7 +134,7 @@ ALLOWED_ORIGINS=https://www.democracia.ar,https://democracia.ar
 
 ```bash
 # Backend
-curl https://api.democracia.ar/api/health
+curl https://democracia-peirs-production.up.railway.app/api/health
 
 # Frontend
 curl https://www.democracia.ar

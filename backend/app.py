@@ -4722,11 +4722,14 @@ app = FastAPI(
 _DEFAULT_ORIGINS = (
     "https://democracia.ar,"
     "https://www.democracia.ar,"
-    "https://api.democracia.ar,"
     "http://localhost:5173,"
     "http://localhost:3000,"
     "http://localhost:8000"
 )
+# Nota: api.democracia.ar fue retirado el 2026-05-04. Era un proyecto Railway
+# secundario sin secrets que generaba dual-deploy con cada push. Si en el
+# futuro se quiere agregar otro origin (ej. dashboard de un partner), pasarlo
+# via env var ALLOWED_ORIGINS, no hardcodear aquí.
 _RAW_ORIGINS = os.getenv("ALLOWED_ORIGINS", _DEFAULT_ORIGINS)
 
 _ALLOWED_ORIGINS: list[str]
