@@ -87,10 +87,40 @@ AUDIENCE_DESC = {
     "international": "Observadores internacionales (OEA, EU EOM, Carter Center). English. Marco comparado con estándares internacionales. Formal academic tone.",
 }
 
-LANGUAGE_FULL = {"es": "Español (rioplatense-peruano formal)", "en": "English (formal academic)"}
+LANGUAGE_FULL = {
+    "es": "Español (rioplatense-peruano formal)",
+    "en": "English (formal academic)",
+    "pt": "Português (institucional formal, padrão Brasil)",
+}
+# Reglas de idioma reforzadas — el contexto inyectado al LLM contiene mucho
+# español (prompts originales, glosario de categorias, datos PER) y eso
+# generaba resistencia del modelo a responder en otro idioma. Ahora la regla
+# es explicita y absoluta: usar SOLO el idioma pedido, sin code-switching.
 LANGUAGE_RULE = {
-    "es": "Respondé en español formal, registro institucional peruano.",
-    "en": "Respond in formal academic English.",
+    "es": (
+        "REGLA DE IDIOMA ESTRICTA: respondé EXCLUSIVAMENTE en español formal, "
+        "registro institucional peruano. No uses inglés ni portugués bajo ninguna "
+        "circunstancia, salvo en (a) nombres propios institucionales, (b) tecnicismos "
+        "sin equivalente español, (c) citas textuales en su idioma original."
+    ),
+    "en": (
+        "STRICT LANGUAGE RULE: respond EXCLUSIVELY in formal academic English. "
+        "Do NOT use Spanish or Portuguese under any circumstance, even though much "
+        "of the surrounding context (rules, glossary, source data) is written in "
+        "Spanish. Translate every concept, proper noun (when an English form exists), "
+        "and category label into English. The only allowed Spanish: (a) institutional "
+        "proper nouns without English form (e.g., 'Jurado Nacional de Elecciones'), "
+        "(b) verbatim quotations in their original language. Even subsection headings, "
+        "category names from the Hunter glossary, and instruction words must be in "
+        "English. Output 100% English narrative."
+    ),
+    "pt": (
+        "REGRA DE IDIOMA ESTRITA: responda EXCLUSIVAMENTE em português formal, "
+        "registro institucional brasileiro. Não use espanhol ou inglês em nenhuma "
+        "circunstância, exceto em (a) nomes próprios institucionais, (b) termos "
+        "técnicos sem equivalente em português, (c) citações textuais em seu idioma "
+        "original."
+    ),
 }
 
 

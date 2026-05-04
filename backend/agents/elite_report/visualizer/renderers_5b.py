@@ -27,6 +27,15 @@ from agents.elite_report.visualizer.palette import (
 )
 # Reusar wrap helper definido en renderers.py para evitar duplicar.
 from agents.elite_report.visualizer.renderers import _wrap_2lines
+# i18n para strings hardcoded dentro de SVG (status labels, headers uppercase,
+# gauge bands). Cada renderer lee `data["_language"]` (inyectado por
+# _attach_visualizations) y traduce. Default 'es' si falta.
+from agents.elite_report.i18n import t as _t
+
+
+def _lang(data: Dict[str, Any]) -> str:
+    """Extrae _language inyectado por _attach_visualizations."""
+    return data.get("_language", "es") if isinstance(data, dict) else "es"
 
 
 def _esc(s: Any) -> str:
@@ -192,7 +201,7 @@ def render_flow_chart_voting(data: Dict[str, Any]) -> str:
     # Header
     svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">CADENA DEL VOTO</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.vote_chain")}</text>')
 
     # Boxes + arrows
     for i, st in enumerate(stages):
@@ -229,8 +238,13 @@ def render_flow_chart_voting(data: Dict[str, Any]) -> str:
 
     # Leyenda
     ly = H - 14
-    items = [("ok", "OK"), ("warn", "Atención"), ("fail", "Falla"),
-             ("pending", "Pendiente")]
+    _l = _lang(data)
+    items = [
+        ("ok",      _t(_l, "viz.status.ok")),
+        ("warn",    _t(_l, "viz.status.warn")),
+        ("fail",    _t(_l, "viz.status.fail")),
+        ("pending", _t(_l, "viz.status.pending")),
+    ]
     lx = 20
     for st, lbl in items:
         svg.append(f'<circle cx="{lx+5}" cy="{ly-3}" r="4" '
@@ -292,7 +306,7 @@ def render_network_institutions(data: Dict[str, Any]) -> str:
     # Header
     svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">RED INSTITUCIONAL ELECTORAL</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.electoral_network")}</text>')
 
     # Edges (lineas primero, despues labels con background para legibilidad)
     edge_labels: List[tuple] = []
@@ -387,7 +401,7 @@ def render_hourly_timeline(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="22" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">JORNADA — EVENTOS POR HORA</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.electoral_day")}</text>')
 
     # Grid horizontal
     for i in range(5):
@@ -467,7 +481,7 @@ def render_map_regions_affected(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">REGIONES AFECTADAS — INTENSIDAD POR INCIDENTES</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.regions_affected")}</text>')
 
     for idx, reg in enumerate(regions):
         r = idx // cols
@@ -546,7 +560,7 @@ def render_progress_chart(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="22" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">PROGRESO DE ACTAS PROCESADAS</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.tally_progress")}</text>')
     svg.append(f'<text x="20" y="38" font-family="{FONT_MONO}" font-size="9" '
                f'fill="{COLORS["text_muted"]}">% acumulado del padron escrutado vs tiempo</text>')
     # Y axis label rotado
@@ -639,7 +653,7 @@ def render_integrity_incidents_grid(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="26" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">INCIDENTES DE INTEGRIDAD — REGIÓN × CATEGORÍA</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.integrity_grid")}</text>')
 
     # Headers (cols)
     header_y = 70
@@ -725,7 +739,7 @@ def render_actor_network(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">RED DE ACTORES — ACCIONES E INTERVENCIONES</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.actor_network")}</text>')
 
     # Edges
     for ed in edges[:18]:
@@ -793,7 +807,7 @@ def render_judicial_timeline(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="30" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">CRONOLOGÍA JUDICIAL</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.judicial_chronology")}</text>')
 
     # Línea vertical
     line_x = 130
@@ -862,8 +876,10 @@ def render_compliance_matrix(data: Dict[str, Any]) -> str:
         "unknown": COLORS["text_muted"],
     }
     status_label = {
-        "ok": "CUMPLE", "partial": "PARCIAL",
-        "breach": "INCUMPLE", "unknown": "S/D",
+        "ok":      _t(_lang(data), "viz.compliance.ok"),
+        "partial": _t(_lang(data), "viz.compliance.partial"),
+        "breach":  _t(_lang(data), "viz.compliance.breach"),
+        "unknown": _t(_lang(data), "viz.compliance.unknown"),
     }
 
     W = 680
@@ -876,11 +892,17 @@ def render_compliance_matrix(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="26" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">MATRIZ DE CUMPLIMIENTO ICCPR / CADH</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.compliance_matrix")}</text>')
 
     # Header
     y_hdr = 50
-    headers = [("ARTÍCULO", 16), ("TEMA", 200), ("EVIDENCIA", 470), ("ESTADO", 560)]
+    _l = _lang(data)
+    headers = [
+        (_t(_l, "viz.compliance.col.article"),  16),
+        (_t(_l, "viz.compliance.col.topic"),    200),
+        (_t(_l, "viz.compliance.col.evidence"), 470),
+        (_t(_l, "viz.compliance.col.status"),   560),
+    ]
     for label, x in headers:
         svg.append(f'<text x="{x}" y="{y_hdr}" font-family="{FONT_SANS}" '
                    f'font-size="9" font-weight="700" letter-spacing="1.2" '
@@ -904,7 +926,7 @@ def render_compliance_matrix(data: Dict[str, Any]) -> str:
         svg.append(f'<text x="200" y="{y}" font-family="{FONT_SANS}" font-size="10" '
                    f'fill="{COLORS["text_muted"]}">{topic}</text>')
         svg.append(f'<text x="470" y="{y}" font-family="{FONT_MONO}" '
-                   f'font-size="10" fill="{COLORS["text_muted"]}">{ev_count} ev.</text>')
+                   f'font-size="10" fill="{COLORS["text_muted"]}">{ev_count} {_t(_lang(data), "viz.compliance.evidence_unit")}</text>')
         # Badge
         svg.append(f'<rect x="555" y="{y-13}" width="105" height="18" rx="3" '
                    f'fill="{color}" opacity="0.18" stroke="{color}" stroke-width="1"/>')
@@ -939,10 +961,10 @@ def render_early_warning_meter(data: Dict[str, Any]) -> str:
     R_inner = 100
 
     bands = [
-        (0.00, 0.25, COLORS["warn_green"], "VERDE"),
-        (0.25, 0.50, COLORS["warn_amber"], "ÁMBAR"),
-        (0.50, 0.75, COLORS["warn_orange"], "NARANJA"),
-        (0.75, 1.00, COLORS["warn_red"],   "ROJO"),
+        (0.00, 0.25, COLORS["warn_green"],  _t(_lang(data), "viz.gauge.green")),
+        (0.25, 0.50, COLORS["warn_amber"],  _t(_lang(data), "viz.gauge.amber")),
+        (0.50, 0.75, COLORS["warn_orange"], _t(_lang(data), "viz.gauge.orange")),
+        (0.75, 1.00, COLORS["warn_red"],    _t(_lang(data), "viz.gauge.red")),
     ]
 
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
@@ -952,7 +974,7 @@ def render_early_warning_meter(data: Dict[str, Any]) -> str:
     svg.append(f'<text x="{cx}" y="40" text-anchor="middle" '
                f'font-family="{FONT_SANS}" font-size="11" font-weight="700" '
                f'letter-spacing="1.5" fill="{COLORS["teal_dark"]}">'
-               f'ALERTA TEMPRANA — NIVEL DE RIESGO</text>')
+               f'{_t(_lang(data), "viz.header.early_warning")}</text>')
 
     # Bandas (semicírculo)
     def arc_path(a0: float, a1: float, ro: float, ri: float) -> str:
@@ -1043,12 +1065,17 @@ def render_matrix_recommendations(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="26" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">RECOMENDACIONES — DESTINATARIO × PRIORIDAD × HORIZONTE</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.recommendations_matrix")}</text>')
 
     # Header
     y_hdr = 56
-    for x, label in [(16, "RECOMENDACIÓN"), (340, "DESTINATARIO"),
-                     (470, "PRIORIDAD"), (570, "HORIZONTE")]:
+    _l = _lang(data)
+    for x, label in [
+        (16,  _t(_l, "viz.rec.col.recommendation")),
+        (340, _t(_l, "viz.rec.col.addressee")),
+        (470, _t(_l, "viz.rec.col.priority")),
+        (570, _t(_l, "viz.rec.col.horizon")),
+    ]:
         svg.append(f'<text x="{x}" y="{y_hdr}" font-family="{FONT_SANS}" '
                    f'font-size="9" font-weight="700" letter-spacing="1.2" '
                    f'fill="{COLORS["text_muted"]}">{label}</text>')
@@ -1135,7 +1162,7 @@ def render_system_architecture(data: Dict[str, Any]) -> str:
 
     svg.append(f'<text x="20" y="30" font-family="{FONT_SANS}" font-size="11" '
                f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">ARQUITECTURA DEL SISTEMA ELECTORAL</text>')
+               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.system_architecture")}</text>')
 
     positions = {}
     for i, c in enumerate(comps):

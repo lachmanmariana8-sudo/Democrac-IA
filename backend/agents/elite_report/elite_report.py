@@ -130,7 +130,8 @@ class PEIRSEliteReport:
         )
 
         # ── 7. ATTACH VISUALIZATIONS A CADA CAPÍTULO ───────────────────
-        self._attach_visualizations(chapters, bundle, forecast, stats)
+        self._attach_visualizations(chapters, bundle, forecast, stats,
+                                     language=req.language or "es")
 
         # ── 8. CITATION BUILDER ────────────────────────────────────────
         cb = CitationBuilder()
@@ -280,8 +281,14 @@ class PEIRSEliteReport:
 
     @staticmethod
     def _attach_visualizations(chapters: list, bundle: EvidenceBundle,
-                                forecast, stats: Dict[str, Any]) -> None:
-        """Adjunta VizSpecs a cada capítulo según su chapter_id."""
+                                forecast, stats: Dict[str, Any],
+                                language: str = "es") -> None:
+        """Adjunta VizSpecs a cada capítulo según su chapter_id.
+
+        Todos los `title=` y `caption=` se traducen via i18n keys
+        `viz.{kind}.title` / `viz.{kind}.caption` para soportar es/en/pt.
+        """
+        from agents.elite_report.i18n import t as _t
         # Datos pre-computados reutilizables
         series_data = {
             "series": [
@@ -533,21 +540,41 @@ class PEIRSEliteReport:
                 })
 
         # actor_network: red de actores (cap 7) — institucional + partidario
+        # Type/action labels traducidos por idioma del informe.
+        _i18n_actor = {
+            "es": {"inst": "institución", "fis": "fiscal", "jud": "judicial", "med": "media",
+                   "investiga": "investiga", "audita": "audita", "padrón": "padrón",
+                   "supervisa": "supervisa", "reporta": "reporta",
+                   "fiscalia": "Fiscalía", "pj": "Poder Judicial", "prensa": "Prensa indep."},
+            "en": {"inst": "institution", "fis": "prosecutor", "jud": "judicial", "med": "media",
+                   "investiga": "investigates", "audita": "audits", "padrón": "electoral roll",
+                   "supervisa": "supervises", "reporta": "reports",
+                   "fiscalia": "Prosecutor's Office", "pj": "Judiciary", "prensa": "Independent press"},
+            "pt": {"inst": "instituição", "fis": "fiscal", "jud": "judicial", "med": "media",
+                   "investiga": "investiga", "audita": "audita", "padrón": "cadastro",
+                   "supervisa": "supervisiona", "reporta": "reporta",
+                   "fiscalia": "Ministério Público", "pj": "Judiciário", "prensa": "Imprensa indep."},
+        }.get(language, None) or {}
+        if not _i18n_actor:
+            _i18n_actor = {"inst": "institución", "fis": "fiscal", "jud": "judicial", "med": "media",
+                           "investiga": "investiga", "audita": "audita", "padrón": "padrón",
+                           "supervisa": "supervisa", "reporta": "reporta",
+                           "fiscalia": "Fiscalía", "pj": "Poder Judicial", "prensa": "Prensa indep."}
         actor_network_data = {
             "actors": [
-                {"id": "JNE", "label": "JNE", "type": "institución"},
-                {"id": "ONPE", "label": "ONPE", "type": "institución"},
-                {"id": "RENIEC", "label": "RENIEC", "type": "institución"},
-                {"id": "FIS", "label": "Fiscalía", "type": "fiscal"},
-                {"id": "PJ", "label": "Poder Judicial", "type": "judicial"},
-                {"id": "PRENSA", "label": "Prensa indep.", "type": "media"},
+                {"id": "JNE", "label": "JNE", "type": _i18n_actor["inst"]},
+                {"id": "ONPE", "label": "ONPE", "type": _i18n_actor["inst"]},
+                {"id": "RENIEC", "label": "RENIEC", "type": _i18n_actor["inst"]},
+                {"id": "FIS", "label": _i18n_actor["fiscalia"], "type": _i18n_actor["fis"]},
+                {"id": "PJ", "label": _i18n_actor["pj"], "type": _i18n_actor["jud"]},
+                {"id": "PRENSA", "label": _i18n_actor["prensa"], "type": _i18n_actor["med"]},
             ],
             "edges": [
-                {"from": "FIS", "to": "ONPE", "action": "investiga", "severity": "high"},
-                {"from": "JNE", "to": "ONPE", "action": "audita", "severity": "medium"},
-                {"from": "RENIEC", "to": "ONPE", "action": "padrón", "severity": "info"},
-                {"from": "PJ", "to": "FIS", "action": "supervisa", "severity": "info"},
-                {"from": "PRENSA", "to": "ONPE", "action": "reporta", "severity": "medium"},
+                {"from": "FIS", "to": "ONPE", "action": _i18n_actor["investiga"], "severity": "high"},
+                {"from": "JNE", "to": "ONPE", "action": _i18n_actor["audita"], "severity": "medium"},
+                {"from": "RENIEC", "to": "ONPE", "action": _i18n_actor["padrón"], "severity": "info"},
+                {"from": "PJ", "to": "FIS", "action": _i18n_actor["supervisa"], "severity": "info"},
+                {"from": "PRENSA", "to": "ONPE", "action": _i18n_actor["reporta"], "severity": "medium"},
             ],
         }
 
@@ -615,29 +642,146 @@ class PEIRSEliteReport:
             else: level = "green"
         # Drivers: top categorías
         top_drivers = [c for c, _ in all_cats.most_common(3)]
+        # i18n labels para early_warning, recommendations, architecture
+        _i18n_data = {
+            "es": {
+                "ew_levels": {"green": "Estable", "amber": "Vigilancia",
+                              "orange": "Riesgo elevado", "red": "Crisis"},
+                "horizon_short": "corto", "horizon_medium": "medio", "horizon_long": "largo",
+                "rec_rows": [
+                    "Auditar STAE/SCE con tercero independiente",
+                    "Marco legal IA en procesos electorales",
+                    "Reforzar cadena de custodia de actas",
+                    "Capacitación obligatoria miembros de mesa",
+                    "Marco regulatorio publicidad digital",
+                    "Protocolo de respuesta a desinformación",
+                ],
+                "addressee_congress": "Congreso", "addressee_jne_cong": "JNE/Congreso",
+                "addressee_onpe_jne": "ONPE/JNE",
+                "stae_subtitle": "Mesa — laptops/imp.",
+                "sce_subtitle": "Cómputo + IA dual",
+                "spr_subtitle": "resultadoelectoral",
+                "flow_label_actas": "actas + foto",
+                "flow_label_aggr": "agregados",
+                "role_arbiter": "árbitro", "role_org": "organización", "role_roll": "padrón",
+                "edge_label_roll": "padrón", "edge_label_tally": "actas",
+                "edge_label_oversight": "fiscaliza",
+                "stage_roll": "Padrón", "stage_table": "Mesa",
+                "stage_tally": "Acta", "stage_count": "Cómputo",
+                "stage_proclaim": "Proclamación",
+                "actor_table_members": "Miembros mesa",
+            },
+            "en": {
+                "ew_levels": {"green": "Stable", "amber": "Watch",
+                              "orange": "Elevated risk", "red": "Crisis"},
+                "horizon_short": "short", "horizon_medium": "medium", "horizon_long": "long",
+                "rec_rows": [
+                    "Audit STAE/SCE with an independent third party",
+                    "Legal framework for AI in electoral processes",
+                    "Strengthen chain of custody of tally sheets",
+                    "Mandatory training for polling station members",
+                    "Regulatory framework for digital advertising",
+                    "Disinformation response protocol",
+                ],
+                "addressee_congress": "Congress", "addressee_jne_cong": "JNE/Congress",
+                "addressee_onpe_jne": "ONPE/JNE",
+                "stae_subtitle": "Polling — laptops/printers",
+                "sce_subtitle": "Tabulation + dual AI",
+                "spr_subtitle": "results portal",
+                "flow_label_actas": "tally sheets + photo",
+                "flow_label_aggr": "aggregates",
+                "role_arbiter": "arbiter", "role_org": "organization",
+                "role_roll": "electoral roll",
+                "edge_label_roll": "electoral roll", "edge_label_tally": "tally sheets",
+                "edge_label_oversight": "oversight",
+                "stage_roll": "Electoral roll", "stage_table": "Polling station",
+                "stage_tally": "Tally sheet", "stage_count": "Tabulation",
+                "stage_proclaim": "Proclamation",
+                "actor_table_members": "Polling members",
+            },
+            "pt": {
+                "ew_levels": {"green": "Estável", "amber": "Vigilância",
+                              "orange": "Risco elevado", "red": "Crise"},
+                "horizon_short": "curto", "horizon_medium": "médio", "horizon_long": "longo",
+                "rec_rows": [
+                    "Auditar STAE/SCE com terceiro independente",
+                    "Marco legal de IA em processos eleitorais",
+                    "Reforçar cadeia de custódia das atas",
+                    "Capacitação obrigatória dos membros de mesa",
+                    "Marco regulatório de publicidade digital",
+                    "Protocolo de resposta a desinformação",
+                ],
+                "addressee_congress": "Congresso", "addressee_jne_cong": "JNE/Congresso",
+                "addressee_onpe_jne": "ONPE/JNE",
+                "stae_subtitle": "Mesa — laptops/imp.",
+                "sce_subtitle": "Apuração + IA dual",
+                "spr_subtitle": "portal de resultados",
+                "flow_label_actas": "atas + foto",
+                "flow_label_aggr": "agregados",
+                "role_arbiter": "árbitro", "role_org": "organização", "role_roll": "cadastro",
+                "edge_label_roll": "cadastro", "edge_label_tally": "atas",
+                "edge_label_oversight": "fiscaliza",
+                "stage_roll": "Cadastro", "stage_table": "Mesa",
+                "stage_tally": "Ata", "stage_count": "Apuração",
+                "stage_proclaim": "Proclamação",
+                "actor_table_members": "Membros mesa",
+            },
+        }.get(language, {})
+        if not _i18n_data:
+            _i18n_data = _i18n_actor and {} or {}  # caer a es default
+        # Asegurar estructura mínima si language unsupported
+        _i18n_data = _i18n_data or {
+            "ew_levels": {"green": "Estable", "amber": "Vigilancia",
+                          "orange": "Riesgo elevado", "red": "Crisis"},
+            "horizon_short": "corto", "horizon_medium": "medio", "horizon_long": "largo",
+            "rec_rows": ["Auditar STAE/SCE con tercero independiente",
+                         "Marco legal IA en procesos electorales",
+                         "Reforzar cadena de custodia de actas",
+                         "Capacitación obligatoria miembros de mesa",
+                         "Marco regulatorio publicidad digital",
+                         "Protocolo de respuesta a desinformación"],
+            "addressee_congress": "Congreso", "addressee_jne_cong": "JNE/Congreso",
+            "addressee_onpe_jne": "ONPE/JNE",
+            "stae_subtitle": "Mesa — laptops/imp.", "sce_subtitle": "Cómputo + IA dual",
+            "spr_subtitle": "resultadoelectoral",
+            "flow_label_actas": "actas + foto", "flow_label_aggr": "agregados",
+            "role_arbiter": "árbitro", "role_org": "organización", "role_roll": "padrón",
+            "edge_label_roll": "padrón", "edge_label_tally": "actas",
+            "edge_label_oversight": "fiscaliza",
+            "stage_roll": "Padrón", "stage_table": "Mesa",
+            "stage_tally": "Acta", "stage_count": "Cómputo",
+            "stage_proclaim": "Proclamación",
+            "actor_table_members": "Miembros mesa",
+        }
+
         early_warning_data = {
             "level": level,
             "score": warning_score_map.get(level, 0.5),
-            "label": {"green": "Estable", "amber": "Vigilancia",
-                      "orange": "Riesgo elevado", "red": "Crisis"}.get(level, ""),
+            "label": _i18n_data["ew_levels"].get(level, ""),
             "drivers": top_drivers,
         }
 
         # matrix_recommendations (cap 11)
+        _rec_rows = _i18n_data["rec_rows"]
+        _hs = _i18n_data["horizon_short"]
+        _hm = _i18n_data["horizon_medium"]
         recommendations_data = {
             "rows": [
-                {"recommendation": "Auditar STAE/SCE con tercero independiente",
-                 "addressee": "ONPE", "priority": "critical", "horizon": "corto"},
-                {"recommendation": "Marco legal IA en procesos electorales",
-                 "addressee": "Congreso", "priority": "high", "horizon": "medio"},
-                {"recommendation": "Reforzar cadena de custodia de actas",
-                 "addressee": "ONPE/JNE", "priority": "high", "horizon": "corto"},
-                {"recommendation": "Capacitación obligatoria miembros de mesa",
-                 "addressee": "ONPE", "priority": "medium", "horizon": "corto"},
-                {"recommendation": "Marco regulatorio publicidad digital",
-                 "addressee": "JNE/Congreso", "priority": "medium", "horizon": "medio"},
-                {"recommendation": "Protocolo de respuesta a desinformación",
-                 "addressee": "JNE", "priority": "high", "horizon": "corto"},
+                {"recommendation": _rec_rows[0], "addressee": "ONPE",
+                 "priority": "critical", "horizon": _hs},
+                {"recommendation": _rec_rows[1],
+                 "addressee": _i18n_data["addressee_congress"],
+                 "priority": "high", "horizon": _hm},
+                {"recommendation": _rec_rows[2],
+                 "addressee": _i18n_data["addressee_onpe_jne"],
+                 "priority": "high", "horizon": _hs},
+                {"recommendation": _rec_rows[3], "addressee": "ONPE",
+                 "priority": "medium", "horizon": _hs},
+                {"recommendation": _rec_rows[4],
+                 "addressee": _i18n_data["addressee_jne_cong"],
+                 "priority": "medium", "horizon": _hm},
+                {"recommendation": _rec_rows[5], "addressee": "JNE",
+                 "priority": "high", "horizon": _hs},
             ]
         }
 
@@ -645,41 +789,41 @@ class PEIRSEliteReport:
         architecture_data = {
             "components": [
                 {"id": "STAE", "label": "STAE",
-                 "subtitle": "Mesa — laptops/imp.", "layer": "edge", "audited": False},
+                 "subtitle": _i18n_data["stae_subtitle"], "layer": "edge", "audited": False},
                 {"id": "SCE", "label": "SCE",
-                 "subtitle": "Cómputo + IA dual", "layer": "core", "audited": False},
+                 "subtitle": _i18n_data["sce_subtitle"], "layer": "core", "audited": False},
                 {"id": "SPR", "label": "SPR",
-                 "subtitle": "resultadoelectoral", "layer": "publish", "audited": True},
+                 "subtitle": _i18n_data["spr_subtitle"], "layer": "publish", "audited": True},
             ],
             "flows": [
-                {"from": "STAE", "to": "SCE", "label": "actas + foto"},
-                {"from": "SCE", "to": "SPR", "label": "agregados"},
+                {"from": "STAE", "to": "SCE", "label": _i18n_data["flow_label_actas"]},
+                {"from": "SCE", "to": "SPR", "label": _i18n_data["flow_label_aggr"]},
             ],
         }
 
         # network_institutions (cap 3) — JNE + ONPE + RENIEC + relaciones
         network_inst_data = {
             "nodes": [
-                {"id": "JNE", "label": "JNE", "role": "árbitro", "status": "amber"},
-                {"id": "ONPE", "label": "ONPE", "role": "organización", "status": "red"},
-                {"id": "RENIEC", "label": "RENIEC", "role": "padrón", "status": "ok"},
+                {"id": "JNE", "label": "JNE", "role": _i18n_data["role_arbiter"], "status": "amber"},
+                {"id": "ONPE", "label": "ONPE", "role": _i18n_data["role_org"], "status": "red"},
+                {"id": "RENIEC", "label": "RENIEC", "role": _i18n_data["role_roll"], "status": "ok"},
             ],
             "edges": [
-                {"from": "RENIEC", "to": "ONPE", "label": "padrón"},
-                {"from": "ONPE", "to": "JNE", "label": "actas"},
-                {"from": "JNE", "to": "ONPE", "label": "fiscaliza"},
+                {"from": "RENIEC", "to": "ONPE", "label": _i18n_data["edge_label_roll"]},
+                {"from": "ONPE", "to": "JNE", "label": _i18n_data["edge_label_tally"]},
+                {"from": "JNE", "to": "ONPE", "label": _i18n_data["edge_label_oversight"]},
             ],
         }
 
         # flow_chart_voting (cap 3) — cadena del voto
         flow_voting_data = {
             "stages": [
-                {"name": "Padrón", "actor": "RENIEC", "status": "ok"},
-                {"name": "Mesa", "actor": "ONPE+ODPE", "status": "ok"},
-                {"name": "Acta", "actor": "Miembros mesa", "status": "warn"},
+                {"name": _i18n_data["stage_roll"], "actor": "RENIEC", "status": "ok"},
+                {"name": _i18n_data["stage_table"], "actor": "ONPE+ODPE", "status": "ok"},
+                {"name": _i18n_data["stage_tally"], "actor": _i18n_data["actor_table_members"], "status": "warn"},
                 {"name": "STAE/SCE", "actor": "ONPE", "status": "warn"},
-                {"name": "Cómputo", "actor": "JEE", "status": "ok"},
-                {"name": "Proclamación", "actor": "JNE", "status": "pending"},
+                {"name": _i18n_data["stage_count"], "actor": "JEE", "status": "ok"},
+                {"name": _i18n_data["stage_proclaim"], "actor": "JNE", "status": "pending"},
             ],
         }
 
@@ -692,158 +836,66 @@ class PEIRSEliteReport:
             }
 
         # ── Asignar viz por chapter_id ──────────────────────────────────────
+        # Helper local: crea VizSpec con title/caption traducidos via i18n.
+        # Inyecta _language en data para que los renderers internos puedan
+        # i18n sus strings hardcoded (status labels, headers uppercase, etc).
+        def _vs(kind: str, data: Dict[str, Any]) -> VizSpec:
+            data_with_lang = dict(data) if isinstance(data, dict) else {"_data": data}
+            data_with_lang["_language"] = language
+            return VizSpec(
+                kind=kind,
+                title=_t(language, f"viz.{kind}.title"),
+                caption=_t(language, f"viz.{kind}.caption", ""),
+                data=data_with_lang,
+            )
+
         for ch in chapters:
             if ch.chapter_id == "contexto_historico":
                 if series_data["series"]:
-                    ch.visualizations.append(VizSpec(
-                        kind="timeseries_multi",
-                        title="Trayectoria histórica — índices democráticos",
-                        caption="Series V-Dem, Freedom House, PEI y RSF de los últimos 10 años.",
-                        data=series_data,
-                    ))
+                    ch.visualizations.append(_vs("timeseries_multi", series_data))
                 if events_timeline_data["events"]:
-                    ch.visualizations.append(VizSpec(
-                        kind="events_timeline",
-                        title="Eventos críticos del período observado",
-                        caption="Top hallazgos ordenados por severidad y fecha.",
-                        data=events_timeline_data,
-                    ))
+                    ch.visualizations.append(_vs("events_timeline", events_timeline_data))
             elif ch.chapter_id == "marco_juridico":
-                ch.visualizations.append(VizSpec(
-                    kind="matrix_normativa",
-                    title="Marco normativo aplicable",
-                    caption="Instrumentos ordenados por jerarquía normativa.",
-                    data=matrix_norm_data,
-                ))
+                ch.visualizations.append(_vs("matrix_normativa", matrix_norm_data))
             elif ch.chapter_id == "sistema_electoral":
-                ch.visualizations.append(VizSpec(
-                    kind="flow_chart_voting",
-                    title="Cadena del voto — actores y custodia",
-                    caption="Padrón → Mesa → Acta → STAE/SCE → Cómputo → Proclamación.",
-                    data=flow_voting_data,
-                ))
-                ch.visualizations.append(VizSpec(
-                    kind="network_institutions",
-                    title="Red institucional electoral",
-                    caption="JNE (árbitro), ONPE (organización), RENIEC (padrón) y sus interacciones.",
-                    data=network_inst_data,
-                ))
+                ch.visualizations.append(_vs("flow_chart_voting", flow_voting_data))
+                ch.visualizations.append(_vs("network_institutions", network_inst_data))
             elif ch.chapter_id == "fase_pre_electoral" and phase_data["phases"]:
-                ch.visualizations.append(VizSpec(
-                    kind="phase_timeline",
-                    title="Distribución de hallazgos por fase electoral",
-                    caption="Barras apiladas por severidad a lo largo del ciclo.",
-                    data=phase_data,
-                ))
+                ch.visualizations.append(_vs("phase_timeline", phase_data))
             elif ch.chapter_id == "jornada_electoral":
                 if hourly_data["events"]:
-                    ch.visualizations.append(VizSpec(
-                        kind="hourly_timeline",
-                        title="Jornada — eventos por hora",
-                        caption="Volumen y severidad máxima de hallazgos por franja horaria.",
-                        data=hourly_data,
-                    ))
+                    ch.visualizations.append(_vs("hourly_timeline", hourly_data))
                 if regions_affected_data["regions"]:
-                    ch.visualizations.append(VizSpec(
-                        kind="map_regions_affected",
-                        title="Regiones afectadas — intensidad por incidentes",
-                        caption="Conteo de hallazgos por región (location matching).",
-                        data=regions_affected_data,
-                    ))
+                    ch.visualizations.append(_vs("map_regions_affected", regions_affected_data))
             elif ch.chapter_id == "escrutinio_computo":
-                ch.visualizations.append(VizSpec(
-                    kind="progress_chart",
-                    title="Progreso de actas procesadas",
-                    caption="Curva temporal del % escrutado (estimación).",
-                    data=progress_data,
-                ))
+                ch.visualizations.append(_vs("progress_chart", progress_data))
                 if any(any(v > 0 for v in row) for row in incidents_grid_data["values"]):
-                    ch.visualizations.append(VizSpec(
-                        kind="integrity_incidents_grid",
-                        title="Incidentes de integridad — región × categoría",
-                        caption="Intensidad cromática proporcional al conteo.",
-                        data=incidents_grid_data,
-                    ))
+                    ch.visualizations.append(_vs("integrity_incidents_grid", incidents_grid_data))
             elif ch.chapter_id == "post_electoral":
-                ch.visualizations.append(VizSpec(
-                    kind="actor_network",
-                    title="Red de actores institucionales",
-                    caption="Acciones e intervenciones cruzadas observadas.",
-                    data=actor_network_data,
-                ))
+                ch.visualizations.append(_vs("actor_network", actor_network_data))
                 if judicial_data["actions"]:
-                    ch.visualizations.append(VizSpec(
-                        kind="judicial_timeline",
-                        title="Cronología judicial",
-                        caption="Acciones legales documentadas en el período.",
-                        data=judicial_data,
-                    ))
+                    ch.visualizations.append(_vs("judicial_timeline", judicial_data))
             elif ch.chapter_id == "derechos_vulnerados":
-                ch.visualizations.append(VizSpec(
-                    kind="heatmap_rights",
-                    title="Heatmap derechos × categorías",
-                    caption="Intensidad = cantidad de hallazgos que invocan cada derecho.",
-                    data=heatmap_data,
-                ))
+                ch.visualizations.append(_vs("heatmap_rights", heatmap_data))
                 if compliance_data["rows"]:
-                    ch.visualizations.append(VizSpec(
-                        kind="compliance_matrix",
-                        title="Matriz de cumplimiento ICCPR / CADH",
-                        caption="Estado por artículo según severidad de hallazgos vinculados.",
-                        data=compliance_data,
-                    ))
+                    ch.visualizations.append(_vs("compliance_matrix", compliance_data))
             elif ch.chapter_id == "analisis_predictivo":
                 if forecast_data:
-                    ch.visualizations.append(VizSpec(
-                        kind="forecast_chart",
-                        title="Escenarios probabilísticos con bandas de confianza",
-                        caption="Horizonte de 2 semanas post-informe.",
-                        data=forecast_data,
+                    ch.visualizations.append(_vs("forecast_chart", forecast_data))
+                    ch.visualizations.append(_vs(
+                        "scenario_probability",
+                        {"scenarios": forecast_data["scenarios"]},
                     ))
-                    ch.visualizations.append(VizSpec(
-                        kind="scenario_probability",
-                        title="Probabilidad por escenario (vista compacta)",
-                        caption="",
-                        data={"scenarios": forecast_data["scenarios"]},
-                    ))
-                ch.visualizations.append(VizSpec(
-                    kind="early_warning_meter",
-                    title="Medidor de alerta temprana",
-                    caption="Nivel actual de riesgo según severidad agregada y forecast.",
-                    data=early_warning_data,
-                ))
+                ch.visualizations.append(_vs("early_warning_meter", early_warning_data))
                 # Cableado de parliament_scenarios retirado 2026-04-29 a pedido
-                # de Mariana — la comparativa de parlamentos hardcoded competia
-                # visualmente con los escenarios probabilisticos del forecast.
-                # El renderer + el VizKind quedan disponibles si en el futuro
-                # se quiere reactivar con data dinamica del bundle.
+                # de Mariana.
             elif ch.chapter_id == "conclusiones":
-                ch.visualizations.append(VizSpec(
-                    kind="semaphore_institutional",
-                    title="Evaluación institucional por órgano",
-                    caption="Semáforo de estado al cierre del período observado.",
-                    data=semaphore_data,
-                ))
-                ch.visualizations.append(VizSpec(
-                    kind="dimensions_radar",
-                    title="8 Dimensiones PEIRS",
-                    caption="Evaluación cualitativa ajustada por hallazgos del ciclo.",
-                    data=radar_data,
-                ))
+                ch.visualizations.append(_vs("semaphore_institutional", semaphore_data))
+                ch.visualizations.append(_vs("dimensions_radar", radar_data))
             elif ch.chapter_id == "recomendaciones":
-                ch.visualizations.append(VizSpec(
-                    kind="matrix_recommendations",
-                    title="Matriz de recomendaciones priorizadas",
-                    caption="Recomendación × destinatario × prioridad × horizonte temporal.",
-                    data=recommendations_data,
-                ))
+                ch.visualizations.append(_vs("matrix_recommendations", recommendations_data))
             elif ch.chapter_id == "ia_regulacion":
-                ch.visualizations.append(VizSpec(
-                    kind="system_architecture",
-                    title="Arquitectura del sistema electoral con IA",
-                    caption="Capas STAE → SCE → SPR con flujo de datos. Badges indican estado de auditoría pública.",
-                    data=architecture_data,
-                ))
+                ch.visualizations.append(_vs("system_architecture", architecture_data))
 
     def _persist(self, output: EliteReportOutput) -> None:
         """Guarda markdown + html + metadata.json en reports/elite/{report_id}/."""
