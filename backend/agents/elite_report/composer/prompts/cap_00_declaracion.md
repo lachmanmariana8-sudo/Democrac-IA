@@ -17,7 +17,7 @@
 - Cerrar con una **oración de juicio global** sobre el estado de integridad electoral (sin calificar resultado político).
 - **Cerrar la declaración con un blockquote de disclosure** en este formato literal (copiarlo tal cual al final del capítulo):
 
-> **DEMOCRAC.IA no legitima ni valida resultados electorales.** Este informe emite inteligencia electoral con trazabilidad verificable bajo estándares de la Comisión de Venecia, OEA/DECO, OSCE/ODIHR y Carter Center, sin sesgo político-partidario.
+> **DEMOCRAC.IA no legitima ni valida resultados electorales.** Este informe emite inteligencia electoral con trazabilidad verificable bajo estándares internacionales de observación electoral, sin sesgo político-partidario.
 
 **Ejemplo de apertura aceptable:**
 

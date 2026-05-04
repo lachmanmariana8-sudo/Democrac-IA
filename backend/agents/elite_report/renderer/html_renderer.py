@@ -685,11 +685,11 @@ def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
 <div class="disclosure">
 <strong>DEMOCRAC.IA no legitima ni valida resultados electorales.</strong> Este
 informe emite inteligencia electoral con trazabilidad verificable bajo
-estándares de la Comisión de Venecia, OEA/DECO, OSCE/ODIHR y Carter Center,
-sin sesgo político-partidario. Los datos son para uso analítico de
-autoridades electorales, organismos multilaterales, observadores acreditados
-y academia. Cada hallazgo cita fuente primaria con URL pública;
-los bloques sin verificación independiente fueron postergados antes que publicados.
+estándares internacionales de observación electoral, sin sesgo
+político-partidario. Los datos son para uso analítico de autoridades
+electorales, organismos multilaterales, observadores acreditados y academia.
+Cada hallazgo cita fuente primaria con URL pública; los bloques sin
+verificación independiente fueron postergados antes que publicados.
 </div>
 </section>"""
 
@@ -830,8 +830,8 @@ def _render_appendix_c_placeholder() -> str:
 def _render_footer(report_id: str, generated_at: str) -> str:
     return f"""<footer class="elite-footer">
 <strong>DEMOCRAC.IA no legitima ni valida resultados electorales.</strong>
-Inteligencia electoral con trazabilidad verificable bajo estándares Comisión
-de Venecia · OEA/DECO · OSCE/ODIHR · Carter Center · IDEA Internacional.<br>
+Inteligencia electoral con trazabilidad verificable bajo estándares
+internacionales de observación electoral.<br>
 PEIRS Elite Report · {report_id} · {generated_at[:16].replace('T', ' ')} UTC ·
 Pipeline 6 etapas · SVG server-side · Citas APA 7
 </footer>"""

@@ -29,6 +29,33 @@ def _esc(s: str) -> str:
     return html.escape(s or "")
 
 
+def _wrap_2lines(text: str, max_chars_per_line: int) -> tuple[str, str]:
+    """Quiebra `text` en hasta 2 líneas para evitar truncations crudos.
+    Retorna (line1, line2) ambos HTML-escapados. Si el texto cabe en una
+    línea, line2 = "". Si excede 2*max_chars_per_line, trunca con '…'.
+
+    Estrategia: busca espacio cercano a max_chars_per_line para partir
+    sin romper palabras. Si no hay espacio, parte en max_chars literal.
+    """
+    text = (text or "").strip()
+    if not text:
+        return "", ""
+    if len(text) <= max_chars_per_line:
+        return _esc(text), ""
+    # Limitar a 2 líneas
+    cap = max_chars_per_line * 2
+    if len(text) > cap:
+        text = text[:cap - 1].rstrip() + "…"
+    # Buscar último espacio dentro de la primera línea
+    cut = text.rfind(" ", 0, max_chars_per_line + 1)
+    if cut <= 0:
+        # No hay espacio — partir literal en max_chars
+        return _esc(text[:max_chars_per_line]), _esc(text[max_chars_per_line:])
+    line1 = text[:cut]
+    line2 = text[cut + 1:]
+    return _esc(line1), _esc(line2)
+
+
 def _render_empty_state(title: str, subtitle: str = "") -> str:
     """Placeholder visual consistente cuando no hay datos para graficar.
 
@@ -221,21 +248,31 @@ def render_phase_timeline(data: Dict[str, Any]) -> str:
                        f'fill="{COLORS[sev]}" opacity="0.85"/>')
             cumul += bh
 
-        # Label fase rotado -35° para evitar superposicion entre fases vecinas
-        # cuando step es chico (9 fases x ~67px = labels de 18 chars chocan).
+        # Label fase rotado -35° con wrap a 2 líneas si el nombre es largo
+        # (ej. "Escrutinio y cómputo", "Resolución de disputas").
         label = p.get("label", p.get("phase", ""))
         label_clean = label.replace("📋", "").replace("📣", "").replace("🗣️", "").replace("🤫", "") \
                            .replace("🗳️", "").replace("🔢", "").replace("📊", "") \
-                           .replace("⚖️", "").replace("✅", "").strip()[:22]
+                           .replace("⚖️", "").replace("✅", "").strip()
         # Total arriba (centrado, no rotado, mas legible)
         svg.append(f'<text x="{cx}" y="{mt+ph+16}" text-anchor="middle" '
                    f'font-family="{FONT_MONO}" font-size="11" font-weight="700" '
                    f'fill="{COLORS["text"]}">{p.get("total", 0)}</text>')
-        # Label rotado debajo
-        svg.append(f'<text x="{cx}" y="{mt+ph+32}" text-anchor="end" '
-                   f'font-family="{FONT_SANS}" font-size="9" '
-                   f'transform="rotate(-35 {cx} {mt+ph+32})" '
-                   f'fill="{COLORS["text_muted"]}">{_esc(label_clean)}</text>')
+        # Label rotado: 2 líneas via tspan si excede 16 chars
+        line1, line2 = _wrap_2lines(label_clean, 16)
+        if line2:
+            svg.append(f'<text x="{cx}" y="{mt+ph+32}" text-anchor="end" '
+                       f'font-family="{FONT_SANS}" font-size="9" '
+                       f'transform="rotate(-35 {cx} {mt+ph+32})" '
+                       f'fill="{COLORS["text_muted"]}">'
+                       f'<tspan x="{cx}" dy="0">{line1}</tspan>'
+                       f'<tspan x="{cx}" dy="11">{line2}</tspan>'
+                       f'</text>')
+        else:
+            svg.append(f'<text x="{cx}" y="{mt+ph+32}" text-anchor="end" '
+                       f'font-family="{FONT_SANS}" font-size="9" '
+                       f'transform="rotate(-35 {cx} {mt+ph+32})" '
+                       f'fill="{COLORS["text_muted"]}">{line1}</text>')
 
     # Leyenda — etiquetas en español, mas espacio entre items, en linea
     # superior (mt-2) para no chocar con los labels rotados del eje X.

@@ -25,6 +25,8 @@ from typing import Any, Dict, List
 from agents.elite_report.visualizer.palette import (
     COLORS, SERIES_PALETTE, FONT_SANS, FONT_MONO,
 )
+# Reusar wrap helper definido en renderers.py para evitar duplicar.
+from agents.elite_report.visualizer.renderers import _wrap_2lines
 
 
 def _esc(s: Any) -> str:
@@ -106,7 +108,8 @@ def render_events_timeline(data: Dict[str, Any]) -> str:
         sev = ev.get("severity", "info")
         color = _severity_color(sev)
         date = _esc(ev.get("date", ""))
-        label = _esc(ev.get("label", ""))[:24]
+        # Wrap label a 2 lineas (max 16 chars/linea = 32 chars total)
+        line1, line2 = _wrap_2lines(ev.get("label", ""), 16)
         # Marcador
         svg.append(f'<circle cx="{x:.1f}" cy="{base_y}" r="6" '
                    f'fill="{color}" stroke="{COLORS["bg"]}" stroke-width="2"/>')
@@ -114,13 +117,21 @@ def render_events_timeline(data: Dict[str, Any]) -> str:
         svg.append(f'<text x="{x:.1f}" y="{base_y-14}" text-anchor="middle" '
                    f'font-family="{FONT_MONO}" font-size="9" '
                    f'fill="{COLORS["text_muted"]}">{date}</text>')
-        # Label (debajo, escalonado en 3 niveles)
+        # Label (debajo, escalonado en 3 niveles, con wrap a 2 lineas)
         ly = base_y + 22 + levels[i % 3]
         svg.append(f'<line x1="{x:.1f}" y1="{base_y+8}" x2="{x:.1f}" y2="{ly-12}" '
                    f'stroke="{color}" stroke-width="0.8" opacity="0.5"/>')
-        svg.append(f'<text x="{x:.1f}" y="{ly}" text-anchor="middle" '
-                   f'font-family="{FONT_SANS}" font-size="9" font-weight="600" '
-                   f'fill="{COLORS["text"]}">{label}</text>')
+        if line2:
+            svg.append(f'<text x="{x:.1f}" y="{ly}" text-anchor="middle" '
+                       f'font-family="{FONT_SANS}" font-size="9" font-weight="600" '
+                       f'fill="{COLORS["text"]}">'
+                       f'<tspan x="{x:.1f}" dy="0">{line1}</tspan>'
+                       f'<tspan x="{x:.1f}" dy="11">{line2}</tspan>'
+                       f'</text>')
+        else:
+            svg.append(f'<text x="{x:.1f}" y="{ly}" text-anchor="middle" '
+                       f'font-family="{FONT_SANS}" font-size="9" font-weight="600" '
+                       f'fill="{COLORS["text"]}">{line1}</text>')
 
     # Leyenda
     legend_y = H - 16
@@ -806,11 +817,20 @@ def render_judicial_timeline(data: Dict[str, Any]) -> str:
         svg.append(f'<text x="{line_x-16}" y="{y+row_h/2+10:.1f}" text-anchor="end" '
                    f'font-family="{FONT_SANS}" font-size="9" '
                    f'fill="{COLORS["text_muted"]}">{actor}</text>')
-        # Action a la derecha
-        action = _esc(act.get("action", ""))[:62]
-        svg.append(f'<text x="{line_x+16}" y="{y+row_h/2+4:.1f}" '
-                   f'font-family="{FONT_SANS}" font-size="11" font-weight="600" '
-                   f'fill="{COLORS["text"]}">{action}</text>')
+        # Action a la derecha — wrap a 2 lineas (max 50 chars/linea = 100 total)
+        ax = line_x + 16
+        action_l1, action_l2 = _wrap_2lines(act.get("action", ""), 50)
+        if action_l2:
+            svg.append(f'<text x="{ax}" y="{y+row_h/2-4:.1f}" '
+                       f'font-family="{FONT_SANS}" font-size="11" font-weight="600" '
+                       f'fill="{COLORS["text"]}">'
+                       f'<tspan x="{ax}" dy="0">{action_l1}</tspan>'
+                       f'<tspan x="{ax}" dy="13">{action_l2}</tspan>'
+                       f'</text>')
+        else:
+            svg.append(f'<text x="{ax}" y="{y+row_h/2+4:.1f}" '
+                       f'font-family="{FONT_SANS}" font-size="11" font-weight="600" '
+                       f'fill="{COLORS["text"]}">{action_l1}</text>')
 
     svg.append('</svg>')
     return "".join(svg)
