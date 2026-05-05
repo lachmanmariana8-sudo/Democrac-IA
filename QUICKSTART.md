@@ -1,315 +1,364 @@
-# 🇵🇪 DEMOCRAC.IA / PEIRS — Quick Start Guide
+# DEMOCRAC.IA / PEIRS — Quick Start Guide
 
-**Democracia PEIRS v0.4.0** — Predictive Electoral Integrity & Risk System
-
----
-
-## ⚡ Quick Status (April 4, 2026)
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **Backend** | ✅ OPERATIONAL | Python 3.14.3, FastAPI, 82/82 tests passing |
-| **API Server** | ✅ LIVE | Running on `http://localhost:8000` |
-| **Data Sources** | ✅ INTEGRATED | V-Dem, Freedom House, PEI v10, OONI, Peru 2026 |
-| **Database** | ✅ READY | SQLite with full schema |
-| **Frontend** | ⚠️ BLOCKED | Node.js missing from PATH |
-| **Dashboard** | ❌ CANNOT START | Waiting for Node.js installation |
-
-See [STATUS_REPORT.md](STATUS_REPORT.md) for full diagnostics.
+**v0.5.2** — Predictive Electoral Integrity & Risk System
 
 ---
 
-## 🚀 How to Run
+## ESTADO ACTUAL (2026-05-04)
 
-### Step 1: Install Node.js (if not already installed)
+| Componente | Estado | URL |
+| --- | --- | --- |
+| Frontend | OPERATIVO | <https://democracia.ar> |
+| Backend | OPERATIVO | <https://democracia-peirs-production.up.railway.app> |
+| Tests | 91/91 pasando | -- |
+| Hunter scheduler | Activo cada 4h | 8 fuentes RSS Perú |
+| Sesión observación PER 2026 | Activa | Restaurada tras restore Railway |
+| i18n | es / en / pt | Elite Report trilingüe completo |
+
+Para diagnóstico detallado, ver [STATUS_REPORT.md](STATUS_REPORT.md).
+
+---
+
+## USO EN PRODUCCION
+
+La plataforma está en producción y accesible públicamente. No necesitás
+correr nada localmente para usarla.
+
+### Acceder al dashboard
+
+1. Abrir <https://democracia.ar> en cualquier navegador moderno.
+2. Si vas a generar Elite Reports, primero ingresá la Observer Key:
+   - URL `https://democracia.ar/?key=TU_OBSERVER_KEY` (la key se guarda
+     en `localStorage` y la URL se limpia automáticamente).
+   - La key es la misma que está en `OBSERVER_API_KEYS` (variable de
+     entorno en Railway → primario → Variables).
+
+### Generar un Elite Report
+
+1. Ir a **Perú Situation Room → Tab Informe Elite**.
+2. Seleccionar **idioma** (es / en / pt) y **audiencia** (institutional /
+   executive / press / international).
+3. Click **Generar Informe Elite** (~$0.40-0.80 por informe, ~30-60s).
+4. Tras la generación, descargar como:
+   - **HTML** (visualizable en browser).
+   - **Markdown** (para archivado / conversión).
+   - **PDF** vía botón "Imprimir / Print" → `Ctrl+P` del browser.
+
+### Descargar informes generados previamente
+
+Los reportes ya generados están en SQLite triple-tier (sobreviven a
+reinicios). Buscalos en la misma tab Informe Elite por `run_id` o desde
+el endpoint:
 
 ```bash
-# Download and install from:
-https://nodejs.org/  (version 18 or later)
-
-# Verify installation:
-node --version
-npm --version
+curl -H "X-Observer-Key: TU_KEY" \
+  https://democracia-peirs-production.up.railway.app/api/elite-report/{run_id}
 ```
 
-### Step 2: Start the Full Stack
+---
 
-**Option A: PowerShell (Recommended)**
+## DESARROLLO LOCAL
+
+### Prerequisitos
+
+- Python 3.14 (Windows) o 3.11 (Linux/macOS — paridad con Railway)
+- Node.js 18+ con npm
+- Git
+
+### Setup inicial
+
+```bash
+git clone https://github.com/lachmanmariana8-sudo/democracia-peirs.git
+cd democracia-peirs
+
+# Backend
+cd backend
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/Mac: source .venv/bin/activate
+pip install -r ../requirements.txt
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+### Variables de entorno (`.env` en raíz)
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+OBSERVER_API_KEYS=tu-clave-dev
+LLM_MODEL=claude-sonnet-4-5
+LLM_TEMPERATURE=0.3
+
+# Opcionales
+SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+HUNTER_INTERVAL_MINUTES=240
+MAX_ELITE_PER_DAY=20
+
+# Datos (si usás CSV completos en local)
+VDEM_CSV_PATH=../data/vdem/vdem_v16.csv
+VDEM_VERSION=v16
+VDEM_LAST_YEAR=2025
+```
+
+### Levantar el stack local
+
+**Opción A — Scripts PowerShell (Windows):**
 
 ```powershell
-# From the d:\DemocracIA directory:
-.\arrange_all.ps1
+# Terminal 1 — Backend
+.\iniciar_backend.ps1
+
+# Terminal 2 — Frontend
+.\iniciar_frontend.ps1
 ```
 
-**Option B: Command Prompt (Windows)**
+**Opción B — Manual:**
 
-```cmd
-# From the d:\DemocracIA directory:
-arrange_all.bat
-```
+```bash
+# Terminal 1 — Backend (puerto 8000)
+cd backend
+uvicorn app:app --reload --port 8000
 
-**Option C: Manual (Two terminals)**
-
-Terminal 1 — Backend:
-
-```powershell
-cd d:\DemocracIA\backend
-C:/Python314/python.exe -m uvicorn app:app --reload --port 8000
-```
-
-Terminal 2 — Frontend:
-
-```powershell
-cd d:\DemocracIA\frontend
+# Terminal 2 — Frontend (puerto 5173)
+cd frontend
 npm run dev
 ```
 
-### Step 3: Open Dashboard
-
-Once both servers are running:
-
-- **Backend:** <http://localhost:8000>
-- **Dashboard:** <http://localhost:5173>
-- **API Docs:** <http://localhost:8000/docs> (Swagger)
-
----
-
-## 📊 What's Ready to Analyze
-
-### Supported Countries (38 available)
-
-- **Peru 2026** ← Primary focus
-- Argentina, Bolivia, Brazil, Chile, Colombia, Costa Rica
-- Mexico, Panama, Paraguay, Uruguay, Venezuela
-- And 26 more (see `/api/countries`)
-
-### Available Analysis
+### Verificación
 
 ```bash
-# Health check
 curl http://localhost:8000/api/health
+# {"status":"operational","system":"DEMOCRAC.IA (PEIRS)","version":"0.4.0"...}
+```
 
-# List available countries
-curl http://localhost:8000/api/countries
+Abrir <http://localhost:5173> en el browser → debería verse el dashboard.
 
-# Run full electoral integrity analysis
-curl -X POST http://localhost:8000/api/analyze \
+---
+
+## QUE PUEDE HACER LA PLATAFORMA
+
+### Países cubiertos (38)
+
+| Región | Países |
+| --- | --- |
+| Américas (19) | VEN, NIC, GTM, URY, COL, BRA, MEX, ARG, CHL, BOL, ECU, PER, HND, SLV, PAN, CRI, DOM, PRY, CUB |
+| Europa (8) | DEU, FRA, HUN, POL, SRB, GEO, ARM, AZE |
+| África (5) | CMR, COD, ETH, NGA, ZWE |
+| Asia / Medio Oriente (6) | BGD, PHL, MMR, PAK, THA, TUR |
+
+**Caso de uso activo:** Perú 2026 (elecciones 12-abr-2026).
+
+### Tipos de análisis
+
+```bash
+# Healthcheck
+curl https://democracia-peirs-production.up.railway.app/api/health
+
+# Lista de países
+curl https://democracia-peirs-production.up.railway.app/api/countries
+
+# Análisis pipeline 4 agentes (público)
+curl -X POST https://democracia-peirs-production.up.railway.app/api/analyze \
   -H "Content-Type: application/json" \
-  -d '{"country_code": "PER", "election_date": "2026-04-12"}'
+  -d '{"country_code": "PER"}'
+
+# Elite Report (con Observer Key)
+curl -X POST https://democracia-peirs-production.up.railway.app/api/elite-report \
+  -H "Content-Type: application/json" \
+  -H "X-Observer-Key: TU_KEY" \
+  -d '{"country_code": "PER", "language": "en", "audience": "institutional", "report_type": "preliminary"}'
+```
+
+### Datasets integrados
+
+| Dataset | Cobertura | Uso |
+| --- | --- | --- |
+| V-Dem v16 | 1789-2025 | EMB, irregularidades, libertad civil, media, ecosistema digital |
+| Freedom House FIW | 2013-2025 | Score democracia, libertades civiles/políticas |
+| PEI 10.0 | 2012-2023 | Integridad EMBs, financiamiento, medios, registro |
+| RSF 2025 | 180 países | Libertad de prensa por país |
+| OONI | Tiempo real | Censura web (date-only since/until) |
+| Hunter RSS Perú | Cada 4h | 8 fuentes verificadas mapeadas a 9 fases electorales |
+
+---
+
+## TESTING
+
+### Suite completa
+
+```bash
+cd backend
+pytest -q  # 91 tests, ~8s
+```
+
+### Sólo Elite Report integration
+
+```bash
+cd backend
+pytest tests/test_elite_pipeline.py -v
+```
+
+### Coverage
+
+```bash
+cd backend
+pytest --cov=. --cov-report=html
+open htmlcov/index.html
 ```
 
 ---
 
-## 📈 Data Sources Integrated
+## ESTRUCTURA DEL REPO
 
-| Source | Dataset | Last Updated | Coverage |
-|--------|---------|--------------|----------|
-| **V-Dem** | V-Dem v15 Full | 2025 | 179 countries, 1789–2024 |
-| **Freedom House** | FIW Ratings 2013–2025 | 2025 | Countries + territories |
-| **PEI** | Perceptions of Electoral Integrity v10 | 2023 | 150+ elections |
-| **RSF** | Press Freedom Index 2025 | 2025 | 180 countries |
-| **OONI** | Internet Censorship Detection | Daily | Real-time (API) |
-| **Peru Specifics** | Electoral data 2026 | 2026 | Peru 2026 elections |
-
----
-
-## 🔧 Testing Backend (Without Frontend)
-
-```powershell
-# Run all 82 tests
-cd d:\DemocracIA
-C:/Python314/python.exe -m pytest backend/tests/ -v
-
-# Run specific test module
-C:/Python314/python.exe -m pytest backend/tests/test_data_loaders.py -v
-
-# Generate test coverage
-C:/Python314/python.exe -m pytest backend/tests/ --cov=backend --cov-report=html
-```
-
----
-
-## 📁 Project Structure
-
-```
+```text
 d:\DemocracIA\
-├── backend/               ← FastAPI + LangGraph agents ✅
-│   ├── app.py             ← Main server
-│   ├── agents/            ← 4 AI agents for analysis
-│   ├── modules/           ← Data loaders, validators
-│   ├── db/                ← SQLite schema & CRUD
-│   ├── rag/               ← Legal knowledge base
-│   ├── tests/             ← 82 unit + E2E tests
-│   └── requirements.txt   ← Python dependencies
+├── backend/                    FastAPI + LangGraph
+│   ├── app.py                  Server principal (5400+ líneas)
+│   ├── agents/
+│   │   ├── elite_report/       Pipeline Elite Report (12 caps + 3 anexos)
+│   │   ├── pipeline.py         LangGraph 4 agentes
+│   │   ├── architect.py        Architect Agent (Opus 4.7 autónomo)
+│   │   └── ...
+│   ├── modules/                Loaders V-Dem v16, FH, PEI, RSF, validators
+│   ├── rag/                    ChromaDB + sentence-transformers
+│   ├── integrations/           OONI, alerts, peru_sources
+│   ├── db/                     SQLite triple-tier
+│   ├── tests/                  91 tests
+│   └── requirements.txt
 │
-├── frontend/              ← React + Vite ⚠️
-│   ├── src/
-│   ├── App.jsx            ← Main dashboard
-│   ├── package.json       ← npm dependencies
+├── frontend/                   React 19 + Vite 7
+│   ├── src/App.jsx             Single-file app (~5000 líneas)
+│   ├── package.json
 │   └── vite.config.js
 │
-├── data/                  ← Real datasets
-│   ├── V-Dem-CY-Full+Others-v15.csv
-│   ├── All_data_FIW_2013-2025.csv
-│   ├── PEI/               ← Electoral integrity project
-│   └── RSF/               ← Press freedom index
+├── data/                       Datasets (V-Dem CSV completo excluido de git)
+│   ├── vdem/vdem_v16.csv       Excluido de git (~440MB)
+│   ├── All_data_FIW_2013-2025 - Index.csv
+│   ├── PEI/PEI_10 Election External.csv
+│   └── RSF/2025 - 2025.csv
 │
-├── STATUS_REPORT.md       ← Full diagnostics
-├── arrange_all.ps1        ← PowerShell startup script
-├── arrange_all.bat        ← Command prompt startup script
-└── this file
+├── DOCS Proyect/               Documentación institucional
+│   ├── PEIRS_Documento_Institucional_v2.0.md   Para partners (CONFIDENCIAL)
+│   ├── PEIRS_Arquitectura_Roadmap.md           Script técnico de sesiones
+│   ├── INFORME_METODOLOGIA.md                  Playbook reproducible
+│   └── PROMPT_MAESTRO.md                       Instrumento de evaluación
+│
+├── scripts/
+│   ├── backup.py                Backup completo prod (--targz para tar.gz)
+│   └── generate_vdem_static.py  Regenera vdem_static.py desde CSV
+│
+├── STATUS_REPORT.md             Diagnóstico actualizado
+├── QUICKSTART.md                Esta guía
+├── DEPLOY_README.md             Procedimiento de despliegue
+├── AUDIT_TECNICO_COMPLETO.md    Auditoría técnica
+├── CLAUDE.md                    Token-efficient rules
+├── nixpacks.toml                Config Railway build
+├── railway.toml                 Config Railway deploy
+├── Procfile                     Backup start command
+├── netlify.toml                 Config frontend
+└── iniciar_*.ps1                Scripts de bring-up local
 ```
 
 ---
 
-## 🎯 What's Running Right Now
+## TROUBLESHOOTING
 
-### ✅ Backend Server (Port 8000)
+### El dashboard no carga (`https://democracia.ar`)
 
-```
-[FastAPI + Uvicorn]
-├─ /api/health              → System status
-├─ /api/countries           → Available countries
-├─ /api/analyze             → Run analysis pipeline
-├─ /api/report/{id}         → Get completed report
-├─ /docs                    → Swagger UI
-└─ /openapi.json           → OpenAPI spec
+Si ves error en consola tipo "Error: Acceso restringido", la Observer Key
+del browser se perdió. Solución:
+
+```text
+https://democracia.ar/?key=TU_OBSERVER_KEY
 ```
 
-**4-Agent Pipeline** (LangGraph):
+El frontend ingiere la key, la guarda en localStorage, limpia la URL.
+Refresh con `Ctrl+F5`.
 
-1. **Architect Agent** — Frame analysis, validate inputs
-2. **Auditor Agent** — Electoral integrity checks
-3. **Hunter Agent** — Pattern detection, risk scoring
-4. **Alert Agent** — Dispatch findings
+### Backend remoto da timeout
 
-**Data Connections:**
+Probable cold start de Railway tras inactividad. Esperar ~30-60s y
+reintentar. Si persiste >5 min, verificar Railway dashboard
+(`Deployments → último deploy verde`).
 
-- V-Dem, Freedom House, PEI datasets
-- OONI real-time API (censorship alerts)
-- Peru-specific electoral data
-- RAG legal knowledge base (14 instruments)
-- SQLite database (analysis logs)
+### Budget diario agotado
 
-### ⚠️ Frontend Server (Port 5173)
-
-Currently **NOT RUNNING** — needs Node.js. Once installed:
-
-```
-[React 19 + Vite]
-├─ Dashboard (country selection)
-├─ Analysis charts (Recharts)
-├─ Real-time data streaming
-├─ Report export (Markdown/JSON)
-└─ Live backend connection
+```text
+{"error":"Budget diario agotado para PER.","limit":5}
 ```
 
----
+Subir `MAX_ELITE_PER_DAY` en Railway → primario → Variables. El cambio
+re-despliega automático.
 
-## ❓ Troubleshooting
+### Backend local: `Cannot find module 'anthropic'`
 
-### "npm: command not found"
+```bash
+cd backend
+pip install -r ../requirements.txt
+```
 
-**Solution:** Node.js is not in your system PATH
-
-1. Uninstall Node.js
-2. Download fresh from <https://nodejs.org/>
-3. Install with "Add to PATH" option checked
-4. Restart terminal/PowerShell
-5. Verify: `npm --version`
-
-### "Backend on port 8000 already in use"
+### Backend local: puerto 8000 ocupado
 
 ```powershell
-# Find and kill process using port 8000
+# Windows
 netstat -ano | findstr :8000
 taskkill /PID <PID> /F
 ```
 
-### "Cannot find module 'anthropic'"
-
-```powershell
-# Reinstall Python dependencies
-cd d:\DemocracIA
-C:/Python314/python.exe -m pip install -r backend/requirements.txt
-```
-
-### Dashboard shows "Cannot connect to backend"
-
-```powershell
-# Verify backend is running:
-curl http://localhost:8000/api/health
-
-# If not, start it:
-cd d:\DemocracIA\backend
-C:/Python314/python.exe -m uvicorn app:app --reload --port 8000
+```bash
+# Linux/Mac
+lsof -i :8000
+kill -9 <PID>
 ```
 
 ---
 
-## 📞 Commands Reference
+## CONFIGURACION AVANZADA
 
-| Task | Command |
-|------|---------|
-| **Run backend tests** | `C:/Python314/python.exe -m pytest backend/tests/ -v` |
-| **Start backend only** | `cd backend && C:/Python314/python.exe -m uvicorn app:app --reload --port 8000` |
-| **Start frontend only** | `cd frontend && npm run dev` |
-| **Build frontend** | `cd frontend && npm run build` |
-| **Lint frontend** | `cd frontend && npm run lint` |
-| **Full diagnostics** | `C:/Python314/python.exe backend/agents/architect.py --audit` |
-| **Check dependencies** | `C:/Python314/python.exe -m pip list \| grep -E "fastapi\|langgraph\|pydantic"` |
-
----
-
-## 🔐 Configuration
-
-### Required Environment Variables (Optional)
+### Alertas
 
 ```env
-# .env file in d:\DemocracIA\
-
-ANTHROPIC_API_KEY=sk-ant-...          # Claude API (for LLM features)
-LLM_MODEL=claude-3-5-sonnet-20241022  # Default model
-LLM_TEMPERATURE=0.3                   # Reasoning mode
-
-OBSERVER_API_KEYS=democracia-obs-dev-2026  # Observer network auth
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+ALERT_EMAIL_FROM=alerts@democracia.ar
+ALERT_EMAIL_TO=tu@email.com
+ALERT_SMTP_HOST=smtp.sendgrid.net
+ALERT_SMTP_PORT=587
+ALERT_SMTP_USER=apikey
+ALERT_SMTP_PASS=...
+ALERT_MIN_SEVERITY=high
 ```
 
-### Optional: Alert Channels
+### Hunter scheduler
 
 ```env
-SLACK_WEBHOOK_URL=https://hooks.slack.com/...
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=...
-SMTP_PASSWORD=...
+HUNTER_INTERVAL_MINUTES=240         # Default 4h
+AUTO_OBSERVE_COUNTRIES=PER          # Arranca observación auto al boot
+```
+
+### CORS
+
+```env
+ALLOWED_ORIGINS=https://democracia.ar,https://www.democracia.ar
+# O wildcard (acepta cualquier origen + credenciales):
+ALLOWED_ORIGINS=*
 ```
 
 ---
 
-## 📚 Documentation
+## DOCUMENTOS
 
-- [Full Status Report](STATUS_REPORT.md) — Comprehensive diagnostics
-- API Docs — <http://localhost:8000/docs> (when running)
-- [Whitepaper](docs/whitepaper_2026_v2.md) — PEIRS methodology
-- [Architecture](docs/architecture_2026_v1.4.md) — System design
-
----
-
-## ✨ Next Steps
-
-1. **[IMMEDIATE]** Install Node.js from <https://nodejs.org/>
-2. **[THEN]** Run `.\arrange_all.ps1` to start both servers
-3. **[VERIFY]** Open <http://localhost:5173> in browser
-4. **[TEST]** Analyze Peru 2026 via dashboard
-5. **[EXPLORE]** Check API docs at <http://localhost:8000/docs>
+- [STATUS_REPORT.md](STATUS_REPORT.md) — Diagnóstico técnico completo
+- [DEPLOY_README.md](DEPLOY_README.md) — Procedimiento de despliegue
+- [AUDIT_TECNICO_COMPLETO.md](AUDIT_TECNICO_COMPLETO.md) — Auditoría detallada
+- [DOCS Proyect/PEIRS_Documento_Institucional_v2.0.md](DOCS%20Proyect/PEIRS_Documento_Institucional_v2.0.md) — Dossier para partners
+- [DOCS Proyect/PEIRS_Arquitectura_Roadmap.md](DOCS%20Proyect/PEIRS_Arquitectura_Roadmap.md) — Roadmap técnico cronológico
+- [DOCS Proyect/INFORME_METODOLOGIA.md](DOCS%20Proyect/INFORME_METODOLOGIA.md) — Playbook del Elite Report
 
 ---
 
-**Status:** April 4, 2026 | **System Ready:** Backend ✅ | **Waiting for:** Node.js installation 🕐
-
-For questions or issues, see [STATUS_REPORT.md](STATUS_REPORT.md) or run the diagnostic:
-
-```powershell
-C:/Python314/python.exe backend/agents/architect.py --audit
-```
+**Versión:** v0.5.2 (cierre 4-may-2026)
+**Sistema:** Producción en `democracia.ar` + `democracia-peirs-production.up.railway.app`

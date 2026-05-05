@@ -1,7 +1,12 @@
 # DEMOCRAC.IA / PEIRS — Auditoría Técnica Completa
 
 **Predictive Electoral Integrity & Risk System**
-**Fecha:** 5 de abril de 2026 | **Versión:** 0.4.0 | **Estado:** En producción
+**Fecha:** 4 de mayo de 2026 | **Versión:** 0.5.2 | **Estado:** En producción
+
+> **Versión anterior:** v1.0 del 5-abril-2026 (v0.4.0). Esta auditoría refleja
+> el estado real al cierre de la sesión del 4-may-2026, después de:
+> i18n profundo del Elite Report (es/en/pt), upgrade a V-Dem v16,
+> Sprint 1 de tests integrados, recuperación de incidente Railway.
 
 ---
 
@@ -18,7 +23,7 @@ Democratizar el acceso a inteligencia electoral de calidad, antes reservada a or
 | Valor | Expresión concreta |
 |---|---|
 | **Transparencia** | Trazabilidad completa: cada dato del reporte incluye fuente, fecha y nivel de confianza. Código abierto en GitHub |
-| **Rigurosidad** | Corpus legal de 17 instrumentos internacionales autenticados (ICCPR, CADH, CDI, jurisprudencia CIDH). No inventa: cita |
+| **Rigurosidad** | Corpus legal de 14 instrumentos jurídico-electorales en ChromaDB con búsqueda semántica (ICCPR, CADH, CDI, CEDAW, OSCE/ODIHR, UNDRIP, jurisprudencia CIDH, Constitución Perú 1993, LOE 26859, LOP 28094, Resoluciones JNE). No inventa: cita |
 | **Independencia** | Sin financiamiento partidario. Datos de fuentes académicas (V-Dem) y organismos internacionales (Freedom House, OSCE) |
 | **Accesibilidad** | Dashboard web gratuito en democracia.ar. Interfaz en español. Visualizaciones intuitivas |
 | **Protección de derechos** | Cada hallazgo se mapea automáticamente a los artículos de derechos humanos potencialmente vulnerados |
@@ -29,19 +34,35 @@ Democratizar el acceso a inteligencia electoral de calidad, antes reservada a or
 
 ## 2. Qué hace la plataforma
 
-### 2.1 Pipeline de análisis (5 agentes orquestados)
+### 2.1 Pipeline de análisis
 
+La plataforma opera con **dos pipelines en paralelo**:
+
+#### A) Pipeline LangGraph (4 agentes) — análisis original
+
+```text
+┌──────────────┐    ┌───────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│  Agente 1    │───>│    Agente 2       │───>│    Agente 3      │───>│    Agente 4      │
+│  OSINT       │    │  POLITICAL        │    │  LEGAL           │    │  REPORT          │
+│  INGESTION   │    │  ANALYST          │    │  COMPLIANCE      │    │  GENERATOR       │
+└──────────────┘    └───────────────────┘    └──────────────────┘    └──────────────────┘
+      │                     │                        │                       │
+  V-Dem v16           Partidos,             RAG Legal Corpus          Reporte 9 caps
+  Freedom House       Medios,               14 instrumentos           Markdown + JSON
+  RSF 2025, PEI 10    Redes digitales       ICCPR, CADH, CIDH        Trazabilidad APA 7
 ```
-┌──────────────┐    ┌───────────────────┐    ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│  Agente 1    │───>│    Agente 2       │───>│    Agente 3      │───>│    Agente 4      │───>│    Agente 5      │
-│  INGESTION   │    │  POLITICAL        │    │  LEGAL           │    │  DICTAMEN        │    │  REPORT          │
-│  OSINT Data  │    │  ANALYST          │    │  COMPLIANCE      │    │  ELECTORAL       │    │  GENERATOR       │
-└──────────────┘    └───────────────────┘    └──────────────────┘    └──────────────────┘    └──────────────────┘
-      │                     │                        │                       │                       │
-  V-Dem v15           Partidos,             RAG Legal Corpus          Opinión técnica         Reporte VIP
-  Freedom House       Medios,               17 instrumentos           verificada con          10 capítulos
-  RSF, PEI            Redes digitales       ICCPR, CADH, CIDH        datos cruzados          Markdown + JSON
+
+#### B) Pipeline Elite Report (6 etapas) — producto canónico
+
+```text
+EliteLoader → PhaseOrganizer → CrossReferenceBuilder → PredictiveEngine
+    → ChapterComposer → Visualizer + Renderer → Persist (SQLite triple-tier)
 ```
+
+Genera el **Elite Report de 12 capítulos + 3 anexos** con i18n trilingüe
+(es/en/pt), 21 visualizaciones SVG server-side, motor predictivo con 6
+escenarios + early-warning meter, y citas APA 7. Costo ~$0.40-0.80 por
+informe con prompt caching de Anthropic.
 
 ### 2.2 Agentes especializados adicionales
 
@@ -67,20 +88,26 @@ PREPARATORIO → PRE-CAMPAÑA → CAMPAÑA → SILENCIO ELECTORAL → JORNADA EL
 - Detección automática de patrones de fraude (geográfico, temporal, sistemático)
 - Mapeo automático a derechos humanos vulnerados
 
-### 2.4 Reporte VIP de 10 capítulos
+### 2.4 Elite Report — 12 capítulos + 3 anexos
 
 | Cap. | Título | Contenido |
 |---|---|---|
-| 0 | Perfil del País | Demografía, economía, padrón electoral |
-| 1 | Resumen Ejecutivo | KPIs: Freedom House, V-Dem, PEI, RSF. Dashboard de riesgo |
-| 2 | Contexto Político | Marco legal, fuerzas de poder, crisis institucional |
-| 3 | Organismo Electoral | Independencia, registro, observación internacional |
-| 4 | Inclusividad | Mujeres, pueblos originarios, LGBTQ+, discapacidad |
-| 5 | Campaña | Libertades, financiamiento, cobertura mediática |
-| 6 | Amenazas Digitales | Internet, desinformación, regulación de plataformas |
-| 7 | Jornada Electoral | Observaciones en tiempo real, irregularidades |
-| 8 | Observación de Campo | Hallazgos del Hunter, patrones detectados |
-| 9 | Justicia Electoral | Mecanismos de resolución, rendición de cuentas |
+| -2 | Declaración preliminar | Síntesis ejecutiva en 1 página A4 (300-400 palabras) |
+| 1 | Contexto histórico | Trayectoria democrática 10 años con datasets cuantitativos |
+| 2 | Marco jurídico aplicable | Normativa internacional + nacional en jerarquía |
+| 3 | Sistema electoral | Arquitectura institucional (EMB), procedimientos, tecnología |
+| 4 | Fase pre-electoral | Hallazgos del Hunter en preparatoria + campaña |
+| 5 | Jornada electoral | Eventos hora por hora, regiones afectadas |
+| 6 | Escrutinio y cómputo | Progreso de actas, incidentes de integridad |
+| 7 | Post-electoral | Red de actores, cronología judicial |
+| 8 | Derechos vulnerados | Cumplimiento ICCPR/CADH/CDI por artículo |
+| 9 | Análisis predictivo | 6 escenarios probabilísticos + early-warning meter |
+| 10 | Conclusiones | Síntesis multidimensional 8 PEIRS |
+| 11 | Recomendaciones | Corto / mediano / largo plazo + sistema internacional |
+| 12 | IA y regulación | Arquitectura tecnológica, incidentes, marco regulatorio |
+| Anexo A | Metodología técnica | Pipeline PEIRS, fuentes Hunter, limitaciones reconocidas |
+| Anexo B | Bibliografía APA 7 | Citas con URL activa a fuente primaria |
+| Anexo C | Glosario | Definiciones de categorías Hunter |
 
 ---
 
@@ -90,18 +117,21 @@ PREPARATORIO → PRE-CAMPAÑA → CAMPAÑA → SILENCIO ELECTORAL → JORNADA EL
 
 | Componente | Tecnología | Versión |
 |---|---|---|
-| Lenguaje | Python | 3.14.3 |
+| Lenguaje | Python | 3.11 (Railway/Nixpacks) — 3.14 dev local |
 | Framework API | FastAPI | >=0.115.0 |
 | Servidor ASGI | Uvicorn | >=0.30.0 |
 | Orquestación IA | LangGraph | >=0.2.0 |
 | LLM Framework | LangChain Core + Anthropic | >=0.3.0 / >=0.2.0 |
-| Modelo LLM | Claude Sonnet 4 | claude-sonnet-4-20250514 |
+| Modelo LLM (clasificación + composición) | Claude Sonnet 4.6 | claude-sonnet-4-6 con prompt caching |
+| Modelo LLM (Architect Agent autónomo) | Claude Opus 4.7 | claude-opus-4-7 + claude-agent-sdk |
 | Validación | Pydantic | >=2.0 |
 | Datos | Pandas | >=2.0.0 |
 | Vector DB | ChromaDB | >=0.5.0 |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) | >=3.0.0 |
+| Embeddings | sentence-transformers (all-MiniLM-L6-v2) | >=3.0.0 (~90MB) |
 | HTTP Client | httpx | >=0.27.0 |
-| Base de datos | SQLite (WAL mode) | Built-in |
+| Base de datos | SQLite triple-tier (filesystem + TEXT + PDF on-demand) | Built-in + Pandas |
+| i18n | Módulo propio `i18n.py` (180+ keys) + `section_titles.py` (50 entries) | es / en / pt |
+| Tests | pytest | 91/91 pasando, `requirements-dev.txt` separado |
 
 ### 3.2 Frontend
 
@@ -118,38 +148,43 @@ PREPARATORIO → PRE-CAMPAÑA → CAMPAÑA → SILENCIO ELECTORAL → JORNADA EL
 
 | Componente | Servicio | URL |
 |---|---|---|
-| Backend hosting | Railway | democracia-peirs-production.up.railway.app |
+| Backend hosting | Railway (Nixpacks + volumen persistente) | democracia-peirs-production.up.railway.app |
 | Frontend hosting | Netlify | democracia-peirs.netlify.app |
 | Dominio principal | democracia.ar | www.democracia.ar |
-| API producción | Railway | api via mismo dominio Railway |
-| SSL/TLS | Let's Encrypt (auto) | Válido hasta Jul 2026 |
-| CI/CD | GitHub → Railway/Netlify | Auto-deploy on push to main |
-| Alertas | Discord webhook | Embed format con severidad/color |
+| Backup | `scripts/backup.py --targz` (snapshot single-file) | Manual / cron recomendado |
+| Generación PDF | Browser-native via `/printable` + `window.print()` | Sin dependencias C-extension |
+| SSL/TLS | Let's Encrypt (auto) | Renovación automática |
+| CI/CD | GitHub → Railway / Netlify | Auto-deploy on push to main (secundario `api.democracia.ar` con auto-deploy DESACTIVADO) |
+| Alertas | Discord webhook | Embed format con severidad/color (severidad ≥ high) |
 | Repositorio | GitHub | lachmanmariana8-sudo/democracia-peirs |
 
 ### 3.4 Fuentes de datos integradas
 
 | Fuente | Tipo | Cobertura | Variables clave |
 |---|---|---|---|
-| **V-Dem v15** | Dataset académico | 177 países, 1900-2024 | 27 indicadores: tipo régimen, equidad electoral, sesgo mediático, autonomía partidaria |
+| **V-Dem v16** | Dataset académico | 1789-2025 (CSV completo ~440MB) + tier estático en `vdem_static.py` (38 países × 21 indicadores × 1985-2025, 618KB en git) | 21 indicadores: tipo régimen, equidad electoral, sesgo mediático, autonomía EMB, irregularidades, ecosistema digital |
 | **Freedom House FIW** | Índice anual | 210+ países, 2013-2025 | Derechos políticos (0-40), libertades civiles (0-60), estatus |
 | **RSF Press Freedom** | Índice anual | 180 países, 2025 | Score libertad de prensa (0-100), tracker de periodistas asesinados |
-| **PEI v10** | Dataset académico | 153 elecciones, 1991-2023 | Integridad percibida: EMBs, leyes, procedimientos, conteo, resultados |
-| **OONI** | API tiempo real | Global, continuo | Anomalías web, interferencia de red por dominio y ASN |
-| **RSS Perú** | Feeds RSS | 4 fuentes (Andina, RPP, JNE, ONPE) | Noticias clasificadas por fase electoral |
+| **PEI v10** | Dataset académico | 586 elecciones, 2012-2023 | Integridad percibida: EMBs, leyes, procedimientos, conteo, resultados |
+| **OONI** | API tiempo real | Global, continuo | Anomalías web, interferencia de red por dominio y ASN (date-only since/until) |
+| **Hunter RSS Perú** | Feeds RSS cada 4h | 8 fuentes (Andina, RPP, El Comercio, Gestión, IDL-Reporteros, Wayka, JNE, ONPE) | Noticias clasificadas por fase electoral con Sonnet 4.6, dedupe semántico |
 
-### 3.5 Corpus legal RAG (17 instrumentos autenticados)
+### 3.5 Corpus legal RAG (14 instrumentos jurídico-electorales)
+
+Vectorizado en ChromaDB con embeddings sentence-transformers all-MiniLM-L6-v2.
+Búsqueda semántica con keyword fallback. Indexado en background al startup
+para no bloquear el healthcheck Railway.
 
 | Categoría | Instrumentos |
 |---|---|
-| **ICCPR** (4 docs) | Art. 25 (derecho al voto), Art. 19 (expresión), Art. 20 (odio), Arts. 21-22 (asamblea) |
-| **CADH** (2 docs) | Art. 23 (derechos políticos), Art. 13 (libertad de expresión) |
-| **CDI** (1 doc) | Carta Democrática Interamericana completa |
-| **CIDH Jurisprudencia** (3 docs) | Castañeda Gutman 2008, Yatama 2005, López Mendoza 2011 |
-| **CEDAW** (1 doc) | Art. 7 — Participación política de mujeres |
-| **OSCE/ODIHR** (2 docs) | Manual de observación electoral, Declaración de Principios 2005 |
-| **Fraude y odio** (2 docs) | Metodología de análisis de fraude, estándares de plataformas digitales |
-| **Marco nacional Perú** (1 doc) | Estructura JNE/ONPE/RENIEC, códigos legales |
+| **ICCPR** | Art. 25 (derecho al voto), Art. 19 (expresión), Art. 20 (odio), Arts. 21-22 (asamblea) |
+| **CADH** | Art. 23 (derechos políticos), Art. 13 (libertad de expresión) |
+| **CDI** | Carta Democrática Interamericana completa |
+| **CIDH Jurisprudencia** | Castañeda Gutman 2008, Yatama 2005, López Mendoza 2011 |
+| **CEDAW** | Art. 7 — Participación política de mujeres |
+| **OSCE/ODIHR** | Manual de observación electoral, Declaración de Principios 2005 |
+| **UNDRIP** | Derechos de los pueblos indígenas en procesos electorales |
+| **Marco nacional Perú** | Constitución 1993, LOE 26859, LOP 28094, Resoluciones JNE |
 
 ---
 
@@ -337,8 +372,9 @@ Stats: `get_db_stats`
 | `test_db.py` | 30 | CRUD completo, deduplicación, alertas |
 | `test_field_validator.py` | 6 | Validación, patrones, calidad |
 | `test_e2e_pipeline.py` | 10 | Pipeline end-to-end |
+| `test_elite_pipeline.py` | 9 | Sprint 1: VizKind dispatch, FindingRef, PredictiveEngine, attach_visualizations, render SVG, ChapterComposer no-LLM, `_format_vdem_emb`, disclosure presence |
 | `conftest.py` | — | Fixtures: DB temporal, mocks |
-| **TOTAL** | **82 tests** | **100% passing** |
+| **TOTAL** | **91 tests** | **100% passing** (~8s) |
 
 ---
 
@@ -370,8 +406,12 @@ git push origin main
 | `ALLOWED_ORIGINS` | https://www.democracia.ar,https://democracia.ar | CORS |
 | `ALERT_WEBHOOK_URL` | https://discord.com/api/webhooks/... | Alertas a Discord |
 | `ALERT_MIN_SEVERITY` | high | Umbral mínimo para alertas |
-| `HUNTER_INTERVAL_MINUTES` | 720 | Hunter automático cada 12h |
+| `HUNTER_INTERVAL_MINUTES` | 240 | Hunter automático cada 4h |
 | `AUTO_OBSERVE_COUNTRIES` | PER | Auto-crear sesión de observación en startup |
+| `MAX_ELITE_PER_DAY` | 20 | Budget diario de Elite Reports por país |
+| `VDEM_VERSION` | v16 | Versión del dataset V-Dem en uso |
+| `VDEM_LAST_YEAR` | 2025 | Año más reciente cubierto por el dataset |
+| `DEMOCRACIA_DB_PATH` | /data/democracia.db | Path al SQLite en volumen Railway |
 
 ### 9.4 Variables de entorno en producción (Netlify)
 
@@ -384,17 +424,19 @@ git push origin main
 
 ## 10. Estado del sitio web en producción
 
-### 10.1 Verificación en vivo (5 abril 2026, 17:03 UTC)
+### 10.1 Verificación en vivo (4 mayo 2026)
 
 | Servicio | URL | Estado |
 |---|---|---|
-| Frontend | https://www.democracia.ar | **OPERATIVO** (200 OK, Netlify) |
-| Backend | https://democracia-peirs-production.up.railway.app | **OPERATIVO** |
-| Health check | /api/health | version 0.4.0, 38 países, 14 instrumentos legales |
-| RAG legal | ChromaDB | **ACTIVO** |
-| OONI | Integración | **ACTIVA** |
-| Alertas Discord | Webhook | **CONFIGURADO Y PROBADO** |
-| SSL | Let's Encrypt | Válido hasta Jul 2026 |
+| Frontend | <https://democracia.ar> | OPERATIVO (200 OK, Netlify) |
+| Backend | <https://democracia-peirs-production.up.railway.app> | OPERATIVO (recovery exitoso 4-may) |
+| Health check | `/api/health` | version 0.5.2, 38 países, 14 instrumentos legales, V-Dem v16 |
+| RAG legal | ChromaDB | ACTIVO (init en background) |
+| OONI | Integración | ACTIVA |
+| Hunter scheduler | 8 fuentes RSS Perú | ACTIVO cada 4h |
+| Alertas Discord | Webhook | CONFIGURADO Y PROBADO |
+| Sesión observación PER 2026 | Volumen SQLite | ACTIVA, restaurada tras incidente Railway |
+| SSL | Let's Encrypt | Renovación automática |
 
 ### 10.2 Features activos en producción
 
@@ -404,14 +446,20 @@ git push origin main
     "country_profile",
     "electoral_observation_protocol",
     "traceability",
-    "vdem_v15",
+    "vdem_v16",
     "freedom_house",
     "pei_v10",
+    "rsf_index",
     "ooni_live",
     "fraud_hate_analysis",
-    "rag_legal"
+    "rag_legal",
+    "constitutionalist",
+    "report_designer",
+    "elite_report"
   ],
   "llm_configured": true,
+  "active_observation_sessions": 1,
+  "observer_keys_configured": 1,
   "alert_dispatch": true,
   "alert_channels_configured": { "webhook": true }
 }
@@ -423,24 +471,28 @@ git push origin main
 
 ### 11.1 Producto
 
-- Sistema de inteligencia electoral funcional, en producción, accesible en www.democracia.ar
-- Pipeline de 5 agentes IA orquestados generando reportes VIP de 10 capítulos
+- Sistema de inteligencia electoral funcional, en producción, accesible en <https://democracia.ar>
+- Pipeline LangGraph 4 agentes + Elite Report 6-etapas generando informes de 12 capítulos + 3 anexos
+- i18n trilingüe (es / en / pt) con 180+ claves cubriendo todo el chrome del informe
 - Protocolo completo de observación electoral (9 fases, 19 categorías)
-- Hunter Agent automático rastreando OSINT 2 veces por día
-- Alertas en tiempo real a Discord para hallazgos de alta severidad
-- RAG legal con 17 instrumentos internacionales autenticados
-- Monitoreo de censura internet vía OONI en tiempo real
+- Hunter Agent automático cada 4h rastreando 8 fuentes RSS Perú con clasificación Sonnet 4.6
+- Alertas en tiempo real a Discord para hallazgos ≥ high
+- RAG legal con 14 instrumentos jurídico-electorales en ChromaDB
+- Monitoreo OONI de censura internet en tiempo real
+- SQLite triple-tier: filesystem + TEXT columns + PDF on-demand. Sobrevive a corrupción del volumen
+- Architect Agent autónomo (Claude Opus 4.7 + claude-agent-sdk) para refactor iterativo
 
 ### 11.2 Técnicos
 
-- 8,100 líneas de backend (app.py) + 7,000+ en módulos = ~15,000 LOC Python
-- 7,485 líneas de frontend React con 31 componentes y 5 tipos de gráficos
-- 39 endpoints API documentados con Swagger
-- 82 tests automatizados, 100% passing
-- Deploy automatizado: push a GitHub → Railway + Netlify rebuildan
-- 38 países monitoreados con datos reales de 5 fuentes internacionales
-- Base de datos SQLite con 8 tablas y 18 funciones CRUD
+- ~15,000 LOC Python (backend: `app.py` 5400+ líneas + módulos)
+- ~5,000 LOC React (single-file `App.jsx`)
+- 39+ endpoints API documentados
+- 91 tests automatizados, 100% passing en ~8s
+- Deploy automatizado: push a GitHub → Railway primario + Netlify rebuild (secundario con auto-deploy desactivado por seguridad)
+- 38 países en catálogo, 4 con datos reales confirmados (VEN, NIC, GTM, URY) + Perú con cobertura activa
+- Base de datos SQLite con 8 tablas + tablas Elite Report con TEXT columns
 - Fallbacks en cada capa garantizan que el sistema nunca falla completamente
+- Backup script (`scripts/backup.py --targz`) para snapshot single-file de prod
 
 ### 11.3 Operativos
 
@@ -449,7 +501,7 @@ git push origin main
 - Sesión de observación auto-bootstrapped en cada deploy
 - Integración Discord operativa para alertas electorales
 
-### 11.4 Evolución del proyecto (25 días)
+### 11.4 Evolución del proyecto (~55 días)
 
 | Fecha | Hito |
 |---|---|
@@ -458,49 +510,55 @@ git push origin main
 | 25 mar 2026 | SQLite, informe Perú enriquecido, timeline crisis democrática |
 | 27 mar 2026 | Arquitectura v0.4: agents/, chapters/, db/, tests/ |
 | 1 abr 2026 | Hunter Agent, protocolo multi-sesión, deploy config |
-| 2 abr 2026 | CORS configurable, DB_PATH Railway, V-Dem estático |
-| 3 abr 2026 | RAG keyword fallback, 17 tests E2E, V-Dem 38 países |
-| 4 abr 2026 | Deploy a producción, fix port mismatch, RAG ChromaDB activo |
-| 5 abr 2026 | Discord alertas, Sentinel con hallazgos en web, auto-observe |
+| 4-5 abr 2026 | Deploy a producción, fix port mismatch, RAG ChromaDB activo, Discord alertas |
+| 14-20 abr 2026 | Elite Report 12 capítulos + 3 anexos, ReportDesigner sub-agente |
+| 27 abr 2026 | v0.5.0 — Constitucionalista RAG, Architect Agent autónomo, hardening producción, migración SQLite |
+| 4 may 2026 | v0.5.2 — i18n profundo (es/en/pt), V-Dem v16 upgrade, Sprint 1 tests (91/91), backup script, /printable, /structured. Recuperación incidente Railway. Disclosure neutral |
 
-**41 commits en 25 días.** De prototipo a producción.
+**~75 commits en ~55 días.** De prototipo a producción + i18n trilingüe + caso de uso activo.
 
 ---
 
 ## 12. Próximos pasos
 
-### 12.1 Corto plazo (próximas 2 semanas — antes de elecciones Perú)
+### 12.1 Sprints blockers para BRA + USA (próximas 4-6 semanas)
 
-| Prioridad | Tarea | Impacto |
+| Prioridad | Sprint | Esfuerzo | Bloquea |
+|---|---|---|---|
+| P0 | **Sprint 2 — CountryAdapter pluggable** | 4-6h | Onboarding Brasil, USA |
+| P0 | **Sprint 3 — Modelo institucional generalizado** | 6-8h | Federal centralizado (BRA), federal descentralizado (USA) |
+| P1 | **Sprint 4 — Traducir 13 prompts cap_NN.md a en/pt** | 8-10h | Eliminar últimos restos de español en narrativa LLM |
+
+### 12.2 Cobertura electoral H2 2026
+
+| Sprint | Calendario | Esfuerzo |
 |---|---|---|
-| P0 | **Railway Volume** para persistir SQLite entre deploys | Los datos y sesiones sobreviven redeploys |
-| P0 | **Avanzar fase PER a pre_campaign/campaign** cuando corresponda | Hunter clasifica con contexto correcto |
-| P1 | Agregar más fuentes RSS al Hunter (El Comercio, La República, Gestión) | Mayor cobertura OSINT |
-| P1 | Frontend: rebuild en Netlify con `VITE_API_BASE` correcto verificado | Dashboard conecta a backend |
-| P2 | Configurar OONI alertas para Perú (dominios JNE, ONPE, RENIEC) | Detectar censura a infraestructura electoral |
+| **Sprint 5 — Brasil 2026 onboarding** | Antes 4-oct-2026 | 10-12h |
+| **Sprint 6 — USA 2026 midterms onboarding** | Antes 3-nov-2026 | 12-16h |
 
-### 12.2 Mediano plazo (1-3 meses)
+### 12.3 Mediano plazo (paralelo, 1-3 meses)
 
 | Tarea | Descripción |
 |---|---|
-| **Más países activos** | Activar AUTO_OBSERVE para Venezuela, Nicaragua, Colombia, Brasil |
-| **PostgreSQL** | Migrar de SQLite a PostgreSQL para escala y concurrencia |
-| **Autenticación frontend** | Login para observadores con roles diferenciados |
-| **Export PDF** | Generar reportes VIP en LaTeX/PDF descargable |
-| **API rate limiting** | Proteger endpoints públicos contra abuso |
-| **Tests de integración** | Tests E2E contra API real con datos de producción |
-| **Monitoring** | Dashboard de Grafana/Railway metrics para uptime y performance |
+| **Frontend feature flags + preview unlock** | Tabs Brasil / USA con `?preview=DEMOCRACIA_PREVIEW_2026` |
+| **Citation builder i18n** | Meses en español, "Recuperado de" → "Retrieved from" |
+| **Predictive scenarios narrative i18n** | Implications/indicators/watch_signals en es dentro de narrativa |
+| **PostgreSQL** | Evaluar migración desde SQLite si concurrencia lo justifica |
+| **Tests E2E integración Railway** | Smoke tests contra API real post-deploy |
+| **Monitoring** | Dashboard Railway metrics para uptime y latencia LLM |
+| **Backup automatizado** | Cron diario invocando `scripts/backup.py --targz` |
 
-### 12.3 Largo plazo (6-12 meses)
+### 12.4 Largo plazo (6-12 meses)
 
 | Tarea | Descripción |
 |---|---|
 | **Neo4j** | Grafo de redes de poder: partidos, financistas, medios |
 | **NLP avanzado** | Análisis de sentimiento en redes sociales (Twitter/X, TikTok) |
 | **Playwright scraping** | OSINT profundo: scraping de portales electorales |
-| **API pública** | Abrir API para investigadores y periodistas |
+| **API pública con tiers** | Abrir API para investigadores y periodistas |
 | **App móvil** | PWA para observadores en campo sin conexión |
-| **Multi-idioma** | Interfaz en inglés, portugués, francés |
+| **Multi-idioma adicional** | Francés (África francófona) |
+| **Detección estadística de anomalías** | Hunter detecta cambios de tasa, no sólo clasifica |
 
 ---
 
@@ -509,19 +567,24 @@ git push origin main
 | Métrica | Valor |
 |---|---|
 | Líneas de código backend | ~15,000 |
-| Líneas de código frontend | 7,485 |
-| Endpoints API | 39 |
-| Agentes IA | 8 (5 pipeline + 3 especializados) |
-| Tests | 82 (100% passing) |
+| Líneas de código frontend | ~5,000 (single-file `App.jsx`) |
+| Endpoints API | 40+ (incluye `/structured`, `/printable`, `/elite-report/*`) |
+| Pipelines de análisis | 2 (LangGraph 4 agentes + Elite Report 6 etapas) |
+| Agentes IA | 7 (4 LangGraph + Hunter + Auditor + Architect Agent autónomo) |
+| Tests | 91 (100% passing en ~8s) |
 | Países monitoreados | 38 |
-| Fuentes de datos | 6 (V-Dem, FH, RSF, PEI, OONI, RSS) |
-| Instrumentos legales | 17 |
-| Tablas en base de datos | 8 |
-| Categorías de observación | 19 |
+| Países con cobertura activa | 1 (Perú 2026) |
+| Fuentes de datos | 6 (V-Dem v16, FH, RSF, PEI, OONI, Hunter RSS) |
+| Instrumentos legales | 14 |
+| Idiomas soportados | 3 (es / en / pt) |
+| Claves i18n | 180+ |
+| Categorías Hunter | 19 |
 | Fases electorales | 9 |
-| Componentes React | 31 |
-| Commits | 41 en 25 días |
-| Tiempo a producción | 25 días |
+| Capítulos Elite Report | 12 + 3 anexos |
+| Visualizaciones SVG | 21 server-side |
+| Escenarios predictivos | 6 con bandas de confianza |
+| Commits | ~75 en ~55 días |
+| Tiempo a producción + i18n trilingüe | ~55 días |
 
 ---
 
@@ -538,5 +601,6 @@ git push origin main
 
 ---
 
-*Documento generado el 5 de abril de 2026. DEMOCRAC.IA / PEIRS v0.4.0.*
-*De prototipo a producción en 25 días. Inteligencia electoral para todos.*
+*Documento actualizado el 4 de mayo de 2026. DEMOCRAC.IA / PEIRS v0.5.2.*
+*De prototipo a producción + i18n trilingüe + caso de uso activo en ~55 días.*
+*Inteligencia electoral para todos.*

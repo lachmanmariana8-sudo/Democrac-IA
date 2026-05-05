@@ -1,285 +1,231 @@
 # DEMOCRAC.IA / PEIRS — Status Report
-**Generated:** 2026-04-04 | **Version:** v0.4.0
+
+**Generated:** 2026-05-04 (cierre de sesión) | **Version:** v0.5.2
 
 ---
 
-## ✅ BACKEND STATUS: OPERATIONAL
+## SISTEMA EN PRODUCCION
 
-### Python Environment
-- **Python Version:** 3.14.3
-- **Location:** `C:/Python314/python.exe`
-- **Status:** ✅ Configured
-
-### Dependencies
-- **All 51 core packages installed and up-to-date**
-  - LangGraph: 1.1.6 (agents orchestration)
-  - FastAPI: 0.135.3 (REST API)
-  - Pydantic: 2.12.5 (data validation)
-  - Pandas: 3.0.2 (data processing)
-  - ChromaDB: 1.5.5 (RAG vector store)
-  - Sentence-Transformers: 5.3.0 (embeddings)
-  - And 45 more dependencies
-
-### Test Suite Results
-- **Total Tests:** 82
-- **Passed:** ✅ 82/82 (100%)
-- **Coverage Areas:**
-  - Configuration & modules
-  - Data loaders (V-Dem, Freedom House, RSF, PEI)
-  - Database operations
-  - End-to-end pipeline
-  - Field validator
-- **Warnings:** 2 deprecation warnings (non-critical)
-
-### Live API Status
-- **Server:** Running on `http://127.0.0.1:8000`
-- **Health Check:** ✅ Operational
-- **Base Status:** Operational
-- **System:** DEMOCRAC.IA (PEIRS)
-- **Version:** 0.4.0
-
-### Active Features
-- ✅ Country profile analysis
-- ✅ Electoral observation protocol
-- ✅ Traceability logging
-- ✅ V-Dem v15 integration
-- ✅ Freedom House data
-- ✅ PEI v10.0 (Perceptions of Electoral Integrity)
-- ✅ OONI live integration (censorship detection)
-- ✅ Fraud & hate speech analysis
-- ✅ RAG legal knowledge base
-
-### Available Endpoints
-1. **GET `/api/health`** — System status
-2. **GET `/api/countries`** — List 38 available countries
-3. **POST `/api/analyze`** — Run complete electoral integrity analysis
-4. **GET `/api/report/{id}`** — Retrieve generated reports
-
-### Data Sources Integrated
-| Source | Format | Status | Notes |
-|--------|--------|--------|-------|
-| V-Dem v15 | JSON | ✅ Ready | Static dataset loaded |
-| Freedom House | CSV | ✅ Ready | Countries 1973-2025 |
-| PEI v10.0 | CSV | ✅ Ready | Electoral Integrity Project |
-| RSF World | CSV | ✅ Fallback | Press freedom by year |
-| OONI | API | ✅ Live | Real-time censorship alerts |
-| Peru-specific | JSON/CSV | ✅ Ready | Electoral system, political forces, regions |
+| Capa | Estado | URL / Endpoint |
+| --- | --- | --- |
+| Frontend (React + Vite) | OPERATIVO | <https://democracia.ar> |
+| Backend (FastAPI) | OPERATIVO | <https://democracia-peirs-production.up.railway.app> |
+| Healthcheck | OPERATIVO | `/api/health` (timeout 300s) |
+| Volumen persistente | OPERATIVO | SQLite triple-tier (filesystem + TEXT + PDF on-demand) |
+| Sesión observación PER 2026 | ACTIVA | Restaurada tras restore Railway 4-may |
+| Hunter scheduler | OPERATIVO | Cada 4h sobre 8 fuentes RSS Perú |
+| Discord webhook alerts | OPERATIVO | Severidad ≥ high |
 
 ---
 
-## ⚠️ FRONTEND STATUS: BLOCKED (ENVIRONMENT ISSUE)
+## BACKEND
 
-### Toolchain Status
-- **Node.js:** ❌ NOT FOUND in system PATH
-- **npm:** ❌ NOT FOUND in system PATH
-- **Vite:** ❌ Cannot start without npm
+### Entorno Python
 
-### Frontend Configuration
-- **Version:** 0.0.0 (dev)
-- **React:** 19.2.0
-- **React-DOM:** 19.2.0
-- **Recharts:** 3.8.0 (data visualizations)
-- **Vite:** 7.3.1 (build tool)
-- **Dependencies:** ✅ All installed in `node_modules/`
+- **Producción (Railway):** Python 3.11 (Nixpacks `python311`)
+- **Desarrollo local (Windows):** Python 3.14.3 en `C:/Python314/`
+- **Parity confirmada:** sin nested f-strings PEP 701 (3.14 acepta, 3.11 no)
 
-### Frontend Startup Error
+### Dependencias clave
+
+- LangGraph 0.2.x (orchestration)
+- LangChain Core 0.3.x + langchain-anthropic
+- FastAPI 0.115.x + Uvicorn
+- Pydantic 2.x
+- Pandas 2.x (subido a 3.x en local)
+- ChromaDB + sentence-transformers (all-MiniLM-L6-v2, 90MB)
+- httpx (RSS + OONI)
+- Anthropic SDK + claude-agent-sdk
+- pytest (separado en `requirements-dev.txt`)
+
+### Tests
+
+- **Total:** 91/91 pasando (era 82 al 4-abr; +9 con `test_elite_pipeline.py`)
+- **Coverage:** loaders, persistencia, e2e pipeline, Elite Report integration
+- **Warnings:** 2 deprecation no-críticos (LangChain Core Pydantic V1, ChromaDB asyncio.iscoroutinefunction)
+
+### Endpoints principales
+
 ```
-Command: npm run dev
-Error: npm: El término 'npm' no se reconoce como nombre de un cmdlet
-Status: ❌ FAILED — npm/node not in PATH
+GET  /api/health                                System status (público)
+GET  /api/countries                             Lista de 38 países
+POST /api/analyze                               Pipeline LangGraph 4 agentes
+GET  /api/report/{run_id}                       Recupera reporte
+GET  /api/report/{run_id}/markdown              Versión Markdown
+GET  /api/report/{run_id}/traceability          JSON de trazabilidad APA 7
+
+POST /api/elite-report                          Genera Elite Report (Observer Key)
+GET  /api/elite-report/{run_id}                 HTML del Elite Report
+GET  /api/elite-report/{run_id}/structured      Extracción dinámica de secciones
+GET  /api/elite-report/{run_id}/printable       HTML A4 para window.print()
+GET  /api/elite-report/{run_id}/markdown        Versión MD (i18n aplicado)
+
+GET  /api/sentinel/alerts                       Alertas en tiempo real (Hunter)
+GET  /api/peru/actors                           8 fuerzas políticas 2026
+GET  /api/peru/scenarios                        Escenarios parlamentarios
+GET  /api/observation/{country}/active          Sesión activa del país
+POST /api/observation/{session_id}/entry        Registrar entry de campo
 ```
 
-### Solution Required
-**ACTION NEEDED:** Install Node.js 18+ or add Node installation to system PATH
+### Fuentes de datos integradas
+
+| Fuente | Formato | Estado | Cobertura |
+| --- | --- | --- | --- |
+| V-Dem v16 | CSV + static | OPERATIVO | 1789-2025, 38 países × 21 indicadores en `vdem_static.py` |
+| Freedom House FIW | CSV | OPERATIVO | 2013-2025 |
+| PEI v10.0 | CSV | OPERATIVO | 2012-2023, 586 elecciones |
+| RSF 2025 | CSV | OPERATIVO | 180 países |
+| OONI | API | OPERATIVO | Censura web en tiempo real (date-only since/until) |
+| Hunter RSS Perú | RSS | OPERATIVO | Andina, RPP, El Comercio, Gestión, IDL-Reporteros, Wayka, JNE, ONPE |
+| Marco legal | RAG | OPERATIVO | 14 instrumentos vectorizados en ChromaDB |
 
 ---
 
-## 📊 Project Structure
+## FRONTEND
+
+### Estado
+
+- **OPERATIVO en producción** en <https://democracia.ar>
+- Bundle actual: `assets/index-BF4UNvwu.js`
+- Auto-deploy desde GitHub `main` via Netlify
+
+### Stack
+
+- React 19 + Vite 7 + Recharts 2.x
+- Estilos inline (sin Tailwind/CSS-in-JS framework)
+- Tema oscuro institucional con Fraunces + DM Sans + DM Mono
+- Single-file app (`src/App.jsx`, ~5000 líneas)
+
+### Tabs operativas
+
+- **Overview** — Dashboard global 38 países
+- **Detalle país** — Análisis individual con gauge + radar + violaciones
+- **Sentinel** — Alertas Hunter en tiempo real
+- **Perú Situation Room** — 11 secciones específicas Perú 2026
+- **Metodología** — Documentación de indicadores
+
+---
+
+## i18n PROFUNDO (es / en / pt)
+
+- **180+ claves** en `agents/elite_report/i18n.py`: cover, footer, TOC, captions, viz titles/subtitles, headers SVG, status labels, gauge bands, compliance columns, scenarios labels, audit notes, alert badges, severity legends, Appendix A body completo
+- **50 entradas** de subchapter titles en `agents/elite_report/section_titles.py` cubriendo 1.1 a 12.6
+- **LANGUAGE_RULE** reforzado en composer: LLM responde en idioma pedido aún con contexto en español
+
+---
+
+## SEGURIDAD
+
+| Componente | Estado | Notas |
+| --- | --- | --- |
+| Autenticación API | OPERATIVA | X-Observer-Key sobre endpoints sensibles (`elite-report`, `observation`) |
+| Rate limiting | OPERATIVO | Por IP en endpoints caros |
+| Budget diario | OPERATIVO | `MAX_ELITE_PER_DAY` env var (default 5; producción 20) |
+| CORS | OPERATIVO | Default a dominios explícitos + soporte wildcard via regex |
+| Base de datos | LOCAL en volumen Railway | SQLite con WAL mode |
+| LLM | CONFIGURADO | `ANTHROPIC_API_KEY` en Variables Railway |
+
+---
+
+## INFRAESTRUCTURA
+
+| Servicio | Función | Estado |
+| --- | --- | --- |
+| Railway (primario) | Backend FastAPI + volumen persistente | OPERATIVO. Restore exitoso 4-may, dual-deploy resuelto |
+| Railway (secundario) | `api.democracia.ar` | Auto-deploy DESACTIVADO (preservado por seguridad) |
+| Netlify | Frontend `democracia.ar` | OPERATIVO |
+| Discord webhook | Alertas severidad ≥ high | OPERATIVO |
+| GitHub | Repo principal | `main` con auto-deploy |
+
+---
+
+## VALIDATION CHECKLIST
 
 ### Backend
-```
-backend/
-├── app.py              ← Main FastAPI application (✅ Operational)
-├── requirements.txt    ← Python dependencies
-├── agents/
-│   ├── architect.py    ← CTO/Architecture agent
-│   ├── auditor.py      ← Electoral audit agent
-│   ├── hunter.py       ← Risk pattern detection
-│   ├── pipeline.py     ← LangGraph orchestration
-│   └── nodes.py        ← Node definitions
-├── modules/
-│   ├── peru_data.py    ← Peru 2026 electoral data
-│   ├── data_loaders.py ← V-Dem, FH, PEI, RSF loaders
-│   ├── field_validator.py ← Entry quality validation
-│   ├── fraud_hate_analysis.py ← Pattern detection
-│   └── catalog.py      ← Country metadata
-├── rag/               ← Legal knowledge base (keyword+semantic)
-├── integrations/
-│   ├── ooni.py        ← Censorship alerts
-│   ├── alerts.py      ← Alert dispatch
-│   └── peru_sources.py ← Peru-specific APIs
-├── db/                ← SQLite persistence
-└── tests/             ← 82 unit & e2e tests (✅ 100% passing)
-```
+
+- [x] Python deps instalados (Railway Nixpacks)
+- [x] Configuración validada
+- [x] 91/91 tests pasando
+- [x] Healthcheck operativo
+- [x] Loaders V-Dem v16 + FH + PEI + RSF funcionando
+- [x] SQLite triple-tier inicializado
+- [x] RAG ChromaDB indexado (init_rag en background)
+- [x] OONI integration ready
+- [x] Hunter scheduler operativo
+- [x] Discord alerts operativos
 
 ### Frontend
-```
-frontend/
-├── src/
-│   ├── main.jsx       ← React entry point (✅ React 19)
-│   ├── App.jsx        ← Main dashboard component
-│   ├── App.css        ← Styling
-│   └── assets/        ← Images, icons
-├── public/            ← Static assets
-├── package.json       ← Dependencies (npm)
-├── vite.config.js     ← Build configuration
-├── netlify.toml       ← Netlify deployment config
-└── node_modules/      ← Dependencies installed (✅ 1000+)
-```
 
-### Data
-```
-data/
-├── V-Dem-CY-Full+Others-v15.csv  (3.5MB dataset)
-├── All_data_FIW_2013-2025.csv    (Freedom House ratings)
-├── Country_and_Territory_Ratings_FIW.csv
-├── List_of_Electoral_Democracies_FIW24.csv
-├── PEI/
-│   ├── PEI_10 Election External.csv     ← PEI v10.0
-│   └── PEI_10 Expert External.csv
-└── RSF/
-    └── 2025 - 2025.csv                   ← Latest press freedom index
-```
+- [x] Build production (Vite)
+- [x] Servido en `democracia.ar`
+- [x] Backend connection ok (CORS validado)
+- [x] Observer Key flow operativo (URL `?key=`+ localStorage)
+- [x] i18n trilingüe en informe Elite
+
+### Integración
+
+- [x] Backend ↔ SQLite triple-tier
+- [x] Backend ↔ ChromaDB RAG
+- [x] Backend ↔ OONI
+- [x] Backend ↔ datasets reales
+- [x] Backend ↔ Hunter RSS
+- [x] Backend ↔ Discord webhook
+- [x] Frontend ↔ Backend producción
 
 ---
 
-## 🔄 Integration Flow
+## COMANDOS DE SOPORTE
 
-```
-User Request → FastAPI (port 8000)
-    ↓
-    ├─→ Country Profile Agent (validates country code)
-    ├─→ Architect Agent (designs analysis frame)
-    ├─→ Auditor Agent (runs integrity checks)
-    ├─→ Hunter Agent (detects risks/patterns)
-    └─→ Alert Agent (dispatches findings)
-    
-    ↓
-    ├─→ [Data Sources]
-    │   ├─ V-Dem static data
-    │   ├─ Freedom House ratings
-    │   ├─ PEI v10.0 (real electoral data)
-    │   ├─ OONI live API (real-time censorship)
-    │   └─ Peru-specific modules
-    │
-    ├─→ [RAG Legal Knowledge Base]
-    │   ├─ Keyword retriever (fallback)
-    │   ├─ Semantic search (ChromaDB+embeddings)
-    │   └─ 14 legal instruments indexed
-    │
-    └─→ [Database]
-        ├─ Analysis runs
-        ├─ Reports
-        ├─ Observation sessions
-        ├─ Entries & deduplication
-        └─ Alerts
+### Healthcheck remoto
 
-    ↓
-    Markdown Report + JSON Trace → Frontend Dashboard
+```bash
+curl -s https://democracia-peirs-production.up.railway.app/api/health | jq
 ```
 
----
+### Healthcheck local (dev)
 
-## 🎯 Validation Checklist
-
-### Backend ✅
-- [x] All Python dependencies installed
-- [x] Configuration validated
-- [x] 82/82 tests passing
-- [x] API health check operational
-- [x] Countries endpoint returning data
-- [x] Data loaders working (V-Dem, PEI, FH, RSF)
-- [x] Database (SQLite) initialized
-- [x] RAG keyword retriever functional
-- [x] OONI integration ready
-- [x] Fraud/hate analysis module imported
-- [x] Alert system ready (Slack/webhook/email)
-
-### Frontend ⚠️
-- [ ] Node.js installed (MISSING)
-- [ ] npm available (MISSING)
-- [x] React dependencies downloaded
-- [x] build configuration ready
-- [ ] Vite dev server can start (BLOCKED by missing Node)
-
-### Integration 🟡
-- [x] Backend → Database bridge working
-- [x] Backend → RAG system connected
-- [x] Backend → OONI API ready
-- [x] Backend → Peru-specific data loaded
-- [ ] Backend → Frontend communication (frontend blocked)
-
----
-
-## 📋 Next Steps
-
-### IMMEDIATE (Unblock Frontend)
-1. **Install Node.js 18+** from https://nodejs.org/
-2. Verify npm is available: `npm --version`
-3. Return to frontend folder
-4. Run: `npm run dev`
-5. Confirm dashboard loads on `http://localhost:5173`
-
-### THEN (Integration Testing)
-1. Run: `C:/Python314/python.exe -m uvicorn backend/app:app --reload --port 8000` (backend)
-2. In new terminal: `npm run dev` (frontend, once Node is installed)
-3. Test real analysis on Peru 2026: `POST /api/analyze` with `{"country_code": "PER"}`
-4. Verify dashboard charts and data flow
-
-### OPTIONAL (Production Hardening)
-- [ ] Set `ANTHROPIC_API_KEY` env var for LLM features
-- [ ] Configure alert channels (Slack webhook, email SMTP)
-- [ ] Load v-dem static embeddings to ChromaDB (init_rag)
-- [ ] Configure OONI caching (Redis optional)
-- [ ] SSL certificate for deployment
-
----
-
-## 🔐 Security Status
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| API Authentication | ⚠️ Optional | API key bearer token implemented but not enforced |
-| Database | ✅ Local SQLite | No internet exposure |
-| External APIs | ✅ Isolated | OONI fetch only (read-only) |
-| LLM | ⚠️ Not configured | ANTHROPIC_API_KEY needed for full features |
-| Data | ✅ Public sources | No sensitive data in repo |
-
----
-
-## 📞 Support Commands
-
-### Backend Health Check
-```powershell
-C:/Python314/python.exe -m uvicorn backend/app:app --reload --port 8000
-# Then: Invoke-WebRequest http://localhost:8000/api/health
-```
-
-### Run Tests
 ```powershell
 cd d:\DemocracIA
-C:/Python314/python.exe -m pytest backend/tests/ -v
+.\iniciar_backend.ps1
+# Espera: [V-Dem] OK [FH] OK [PEI] OK + Application startup complete
 ```
 
-### Start Frontend (once Node.js is installed)
+### Tests (correr suite)
+
+```powershell
+cd d:\DemocracIA\backend
+C:/Python314/python.exe -m pytest -q
+```
+
+### Backup de producción
+
+```bash
+python scripts/backup.py --targz
+# Genera backups/peirs_backup_YYYY-MM-DD_HHMMSS.tar.gz
+```
+
+### Frontend dev local
+
 ```powershell
 cd d:\DemocracIA\frontend
-npm install   # If node_modules was deleted
-npm run dev   # Start dev server on http://localhost:5173
+npm install
+npm run dev
+# Sirve en http://localhost:5173
 ```
 
 ---
 
-**Generated:** 2026-04-04 15:17 UTC  
-**System:** Windows 11 | Python 3.14.3 | FastAPI 0.135.3  
-**Next Review:** After Node.js installation
+## DOCUMENTOS ASOCIADOS
+
+- [PEIRS_Documento_Institucional_v2.0.md](DOCS%20Proyect/PEIRS_Documento_Institucional_v2.0.md) — Dossier institucional ejecutivo (CONFIDENCIAL)
+- [PEIRS_Arquitectura_Roadmap.md](DOCS%20Proyect/PEIRS_Arquitectura_Roadmap.md) — Roadmap técnico con script de sesiones
+- [INFORME_METODOLOGIA.md](DOCS%20Proyect/INFORME_METODOLOGIA.md) — Playbook reproducible del Elite Report
+- [QUICKSTART.md](QUICKSTART.md) — Guía de uso de la plataforma
+- [DEPLOY_README.md](DEPLOY_README.md) — Procedimiento de despliegue
+- [AUDIT_TECNICO_COMPLETO.md](AUDIT_TECNICO_COMPLETO.md) — Auditoría técnica detallada
+
+---
+
+**Generated:** 2026-05-04 (cierre v0.5.2)
+**System:** Producción en `democracia.ar` + `democracia-peirs-production.up.railway.app`
+**Next Review:** Tras Sprints 2-3 (CountryAdapter + modelo institucional generalizado)
