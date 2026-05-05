@@ -1,18 +1,39 @@
 # DEMOCRAC.IA (PEIRS) — Codebase Analysis for AI Agents
+
 **Comprehensive Guide to Navigate, Build, and Extend the Codebase**
-**Current Version:** v0.4.0 (April 2026)
+**Current Version:** v0.5.2 (May 2026)
+
+> **Update note (May 4, 2026):** This document was refreshed from v0.4.0
+> baseline to reflect v0.5.2. Major changes since v0.4.0:
+>
+> - Two pipelines now coexist: original LangGraph (4 agents) + Elite Report
+>   (6-stage pipeline producing 12 chapters + 3 appendices).
+> - V-Dem upgraded to v16 (1789-2025).
+> - i18n trilingual (es/en/pt) with 180+ keys + 50 subchapter title mappings.
+> - SQLite triple-tier persistence (filesystem + TEXT columns + PDF on-demand).
+> - 91/91 tests passing (was 82).
+> - Python 3.11 in Railway (Nixpacks); 3.14 in dev local.
+> - PDF generation via browser-native `/printable` + `window.print()` (no
+>   xhtml2pdf).
+> - Architect Agent autonomous via Claude Opus 4.7 + claude-agent-sdk.
 
 ---
 
 ## 1. GIT & BUILD CONVENTIONS
 
 ### Repository Structure
-```
+
+```text
 d:\DemocracIA/
-├── backend/              # FastAPI + LangGraph agents (Python 3.14)
+├── backend/              # FastAPI + LangGraph agents (Python 3.11 prod / 3.14 dev)
+│   └── agents/
+│       ├── elite_report/ # Elite Report 6-stage pipeline (12 chapters + 3 appendices)
+│       └── ...
 ├── frontend/             # React 19 + Vite 7 (Node.js ES6 modules)
-├── data/                 # Datasets: V-Dem, Freedom House, RSF, PEI (3.5GB+)
-├── docs/                 # Architecture & deployment guides
+├── data/                 # Datasets: V-Dem v16, Freedom House, RSF, PEI (~440MB CSV excluded)
+├── DOCS Proyect/         # Institutional + technical documentation (es)
+├── scripts/              # backup.py, generate_vdem_static.py
+├── nixpacks.toml         # Railway Python 3.11 build config
 └── [config files]        # Procfile, railway.toml, netlify.toml, requirements.txt
 ```
 
@@ -23,7 +44,8 @@ d:\DemocracIA/
   - Build command: `npm run build` (from `frontend/`)
   - Publish directory: `frontend/dist`
 - **package.json** (frontend): Scripts: `dev`, `build`, `lint`, `preview`
-- **requirements.txt** (backend): 51 core python packages pinned to v0.3.0
+- **requirements.txt** (backend): production dependencies pinned (LangGraph, FastAPI, Anthropic SDK, ChromaDB, sentence-transformers, etc.)
+- **requirements-dev.txt**: pytest + dev tooling, separated from prod (NOT installed on Railway)
 
 ### Git Conventions
 - **.gitignore**: Excludes large datasets (>100MB), generated reports, SQLite DBs, build artifacts
@@ -33,10 +55,12 @@ d:\DemocracIA/
 - **No Docker files present** — uses native Python + Node.js runtimes
 
 ### Local Development Setup
+
 ```bash
-# Backend: Python 3.14+ required
+# Backend: Python 3.11 (paridad con Railway) o 3.14 (dev local Windows)
 cd backend
-pip install -r requirements.txt
+pip install -r ../requirements.txt
+pip install -r ../requirements-dev.txt   # for pytest + dev tooling
 python -m uvicorn app:app --reload --port 8000
 
 # Frontend: Node.js 18+ required
@@ -47,7 +71,8 @@ npm run build       # Production build to dist/
 npm run lint        # ESLint check
 
 # Full stack (PowerShell scripts provided)
-.\arrange_all.ps1   # Starts backend + frontend in parallel
+.\iniciar_backend.ps1     # Backend with PYTHONUTF8=1
+.\iniciar_frontend.ps1    # Frontend dev server
 ```
 
 ---
@@ -55,81 +80,106 @@ npm run lint        # ESLint check
 ## 2. ARCHITECTURE PATTERNS
 
 ### System Topology
-```
-┌─────────────────────────┐
-│   React 19 + Vite       │  localhost:5173 (frontend)
-│   Dashboard + Charts    │
-└────────────┬────────────┘
-             │ HTTP REST (8001 in prod, 8000 local)
-┌────────────▼────────────────────────────────────┐
-│   FastAPI Backend (Python 3.14)                 │
-│   ┌──────────────────────────────────────────┐  │
-│   │  LangGraph Pipeline (5 sequential agents)│  │
-│   │  Ingestion → PoliticalAnalyst → Legal    │  │
-│   │  → Dictamen → ReportGenerator            │  │
-│   └──────────────────────────────────────────┘  │
-│                                                  │
-│   ┌──────────┐ ┌──────────┐ ┌──────────────┐   │
-│   │Agent 5   │ │Agent 7   │ │Expert Archi- │   │
-│   │FieldVali│ │AlertDisp │ │ tect (meta)  │   │
-│   └──────────┘ └──────────┘ └──────────────┘   │
-│                                                  │
-│   Core Modules: data_loaders, catalog, schema   │
-└────────────┬────────────┬──────────────────────┘
-             │            │
-        ┌────▼────┐  ┌────▼──────────┐
-        │ SQLite  │  │ RAG (ChromaDB) │  ← Fallback to keyword TF-IDF
-        │   WAL   │  │ 60+ legal docs │
-        └─────────┘  └────────────────┘
+
+```text
+┌──────────────────────────────┐
+│   React 19 + Vite            │  democracia.ar (Netlify)
+│   Single-file App.jsx        │
+└────────────┬─────────────────┘
+             │ HTTP REST (Railway 8080 prod, localhost:8000 dev)
+┌────────────▼─────────────────────────────────────────────┐
+│   FastAPI Backend (Python 3.11 Railway / 3.14 dev)       │
+│   ┌───────────────────────────────────────────────────┐  │
+│   │  Pipeline A — LangGraph (4 agents, original)      │  │
+│   │  OSINT → Political → Legal → Report               │  │
+│   └───────────────────────────────────────────────────┘  │
+│   ┌───────────────────────────────────────────────────┐  │
+│   │  Pipeline B — Elite Report (6 stages, canonical)  │  │
+│   │  EliteLoader → PhaseOrganizer → CrossRefBuilder   │  │
+│   │  → PredictiveEngine → ChapterComposer →           │  │
+│   │  Visualizer + Renderer → Persist (triple-tier)    │  │
+│   └───────────────────────────────────────────────────┘  │
+│                                                           │
+│   ┌──────────┐ ┌──────────┐ ┌──────────────┐            │
+│   │Hunter    │ │Auditor   │ │Architect     │            │
+│   │RSS+OONI  │ │FieldVali │ │Agent (Opus 4│            │
+│   │24/7      │ │+Patterns │ │.7 autónomo)  │            │
+│   └──────────┘ └──────────┘ └──────────────┘            │
+│                                                           │
+│   i18n: 180+ keys (es/en/pt) + section_titles.py         │
+│   Core: data_loaders, catalog, schema, vdem_static       │
+└────────────┬───────────────────┬─────────────────────────┘
+             │                   │
+        ┌────▼────────────┐ ┌────▼──────────┐
+        │ SQLite triple   │ │ RAG (ChromaDB)│  ← keyword fallback
+        │ tier (FS+TEXT+  │ │ 14 legal docs │
+        │ PDF on-demand)  │ │ + sentence-tr │
+        └─────────────────┘ └───────────────┘
              │
         ┌────▼──────────────────┐
         │ Data layers:          │
-        │ V-Dem, FH, RSF, PEI   │
+        │ V-Dem v16 (1789-2025) │
+        │ FH FIW, PEI 10, RSF   │
         │ OONI API (real-time)  │
+        │ Hunter RSS Perú (4h)  │
         └───────────────────────┘
 ```
 
-### Agent Pipeline (LangGraph)
-**State**: `PEIRSState` (TypedDict) passes immutably through 5 nodes
+### Pipeline A — LangGraph (4 agents, original)
+
+**State**: `PEIRSState` (TypedDict) passes immutably through 4 nodes
 - **run_id**: UUID for tracking
 - **country_code**: ISO 3166-1 alpha-3
-- **context_data**: V-Dem indices normalized 0–1
+- **context_data**: V-Dem v16 indices + FH + PEI + RSF normalized 0–1
 - **political_data**: Coalition, polarization, media bias scores
 - **legal_analysis**: Violations per international instrument
 - **risk_score**: 0–100 aggregated risk
 - **risk_level**: `critical|high|moderate|low`
-- **report_chapters**: Dict of 10 markdown sections
+- **report_chapters**: Dict of markdown sections
 - **agent_logs**: Audit trail of all operations
 - **trace_log**: Chronological operations log
 
 **Agent Nodes:**
 
-1. **Ingestion Agent** (`ingestion_agent`, `app.py:~1158`)
-   - Loads V-Dem v15 (383 columns → 24 selected), Freedom House FIW 2025, RSF, PEI v10
+1. **Ingestion Agent** (OSINT loader)
+   - Loads V-Dem v16 (~440MB CSV with 21 monitored indicators) or static fallback (`vdem_static.py`, 38 countries × 21 indicators × 1985-2025)
+   - Loads Freedom House FIW 2013-2025, RSF 2025, PEI 10.0
    - Normalizes indices to 0–1 scale
    - Integrates real-time OONI API for internet censorship
 
-2. **Political Analyst Agent** (`political_analyst_agent`, `app.py:~1340`)
+2. **Political Analyst Agent**
    - Evaluates media independence (V-Dem `v2mebias` + RSF)
    - Calculates polarization, opposition barriers
-   - References Claude Sonnet for contextual analysis
-   - No LLM fallback—uses rule-based heuristics if API fails
+   - References Claude Sonnet 4.6 for contextual analysis
+   - Rule-based heuristics fallback if LLM unavailable
 
-3. **Legal Compliance Agent** (`legal_compliance_agent`, `app.py:~1520`)
+3. **Legal Compliance Agent**
    - RAG query: matches country/issue to international instruments
-   - Checks violations: ICCPR, CEDAW, ICERD, CRPD, CADH, CDI, UNDRIP, UNCAC
-   - Uses ChromaDB semantic search OR keyword TF-IDF fallback
-   - Returns applicable_instruments dict + violation_count
+   - Checks violations: ICCPR, CADH, CDI, CEDAW, OSCE/ODIHR, UNDRIP, jurisprudence CIDH, Constitución Perú 1993, LOE, LOP, Resoluciones JNE (14 instruments total)
+   - Uses ChromaDB semantic search OR keyword fallback
+   - Returns `applicable_instruments` dict + violation_count
 
-4. **Electoral Dictamen Agent** (`electoral_dictamen_agent`, `app.py:~1710`)
-   - Generates formal legal opinion (Spanish)
-   - Cites specific articles + severity levels
-   - Output: structured `dictamen` dict with violations, risk level
-
-5. **Report Generator Agent** (`report_generator_agent`, `app.py:~2010`)
-   - Assembles 10-chapter markdown report (3000+ words)
+4. **Report Generator Agent**
+   - Assembles markdown report (3000+ words)
    - Generates executive summary via Claude
    - Stores report in SQLite + JSON files in `/data/reports/{run_id}.json`
+
+### Pipeline B — Elite Report (6 stages, canonical product)
+
+Located in `backend/agents/elite_report/`. Produces the institutional-grade
+12-chapter + 3-appendix report.
+
+1. **EliteLoader** (`loaders/elite_loader.py`) — parallel evidence loading: Hunter entries, dispatched alerts, country-filtered constitutionalist RAG corpus, V-Dem v16 + FH + PEI + RSF historical series. Cache TTL 1h.
+
+2. **PhaseOrganizer** (`organizers/phase_organizer.py`) — groups Hunter findings into 9 electoral cycle phases by date and electoral calendar.
+
+3. **CrossReferenceBuilder** (`organizers/cross_reference.py`) — links high/critical findings to normative-framework articles via curated 14-category mapping.
+
+4. **PredictiveEngine** (`predictive/engine.py`) — hybrid engine: deterministic rules + Claude Sonnet 4.6 producing 6 probabilistic scenarios with confidence bands + early-warning meter.
+
+5. **ChapterComposer** (`composer/chapter_composer.py`) — 12 specialized prompts with Anthropic prompt caching, concurrency limit 4. Each chapter generated with shared context + chapter-specific data. LANGUAGE_RULE enforces output language (es/en/pt).
+
+6. **Visualizer + Renderer** — 21 server-side SVG visualizations (`visualizer/renderers.py` + `renderers_5b.py`); HTML+CSS @page A4 + @media print (`renderer/html_renderer.py`); SQLite triple-tier persistence (filesystem + TEXT columns + PDF on-demand).
 
 **Supporting Agents:**
 
@@ -138,26 +188,53 @@ npm run lint        # ESLint check
 - **Expert Architect Agent** (`agents/architect.py`): Meta-agent that audits system quality, proposes structural improvements (runs periodically, non-blocking)
 
 ### Module Organization
-```
-backend/agents/          # 7 agents + pipeline orchestration
-backend/modules/         # Data loaders, validation, analysis
-  ├── config.py         # Centralized env vars + constants (~50 vars)
-  ├── data_loaders.py   # V-Dem, FH, RSF, PEI CSV loaders
-  ├── catalog.py        # Country metadata (38 countries)
-  ├── field_validator.py # Entry quality + pattern detection
-  ├── fraud_hate_analysis.py # Pattern clustering
-  └── peru_data.py      # Peru 2026-specific data
-backend/db/              # SQLite schema + CRUD
-  ├── schema.py         # 8 tables: analysis_runs, reports, observation_*
-  └── crud.py           # Queries for entries, reports
-backend/rag/             # Legal knowledge base
-  ├── corpus.py         # 60+ documents (~100KB text)
-  ├── indexer.py        # ChromaDB init + embedding
-  └── retriever.py      # Semantic + keyword fallback queries
-backend/integrations/    # External APIs
-  ├── ooni.py           # Censorship alerts
-  ├── alerts.py         # Slack/webhook/SMTP dispatch
-  ├── peru_sources.py   # Peru JNE, ONPE APIs (stubs)
+
+```text
+backend/agents/                    # Agents + pipeline orchestration
+  ├── pipeline.py                  # LangGraph pipeline original
+  ├── architect.py                 # Architect Agent (Opus 4.7 autónomo via claude-agent-sdk)
+  ├── elite_report/                # Elite Report 6-stage pipeline
+  │   ├── elite_report.py          # Orchestrator (PEIRSEliteReport)
+  │   ├── i18n.py                  # 180+ keys for chrome trilingüe (es/en/pt)
+  │   ├── section_titles.py        # 50 entries — subchapter title translation
+  │   ├── models.py                # Pydantic models (FindingRef, ForecastScenario, etc.)
+  │   ├── loaders/                 # EliteLoader (parallel evidence)
+  │   ├── organizers/              # PhaseOrganizer + CrossReferenceBuilder
+  │   ├── predictive/              # PredictiveEngine + scenarios.py templates
+  │   ├── composer/                # ChapterComposer + 13 prompts cap_NN.md
+  │   ├── visualizer/              # 21 SVG renderers + dispatch
+  │   └── renderer/                # html_renderer.py (cover, footer, TOC, anexos)
+  └── report_designer/              # ReportDesigner sub-agent (4 audiencias)
+backend/modules/                    # Data loaders, validation, analysis
+  ├── config.py                    # Centralized env vars + constants (~50 vars). VDEM_VERSION, etc.
+  ├── data_loaders.py              # V-Dem v16, FH, RSF, PEI CSV loaders
+  ├── vdem_static.py               # Static V-Dem fallback (38 países × 21 indicators × 1985-2025, 618KB)
+  ├── catalog.py                   # Country metadata (38 countries)
+  ├── field_validator.py           # Entry quality + pattern detection
+  ├── fraud_hate_analysis.py       # Pattern clustering
+  └── peru_data.py                 # Peru 2026-specific data (forces, scenarios, regions)
+backend/db/                         # SQLite triple-tier persistence
+  ├── schema.py                    # 8 tables + elite_reports with md_content/html_content TEXT
+  └── crud.py                      # Queries for entries, reports
+backend/rag/                        # Legal knowledge base
+  ├── corpus.py                    # 14 instruments + curated docs
+  ├── indexer.py                   # ChromaDB init + embedding (in async background task)
+  └── retriever.py                 # Semantic + keyword fallback queries
+backend/integrations/               # External APIs
+  ├── ooni.py                      # Censorship alerts (date-only since/until)
+  ├── alerts.py                    # Slack/webhook/SMTP dispatch
+  └── peru_sources.py              # Peru JNE, ONPE APIs
+backend/tests/                      # 91 tests
+  ├── test_elite_pipeline.py       # 9 Sprint 1 tests for Elite Report
+  ├── test_e2e_pipeline.py         # End-to-end LangGraph pipeline
+  ├── test_db.py                   # 30 CRUD tests
+  ├── test_data_loaders.py         # V-Dem, FH, RSF, PEI loaders
+  ├── test_field_validator.py      # 6 validation tests
+  ├── test_config_and_modules.py   # 18 config tests
+  └── conftest.py                  # Fixtures
+scripts/                            # Operational scripts
+  ├── backup.py                    # Backup completo prod (--targz para tar.gz)
+  └── generate_vdem_static.py      # Regenerate vdem_static.py from full CSV
 ```
 
 ### Design Patterns
@@ -193,10 +270,13 @@ backend/integrations/    # External APIs
 ## 3. TESTING STRATEGY
 
 ### Test Framework & Coverage
-- **Framework**: `pytest` (v7+, standard)
-- **Total Tests**: 82 unit + E2E tests
-- **Coverage**: 100% passing (as of April 4, 2026)
+
+- **Framework**: `pytest` (separated in `requirements-dev.txt`, NOT installed on Railway)
+- **Total Tests**: 91 unit + E2E + Elite Report integration tests
+- **Coverage**: 100% passing (as of May 4, 2026)
+- **Runtime**: ~8s for full suite
 - **Test Command**: `python -m pytest backend/tests/ -v`
+- **Sprint 1 additions**: `test_elite_pipeline.py` adds 9 integration tests for the Elite Report pipeline (VizKind dispatch, FindingRef shape, PredictiveEngine returns, attach_visualizations, render SVG, ChapterComposer no-LLM mode, `_format_vdem_emb`, disclosure presence)
 - **Coverage Report**: `python -m pytest backend/tests/ --cov=backend --cov-report=html`
 
 ### Test File Organization

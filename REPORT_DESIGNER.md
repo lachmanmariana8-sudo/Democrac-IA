@@ -2,7 +2,40 @@
 
 **Propósito:** Sub-agente de PEIRS especializado en componer informes de observación electoral de nivel internacional a partir de los hallazgos del Hunter, los datasets estructurales y el análisis cualitativo. Reproducible, parametrizable por audiencia, integrado con el dashboard.
 
-**Estado:** Diseño aprobado, sin implementar. Este documento es el plan completo para que la implementación sea mecánica.
+**Estado del blueprint:** Diseño aprobado en 2026-04-14. Documento histórico que guió la implementación.
+
+---
+
+## ⓘ Implementation Status (2026-05-04)
+
+> **Este blueprint guió la implementación de dos productos relacionados:**
+>
+> 1. **`ReportDesigner` (sub-agente)** — implementado en
+>    `backend/agents/report_designer/`. Pipeline Structurer → Visualizer
+>    → Composer. 4 audiencias (technical / executive / press /
+>    international). ES / EN. Dedupe semántico (category+URL+date).
+>    Priorización ponderada por severidad × recencia × credibilidad.
+>    **OPERATIVO** al 4-may-2026.
+>
+> 2. **`PEIRS Elite Report`** — sucesor canónico del ReportDesigner para
+>    la audiencia institucional internacional. Implementado en
+>    `backend/agents/elite_report/`. Pipeline de 6 etapas (EliteLoader →
+>    PhaseOrganizer → CrossReferenceBuilder → PredictiveEngine →
+>    ChapterComposer → Visualizer + Renderer). 12 capítulos + 3 anexos.
+>    i18n trilingüe (es/en/pt). Costo $0.40-0.80 por informe.
+>    **OPERATIVO** al 4-may-2026.
+>
+> **Diferencia entre ambos:** el ReportDesigner es la versión genérica
+> con cuatro audiencias y dos idiomas; el Elite Report es la versión
+> "premium" especializada para audiencia institucional/observadores
+> internacionales con motor predictivo y i18n trilingüe.
+>
+> **Para el blueprint sucesor del Elite Report**, ver
+> [ELITE_REPORT.md](ELITE_REPORT.md).
+>
+> **Para el estado actual de la plataforma**, ver
+> [STATUS_REPORT.md](STATUS_REPORT.md) y
+> [DOCS Proyect/PEIRS_Arquitectura_Roadmap.md](DOCS%20Proyect/PEIRS_Arquitectura_Roadmap.md).
 
 ---
 

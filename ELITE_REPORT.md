@@ -1,10 +1,54 @@
 # PEIRS Elite Report — Blueprint arquitectónico
 
-**Versión:** 1.1 — APROBADO para implementación
-**Estado:** Decisiones confirmadas por Mariana Lachman el 2026-04-20. Sprint 2 autorizado.
-**Fecha:** 2026-04-20
+**Versión del blueprint:** 1.1 — APROBADO para implementación
+**Estado del blueprint:** Decisiones confirmadas por Mariana Lachman el 2026-04-20. Sprint 2 autorizado.
+**Fecha del blueprint:** 2026-04-20
 **Autora del proyecto:** Mariana Lachman · DemocracIA
 **Referencias:** `REPORT_DESIGNER.md` (blueprint predecesor, Fases A-D ya implementadas), `INFORME_PERU_2026.md` (informe v1.1 manual ya entregado).
+
+---
+
+## ⓘ Implementation Status (2026-05-04)
+
+> **Este documento es el blueprint arquitectónico que guió la implementación.**
+> El producto descrito aquí está **operativo en producción al cierre del
+> 4-may-2026 (v0.5.2)**. El blueprint se mantiene como referencia histórica
+> de las decisiones de diseño.
+>
+> **Estado real al 2026-05-04:**
+>
+> | Item | Estado |
+> | --- | --- |
+> | 12 capítulos + 3 anexos generándose | OPERATIVO |
+> | Pipeline 6 etapas (EliteLoader → ... → Renderer) | OPERATIVO |
+> | Motor predictivo con 6 escenarios + early-warning | OPERATIVO |
+> | 21 visualizaciones SVG server-side | OPERATIVO |
+> | Citas APA 7 con `[URL]` activas | OPERATIVO |
+> | i18n trilingüe (es / en / pt) — 180+ claves | OPERATIVO (4-may) |
+> | Section titles 1.1-12.6 traducidos en/pt | OPERATIVO (4-may) |
+> | Persistencia SQLite triple-tier | OPERATIVO (4-may) |
+> | PDF browser-native via `/printable` | OPERATIVO (reemplazó xhtml2pdf) |
+> | `/structured` endpoint para extracción dinámica | OPERATIVO |
+> | Disclosure neutro (sin nombres de organismos) | OPERATIVO |
+> | Sprint 1 — 9 tests integrados | OPERATIVO (91/91 total) |
+> | Costo real por informe | $0.40-0.80 (dentro del límite $1.00 OK) |
+>
+> **Pendientes respecto al blueprint:**
+>
+> | Item | Estado | Resolución |
+> | --- | --- | --- |
+> | Traducir prompts cap_NN.md a en/pt | Pendiente | Sprint 4 (8-10h). Mientras tanto, `section_titles.py` cubre los headers como red de seguridad |
+> | Country adapter pluggable | Pendiente | Sprint 2 (4-6h), bloqueador para Brasil/USA |
+> | Modelo institucional generalizado (federal centr./descentr.) | Pendiente | Sprint 3 (6-8h) |
+> | Brasil 2026 onboarding | Pendiente | Sprint 5 (10-12h, antes 4-oct-2026) |
+> | USA 2026 midterms onboarding | Pendiente | Sprint 6 (12-16h, antes 3-nov-2026) |
+>
+> **Documentos hermanos vivos (estado actual):**
+>
+> - [STATUS_REPORT.md](STATUS_REPORT.md) — diagnóstico técnico
+> - [DOCS Proyect/PEIRS_Documento_Institucional_v2.0.md](DOCS%20Proyect/PEIRS_Documento_Institucional_v2.0.md) — dossier para partners
+> - [DOCS Proyect/PEIRS_Arquitectura_Roadmap.md](DOCS%20Proyect/PEIRS_Arquitectura_Roadmap.md) — roadmap técnico cronológico
+> - [DOCS Proyect/INFORME_METODOLOGIA.md](DOCS%20Proyect/INFORME_METODOLOGIA.md) — playbook reproducible
 
 ## Decisiones confirmadas (2026-04-20)
 
