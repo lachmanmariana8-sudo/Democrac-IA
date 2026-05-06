@@ -5334,6 +5334,293 @@ async def _hunter_scheduler_loop() -> None:
         await asyncio.sleep(interval_min * 60)
 
 
+# ── Phase auto-advance per electoral calendar ────────────────────────────
+# Mantiene la fase de la sesion sincronizada con el calendario electoral del
+# pais sin requerir intervencion manual. Para Peru 2026 cubre 1ra y 2da vuelta
+# (LOE 26859 Art. 380). Cada entrada es (fecha_iso, fase_canonica) ordenada.
+# Las fechas pueden re-usarse: para 2da vuelta se vuelve a pre_campaign etc.
+
+_PHASE_CALENDAR: Dict[str, List[tuple]] = {
+    "PER": [
+        ("2026-01-12", "preparatory"),
+        ("2026-02-12", "pre_campaign"),
+        ("2026-03-13", "campaign"),
+        ("2026-04-10", "electoral_silence"),
+        ("2026-04-12", "election_day"),
+        ("2026-04-13", "counting_tabulation"),
+        ("2026-04-26", "post_election"),
+        ("2026-05-12", "dispute_resolution"),
+        # Segunda vuelta (Peru LOE Art. 380): ~60 dias post primera vuelta
+        ("2026-05-22", "pre_campaign"),
+        ("2026-06-04", "campaign"),
+        ("2026-06-05", "electoral_silence"),
+        ("2026-06-07", "election_day"),
+        ("2026-06-08", "counting_tabulation"),
+        ("2026-06-21", "post_election"),
+        ("2026-07-12", "dispute_resolution"),
+        ("2026-07-25", "completed"),
+    ],
+}
+
+
+def _expected_phase_for(country_code: str, today_iso: str) -> Optional[str]:
+    """Devuelve la fase que el pais deberia tener segun calendario.
+
+    Usa el ultimo entry cuya fecha <= hoy. Permite re-entrar fases (e.g.
+    pre_campaign de 2da vuelta tras dispute_resolution de 1ra)."""
+    cal = _PHASE_CALENDAR.get(country_code.upper())
+    if not cal:
+        return None
+    target = None
+    for date_iso, phase in cal:
+        if date_iso <= today_iso:
+            target = phase
+        else:
+            break
+    return target
+
+
+async def _phase_auto_advance_once() -> None:
+    """Chequea sesiones activas y avanza fase segun calendario.
+    Update directo a DB — bypasea el check de orden del API endpoint para
+    permitir re-entrar fases en 2da vuelta."""
+    if not observation_store:
+        return
+    today_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    for cc, session in list(observation_store.items()):
+        try:
+            expected = _expected_phase_for(cc, today_iso)
+            if not expected:
+                continue
+            current_raw = session.get("phase", "preparatory")
+            current = _PHASE_ALIAS.get(current_raw, current_raw)
+            if current == expected:
+                continue
+            now_iso = datetime.now(timezone.utc).isoformat()
+            session["phase"] = expected
+            session["updated_at"] = now_iso
+            session.setdefault("phase_notes", []).append({
+                "phase": expected,
+                "notes": f"auto-advance segun calendario {cc}",
+                "ts": now_iso,
+                "auto": True,
+            })
+            observation_store[cc] = session
+            try:
+                with _get_db() as conn:
+                    conn.execute(
+                        "UPDATE observation_sessions SET phase=?, updated_at=?, data=? "
+                        "WHERE country_code=? AND session_id=?",
+                        (expected, now_iso, json.dumps(session), cc, session["session_id"])
+                    )
+                    conn.commit()
+            except Exception as _db_err:
+                print(f"[phase-advance][{cc}] DB error: {_db_err}")
+            print(f"[phase-advance][{cc}] {current} -> {expected} (auto, calendar)")
+        except Exception as e:
+            print(f"[phase-advance][{cc}] error: {e}")
+
+
+async def _phase_auto_advance_loop() -> None:
+    """Background loop. Corre 1 vez 2 min post-startup y luego cada 6h.
+    Opt-out: AUTO_PHASE_ADVANCE=0."""
+    if os.getenv("AUTO_PHASE_ADVANCE", "1") != "1":
+        print("[phase-advance] Disabled (AUTO_PHASE_ADVANCE != 1).")
+        return
+    print("[phase-advance] Loop activo — chequeo cada 6h.")
+    await asyncio.sleep(120)  # warm-up 2 min
+    while True:
+        try:
+            await _phase_auto_advance_once()
+        except Exception as e:
+            print(f"[phase-advance] loop error: {e}")
+        await asyncio.sleep(6 * 3600)
+
+
+# ── Daily digest a Discord ────────────────────────────────────────────────
+
+async def _generate_daily_digest_for(country_code: str) -> Optional[Dict[str, Any]]:
+    """Agrega hallazgos de las ultimas 24h para un pais.
+
+    Devuelve dict con stats + top 3 findings. None si no hay sesion activa."""
+    cc = country_code.upper()
+    session = observation_store.get(cc)
+    if not session:
+        return None
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    cutoff_iso = cutoff.isoformat()
+    entries = session.get("entries", [])
+    recent = [e for e in entries if (e.get("recorded_at") or "") >= cutoff_iso]
+    from collections import Counter
+    by_sev = Counter(e.get("severity", "info") for e in recent)
+    by_cat = Counter(e.get("category", "unknown") for e in recent)
+    severity_rank = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+    top = sorted(
+        recent,
+        key=lambda e: (severity_rank.get(e.get("severity", "info"), 0),
+                       e.get("recorded_at", "")),
+        reverse=True,
+    )[:3]
+    return {
+        "country_code": cc,
+        "phase": session.get("phase"),
+        "total_24h": len(recent),
+        "by_severity": dict(by_sev),
+        "by_category": dict(by_cat),
+        "top_findings": [{
+            "category": t.get("category"),
+            "severity": t.get("severity"),
+            "finding": (t.get("finding") or "")[:200],
+            "source": t.get("source_name"),
+            "recorded_at": t.get("recorded_at"),
+        } for t in top],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def _send_daily_digest_discord(digest: Dict[str, Any]) -> bool:
+    """Postea digest formateado al ALERT_WEBHOOK_URL."""
+    cc = digest["country_code"]
+    total = digest["total_24h"]
+    phase = digest["phase"]
+    if total == 0:
+        body = (
+            f"**Fase actual:** `{phase}`\n"
+            f"Sin nuevos hallazgos en las ultimas 24h."
+        )
+    else:
+        sev = digest["by_severity"]
+        cat = digest["by_category"]
+        sev_line = ", ".join(f"{k}={v}" for k, v in sorted(
+            sev.items(),
+            key=lambda x: -{"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}.get(x[0], 0)
+        ))
+        top_cats = sorted(cat.items(), key=lambda x: -x[1])[:5]
+        cat_line = ", ".join(f"{k}={v}" for k, v in top_cats)
+        findings_md = "\n".join([
+            f"- **{f['severity']}** [{f['category']}] {f['finding'][:140]}"
+            for f in digest["top_findings"]
+        ])
+        body = (
+            f"**Fase actual:** `{phase}`\n"
+            f"**Total 24h:** {total} hallazgos\n"
+            f"**Por severidad:** {sev_line}\n"
+            f"**Top categorias:** {cat_line}\n\n"
+            f"**Top hallazgos:**\n{findings_md}\n\n"
+            f"Dashboard: https://democracia.ar"
+        )
+    return await _send_admin_discord(f"Daily Digest — {cc}", body, color=3447003)
+
+
+async def _daily_digest_loop() -> None:
+    """Corre 1 vez por dia a las DAILY_DIGEST_UTC_HOUR (default 13:00 UTC = 10 ART).
+    Opt-out: DAILY_DIGEST_ENABLED=0."""
+    if os.getenv("DAILY_DIGEST_ENABLED", "1") != "1":
+        print("[daily-digest] Disabled.")
+        return
+    target_hour = int(os.getenv("DAILY_DIGEST_UTC_HOUR", "13"))
+    print(f"[daily-digest] Loop activo — corre cada dia a las {target_hour:02d}:00 UTC.")
+    while True:
+        now = datetime.now(timezone.utc)
+        target = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+        if target <= now:
+            target = target + timedelta(days=1)
+        sleep_seconds = (target - now).total_seconds()
+        print(f"[daily-digest] Proxima corrida en {sleep_seconds/3600:.1f}h")
+        await asyncio.sleep(sleep_seconds)
+        try:
+            for cc in list(observation_store.keys()):
+                digest = await _generate_daily_digest_for(cc)
+                if digest:
+                    sent = await _send_daily_digest_discord(digest)
+                    print(f"[daily-digest][{cc}] total={digest['total_24h']} sent={sent}")
+        except Exception as e:
+            print(f"[daily-digest] loop error: {e}")
+
+
+# ── Daily backup ──────────────────────────────────────────────────────────
+
+async def _run_daily_backup() -> None:
+    """Tar.gz del volumen de datos a DAILY_BACKUP_DIR.
+
+    No usa scripts/backup.py (que es API-driven para uso externo). En su lugar,
+    empaqueta directamente el SQLite y los reports filesystem del volumen
+    persistente — autosuficiente, no depende del backend estar corriendo.
+
+    Output: peirs-backup-YYYY-MM-DDTHHMMSS.tar.gz en DAILY_BACKUP_DIR.
+    Mantiene los ultimos DAILY_BACKUP_KEEP (default 7) archivos."""
+    import tarfile
+    keep = int(os.getenv("DAILY_BACKUP_KEEP", "7"))
+    backup_dir = pathlib.Path(os.getenv("DAILY_BACKUP_DIR", "/data/backups"))
+    try:
+        backup_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as _mk_err:
+        print(f"[daily-backup] mkdir error: {_mk_err}")
+        return
+
+    # Paths a empaquetar: SQLite + reports filesystem del volumen
+    db_path = pathlib.Path(DB_PATH)
+    reports_dir = pathlib.Path(DATA_DIR) / "reports"
+    candidates: List[pathlib.Path] = []
+    if db_path.exists():
+        candidates.append(db_path)
+    if reports_dir.exists():
+        candidates.append(reports_dir)
+    if not candidates:
+        print("[daily-backup] No hay paths para backupear (sin SQLite ni reports/).")
+        return
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%S")
+    targz_path = backup_dir / f"peirs-backup-{ts}.tar.gz"
+    try:
+        def _do_tar():
+            with tarfile.open(targz_path, "w:gz") as tar:
+                for c in candidates:
+                    tar.add(str(c), arcname=c.name)
+        await asyncio.to_thread(_do_tar)
+        size_mb = targz_path.stat().st_size / (1024 * 1024)
+        print(f"[daily-backup] OK: {targz_path.name} ({size_mb:.1f} MB)")
+
+        # Rotacion
+        backups = sorted(backup_dir.glob("peirs-backup-*.tar.gz"))
+        if len(backups) > keep:
+            for old in backups[:-keep]:
+                try:
+                    old.unlink()
+                    print(f"[daily-backup] Rotado: {old.name}")
+                except Exception as _rm_err:
+                    print(f"[daily-backup] rm error {old.name}: {_rm_err}")
+    except Exception as e:
+        print(f"[daily-backup] Excepcion: {e}")
+        await _send_admin_discord(
+            "Backup diario fallo",
+            f"Error empaquetando volumen:\n```\n{e}\n```",
+            color=15548997
+        )
+
+
+async def _daily_backup_loop() -> None:
+    """Corre 1 vez por dia a las DAILY_BACKUP_UTC_HOUR (default 03:00 UTC = 00 ART).
+    Opt-out: DAILY_BACKUP_ENABLED=0."""
+    if os.getenv("DAILY_BACKUP_ENABLED", "1") != "1":
+        print("[daily-backup] Disabled.")
+        return
+    target_hour = int(os.getenv("DAILY_BACKUP_UTC_HOUR", "3"))
+    print(f"[daily-backup] Loop activo — corre cada dia a las {target_hour:02d}:00 UTC.")
+    while True:
+        now = datetime.now(timezone.utc)
+        target = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+        if target <= now:
+            target = target + timedelta(days=1)
+        sleep_seconds = (target - now).total_seconds()
+        print(f"[daily-backup] Proxima corrida en {sleep_seconds/3600:.1f}h")
+        await asyncio.sleep(sleep_seconds)
+        try:
+            await _run_daily_backup()
+        except Exception as e:
+            print(f"[daily-backup] loop error: {e}")
+
+
 async def _init_rag_background():
     """Corre init_rag() en un thread aparte para no bloquear el event loop.
 
@@ -5393,6 +5680,14 @@ async def on_startup():
     # Self-test del LLM al arrancar (en background, no bloquea startup).
     # Detecta API key inválida / créditos en cero / overload antes de que el Hunter falle.
     asyncio.create_task(_startup_llm_selftest())
+
+    # ── Automatizaciones diarias (Sprint 6-may-2026) ─────────────────────
+    # A) Phase auto-advance: mantiene la fase de PER sincronizada con calendario
+    # B) Daily digest: postea resumen 24h a Discord cada dia a las 13:00 UTC
+    # F) Daily backup: corre scripts/backup.py --targz cada dia a las 03:00 UTC
+    asyncio.create_task(_phase_auto_advance_loop())
+    asyncio.create_task(_daily_digest_loop())
+    asyncio.create_task(_daily_backup_loop())
 
 
 class AnalyzeRequest(BaseModel):
