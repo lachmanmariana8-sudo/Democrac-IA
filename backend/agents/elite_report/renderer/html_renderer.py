@@ -159,6 +159,30 @@ section.cover .classification {
   border-radius: 3px;
 }
 
+section.cover .brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0 4px;
+}
+
+section.cover .brand .brand-glyph {
+  display: block;
+  flex-shrink: 0;
+}
+
+section.cover .brand .wordmark {
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: #1c2230;
+}
+
+section.cover .brand .wordmark-accent {
+  color: #c25a3a;
+}
+
 section.cover .disclosure {
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;
@@ -658,8 +682,23 @@ def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
     # Conector "a" entre fechas: "Apr 1 to Apr 30" / "1 abr a 30 abr"
     period_sep = {"es": "a", "en": "to", "pt": "a"}.get(lang, "a")
 
+    # Brand logo target glyph — embedded SVG inline para reproducibilidad print
+    brand_logo_svg = (
+        '<svg class="brand-glyph" xmlns="http://www.w3.org/2000/svg" '
+        'viewBox="0 0 80 80" width="64" height="64" aria-label="Democrac.IA">'
+        '<g transform="translate(4,4)">'
+        '<circle cx="36" cy="36" r="32" fill="none" stroke="#1c2230" stroke-width="2.5"/>'
+        '<circle cx="36" cy="36" r="18" fill="none" stroke="#1c2230" stroke-width="2.5"/>'
+        '<circle cx="36" cy="36" r="5" fill="#c25a3a"/>'
+        '</g></svg>'
+    )
+
     return f"""<section class="cover">
 <div class="classification">{_esc(mm.classification).upper()}</div>
+<div class="brand">
+{brand_logo_svg}
+<span class="wordmark">Democrac<span class="wordmark-accent">.IA</span></span>
+</div>
 <p class="pretitle">{t(lang, "cover.pretitle")}</p>
 <h1>{_esc(country_name)} — {_esc(type_label)}</h1>
 <p class="subtitle">{t(lang, "cover.elections_year")} {mm.jornada_date[:4]} · {t(lang, "cover.election_day")} {_esc(mm.jornada_date)}</p>
@@ -671,7 +710,7 @@ def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
 </p>
 <div class="metadata">
 <strong>{t(lang, "cover.mission")}</strong> {_esc(mm.mission_name)}<br>
-<strong>{t(lang, "cover.lead_observer")}</strong> {_esc(mm.lead_observer)}<br>
+{(f'<strong>{t(lang, "cover.lead_observer")}</strong> {_esc(mm.lead_observer)}<br>' if mm.lead_observer else '')}
 <strong>{t(lang, "cover.organization")}</strong> {_esc(mm.organization)}<br>
 <strong>{t(lang, "cover.report_number")}</strong> {_esc(mm.report_number)}<br>
 <strong>{t(lang, "cover.period")}</strong> {_esc(mm.period_start)} {period_sep} {_esc(mm.period_end)}<br>
@@ -875,7 +914,7 @@ def render_markdown(
         "---",
         "",
         f"**{t(lang, 'cover.mission')}** {mm.mission_name}  ",
-        f"**{t(lang, 'cover.lead_observer')}** {mm.lead_observer}  ",
+        *([f"**{t(lang, 'cover.lead_observer')}** {mm.lead_observer}  "] if mm.lead_observer else []),
         f"**{t(lang, 'cover.period')}** {mm.period_start} {period_sep} {mm.period_end}  ",
         f"**{t(lang, 'cover.election_day')}** {mm.jornada_date}  ",
         f"**{t(lang, 'md.classification_label')}** {mm.classification}  ",

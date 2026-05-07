@@ -27,9 +27,9 @@
 
 ## 5.4 Observación y transparencia
 
-- Presencia de observadores internacionales (para PER: Transparencia)
+- Presencia de observadores internacionales (para PER: Transparencia, OEA/DECO si tiene mandato, EU EOM si está acreditada, Centro Carter)
 - Suspensión de conteo rápido de Transparencia si aplica
-- Cobertura mediática internacional
+- **Cobertura mediática internacional**: si NO hay hallazgos específicos del Hunter sobre cobertura internacional, NO escribir "no fue documentada sistemáticamente". En su lugar, documentar SUMARIAMENTE qué outlets internacionales típicamente cubren elecciones peruanas (BBC Mundo, Reuters Latinoamérica, AFP en español, AP, EFE, El País Internacional, Le Monde sección Américas, NYT) y caracterizar cualitativamente lo esperable según el contexto del proceso. Aclarar entre paréntesis que la cobertura específica del día se incorporará en informe final cuando el Hunter integre fuentes internacionales (Sprint Hunter-International, planificado).
 
 ## 5.5 Incidentes de integridad en mesa
 

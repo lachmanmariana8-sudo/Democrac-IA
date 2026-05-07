@@ -43,9 +43,13 @@ CitationType = Literal[
 # ── Metadata de la misión ───────────────────────────────────────────────
 class MissionMetadata(BaseModel):
     """Metadatos institucionales de la misión de observación.
-    Sin firma del jefe de misión (decisión 5, 2026-04-20)."""
+    Sin firma del jefe de misión (decisión 5, 2026-04-20).
+
+    `lead_observer` por default es vacío — el informe no muestra el campo
+    si no se pasa explicitamente. Esto preserva neutralidad institucional
+    y evita que aparezcan nombres en informes pre-confidenciales."""
     mission_name: str = "DemocracIA — Observación Electoral PEIRS"
-    lead_observer: str = "Mariana Lachman"
+    lead_observer: str = ""
     organization: str = "DemocracIA"
     report_number: str = Field(..., description="Ej. 'DMC-PER-2026-001'")
     classification: ReportClassification = "public"

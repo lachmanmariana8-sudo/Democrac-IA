@@ -7300,7 +7300,7 @@ def _default_period_start() -> str:
 class EliteMissionInput(BaseModel):
     """Metadata de misión para el Elite Report."""
     mission_name: str = "DemocracIA — Observación Electoral PEIRS"
-    lead_observer: str = "Mariana Lachman"
+    lead_observer: str = ""
     organization: str = "DemocracIA"
     report_number: str = "DMC-PER-2026-001"
     classification: str = "public"  # public | restricted | confidential
