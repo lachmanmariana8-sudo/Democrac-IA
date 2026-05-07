@@ -46,20 +46,88 @@ RSS_FEEDS: Dict[str, List[str]] = {
     "onpe": [
         "https://www.onpe.gob.pe/feed/",
     ],
+
+    # ── Fuentes internacionales (Sprint Hunter-International, 7-may-2026) ──
+    # Estas cubren Peru solo cuando hay noticia con relevancia internacional.
+    # Se filtran por keyword "Peru/Perú" en _filter_intl_relevant antes de
+    # entrar al pipeline. Cobertura proxy de la observacion externa.
+
+    # BBC News Latin America — feed regional EN, alta credibilidad institucional.
+    "bbc_la": [
+        "http://feeds.bbci.co.uk/news/world/latin_america/rss.xml",
+    ],
+    # BBC Mundo — feed general ES. Cubre eventos electorales latam con foco en
+    # contexto internacional. Filtra a Peru por keyword.
+    "bbc_mundo": [
+        "https://feeds.bbci.co.uk/mundo/rss.xml",
+    ],
+    # Deutsche Welle en español — cobertura LatAm con perspectiva europea.
+    "dw_es": [
+        "https://rss.dw.com/xml/rss-sp-all",
+    ],
+    # El País Internacional — diario referencia ES con cobertura LatAm extensa.
+    "elpais_intl": [
+        "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/internacional/portada",
+    ],
+    # The Guardian World — cobertura global, alta credibilidad para EOM context.
+    "guardian_world": [
+        "https://www.theguardian.com/world/rss",
+    ],
+    # NYT Americas — cobertura US/LatAm con perspectiva editorial-analitica.
+    "nyt_americas": [
+        "https://rss.nytimes.com/services/xml/rss/nyt/Americas.xml",
+    ],
 }
+
+# Fuentes que requieren filtro por keyword "Peru/Perú" antes de ingestar.
+# Las peruanas estan en Peru por default, no necesitan filtro.
+INTL_SOURCES = {"bbc_la", "bbc_mundo", "dw_es", "elpais_intl", "guardian_world", "nyt_americas"}
 
 # ── Fuentes activas por fase electoral ───────────────────────────────────────
 PHASE_SOURCES: Dict[str, List[str]] = {
     "preparatory":         ["andina", "elcomercio", "gestion", "idl", "jne"],
-    "pre_campaign":        ["andina", "elcomercio", "gestion", "idl", "wayka", "jne", "onpe", "rpp"],
-    "campaign":            ["andina", "elcomercio", "gestion", "idl", "wayka", "rpp", "jne", "onpe"],
-    "electoral_silence":   ["andina", "elcomercio", "rpp"],                # + OONI en Hunter
-    "election_day":        ["andina", "elcomercio", "rpp", "onpe"],        # + OONI en Hunter
-    "counting_tabulation": ["andina", "elcomercio", "gestion", "rpp", "onpe", "jne"],
-    "post_election":       ["andina", "elcomercio", "gestion", "idl", "rpp", "jne", "onpe"],
-    "dispute_resolution":  ["andina", "elcomercio", "idl", "jne", "rpp"],
+    "pre_campaign":        ["andina", "elcomercio", "gestion", "idl", "wayka", "jne", "onpe", "rpp",
+                            "bbc_mundo", "dw_es"],
+    "campaign":            ["andina", "elcomercio", "gestion", "idl", "wayka", "rpp", "jne", "onpe",
+                            "bbc_mundo", "dw_es", "elpais_intl"],
+    "electoral_silence":   ["andina", "elcomercio", "rpp",
+                            "bbc_mundo", "elpais_intl"],
+    "election_day":        ["andina", "elcomercio", "rpp", "onpe",
+                            "bbc_la", "bbc_mundo", "dw_es", "elpais_intl",
+                            "guardian_world", "nyt_americas"],
+    "counting_tabulation": ["andina", "elcomercio", "gestion", "rpp", "onpe", "jne",
+                            "bbc_mundo", "elpais_intl", "nyt_americas"],
+    "post_election":       ["andina", "elcomercio", "gestion", "idl", "rpp", "jne", "onpe",
+                            "bbc_la", "bbc_mundo", "dw_es", "elpais_intl",
+                            "guardian_world", "nyt_americas"],
+    "dispute_resolution":  ["andina", "elcomercio", "idl", "jne", "rpp",
+                            "bbc_mundo", "elpais_intl"],
     "completed":           ["andina", "jne"],
 }
+
+
+def _filter_intl_relevant(items: List[Dict], country_keywords: Optional[List[str]] = None) -> List[Dict]:
+    """Filtra items de fuentes internacionales que mencionen el pais.
+
+    Para fuentes intl (BBC, DW, El Pais, Guardian, NYT) la mayoria de items son
+    sobre otros temas. Conservamos solo los que mencionan Peru/Perú/Lima en
+    title o description (case-insensitive). Las fuentes peruanas pasan sin
+    filtrar (todas son sobre Peru por default).
+    """
+    if country_keywords is None:
+        country_keywords = ["peru", "perú", "lima"]
+    needles = [k.lower() for k in country_keywords]
+    out = []
+    for item in items:
+        src = item.get("source", "")
+        if src not in INTL_SOURCES:
+            out.append(item)
+            continue
+        haystack = f"{item.get('title', '')} {item.get('description', '')}".lower()
+        if any(n in haystack for n in needles):
+            item["international"] = True
+            out.append(item)
+    return out
 
 _HEADERS = {
     "User-Agent": "DEMOCRAC.IA-Hunter/1.0 (+https://github.com/democracia-ia)",
@@ -207,6 +275,9 @@ async def fetch_sources(phase: str, extra_keys: Optional[List[str]] = None) -> D
     for (key, _url), items in zip(meta, results_flat):
         if key not in by_source:
             by_source[key] = []
+        # Filtro Peru-relevante para fuentes internacionales
+        if key in INTL_SOURCES:
+            items = _filter_intl_relevant(items)
         by_source[key].extend(items)
 
     return by_source

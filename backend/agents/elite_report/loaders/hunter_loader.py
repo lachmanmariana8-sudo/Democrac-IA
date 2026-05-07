@@ -21,6 +21,12 @@ SOURCE_CREDIBILITY = {
     "ooni": 1.5, "idl": 1.4, "jne": 1.3, "onpe": 1.3,
     "elcomercio": 1.0, "gestion": 1.0, "rpp": 1.0,
     "andina": 0.9, "wayka": 0.8, "": 0.5, None: 0.5,
+    # Fuentes internacionales (Sprint Hunter-International, 7-may-2026)
+    # Bonus de credibilidad +0.1 sobre prensa peruana de referencia: cubren
+    # contexto externo y validan o contradicen narrativa local.
+    "bbc_la": 1.2, "bbc_mundo": 1.2,
+    "dw_es": 1.1, "elpais_intl": 1.1,
+    "guardian_world": 1.1, "nyt_americas": 1.2,
 }
 
 

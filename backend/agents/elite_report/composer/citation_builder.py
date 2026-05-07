@@ -40,6 +40,13 @@ MEDIA_FULL_NAMES = {
     "wayka": "Wayka",
     "jne": "Jurado Nacional de Elecciones",
     "onpe": "Oficina Nacional de Procesos Electorales",
+    # Fuentes internacionales (Sprint Hunter-International)
+    "bbc_la": "BBC News Latin America",
+    "bbc_mundo": "BBC Mundo",
+    "dw_es": "Deutsche Welle (en español)",
+    "elpais_intl": "El País Internacional",
+    "guardian_world": "The Guardian (World)",
+    "nyt_americas": "The New York Times — Americas",
 }
 
 # Mapeo de instrumentos normativos a su cita APA 7 completa
