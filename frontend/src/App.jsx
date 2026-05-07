@@ -134,6 +134,37 @@ const COLORS = {
   cardBg: "#0f1929",
 };
 
+// ═══ Brand identity ════════════════════════════════════════════════════════
+// Logo target: dos circulos concentricos + punto terracota.
+// Colores brand "puros" (light context, print, cover de informes).
+// En dashboard (dark theme) los rings usan COLORS.text para visibilidad.
+const BRAND = {
+  ink: "#1c2230",        // navy oscuro (cover impreso, fondo claro)
+  terracotta: "#c25a3a", // accent del punto + ".IA"
+};
+
+function BrandLogo({ size = 36, withWordmark = false, wordmarkSize = 22, mono = false, lightOnDark = true }) {
+  const ink = mono ? "currentColor" : (lightOnDark ? COLORS.text : BRAND.ink);
+  const accent = mono ? "currentColor" : BRAND.terracotta;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <svg width={size} height={size} viewBox="0 0 80 80" style={{ display: "block" }}>
+        <g transform="translate(4,4)">
+          <circle cx="36" cy="36" r="32" fill="none" stroke={ink} strokeWidth="2.5"/>
+          <circle cx="36" cy="36" r="18" fill="none" stroke={ink} strokeWidth="2.5"/>
+          <circle cx="36" cy="36" r="5" fill={accent}/>
+        </g>
+      </svg>
+      {withWordmark && (
+        <span style={{ fontSize: wordmarkSize, fontWeight: 800, color: ink,
+          letterSpacing: -1, fontFamily: "Inter, 'DM Sans', system-ui, sans-serif" }}>
+          Democrac<span style={{ color: accent }}>.IA</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
 const RISK_LEVELS = {
   critical: { color: COLORS.danger, label: "CRÍTICO", bg: COLORS.dangerDim },
   high: { color: "#f97316", label: "ALTO", bg: "#f9731633" },
@@ -286,15 +317,13 @@ const LoadingScreen = () => (
   }}>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
     <div style={{
-      width: 56, height: 56, borderRadius: 12,
-      background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.info})`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 28, fontWeight: 900, color: COLORS.bg,
       animation: "pulse 2s ease-in-out infinite",
-    }}>D</div>
+    }}>
+      <BrandLogo size={64} />
+    </div>
     <div style={{ textAlign: "center" }}>
       <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, fontFamily: "'DM Mono', monospace" }}>
-        Democrac<span style={{ color: COLORS.accent }}>.IA</span>
+        Democrac<span style={{ color: BRAND.terracotta }}>.IA</span>
       </div>
       <div style={{ fontSize: 15, color: COLORS.textMuted, marginTop: 8 }}>
         Ejecutando pipeline de agentes PEIRS...
@@ -371,15 +400,10 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
     position: "sticky", top: 0, zIndex: 100,
   }}>
     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: 8,
-        background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.info})`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 18, fontWeight: 900, color: COLORS.bg,
-      }}>D</div>
+      <BrandLogo size={36} />
       <div>
         <span style={{ fontSize: 22, fontWeight: 800, color: COLORS.text, letterSpacing: 1, fontFamily: "'DM Mono', monospace" }}>
-          Democrac<span style={{ color: COLORS.accent }}>.IA</span>
+          Democrac<span style={{ color: BRAND.terracotta }}>.IA</span>
         </span>
         <div style={{ fontSize: 9, color: COLORS.textDim, letterSpacing: 3, textTransform: "uppercase", marginTop: 1 }}>
           Predictive Electoral Integrity & Risk System
@@ -497,16 +521,13 @@ const OverviewView = ({ countries, onSelectCountry }) => {
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 20 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 12, flexShrink: 0,
-            background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.info})`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 28, fontWeight: 900, color: COLORS.bg,
-          }}>D</div>
+            flexShrink: 0,
+          }}><BrandLogo size={56} /></div>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
               <h1 style={{ margin: 0, fontSize: 30, fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
                 <strong style={{ color: "#ffffff", fontWeight: 900 }}>Democrac</strong>
-                <strong style={{ color: "#f59e0b", fontWeight: 900 }}>.IA</strong>
+                <strong style={{ color: BRAND.terracotta, fontWeight: 900 }}>.IA</strong>
               </h1>
               <span style={{
                 fontSize: 11, padding: "3px 10px", borderRadius: 6,
