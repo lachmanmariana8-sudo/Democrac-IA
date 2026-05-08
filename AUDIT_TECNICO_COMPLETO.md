@@ -167,7 +167,7 @@ PREPARATORIO → PRE-CAMPAÑA → CAMPAÑA → SILENCIO ELECTORAL → JORNADA EL
 | **RSF Press Freedom** | Índice anual | 180 países, 2025 | Score libertad de prensa (0-100), tracker de periodistas asesinados |
 | **PEI v10** | Dataset académico | 586 elecciones, 2012-2023 | Integridad percibida: EMBs, leyes, procedimientos, conteo, resultados |
 | **OONI** | API tiempo real | Global, continuo | Anomalías web, interferencia de red por dominio y ASN (date-only since/until) |
-| **Hunter RSS Perú** | Feeds RSS cada 4h | 8 fuentes (Andina, RPP, El Comercio, Gestión, IDL-Reporteros, Wayka, JNE, ONPE) | Noticias clasificadas por fase electoral con Sonnet 4.6, dedupe semántico |
+| **Hunter RSS** | Feeds RSS cada 24h | 14 fuentes: 8 nacionales (Andina, RPP, El Comercio, Gestión, IDL-Reporteros, Wayka, JNE, ONPE) + 6 internacionales filtradas por keyword "Peru" (BBC LatAm, BBC Mundo, DW español, El País Internacional, Guardian World, NYT Americas) | Noticias clasificadas por fase electoral con Sonnet 4.6, dedupe semántico |
 
 ### 3.5 Corpus legal RAG (14 instrumentos jurídico-electorales)
 
@@ -227,7 +227,7 @@ para no bloquear el healthcheck Railway.
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────┐              │
 │  │  Integrations: Discord Alerts | OONI | Hunter Scheduler  │              │
-│  │  AUTO_OBSERVE_COUNTRIES | HUNTER_INTERVAL_MINUTES=720     │              │
+│  │  AUTO_OBSERVE_COUNTRIES | HUNTER_INTERVAL_MINUTES=1440    │              │
 │  └──────────────────────────────────────────────────────────┘              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -406,7 +406,7 @@ git push origin main
 | `ALLOWED_ORIGINS` | https://www.democracia.ar,https://democracia.ar | CORS |
 | `ALERT_WEBHOOK_URL` | https://discord.com/api/webhooks/... | Alertas a Discord |
 | `ALERT_MIN_SEVERITY` | high | Umbral mínimo para alertas |
-| `HUNTER_INTERVAL_MINUTES` | 240 | Hunter automático cada 4h |
+| `HUNTER_INTERVAL_MINUTES` | 1440 | Hunter automático cada 24h (configurable) |
 | `AUTO_OBSERVE_COUNTRIES` | PER | Auto-crear sesión de observación en startup |
 | `MAX_ELITE_PER_DAY` | 20 | Budget diario de Elite Reports por país |
 | `VDEM_VERSION` | v16 | Versión del dataset V-Dem en uso |
@@ -433,7 +433,7 @@ git push origin main
 | Health check | `/api/health` | version 0.5.2, 38 países, 14 instrumentos legales, V-Dem v16 |
 | RAG legal | ChromaDB | ACTIVO (init en background) |
 | OONI | Integración | ACTIVA |
-| Hunter scheduler | 8 fuentes RSS Perú | ACTIVO cada 4h |
+| Hunter scheduler | 14 fuentes RSS (8 PER + 6 intl) | ACTIVO cada 24h |
 | Alertas Discord | Webhook | CONFIGURADO Y PROBADO |
 | Sesión observación PER 2026 | Volumen SQLite | ACTIVA, restaurada tras incidente Railway |
 | SSL | Let's Encrypt | Renovación automática |
@@ -475,7 +475,7 @@ git push origin main
 - Pipeline LangGraph 4 agentes + Elite Report 6-etapas generando informes de 12 capítulos + 3 anexos
 - i18n trilingüe (es / en / pt) con 180+ claves cubriendo todo el chrome del informe
 - Protocolo completo de observación electoral (9 fases, 19 categorías)
-- Hunter Agent automático cada 4h rastreando 8 fuentes RSS Perú con clasificación Sonnet 4.6
+- Hunter Agent automático cada 24h rastreando 14 fuentes RSS (8 nacionales + 6 internacionales filtradas por keyword "Peru") con clasificación Sonnet 4.6
 - Alertas en tiempo real a Discord para hallazgos ≥ high
 - RAG legal con 14 instrumentos jurídico-electorales en ChromaDB
 - Monitoreo OONI de censura internet en tiempo real

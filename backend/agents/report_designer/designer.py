@@ -495,7 +495,7 @@ class ReportDesigner:
                 f"debilidades estructurales que requieren atención legislativa inmediata."
             ),
             "metodologia": (
-                f"**Pipeline PEIRS**: Hunter RSS cada 4 horas sobre 5 fuentes peruanas (Andina, "
+                f"**Pipeline PEIRS**: Hunter RSS cada 24 horas sobre 14 fuentes (8 peruanas + 6 internacionales filtradas por keyword \"Peru\") incluyendo Andina, "
                 f"El Comercio, Gestión, IDL-Reporteros, RPP Noticias). Clasificación automática "
                 f"con Claude Sonnet 4.6 (Anthropic). Dedupe semántico por (categoría, URL, fecha). "
                 f"Priorización ponderada: severidad × recencia (decay exp. 3 días) × credibilidad "
@@ -694,7 +694,7 @@ class ReportDesigner:
                 "que requieren atención inmediata del Congreso y del sistema de justicia."
             ),
             "metodologia": (
-                "Pipeline PEIRS: Hunter RSS cada 4h sobre 5 fuentes peruanas verificadas, clasificación con "
+                "Pipeline PEIRS: Hunter RSS cada 24h sobre 14 fuentes verificadas (nacionales e internacionales), clasificación con "
                 "Claude Sonnet 4.6, persistencia SQLite sobre volume Railway. Marco normativo: ICCPR Art. 25, "
                 "CADH Art. 23, Constitución Perú 1993 Arts. 176-187, LOE N° 26859, LOP N° 28094."
             ),

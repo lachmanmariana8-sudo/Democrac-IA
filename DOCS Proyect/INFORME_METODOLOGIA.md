@@ -180,7 +180,7 @@ Ubicación: `backend/rag/corpus.py`. Para escalar a otro país: agregar instrume
 
 ### 4.3. Hunter (OSINT en vivo)
 
-Scheduler async que corre cada 4h (configurable). Ingesta:
+Scheduler async que corre cada 24h (configurable via `HUNTER_INTERVAL_MINUTES`). Ingesta:
 
 - 8 fuentes RSS para PER mapeadas a fases: Andina, RPP, El Comercio, Gestión, IDL-Reporteros, Wayka, JNE, ONPE
 - OONI API para censura de internet
@@ -315,7 +315,7 @@ Verificar `VDEM_LAST_YEAR` en `modules/config.py`.
 
 | Etapa | Tiempo | Costo (USD) |
 |---|---|---|
-| Hunter ciclo (cada 4h) | ~30s | ~$0.005 |
+| Hunter ciclo (cada 24h) | ~30-60s | ~$0.10-0.20 (con fuentes intl) |
 | EliteLoader | < 1s | $0 (cache) |
 | PredictiveEngine | ~10s | ~$0.05 |
 | ChapterComposer (12 caps) | ~2-3 min | ~$0.40-0.70 |

@@ -29,7 +29,7 @@ automáticos. Esto evita el patrón de dual-deploy original.
 | Tests | 91/91 pasando | ~8s para suite completa |
 | SQLite triple-tier | OPERATIVO | filesystem + TEXT columns + PDF on-demand |
 | i18n trilingüe (es/en/pt) | OPERATIVO | 180+ claves + section_titles 50 entries |
-| Hunter scheduler | OPERATIVO | 8 fuentes RSS Perú cada 4h |
+| Hunter scheduler | OPERATIVO | 14 fuentes RSS (8 PER + 6 intl) cada 24h |
 | Sesión PER 2026 | ACTIVA | Volumen preservado tras restore |
 
 ---
@@ -49,7 +49,7 @@ automáticos. Esto evita el patrón de dual-deploy original.
   OBSERVER_API_KEYS=clave-produccion-2026
   DEMOCRACIA_DB_PATH=/data/democracia.db
   AUTO_OBSERVE_COUNTRIES=PER
-  HUNTER_INTERVAL_MINUTES=240
+  HUNTER_INTERVAL_MINUTES=1440
   MAX_ELITE_PER_DAY=20
   VDEM_VERSION=v16
   VDEM_LAST_YEAR=2025

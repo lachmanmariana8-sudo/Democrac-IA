@@ -285,7 +285,7 @@ hacen un escenario informativo:
 
 ### 5.2 Cobertura activa
 
-- **Hunter scheduler** corriendo cada 4 horas sobre 8 fuentes RSS
+- **Hunter scheduler** corriendo cada 24 horas sobre 14 fuentes RSS (8 nacionales + 6 internacionales filtradas por keyword "Peru")
   verificadas (Andina, RPP, El Comercio, Gestión, IDL-Reporteros, Wayka,
   JNE, ONPE), mapeadas a las nueve fases del ciclo electoral.
 - **Sesión de observación activa** desde el inicio de la fase preparatoria,
