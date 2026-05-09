@@ -786,6 +786,68 @@ _STRINGS: Dict[str, Dict[str, str]] = {
 }
 
 
+_INSTRUMENT_TRANSLATIONS: Dict[str, Dict[str, str]] = {
+    # Mapeo de palabras "traducibles" en nombres de instrumentos normativos.
+    # Las abreviaturas/acronimos (ICCPR, CADH, CDI, CEDAW, LOE, LOP, OSCE/ODIHR)
+    # se mantienen — son acronimos canonicos de derecho internacional.
+    # Solo se traducen las palabras locales como "Constitución" o nombres de
+    # leyes peruanas con denominacion descriptiva.
+    "Constitución Política del Perú": {
+        "es": "Constitución Política del Perú",
+        "en": "Political Constitution of Peru",
+        "pt": "Constituição Política do Peru",
+    },
+    "Constitución Política": {
+        "es": "Constitución Política",
+        "en": "Political Constitution",
+        "pt": "Constituição Política",
+    },
+    "Constitución": {
+        "es": "Constitución",
+        "en": "Constitution",
+        "pt": "Constituição",
+    },
+    "Resoluciones JNE": {
+        "es": "Resoluciones JNE",
+        "en": "JNE Resolutions",
+        "pt": "Resoluções JNE",
+    },
+    "Ley Orgánica de Elecciones": {
+        "es": "Ley Orgánica de Elecciones",
+        "en": "Electoral Organic Law",
+        "pt": "Lei Orgânica Eleitoral",
+    },
+    "Ley de Organizaciones Políticas": {
+        "es": "Ley de Organizaciones Políticas",
+        "en": "Political Organizations Law",
+        "pt": "Lei de Organizações Políticas",
+    },
+}
+
+
+def translate_instrument(name: str, language: str) -> str:
+    """Traduce nombre de instrumento normativo a en/pt.
+
+    Las abreviaturas (ICCPR, CADH, CDI, CEDAW, LOE, LOP) se mantienen
+    como acronimos canonicos. Solo las palabras descriptivas localizables
+    (Constitución, Resoluciones, etc.) se reemplazan.
+
+    Reemplazo por patron mas largo primero para evitar matches parciales
+    (e.g. "Constitución Política del Perú" antes que "Constitución" sola).
+    """
+    if not name:
+        return name
+    lang = (language or "es").lower()
+    if lang not in ("en", "pt"):
+        return name
+    # Patrones ordenados por longitud descendente
+    for pattern in sorted(_INSTRUMENT_TRANSLATIONS.keys(), key=len, reverse=True):
+        if pattern in name:
+            replacement = _INSTRUMENT_TRANSLATIONS[pattern].get(lang, pattern)
+            return name.replace(pattern, replacement, 1)
+    return name
+
+
 def t(language: str, key: str, default: str | None = None) -> str:
     """Lookup i18n. Cae a 'es' si la clave existe en español pero no en el
     idioma pedido (defensive). Si la clave no existe en absoluto, devuelve

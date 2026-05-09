@@ -337,35 +337,58 @@ class PEIRSEliteReport:
                 "warning_level": forecast.early_warning_level,
             }
 
-        # Heatmap derechos × categorías
+        # Heatmap derechos × categorías (Cap 8) — auditoria 9-may-2026:
+        #   A) Fix matching: usar igualdad exacta en cross_reference.normative_instrument
+        #      en vez de prefix-match (que duplicaba conteos entre Art. 25 y Art. 19(2)
+        #      del mismo tratado).
+        #   B) Rights dinamicos: top-6 instrumentos REALMENTE invocados por los
+        #      cross_references del periodo, no una lista hardcoded de 6.
+        #   C) i18n de los nombres traducibles ("Constitución" -> "Constitution"/"Constituição").
         from collections import defaultdict, Counter
-        rights_by_cat: Dict[str, Counter] = defaultdict(Counter)
-        all_rights: Counter = Counter()
+        from agents.elite_report.i18n import translate_instrument as _ti_instr
+
+        # Top-6 categorias del Hunter (sin cambios)
         all_cats: Counter = Counter()
         for f in bundle.hunter_entries:
             cat = f.category or "other"
             all_cats[cat] += 1
-            # Extract rights from CrossReferences of this finding
-            # (simplificado: usamos categorías conocidas por ahora)
-        # Llenar matriz básica con las 4 categorías más comunes
         top_cats = [c for c, _ in all_cats.most_common(6)]
-        top_rights = ["ICCPR Art. 25", "CADH Art. 23", "CADH Art. 13",
-                      "ICCPR Art. 19(2)", "CDI Art. 3", "Constitución Art. 176"]
+
+        # Top-6 rights extraidos de los cross_references reales del periodo (B)
+        cr_counts: Counter = Counter()
+        for cr in bundle.cross_references:
+            cr_counts[cr.normative_instrument] += 1
+        top_rights = [r for r, _ in cr_counts.most_common(6)]
+
+        # Fallback canonico si no hay cross_references aun (e.g. periodo sin
+        # findings high/critical). Mantiene el grafico informativo en vez de
+        # mostrar empty-state cuando si hay categorias del Hunter.
+        if not top_rights:
+            top_rights = ["ICCPR Art. 25", "CADH Art. 23", "CADH Art. 13",
+                          "ICCPR Art. 19(2)", "CDI Art. 3", "Constitución Art. 176"]
+
+        # Index entry_id -> category para reducir el costo del cross-product
+        entry_cat: Dict[str, str] = {f.entry_id: (f.category or "other") for f in bundle.hunter_entries}
+
+        # Build matriz con match EXACTO (A)
         heatmap_matrix = []
-        for right in top_rights[:6]:
+        for right in top_rights:
             row = []
-            for cat in top_cats[:6]:
-                # Count findings that would invoke this right for this category
-                # Usamos el mapping CATEGORY_TO_LAW de CrossReference como proxy
-                row.append(sum(1 for cr in bundle.cross_references
-                               if cr.normative_instrument.startswith(right.split()[0])
-                               and any(f.category == cat and f.entry_id == cr.finding_entry_id
-                                        for f in bundle.hunter_entries)))
+            for cat in top_cats:
+                count = sum(
+                    1 for cr in bundle.cross_references
+                    if cr.normative_instrument == right
+                    and entry_cat.get(cr.finding_entry_id) == cat
+                )
+                row.append(count)
             heatmap_matrix.append(row)
 
+        # Traducir labels de derechos al idioma del informe (C)
+        display_rights = [_ti_instr(r, language) for r in top_rights]
+
         heatmap_data = {
-            "rights": top_rights[:6],
-            "categories": top_cats[:6],
+            "rights": display_rights,
+            "categories": top_cats,
             "matrix": heatmap_matrix,
         }
 
