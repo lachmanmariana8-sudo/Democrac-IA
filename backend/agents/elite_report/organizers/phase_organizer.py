@@ -39,8 +39,9 @@ PHASE_ORDER = [
 ]
 
 
-# Calendario electoral Perú 2026 — fechas que delimitan las fases
-# Si el país/elección cambia, se parametriza al PhaseOrganizer.
+# Sprint 2: el calendario ahora viene del CountryAdapter del pais. Se mantiene
+# PERU_2026_CALENDAR como const exportada para backward compat con tests u
+# otros callers que lo importen directamente; valor identico al del adapter.
 PERU_2026_CALENDAR = {
     "preparatory":         (date(2025, 10, 12), date(2026,  1, 11)),
     "pre_campaign":        (date(2026,  1, 12), date(2026,  2, 11)),
@@ -58,8 +59,9 @@ class PhaseOrganizer:
     """Agrupa findings por fase electoral."""
 
     def __init__(self, country_code: str = "PER"):
+        from agents.elite_report.country_adapters import get_adapter
         self.country_code = country_code.upper()
-        self.calendar = PERU_2026_CALENDAR if self.country_code == "PER" else {}
+        self.calendar = get_adapter(self.country_code).electoral_calendar()
 
     def organize(self, findings: List[FindingRef]) -> Dict[str, PhaseEvidence]:
         """Retorna dict {phase_id: PhaseEvidence}. Incluye todas las fases del

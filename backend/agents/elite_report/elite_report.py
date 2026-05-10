@@ -392,35 +392,15 @@ class PEIRSEliteReport:
             "matrix": heatmap_matrix,
         }
 
+        # ── Sprint 2: CountryAdapter resuelve toda la data PER-especifica ──
+        # En lugar de inline data dicts, llamamos al adapter del pais. Para
+        # Brasil/USA solo hace falta sumar BrazilAdapter / USAAdapter al
+        # registry y todo lo de abajo funciona sin tocar este archivo.
+        from agents.elite_report.country_adapters import get_adapter
+        _adapter = get_adapter(bundle.country_code)
+
         # Matriz normativa (cap 2)
-        matrix_norm_data = {
-            "rows": [
-                {"instrument": "Constitución Art. 176", "topic": "Finalidad del sistema electoral",
-                 "hierarchy": "constitucional"},
-                {"instrument": "Constitución Art. 178", "topic": "Atribuciones del JNE",
-                 "hierarchy": "constitucional"},
-                {"instrument": "Constitución Art. 183", "topic": "Funciones de ONPE",
-                 "hierarchy": "constitucional"},
-                {"instrument": "LOE Art. 190", "topic": "Silencio electoral",
-                 "hierarchy": "legal"},
-                {"instrument": "LOE Art. 343", "topic": "Actas observadas",
-                 "hierarchy": "legal"},
-                {"instrument": "LOE Art. 380", "topic": "Segunda vuelta",
-                 "hierarchy": "legal"},
-                {"instrument": "LOP Art. 34", "topic": "Transparencia financiera",
-                 "hierarchy": "legal"},
-                {"instrument": "Ley 31030 (2020)", "topic": "Paridad y alternancia",
-                 "hierarchy": "legal"},
-                {"instrument": "Ley 31170 (2021)", "topic": "Acoso político",
-                 "hierarchy": "legal"},
-                {"instrument": "Res. JNE 0891-2025", "topic": "Rechazo del voto electrónico",
-                 "hierarchy": "jurisprudencial"},
-                {"instrument": "ICCPR Art. 25", "topic": "Derechos políticos",
-                 "hierarchy": "internacional"},
-                {"instrument": "CADH Art. 23", "topic": "Derechos políticos interamericanos",
-                 "hierarchy": "internacional"},
-            ]
-        }
+        matrix_norm_data = {"rows": _adapter.legal_framework_rows()}
 
         # ── Radar 8 dimensiones PEIRS (Cap 10) — auditoria 9-may-2026 (G1) ──
         # Antes: 8 valores hardcoded (55, 72, 28, 58, 50, 35, 60, 62) que NO
@@ -602,14 +582,9 @@ class PEIRSEliteReport:
             progress_data = {"points": [], "current_pct": None}
 
         # integrity_incidents_grid: regiones × categorías (cap 6)
-        # Top regiones del PERU_REGIONS_DATA si país es PER
-        try:
-            from modules.peru_data import PERU_REGIONS_DATA, PERU_PARL_DATA
-            _peru_data_available = True
-        except ImportError:
-            _peru_data_available = False
-            PERU_REGIONS_DATA = []
-            PERU_PARL_DATA = {}
+        # Sprint 2: regions y parliament data via adapter.
+        _regions_data = _adapter.regions_data() or []
+        _parliament_payload = _adapter.parliament_scenarios()
 
         # Verificar si tenemos datos de location en el bundle (campo opcional
         # en FindingRef desde 2026-04-29; antes era None para todos los findings).
@@ -617,8 +592,8 @@ class PEIRSEliteReport:
             (f.location or "").strip() for f in bundle.hunter_entries
         )
 
-        if bundle.country_code == "PER" and _peru_data_available and has_locations:
-            top_regions_per = [r["region"] for r in PERU_REGIONS_DATA[:8]]
+        if _regions_data and has_locations:
+            top_regions_per = [r["region"] for r in _regions_data[:8]]
         else:
             top_regions_per = []
         # Categorías observadas en el bundle (top 6)
@@ -641,8 +616,8 @@ class PEIRSEliteReport:
         # Sólo se popula si hay location data en el bundle. Caso contrario,
         # el viz cae en empty_state placeholder en el renderer.
         regions_affected_data: Dict[str, Any] = {"regions": []}
-        if bundle.country_code == "PER" and _peru_data_available and has_locations:
-            for r in PERU_REGIONS_DATA[:24]:
+        if _regions_data and has_locations:
+            for r in _regions_data[:24]:
                 # Contar findings cuya location coincide con la región
                 count = sum(1 for f in bundle.hunter_entries
                             if (f.location or "").lower().find(r["region"].lower()) != -1)
@@ -659,44 +634,9 @@ class PEIRSEliteReport:
                     "name": r["region"], "intensity": intens, "incidents": count,
                 })
 
-        # actor_network: red de actores (cap 7) — institucional + partidario
-        # Type/action labels traducidos por idioma del informe.
-        _i18n_actor = {
-            "es": {"inst": "institución", "fis": "fiscal", "jud": "judicial", "med": "media",
-                   "investiga": "investiga", "audita": "audita", "padrón": "padrón",
-                   "supervisa": "supervisa", "reporta": "reporta",
-                   "fiscalia": "Fiscalía", "pj": "Poder Judicial", "prensa": "Prensa indep."},
-            "en": {"inst": "institution", "fis": "prosecutor", "jud": "judicial", "med": "media",
-                   "investiga": "investigates", "audita": "audits", "padrón": "electoral roll",
-                   "supervisa": "supervises", "reporta": "reports",
-                   "fiscalia": "Prosecutor's Office", "pj": "Judiciary", "prensa": "Independent press"},
-            "pt": {"inst": "instituição", "fis": "fiscal", "jud": "judicial", "med": "media",
-                   "investiga": "investiga", "audita": "audita", "padrón": "cadastro",
-                   "supervisa": "supervisiona", "reporta": "reporta",
-                   "fiscalia": "Ministério Público", "pj": "Judiciário", "prensa": "Imprensa indep."},
-        }.get(language, None) or {}
-        if not _i18n_actor:
-            _i18n_actor = {"inst": "institución", "fis": "fiscal", "jud": "judicial", "med": "media",
-                           "investiga": "investiga", "audita": "audita", "padrón": "padrón",
-                           "supervisa": "supervisa", "reporta": "reporta",
-                           "fiscalia": "Fiscalía", "pj": "Poder Judicial", "prensa": "Prensa indep."}
-        actor_network_data = {
-            "actors": [
-                {"id": "JNE", "label": "JNE", "type": _i18n_actor["inst"]},
-                {"id": "ONPE", "label": "ONPE", "type": _i18n_actor["inst"]},
-                {"id": "RENIEC", "label": "RENIEC", "type": _i18n_actor["inst"]},
-                {"id": "FIS", "label": _i18n_actor["fiscalia"], "type": _i18n_actor["fis"]},
-                {"id": "PJ", "label": _i18n_actor["pj"], "type": _i18n_actor["jud"]},
-                {"id": "PRENSA", "label": _i18n_actor["prensa"], "type": _i18n_actor["med"]},
-            ],
-            "edges": [
-                {"from": "FIS", "to": "ONPE", "action": _i18n_actor["investiga"], "severity": "high"},
-                {"from": "JNE", "to": "ONPE", "action": _i18n_actor["audita"], "severity": "medium"},
-                {"from": "RENIEC", "to": "ONPE", "action": _i18n_actor["padrón"], "severity": "info"},
-                {"from": "PJ", "to": "FIS", "action": _i18n_actor["supervisa"], "severity": "info"},
-                {"from": "PRENSA", "to": "ONPE", "action": _i18n_actor["reporta"], "severity": "medium"},
-            ],
-        }
+        # actor_network: red de actores (cap 7) — institucional + extra-electoral
+        # Sprint 2: data y labels traducidos provistos por country adapter.
+        actor_network_data = _adapter.actor_network(language)
 
         # judicial_timeline: cronología (cap 7) — derivada de findings legal/judicial
         judicial_findings = [
@@ -762,198 +702,29 @@ class PEIRSEliteReport:
             else: level = "green"
         # Drivers: top categorías
         top_drivers = [c for c, _ in all_cats.most_common(3)]
-        # i18n labels para early_warning, recommendations, architecture
-        _i18n_data = {
-            "es": {
-                "ew_levels": {"green": "Estable", "amber": "Vigilancia",
-                              "orange": "Riesgo elevado", "red": "Crisis"},
-                "horizon_short": "corto", "horizon_medium": "medio", "horizon_long": "largo",
-                "rec_rows": [
-                    "Auditar STAE/SCE con tercero independiente",
-                    "Marco legal IA en procesos electorales",
-                    "Reforzar cadena de custodia de actas",
-                    "Capacitación obligatoria miembros de mesa",
-                    "Marco regulatorio publicidad digital",
-                    "Protocolo de respuesta a desinformación",
-                ],
-                "addressee_congress": "Congreso", "addressee_jne_cong": "JNE/Congreso",
-                "addressee_onpe_jne": "ONPE/JNE",
-                "stae_subtitle": "Mesa — laptops/imp.",
-                "sce_subtitle": "Cómputo + IA dual",
-                "spr_subtitle": "resultadoelectoral",
-                "flow_label_actas": "actas + foto",
-                "flow_label_aggr": "agregados",
-                "role_arbiter": "árbitro", "role_org": "organización", "role_roll": "padrón",
-                "edge_label_roll": "padrón", "edge_label_tally": "actas",
-                "edge_label_oversight": "fiscaliza",
-                "stage_roll": "Padrón", "stage_table": "Mesa",
-                "stage_tally": "Acta", "stage_count": "Cómputo",
-                "stage_proclaim": "Proclamación",
-                "actor_table_members": "Miembros mesa",
-            },
-            "en": {
-                "ew_levels": {"green": "Stable", "amber": "Watch",
-                              "orange": "Elevated risk", "red": "Crisis"},
-                "horizon_short": "short", "horizon_medium": "medium", "horizon_long": "long",
-                "rec_rows": [
-                    "Audit STAE/SCE with an independent third party",
-                    "Legal framework for AI in electoral processes",
-                    "Strengthen chain of custody of tally sheets",
-                    "Mandatory training for polling station members",
-                    "Regulatory framework for digital advertising",
-                    "Disinformation response protocol",
-                ],
-                "addressee_congress": "Congress", "addressee_jne_cong": "JNE/Congress",
-                "addressee_onpe_jne": "ONPE/JNE",
-                "stae_subtitle": "Polling — laptops/printers",
-                "sce_subtitle": "Tabulation + dual AI",
-                "spr_subtitle": "results portal",
-                "flow_label_actas": "tally sheets + photo",
-                "flow_label_aggr": "aggregates",
-                "role_arbiter": "arbiter", "role_org": "organization",
-                "role_roll": "electoral roll",
-                "edge_label_roll": "electoral roll", "edge_label_tally": "tally sheets",
-                "edge_label_oversight": "oversight",
-                "stage_roll": "Electoral roll", "stage_table": "Polling station",
-                "stage_tally": "Tally sheet", "stage_count": "Tabulation",
-                "stage_proclaim": "Proclamation",
-                "actor_table_members": "Polling members",
-            },
-            "pt": {
-                "ew_levels": {"green": "Estável", "amber": "Vigilância",
-                              "orange": "Risco elevado", "red": "Crise"},
-                "horizon_short": "curto", "horizon_medium": "médio", "horizon_long": "longo",
-                "rec_rows": [
-                    "Auditar STAE/SCE com terceiro independente",
-                    "Marco legal de IA em processos eleitorais",
-                    "Reforçar cadeia de custódia das atas",
-                    "Capacitação obrigatória dos membros de mesa",
-                    "Marco regulatório de publicidade digital",
-                    "Protocolo de resposta a desinformação",
-                ],
-                "addressee_congress": "Congresso", "addressee_jne_cong": "JNE/Congresso",
-                "addressee_onpe_jne": "ONPE/JNE",
-                "stae_subtitle": "Mesa — laptops/imp.",
-                "sce_subtitle": "Apuração + IA dual",
-                "spr_subtitle": "portal de resultados",
-                "flow_label_actas": "atas + foto",
-                "flow_label_aggr": "agregados",
-                "role_arbiter": "árbitro", "role_org": "organização", "role_roll": "cadastro",
-                "edge_label_roll": "cadastro", "edge_label_tally": "atas",
-                "edge_label_oversight": "fiscaliza",
-                "stage_roll": "Cadastro", "stage_table": "Mesa",
-                "stage_tally": "Ata", "stage_count": "Apuração",
-                "stage_proclaim": "Proclamação",
-                "actor_table_members": "Membros mesa",
-            },
-        }.get(language, {})
-        if not _i18n_data:
-            _i18n_data = _i18n_actor and {} or {}  # caer a es default
-        # Asegurar estructura mínima si language unsupported
-        _i18n_data = _i18n_data or {
-            "ew_levels": {"green": "Estable", "amber": "Vigilancia",
-                          "orange": "Riesgo elevado", "red": "Crisis"},
-            "horizon_short": "corto", "horizon_medium": "medio", "horizon_long": "largo",
-            "rec_rows": ["Auditar STAE/SCE con tercero independiente",
-                         "Marco legal IA en procesos electorales",
-                         "Reforzar cadena de custodia de actas",
-                         "Capacitación obligatoria miembros de mesa",
-                         "Marco regulatorio publicidad digital",
-                         "Protocolo de respuesta a desinformación"],
-            "addressee_congress": "Congreso", "addressee_jne_cong": "JNE/Congreso",
-            "addressee_onpe_jne": "ONPE/JNE",
-            "stae_subtitle": "Mesa — laptops/imp.", "sce_subtitle": "Cómputo + IA dual",
-            "spr_subtitle": "resultadoelectoral",
-            "flow_label_actas": "actas + foto", "flow_label_aggr": "agregados",
-            "role_arbiter": "árbitro", "role_org": "organización", "role_roll": "padrón",
-            "edge_label_roll": "padrón", "edge_label_tally": "actas",
-            "edge_label_oversight": "fiscaliza",
-            "stage_roll": "Padrón", "stage_table": "Mesa",
-            "stage_tally": "Acta", "stage_count": "Cómputo",
-            "stage_proclaim": "Proclamación",
-            "actor_table_members": "Miembros mesa",
-        }
 
+        # Sprint 2: todos estos data dicts vienen del adapter ahora.
         early_warning_data = {
             "level": level,
             "score": warning_score_map.get(level, 0.5),
-            "label": _i18n_data["ew_levels"].get(level, ""),
+            "label": _adapter.early_warning_label(level, language),
             "drivers": top_drivers,
         }
 
         # matrix_recommendations (cap 11)
-        _rec_rows = _i18n_data["rec_rows"]
-        _hs = _i18n_data["horizon_short"]
-        _hm = _i18n_data["horizon_medium"]
-        recommendations_data = {
-            "rows": [
-                {"recommendation": _rec_rows[0], "addressee": "ONPE",
-                 "priority": "critical", "horizon": _hs},
-                {"recommendation": _rec_rows[1],
-                 "addressee": _i18n_data["addressee_congress"],
-                 "priority": "high", "horizon": _hm},
-                {"recommendation": _rec_rows[2],
-                 "addressee": _i18n_data["addressee_onpe_jne"],
-                 "priority": "high", "horizon": _hs},
-                {"recommendation": _rec_rows[3], "addressee": "ONPE",
-                 "priority": "medium", "horizon": _hs},
-                {"recommendation": _rec_rows[4],
-                 "addressee": _i18n_data["addressee_jne_cong"],
-                 "priority": "medium", "horizon": _hm},
-                {"recommendation": _rec_rows[5], "addressee": "JNE",
-                 "priority": "high", "horizon": _hs},
-            ]
-        }
+        recommendations_data = _adapter.recommendations(language)
 
-        # system_architecture (cap 12) — STAE + SCE + SPR
-        architecture_data = {
-            "components": [
-                {"id": "STAE", "label": "STAE",
-                 "subtitle": _i18n_data["stae_subtitle"], "layer": "edge", "audited": False},
-                {"id": "SCE", "label": "SCE",
-                 "subtitle": _i18n_data["sce_subtitle"], "layer": "core", "audited": False},
-                {"id": "SPR", "label": "SPR",
-                 "subtitle": _i18n_data["spr_subtitle"], "layer": "publish", "audited": True},
-            ],
-            "flows": [
-                {"from": "STAE", "to": "SCE", "label": _i18n_data["flow_label_actas"]},
-                {"from": "SCE", "to": "SPR", "label": _i18n_data["flow_label_aggr"]},
-            ],
-        }
+        # system_architecture (cap 12)
+        architecture_data = _adapter.architecture(language)
 
-        # network_institutions (cap 3) — JNE + ONPE + RENIEC + relaciones
-        network_inst_data = {
-            "nodes": [
-                {"id": "JNE", "label": "JNE", "role": _i18n_data["role_arbiter"], "status": "amber"},
-                {"id": "ONPE", "label": "ONPE", "role": _i18n_data["role_org"], "status": "red"},
-                {"id": "RENIEC", "label": "RENIEC", "role": _i18n_data["role_roll"], "status": "ok"},
-            ],
-            "edges": [
-                {"from": "RENIEC", "to": "ONPE", "label": _i18n_data["edge_label_roll"]},
-                {"from": "ONPE", "to": "JNE", "label": _i18n_data["edge_label_tally"]},
-                {"from": "JNE", "to": "ONPE", "label": _i18n_data["edge_label_oversight"]},
-            ],
-        }
+        # network_institutions (cap 3)
+        network_inst_data = _adapter.network_institutions(language)
 
-        # flow_chart_voting (cap 3) — cadena del voto
-        flow_voting_data = {
-            "stages": [
-                {"name": _i18n_data["stage_roll"], "actor": "RENIEC", "status": "ok"},
-                {"name": _i18n_data["stage_table"], "actor": "ONPE+ODPE", "status": "ok"},
-                {"name": _i18n_data["stage_tally"], "actor": _i18n_data["actor_table_members"], "status": "warn"},
-                {"name": "STAE/SCE", "actor": "ONPE", "status": "warn"},
-                {"name": _i18n_data["stage_count"], "actor": "JEE", "status": "ok"},
-                {"name": _i18n_data["stage_proclaim"], "actor": "JNE", "status": "pending"},
-            ],
-        }
+        # flow_chart_voting (cap 3)
+        flow_voting_data = _adapter.flow_voting_stages(language)
 
-        # parliament_scenarios (cap 9) — sólo PER
-        parliament_data: Optional[Dict[str, Any]] = None
-        if bundle.country_code == "PER" and _peru_data_available and PERU_PARL_DATA.get("scenarios"):
-            parliament_data = {
-                "scenarios": PERU_PARL_DATA["scenarios"],
-                "total_seats": PERU_PARL_DATA.get("total_seats", 130),
-            }
+        # parliament_scenarios (cap 9) — opcional, segun adapter
+        parliament_data: Optional[Dict[str, Any]] = _parliament_payload
 
         # ── Asignar viz por chapter_id ──────────────────────────────────────
         # Helper local: crea VizSpec con title/caption traducidos via i18n.
