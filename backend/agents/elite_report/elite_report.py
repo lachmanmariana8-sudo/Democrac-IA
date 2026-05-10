@@ -422,34 +422,96 @@ class PEIRSEliteReport:
             ]
         }
 
-        # Radar 8 dimensiones (ejemplo — se recalcula a partir de stats)
-        # Heurística simple: valor = max(0, 100 - (findings_en_esa_dim * factor))
-        radar_data = {
-            "dimensions": [
-                {"label": "Sufragio", "value": 55},
-                {"label": "Marco legal", "value": 72},
-                {"label": "Org. electoral", "value": 28},  # ONPE en crisis
-                {"label": "Medios", "value": 58},
-                {"label": "Financiamiento", "value": 50},
-                {"label": "Digital / IA", "value": 35},
-                {"label": "Justicia electoral", "value": 60},
-                {"label": "Inclusividad", "value": 62},
-            ]
+        # ── Radar 8 dimensiones PEIRS (Cap 10) — auditoria 9-may-2026 (G1) ──
+        # Antes: 8 valores hardcoded (55, 72, 28, 58, 50, 35, 60, 62) que NO
+        # cambiaban entre informes. Riesgo credibilidad.
+        # Ahora: heuristica documentada en el comentario original — valor de
+        # cada dimension = max(0, 100 - sum(severity_weight de findings en
+        # categorias de esa dimension)). Periodo limpio -> ~100, periodo con
+        # criticos concentrados -> baja drasticamente.
+        from agents.elite_report.i18n import t as _ti
+        _DIM_CATS: Dict[str, List[str]] = {
+            "suffrage":    ["voter_suppression"],
+            "legal":       ["legal", "irregular_procedure"],
+            "emb":         ["logistics", "fraud_allegation", "counting"],
+            "media":       ["media", "hate_speech", "disinformation"],
+            "finance":     ["campaign_violation"],
+            "digital":     ["digital"],
+            "justice":     ["judicial"],
+            "inclusivity": ["voter_suppression", "security"],
+        }
+        _SEV_WEIGHTS = {"critical": 12, "high": 6, "medium": 2, "low": 0.5, "info": 0}
+        _radar_dims = []
+        for _dim_id, _cats in _DIM_CATS.items():
+            _weighted = sum(
+                _SEV_WEIGHTS.get((f.severity or "info").lower(), 0)
+                for f in bundle.hunter_entries
+                if (f.category or "").lower() in _cats
+            )
+            _value = max(0, min(100, round(100 - _weighted)))
+            _radar_dims.append({
+                "label": _ti(language, f"viz.dim.{_dim_id}"),
+                "value": _value,
+            })
+        radar_data = {"dimensions": _radar_dims}
+
+        # ── Semaforo institucional (Cap 10) — auditoria 9-may-2026 (G2) ────
+        # Antes: status hardcoded JNE=amber/ONPE=red/RENIEC=green/global=amber
+        # con notes fijas. NO respondia al corpus del Hunter.
+        # Ahora: cuenta findings por organo (match keyword en finding/source),
+        # status derivado de la severidad maxima observada en el periodo.
+        # Notes via i18n trilingue.
+        from collections import Counter as _Counter
+        _ORGAN_KW: Dict[str, List[str]] = {
+            # NOTA: estos keywords son PER-especificos. Sprint 2 (CountryAdapter)
+            # los va a abstraer a un adapter por pais.
+            "JNE":    ["jne", "jurado nacional", "jurado electoral"],
+            "ONPE":   ["onpe", "oficina nacional"],
+            "RENIEC": ["reniec", "registro nacional"],
         }
 
-        # Semáforo institucional
-        semaphore_data = {
-            "organs": [
-                {"label": "JNE", "status": "amber",
-                 "note": "Activo pero bajo tensión con ONPE"},
-                {"label": "ONPE", "status": "red",
-                 "note": "Crisis operativa + investigación penal"},
-                {"label": "RENIEC", "status": "green",
-                 "note": "Operando sin incidentes reportados"},
-                {"label": "Proceso global", "status": "amber",
-                 "note": "Legítimo con observaciones estructurales"},
+        def _compute_organ(label: str, kws: List[str]) -> Dict[str, Any]:
+            kws_lo = [k.lower() for k in kws]
+            organ_findings = [
+                f for f in bundle.hunter_entries
+                if any(k in ((f.finding or "") + " " + (f.source_name or "")).lower()
+                       for k in kws_lo)
             ]
+            sev = _Counter((f.severity or "info").lower() for f in organ_findings)
+            crit, high, med = sev.get("critical", 0), sev.get("high", 0), sev.get("medium", 0)
+            if not organ_findings:
+                status, note_key = "green", "semaphore.note.no_data"
+            elif crit >= 1:
+                status, note_key = "red", "semaphore.note.crisis"
+            elif high >= 2:
+                status, note_key = "orange", "semaphore.note.high"
+            elif high >= 1 or med >= 3:
+                status, note_key = "amber", "semaphore.note.tension"
+            else:
+                status, note_key = "green", "semaphore.note.stable"
+            note = _ti(language, note_key)
+            counts_suffix = f" ({crit}c/{high}h/{med}m)" if organ_findings else ""
+            return {"label": label, "status": status, "note": f"{note}{counts_suffix}"}
+
+        _organs_per = [_compute_organ(lbl, kws) for lbl, kws in _ORGAN_KW.items()]
+        # Status global = peor entre los organos
+        _status_rank = {"red": 4, "orange": 3, "amber": 2, "green": 1}
+        _global_status = max(
+            (o["status"] for o in _organs_per),
+            key=lambda s: _status_rank.get(s, 0),
+            default="green",
+        )
+        _global_organ = {
+            "label": _ti(language, "semaphore.organ.global"),
+            "status": _global_status,
+            "note": _ti(language, {
+                "red":    "semaphore.note.crisis",
+                "orange": "semaphore.note.high",
+                "amber":  "semaphore.note.tension",
+                "green":  "semaphore.note.stable",
+            }.get(_global_status, "semaphore.note.stable")),
         }
+        semaphore_data = {"organs": _organs_per + [_global_organ]}
 
         # ── Sprint 5b — Datos derivados del bundle ──────────────────────────
 

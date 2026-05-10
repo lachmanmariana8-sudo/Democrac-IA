@@ -783,6 +783,48 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Does not replace on-site observation: this report complements, but does not substitute, official observation missions.",
         "pt": "Não substitui observação presencial: este relatório complementa, mas não substitui, as missões oficiais de observação.",
     },
+
+    # ── Radar 8 dimensiones PEIRS — labels (Cap 10) ────────────────────────
+    "viz.dim.suffrage":    {"es": "Sufragio",          "en": "Suffrage",            "pt": "Sufrágio"},
+    "viz.dim.legal":       {"es": "Marco legal",       "en": "Legal framework",     "pt": "Marco legal"},
+    "viz.dim.emb":         {"es": "Org. electoral",    "en": "Electoral body",      "pt": "Org. eleitoral"},
+    "viz.dim.media":       {"es": "Medios",            "en": "Media",               "pt": "Mídia"},
+    "viz.dim.finance":     {"es": "Financiamiento",    "en": "Campaign finance",    "pt": "Financiamento"},
+    "viz.dim.digital":     {"es": "Digital / IA",      "en": "Digital / AI",        "pt": "Digital / IA"},
+    "viz.dim.justice":     {"es": "Justicia electoral", "en": "Electoral justice",  "pt": "Justiça eleitoral"},
+    "viz.dim.inclusivity": {"es": "Inclusividad",      "en": "Inclusivity",         "pt": "Inclusividade"},
+
+    # ── Semaforo institucional — notes derivadas dinamicamente (Cap 10) ────
+    "semaphore.note.crisis": {
+        "es": "Crisis institucional reportada",
+        "en": "Institutional crisis reported",
+        "pt": "Crise institucional reportada",
+    },
+    "semaphore.note.high": {
+        "es": "Múltiples hallazgos de alta severidad",
+        "en": "Multiple high-severity findings",
+        "pt": "Múltiplos achados de alta severidade",
+    },
+    "semaphore.note.tension": {
+        "es": "Tensión institucional documentada",
+        "en": "Documented institutional tension",
+        "pt": "Tensão institucional documentada",
+    },
+    "semaphore.note.stable": {
+        "es": "Sin incidentes graves reportados",
+        "en": "No serious incidents reported",
+        "pt": "Sem incidentes graves reportados",
+    },
+    "semaphore.note.no_data": {
+        "es": "Sin datos en el corpus monitoreado",
+        "en": "No data in monitored corpus",
+        "pt": "Sem dados no corpus monitorado",
+    },
+    "semaphore.organ.global": {
+        "es": "Proceso global",
+        "en": "Overall process",
+        "pt": "Processo global",
+    },
 }
 
 
