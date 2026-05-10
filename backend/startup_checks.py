@@ -9,7 +9,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -102,9 +102,26 @@ def check_dataset(name: str, env_var: str, default_path: str) -> CheckResult:
 
 
 def check_vdem() -> CheckResult:
-    return check_dataset(
-        "V-Dem v15", "VDEM_CSV_PATH",
-        "../data/V-Dem-CY-Full+Others-v15.csv"
+    """V-Dem: triple-tier check. CSV completo (Railway no lo trae,
+    excluido de git por tamaño), o tier estatico vdem_static.py
+    (siempre presente, 38 paises × 21 indicadores × 1985-2025)."""
+    version = os.getenv("VDEM_VERSION", "v16")
+    path = Path(os.getenv("VDEM_CSV_PATH", f"../data/vdem/vdem_{version}.csv"))
+    if path.exists():
+        size_mb = path.stat().st_size / (1024 * 1024)
+        return CheckResult(f"V-Dem {version}", True, f"Encontrado CSV completo ({size_mb:.1f} MB)")
+    # Fallback al tier estatico — verificar que vdem_static.py existe
+    static_path = Path(__file__).parent / "modules" / "vdem_static.py"
+    if static_path.exists():
+        size_kb = static_path.stat().st_size / 1024
+        return CheckResult(
+            f"V-Dem {version}", True,
+            f"CSV no disponible — usando vdem_static.py ({size_kb:.0f} KB, 38 paises)"
+        )
+    return CheckResult(
+        f"V-Dem {version}", False,
+        f"Ni CSV ('{path}') ni vdem_static.py disponibles — datos mock",
+        critical=False
     )
 
 
@@ -130,6 +147,10 @@ def check_pei() -> CheckResult:
 
 
 def check_rag() -> CheckResult:
+    """RAG: verifica deps y que el modulo importe. NO llama init_rag —
+    eso corre en background desde app.py:on_startup (asyncio.to_thread)
+    para no bloquear healthcheck. RAG_AVAILABLE tras import es False
+    hasta que el background completa, asi que aca solo validamos deps."""
     try:
         __import__("chromadb")
     except ImportError:
@@ -146,16 +167,15 @@ def check_rag() -> CheckResult:
             "sentence-transformers no instalado — pip install sentence-transformers",
             critical=False
         )
-    # Intenta inicializar RAG
     try:
         sys.path.insert(0, str(Path(__file__).parent))
-        from rag import init_rag, RAG_AVAILABLE  # type: ignore
-        if RAG_AVAILABLE:
-            init_rag()
-            return CheckResult("RAG Legal", True, "ChromaDB + corpus legal inicializado")
-        return CheckResult("RAG Legal", False, "RAG_AVAILABLE=False tras import", critical=False)
+        from rag import init_rag  # type: ignore # noqa: F401
+        return CheckResult(
+            "RAG Legal", True,
+            "Deps instaladas — init en background (ver log [RAG])"
+        )
     except Exception as e:
-        return CheckResult("RAG Legal", False, f"Error al inicializar: {e}", critical=False)
+        return CheckResult("RAG Legal", False, f"Import error: {e}", critical=False)
 
 
 def check_db() -> CheckResult:
@@ -202,7 +222,15 @@ def check_alerts() -> CheckResult:
     return CheckResult("Alert Channels", True, f"{active} canal(es): {channels}")
 
 
-def check_frontend() -> CheckResult:
+def check_frontend() -> Optional[CheckResult]:
+    """Solo aplica para deploy monolitico (backend+frontend juntos). En
+    produccion frontend va a Netlify y backend a Railway separados, asi
+    que skipeamos este check si detectamos entorno cloud-deploy."""
+    # Heuristicas para entorno cloud (frontend NO se sirve desde aca)
+    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+        return None  # skip — Railway, frontend va aparte en Netlify
+    if os.getenv("NETLIFY") or os.getenv("VERCEL"):
+        return None
     dist = Path(__file__).parent.parent / "frontend" / "dist" / "index.html"
     if dist.exists():
         return CheckResult("Frontend (dist)", True, "Build encontrado")
@@ -239,7 +267,9 @@ def run_startup_checks(raise_on_critical: bool = True) -> StartupReport:
     report.add(check_db())
     report.add(check_ooni())
     report.add(check_alerts())
-    report.add(check_frontend())
+    fe_result = check_frontend()
+    if fe_result is not None:  # None = skip (entorno cloud)
+        report.add(fe_result)
 
     report.print_summary()
 
