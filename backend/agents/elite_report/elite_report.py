@@ -134,7 +134,7 @@ class PEIRSEliteReport:
                                      language=req.language or "es")
 
         # ── 8. CITATION BUILDER ────────────────────────────────────────
-        cb = CitationBuilder()
+        cb = CitationBuilder(language=req.language or "es")
         citations = cb.build_bibliography(
             chapters=chapters,
             hunter_entries=bundle.hunter_entries,

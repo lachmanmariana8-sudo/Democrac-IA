@@ -125,11 +125,19 @@ NORMATIVE_APA = {
 
 
 class CitationBuilder:
-    """Extrae citas y construye bibliografía APA 7."""
+    """Extrae citas y construye bibliografía APA 7.
 
-    def __init__(self):
+    `language` (es/en/pt) afecta:
+      - Conector de fecha humana (APA: "20 de octubre" en es/pt vs "October 20" en en)
+      - Nombres de meses (enero/January/janeiro)
+      - "Sin fecha": s.f. (es) / n.d. (en) / s.d. (pt)
+      - "Recuperado de" (es/pt) vs "Retrieved from" (en)
+    """
+
+    def __init__(self, language: str = "es"):
         self._id_counter = 0
         self._by_key: Dict[str, CitationEntry] = {}
+        self._lang = (language or "es").lower()
 
     def _next_id(self) -> str:
         self._id_counter += 1
@@ -252,10 +260,10 @@ class CitationBuilder:
         try:
             dt = datetime.strptime(date_str, "%Y-%m-%d")
             year = dt.year
-            date_human = f"{dt.day} de {self._month_es(dt.month)}"
+            date_human = self._format_date_human(dt)
         except Exception:
             year = 2026
-            date_human = date_str or "s.f."
+            date_human = date_str or self._no_date()
 
         title = f.source_title or (f.finding or "")[:120]
         apa = (
@@ -276,12 +284,13 @@ class CitationBuilder:
     def _add_web_citation(self, url: str, label: str):
         if url in self._by_key:
             return
-        apa = f"{label}. (s.f.). Recuperado de {url}"
+        nd = self._no_date()
+        apa = f"{label}. ({nd}). {self._retrieved_from()} {url}"
         entry = CitationEntry(
             citation_id=self._next_id(),
             type="web",
             apa_formatted=apa,
-            short_form=f"(web, s.f.)",
+            short_form=f"(web, {nd})",
             url=url,
             accessed_date=datetime.utcnow().strftime("%Y-%m-%d"),
         )
@@ -362,6 +371,38 @@ class CitationBuilder:
 
     @staticmethod
     def _month_es(m: int) -> str:
+        # Backward compat: cualquier caller externo legado todavia funciona.
+        # Para uso interno preferimos _month_name(m) que respeta self._lang.
         months = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
                    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
         return months[m - 1] if 1 <= m <= 12 else ""
+
+    def _month_name(self, m: int) -> str:
+        """Nombre de mes en el idioma actual. APA 7-friendly (lowercase es/pt,
+        Capitalized en)."""
+        months_by_lang = {
+            "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+                   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+            "en": ["January", "February", "March", "April", "May", "June",
+                   "July", "August", "September", "October", "November", "December"],
+            "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
+                   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"],
+        }
+        ms = months_by_lang.get(self._lang, months_by_lang["es"])
+        return ms[m - 1] if 1 <= m <= 12 else ""
+
+    def _format_date_human(self, dt: datetime) -> str:
+        """Formato APA 7 humano para fechas. ES/PT: '20 de octubre' /
+        '20 de outubro'. EN: 'October 20'."""
+        m_name = self._month_name(dt.month)
+        if self._lang == "en":
+            return f"{m_name} {dt.day}"
+        return f"{dt.day} de {m_name}"
+
+    def _no_date(self) -> str:
+        """Abreviatura APA 7 para 'sin fecha'."""
+        return {"en": "n.d.", "pt": "s.d."}.get(self._lang, "s.f.")
+
+    def _retrieved_from(self) -> str:
+        """Frase APA 7 para web sources. ES/PT: 'Recuperado de'. EN: 'Retrieved from'."""
+        return {"en": "Retrieved from"}.get(self._lang, "Recuperado de")
