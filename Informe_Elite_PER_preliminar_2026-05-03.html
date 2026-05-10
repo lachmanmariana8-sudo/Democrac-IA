@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>PEIRS Elite Report — Perú — DMC-PER-2026-001</title>
+<style>
+:root {
+  --teal: #00796b;
+  --teal-dark: #004d40;
+  --teal-light: #e0f2f1;
+  --text: #1a1a1a;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --bg: #ffffff;
+  --bg-soft: #fafafa;
+  --border: #cbd5e1;
+  --border-dim: #e5e7eb;
+  --critical: #d32f2f;
+  --high: #f97316;
+  --medium: #fbc02d;
+  --low: #388e3c;
+  --info: #1976d2;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500;700&display=swap');
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+  background: var(--bg);
+  overflow-x: hidden;  /* evita scroll horizontal accidental */
+}
+
+article.elite-report {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 56px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+article.elite-report * {
+  max-width: 100%;  /* protección global contra overflow */
+}
+
+article.elite-report p,
+article.elite-report li,
+article.elite-report blockquote {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+article.elite-report a {
+  word-break: break-all;  /* URLs largas no rompen el layout */
+}
+
+/* ── Portada ───────────────────────────────────────────────────────── */
+section.cover {
+  min-height: 700px;
+  padding: 80px 0 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 20px;                                  /* espacio uniforme entre elementos */
+  border-bottom: 3px solid var(--teal);
+  page-break-after: always;
+}
+
+section.cover .pretitle {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+section.cover h1 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--teal-dark);
+  margin: 8px 0 0;                            /* sin margen abajo — flex gap lo maneja */
+  letter-spacing: -0.8px;
+}
+
+section.cover .subtitle {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  color: var(--text);
+  font-style: italic;
+  margin: 0 0 24px;
+}
+
+section.cover .cover-stats {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.7;
+  margin: 0;
+}
+
+section.cover .metadata {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 2;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin: 24px 0 0;
+}
+
+section.cover .metadata strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+section.cover .classification {
+  align-self: flex-start;
+  padding: 4px 12px;
+  background: var(--teal);
+  color: white;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+
+/* ── TOC ───────────────────────────────────────────────────────────── */
+nav.toc {
+  margin: 40px 0 64px;
+  padding: 32px 40px;
+  background: var(--bg-soft);
+  border-left: 4px solid var(--teal);
+}
+
+nav.toc h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  color: var(--teal-dark);
+  margin: 0 0 20px;
+  font-weight: 600;
+}
+
+nav.toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  columns: 1;
+}
+
+nav.toc li {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border-dim);
+  font-size: 13px;
+}
+
+nav.toc li .num {
+  display: inline-block;
+  width: 32px;
+  font-family: 'DM Mono', monospace;
+  color: var(--teal);
+  font-weight: 700;
+}
+
+nav.toc li a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+nav.toc li a:hover { color: var(--teal); }
+
+/* ── Declaración preliminar (destacada) ──────────────────────────── */
+section.declaration {
+  padding: 40px 48px;
+  background: linear-gradient(135deg, #e0f2f1 0%, #fafafa 100%);
+  border-left: 6px solid var(--teal);
+  margin: 0 -48px 64px;
+}
+
+section.declaration h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  color: var(--teal-dark);
+  margin: 0 0 20px;
+}
+
+/* ── Capítulos ──────────────────────────────────────────────────────── */
+section.chapter {
+  margin: 56px 0;
+  page-break-before: always;
+}
+
+section.chapter:first-of-type { page-break-before: avoid; }
+
+section.chapter h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--teal-dark);
+  border-bottom: 2px solid var(--teal);
+  padding-bottom: 12px;
+  margin: 0 0 28px;
+  letter-spacing: -0.5px;
+}
+
+section.chapter h2 .ch-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 18px;
+  color: var(--teal);
+  font-weight: 700;
+  margin-right: 12px;
+  letter-spacing: 2px;
+}
+
+section.chapter h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--teal-dark);
+  margin: 28px 0 10px;
+}
+
+section.chapter p {
+  margin: 12px 0;
+  text-align: justify;
+  hyphens: auto;
+}
+
+section.chapter strong { font-weight: 700; color: var(--text); }
+
+section.chapter a {
+  color: var(--teal);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+section.chapter a:hover { color: var(--teal-dark); }
+
+section.chapter ul, section.chapter ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+section.chapter li { margin: 4px 0; }
+
+section.chapter blockquote {
+  margin: 20px 0;
+  padding: 14px 20px;
+  background: var(--bg-soft);
+  border-left: 4px solid var(--teal);
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Visualizaciones ──────────────────────────────────────────────── */
+figure.viz {
+  margin: 28px 0;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  page-break-inside: avoid;
+  overflow: hidden;  /* contiene SVG que puedan exceder el ancho */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+figure.viz figcaption.viz-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--teal-dark);
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+figure.viz .viz-svg {
+  text-align: center;
+  overflow: hidden;  /* evita que texto de SVG se desborde */
+  max-width: 100%;
+}
+figure.viz .viz-svg svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+figure.viz figcaption.viz-caption {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 8px;
+  text-align: center;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+/* ── Findings citados ─────────────────────────────────────────────── */
+.findings-cited {
+  margin-top: 20px;
+  padding: 14px 18px;
+  background: var(--bg-soft);
+  border-left: 3px solid var(--teal);
+  border-radius: 4px;
+}
+
+.findings-cited h4 {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--teal-dark);
+  margin: 0 0 8px;
+}
+
+.findings-cited ul { margin: 0; padding-left: 18px; }
+
+.findings-cited li {
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.findings-cited .sev {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 6px;
+}
+
+.sev-critical { background: #fef2f2; color: var(--critical); }
+.sev-high     { background: #fff7ed; color: var(--high); }
+.sev-medium   { background: #fefce8; color: #b45309; }
+.sev-low      { background: #f0fdf4; color: var(--low); }
+.sev-info     { background: #eff6ff; color: var(--info); }
+
+/* ── Anexos ────────────────────────────────────────────────────────── */
+aside.appendix {
+  margin: 64px 0;
+  padding-top: 40px;
+  border-top: 2px solid var(--teal);
+  page-break-before: always;
+}
+
+aside.appendix h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  color: var(--teal-dark);
+}
+
+/* ── Bibliografía ─────────────────────────────────────────────────── */
+ol.bibliography {
+  list-style: none;
+  padding: 0;
+  counter-reset: bib;
+}
+
+ol.bibliography li {
+  counter-increment: bib;
+  padding: 8px 0 8px 32px;
+  position: relative;
+  font-size: 11px;
+  line-height: 1.7;
+  border-bottom: 1px solid var(--border-dim);
+  text-indent: -1.2em;
+  padding-left: 2em;
+}
+
+ol.bibliography li::before {
+  content: "[" counter(bib, decimal) "] ";
+  position: absolute;
+  left: 0;
+  color: var(--teal);
+  font-family: 'DM Mono', monospace;
+  font-weight: 700;
+  font-size: 10px;
+  width: 2em;
+  text-indent: 0;
+}
+
+/* ── Tabla anexo C (hallazgos) ──────────────────────────────────── */
+table.findings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-top: 16px;
+}
+
+table.findings-table th {
+  background: var(--teal);
+  color: white;
+  padding: 8px 10px;
+  text-align: left;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+table.findings-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-dim);
+  vertical-align: top;
+}
+
+table.findings-table tr:nth-child(even) { background: var(--bg-soft); }
+
+/* ── Footer ────────────────────────────────────────────────────────── */
+footer.elite-footer {
+  margin-top: 80px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.8;
+  letter-spacing: 1px;
+}
+
+/* ── Print / PDF ──────────────────────────────────────────────────── */
+@page {
+  size: A4;
+  margin: 2.2cm 2cm 2.5cm 2cm;
+}
+
+@media print {
+  html, body { font-size: 10pt; }
+  article.elite-report { max-width: none; padding: 0; }
+  section.chapter { page-break-before: always; }
+  section.cover { min-height: auto; page-break-after: always; }
+  nav.toc { page-break-after: always; }
+  aside.appendix { page-break-before: always; }
+  figure.viz { page-break-inside: avoid; }
+  a { color: var(--teal); text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<article class="elite-report">
+<section class="cover">
+<div class="classification">PUBLIC</div>
+<p class="pretitle">Misión de Observación Electoral · PEIRS</p>
+<h1>Perú — Informe Preliminar</h1>
+<p class="subtitle">Elecciones 2026 · Jornada del 2026-04-12</p>
+<p class="cover-stats">
+<strong>1119</strong> hallazgos monitoreados ·
+<strong style="color:var(--critical);">21 críticos</strong> ·
+<strong style="color:var(--high);">223 altos</strong> ·
+<strong>12 días</strong> de monitoreo continuo
+</p>
+<div class="metadata">
+<strong>Misión:</strong> DemocracIA — Observación Electoral PEIRS<br>
+<strong>Observadora responsable:</strong> Mariana Lachman<br>
+<strong>Organización emisora:</strong> DemocracIA<br>
+<strong>N° de informe:</strong> DMC-PER-2026-001<br>
+<strong>Período cubierto:</strong> 2026-04-09 a 2026-04-20<br>
+<strong>Audiencia:</strong> institutional<br>
+<strong>Idioma:</strong> es<br>
+<strong>Generado:</strong> 2026-04-28 22:44 UTC<br>
+<strong>Report ID:</strong> 239a09b5-310
+</div>
+</section>
+<nav class="toc">
+<h2>Tabla de contenidos</h2>
+<ol>
+<li><span class="num">Declaración</span><a href="#chapter-declaracion_preliminar">Declaración preliminar</a></li>
+<li><span class="num">Cap. 1</span><a href="#chapter-contexto_historico">Contexto histórico</a></li>
+<li><span class="num">Cap. 2</span><a href="#chapter-marco_juridico">Marco jurídico aplicable</a></li>
+<li><span class="num">Cap. 3</span><a href="#chapter-sistema_electoral">Sistema electoral</a></li>
+<li><span class="num">Cap. 4</span><a href="#chapter-fase_pre_electoral">Fase pre-electoral</a></li>
+<li><span class="num">Cap. 5</span><a href="#chapter-jornada_electoral">Jornada electoral</a></li>
+<li><span class="num">Cap. 6</span><a href="#chapter-escrutinio_computo">Escrutinio y cómputo</a></li>
+<li><span class="num">Cap. 7</span><a href="#chapter-post_electoral">Post-electoral</a></li>
+<li><span class="num">Cap. 8</span><a href="#chapter-derechos_vulnerados">Derechos vulnerados</a></li>
+<li><span class="num">Cap. 9</span><a href="#chapter-analisis_predictivo">Análisis predictivo</a></li>
+<li><span class="num">Cap. 10</span><a href="#chapter-conclusiones">Conclusiones</a></li>
+<li><span class="num">Cap. 11</span><a href="#chapter-recomendaciones">Recomendaciones</a></li>
+<li><span class="num">Cap. 12</span><a href="#chapter-ia_regulacion">Inteligencia Artificial en el proceso electoral</a></li>
+<li><span class="num">A</span><a href="#appendix-a">Metodología técnica</a></li>
+<li><span class="num">B</span><a href="#appendix-b">Bibliografía APA</a></li>
+<li><span class="num">C</span><a href="#appendix-c">Hallazgos completos</a></li>
+</ol>
+</nav>
+<section class="declaration" id="chapter-declaracion_preliminar">
+<h2>Declaración preliminar</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+
+
+</section>
+<section class="chapter" id="chapter-contexto_historico">
+<h2><span class="ch-num">Cap. 01</span>Contexto histórico</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+<figure class="viz"><figcaption class="viz-title">Trayectoria histórica — índices democráticos</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" role="img" aria-label="Series históricas"><rect width="680" height="300" fill="#ffffff"/><line x1="60" y1="12.0" x2="560" y2="12.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="60" y1="70.0" x2="560" y2="70.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="60" y1="128.0" x2="560" y2="128.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="60" y1="186.0" x2="560" y2="186.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="60" y1="244.0" x2="560" y2="244.0" stroke="#e5e7eb" stroke-width="0.5"/><text x="60.0" y="260" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#64748b">2021</text><text x="560.0" y="260" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#64748b">2022</text><path d="M 60.0 244.0" fill="none" stroke="#00796b" stroke-width="2.2" stroke-linejoin="round"/><circle cx="60.0" cy="244.0" r="2.5" fill="#00796b"/><rect x="568" y="14" width="10" height="10" fill="#00796b"/><text x="582" y="23" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Perceptions of E</text><text x="582" y="34" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="8" fill="#94a3b8">66.00→66.00</text></svg></div><figcaption class="viz-caption">Series V-Dem, Freedom House, PEI y RSF de los últimos 10 años.</figcaption></figure>
+
+</section>
+<section class="chapter" id="chapter-marco_juridico">
+<h2><span class="ch-num">Cap. 02</span>Marco jurídico aplicable</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+<figure class="viz"><figcaption class="viz-title">Marco normativo aplicable</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 392" role="img" aria-label="Matriz normativa"><rect width="680" height="392" fill="#ffffff"/><line x1="12" y1="24" x2="668" y2="24" stroke="#00796b" stroke-width="1.5"/><text x="16" y="18" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="1.5" fill="#64748b">INSTRUMENTO</text><text x="280" y="18" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="1.5" fill="#64748b">TEMA</text><text x="540" y="18" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="1.5" fill="#64748b">JERARQUÍA</text><text x="16" y="50" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">Constitución Art. 176</text><text x="280" y="50" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Finalidad del sistema electoral</text><rect x="540" y="37" width="120" height="18" rx="3" fill="#d32f2f" opacity="0.15" stroke="#d32f2f" stroke-width="1"/><text x="600" y="50" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#d32f2f">CONSTITUCIONAL</text><rect x="12" y="62" width="656" height="30" fill="#fafafa"/><text x="16" y="80" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">Constitución Art. 178</text><text x="280" y="80" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Atribuciones del JNE</text><rect x="540" y="67" width="120" height="18" rx="3" fill="#d32f2f" opacity="0.15" stroke="#d32f2f" stroke-width="1"/><text x="600" y="80" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#d32f2f">CONSTITUCIONAL</text><text x="16" y="110" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">Constitución Art. 183</text><text x="280" y="110" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Funciones de ONPE</text><rect x="540" y="97" width="120" height="18" rx="3" fill="#d32f2f" opacity="0.15" stroke="#d32f2f" stroke-width="1"/><text x="600" y="110" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#d32f2f">CONSTITUCIONAL</text><rect x="12" y="122" width="656" height="30" fill="#fafafa"/><text x="16" y="140" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">LOE Art. 190</text><text x="280" y="140" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Silencio electoral</text><rect x="540" y="127" width="120" height="18" rx="3" fill="#f97316" opacity="0.15" stroke="#f97316" stroke-width="1"/><text x="600" y="140" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#f97316">LEGAL</text><text x="16" y="170" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">LOE Art. 343</text><text x="280" y="170" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Actas observadas</text><rect x="540" y="157" width="120" height="18" rx="3" fill="#f97316" opacity="0.15" stroke="#f97316" stroke-width="1"/><text x="600" y="170" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#f97316">LEGAL</text><rect x="12" y="182" width="656" height="30" fill="#fafafa"/><text x="16" y="200" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">LOE Art. 380</text><text x="280" y="200" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Segunda vuelta</text><rect x="540" y="187" width="120" height="18" rx="3" fill="#f97316" opacity="0.15" stroke="#f97316" stroke-width="1"/><text x="600" y="200" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#f97316">LEGAL</text><text x="16" y="230" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">LOP Art. 34</text><text x="280" y="230" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Transparencia financiera</text><rect x="540" y="217" width="120" height="18" rx="3" fill="#f97316" opacity="0.15" stroke="#f97316" stroke-width="1"/><text x="600" y="230" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#f97316">LEGAL</text><rect x="12" y="242" width="656" height="30" fill="#fafafa"/><text x="16" y="260" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">Ley 31030 (2020)</text><text x="280" y="260" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Paridad y alternancia</text><rect x="540" y="247" width="120" height="18" rx="3" fill="#f97316" opacity="0.15" stroke="#f97316" stroke-width="1"/><text x="600" y="260" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#f97316">LEGAL</text><text x="16" y="290" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">Ley 31170 (2021)</text><text x="280" y="290" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Acoso político</text><rect x="540" y="277" width="120" height="18" rx="3" fill="#f97316" opacity="0.15" stroke="#f97316" stroke-width="1"/><text x="600" y="290" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#f97316">LEGAL</text><rect x="12" y="302" width="656" height="30" fill="#fafafa"/><text x="16" y="320" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">Res. JNE 0891-2025</text><text x="280" y="320" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Rechazo del voto electrónico</text><rect x="540" y="307" width="120" height="18" rx="3" fill="#1976d2" opacity="0.15" stroke="#1976d2" stroke-width="1"/><text x="600" y="320" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#1976d2">JURISPRUDENCIAL</text><text x="16" y="350" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">ICCPR Art. 25</text><text x="280" y="350" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Derechos políticos</text><rect x="540" y="337" width="120" height="18" rx="3" fill="#a855f7" opacity="0.15" stroke="#a855f7" stroke-width="1"/><text x="600" y="350" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#a855f7">INTERNACIONAL</text><rect x="12" y="362" width="656" height="30" fill="#fafafa"/><text x="16" y="380" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a">CADH Art. 23</text><text x="280" y="380" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#64748b">Derechos políticos interamericanos</text><rect x="540" y="367" width="120" height="18" rx="3" fill="#a855f7" opacity="0.15" stroke="#a855f7" stroke-width="1"/><text x="600" y="380" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#a855f7">INTERNACIONAL</text></svg></div><figcaption class="viz-caption">Instrumentos ordenados por jerarquía normativa.</figcaption></figure>
+
+</section>
+<section class="chapter" id="chapter-sistema_electoral">
+<h2><span class="ch-num">Cap. 03</span>Sistema electoral</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+
+
+</section>
+<section class="chapter" id="chapter-fase_pre_electoral">
+<h2><span class="ch-num">Cap. 04</span>Fase pre-electoral</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+<figure class="viz"><figcaption class="viz-title">Distribución de hallazgos por fase electoral</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" role="img" aria-label="Timeline por fase electoral"><rect width="680" height="280" fill="#ffffff"/><line x1="50" y1="16.0" x2="660" y2="16.0" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="44" y="19.0" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#94a3b8">644</text><line x1="50" y1="64.5" x2="660" y2="64.5" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="44" y="67.5" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#94a3b8">483</text><line x1="50" y1="113.0" x2="660" y2="113.0" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="44" y="116.0" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#94a3b8">322</text><line x1="50" y1="161.5" x2="660" y2="161.5" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="44" y="164.5" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#94a3b8">161</text><line x1="50" y1="210.0" x2="660" y2="210.0" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="44" y="213.0" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#94a3b8">0</text><text x="83.88888888888889" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Preparatorio</text><text x="83.88888888888889" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">0</text><text x="151.66666666666666" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Pre-campaña</text><text x="151.66666666666666" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">0</text><rect x="196.4" y="152.5" width="46.1" height="57.5" fill="#1976d2" opacity="0.85"/><rect x="196.4" y="115.7" width="46.1" height="36.8" fill="#388e3c" opacity="0.85"/><rect x="196.4" y="38.3" width="46.1" height="77.4" fill="#fbc02d" opacity="0.85"/><rect x="196.4" y="16.9" width="46.1" height="21.4" fill="#f97316" opacity="0.85"/><rect x="196.4" y="16.0" width="46.1" height="0.9" fill="#d32f2f" opacity="0.85"/><text x="219.44444444444443" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Campaña electoral</text><text x="219.44444444444443" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">644</text><text x="287.2222222222222" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Silencio / veda el</text><text x="287.2222222222222" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">0</text><text x="355.0" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Jornada electoral</text><text x="355.0" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">0</text><rect x="399.7" y="170.5" width="46.1" height="39.5" fill="#1976d2" opacity="0.85"/><rect x="399.7" y="169.0" width="46.1" height="1.5" fill="#388e3c" opacity="0.85"/><rect x="399.7" y="118.1" width="46.1" height="50.9" fill="#fbc02d" opacity="0.85"/><rect x="399.7" y="72.3" width="46.1" height="45.8" fill="#f97316" opacity="0.85"/><rect x="399.7" y="66.9" width="46.1" height="5.4" fill="#d32f2f" opacity="0.85"/><text x="422.7777777777777" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Escrutinio y cómpu</text><text x="422.7777777777777" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">475</text><text x="490.55555555555554" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Post-electoral</text><text x="490.55555555555554" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">0</text><text x="558.3333333333333" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Resolución de disp</text><text x="558.3333333333333" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">0</text><text x="626.1111111111111" y="226" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">Ciclo completo</text><text x="626.1111111111111" y="240" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">0</text><rect x="50" y="254" width="10" height="10" fill="#1976d2"/><text x="64" y="262" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">info</text><rect x="130" y="254" width="10" height="10" fill="#388e3c"/><text x="144" y="262" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">low</text><rect x="210" y="254" width="10" height="10" fill="#fbc02d"/><text x="224" y="262" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">medium</text><rect x="290" y="254" width="10" height="10" fill="#f97316"/><text x="304" y="262" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">high</text><rect x="370" y="254" width="10" height="10" fill="#d32f2f"/><text x="384" y="262" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b">critical</text></svg></div><figcaption class="viz-caption">Barras apiladas por severidad a lo largo del ciclo.</figcaption></figure>
+
+</section>
+<section class="chapter" id="chapter-jornada_electoral">
+<h2><span class="ch-num">Cap. 05</span>Jornada electoral</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+
+
+</section>
+<section class="chapter" id="chapter-escrutinio_computo">
+<h2><span class="ch-num">Cap. 06</span>Escrutinio y cómputo</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+
+
+</section>
+<section class="chapter" id="chapter-post_electoral">
+<h2><span class="ch-num">Cap. 07</span>Post-electoral</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+
+
+</section>
+<section class="chapter" id="chapter-derechos_vulnerados">
+<h2><span class="ch-num">Cap. 08</span>Derechos vulnerados</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+<figure class="viz"><figcaption class="viz-title">Heatmap derechos × categorías</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 342" role="img" aria-label="Heatmap derechos por categoría"><rect width="680" height="342" fill="#ffffff"/><text x="227.0" y="90" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b" transform="rotate(-40 227.0 90)">logistics</text><text x="281.0" y="90" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b" transform="rotate(-40 281.0 90)">disinformation</text><text x="335.0" y="90" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b" transform="rotate(-40 335.0 90)">counting</text><text x="389.0" y="90" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b" transform="rotate(-40 389.0 90)">legal</text><text x="443.0" y="90" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b" transform="rotate(-40 443.0 90)">results</text><text x="497.0" y="90" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#64748b" transform="rotate(-40 497.0 90)">other</text><text x="192" y="118.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">ICCPR Art. 25</text><rect x="200" y="96" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="254" y="96" width="54" height="36" fill="#00796b" opacity="0.26" stroke="#ffffff" stroke-width="1"/><text x="281.0" y="118.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">31</text><rect x="308" y="96" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="362" y="96" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="416" y="96" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="470" y="96" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><text x="192" y="154.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">CADH Art. 23</text><rect x="200" y="132" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="254" y="132" width="54" height="36" fill="#00796b" opacity="0.26" stroke="#ffffff" stroke-width="1"/><text x="281.0" y="154.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">31</text><rect x="308" y="132" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="362" y="132" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="416" y="132" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="470" y="132" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><text x="192" y="190.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">CADH Art. 13</text><rect x="200" y="168" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="254" y="168" width="54" height="36" fill="#00796b" opacity="0.26" stroke="#ffffff" stroke-width="1"/><text x="281.0" y="190.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">31</text><rect x="308" y="168" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="362" y="168" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="416" y="168" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="470" y="168" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><text x="192" y="226.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">ICCPR Art. 19(2)</text><rect x="200" y="204" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="254" y="204" width="54" height="36" fill="#00796b" opacity="0.26" stroke="#ffffff" stroke-width="1"/><text x="281.0" y="226.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">31</text><rect x="308" y="204" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="362" y="204" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="416" y="204" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="470" y="204" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><text x="192" y="262.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">CDI Art. 3</text><rect x="200" y="240" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="254" y="240" width="54" height="36" fill="#00796b" opacity="0.26" stroke="#ffffff" stroke-width="1"/><text x="281.0" y="262.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">31</text><rect x="308" y="240" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="362" y="240" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="416" y="240" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="470" y="240" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><text x="192" y="298.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Constitución Art. 176</text><rect x="200" y="276" width="54" height="36" fill="#00796b" opacity="0.93" stroke="#ffffff" stroke-width="1"/><text x="227.0" y="298.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="white">146</text><rect x="254" y="276" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/><rect x="308" y="276" width="54" height="36" fill="#00796b" opacity="0.21" stroke="#ffffff" stroke-width="1"/><text x="335.0" y="298.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">23</text><rect x="362" y="276" width="54" height="36" fill="#00796b" opacity="0.46" stroke="#ffffff" stroke-width="1"/><text x="389.0" y="298.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">66</text><rect x="416" y="276" width="54" height="36" fill="#00796b" opacity="0.13" stroke="#ffffff" stroke-width="1"/><text x="443.0" y="298.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#1a1a1a">8</text><rect x="470" y="276" width="54" height="36" fill="#00796b" opacity="0.08" stroke="#ffffff" stroke-width="1"/></svg></div><figcaption class="viz-caption">Intensidad = cantidad de hallazgos que invocan cada derecho.</figcaption></figure>
+
+</section>
+<section class="chapter" id="chapter-analisis_predictivo">
+<h2><span class="ch-num">Cap. 09</span>Análisis predictivo</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+<figure class="viz"><figcaption class="viz-title">Escenarios probabilísticos con bandas de confianza</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 310" role="img" aria-label="Forecast de escenarios"><rect width="680" height="310" fill="#ffffff"/><rect x="520" y="8" width="150" height="22" rx="4" fill="#ca8a04"/><text x="595" y="23" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="700" fill="white">ALERTA AMBER</text><line x1="240.0" y1="44" x2="240.0" y2="280" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="240.0" y="298" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#64748b">0%</text><line x1="335.0" y1="44" x2="335.0" y2="280" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="335.0" y="298" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#64748b">25%</text><line x1="430.0" y1="44" x2="430.0" y2="280" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="430.0" y="298" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#64748b">50%</text><line x1="525.0" y1="44" x2="525.0" y2="280" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="525.0" y="298" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#64748b">75%</text><line x1="620.0" y1="44" x2="620.0" y2="280" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><text x="620.0" y="298" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" fill="#64748b">100%</text><text x="230" y="71.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Disputa post-electoral prolongada</text><rect x="316.0" y="57.0" width="76.0" height="20" fill="#00796b" opacity="0.18"/><circle cx="354.0" cy="67.0" r="6" fill="#00796b" stroke="white" stroke-width="2"/><text x="628" y="71.0" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="11" font-weight="700" fill="#004d40">30%</text><text x="230" y="117.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Nulidad parcial por el JNE (art. 1</text><rect x="240.0" y="103.0" width="76.0" height="20" fill="#00796b" opacity="0.18"/><circle cx="278.0" cy="113.0" r="6" fill="#00796b" stroke="white" stroke-width="2"/><text x="628" y="117.0" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="11" font-weight="700" fill="#004d40">10%</text><text x="230" y="163.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Segunda vuelta electoral con alta </text><rect x="411.0" y="149.0" width="76.0" height="20" fill="#00796b" opacity="0.18"/><circle cx="449.0" cy="159.0" r="6" fill="#00796b" stroke="white" stroke-width="2"/><text x="628" y="163.0" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="11" font-weight="700" fill="#004d40">55%</text><text x="230" y="209.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Crisis institucional post-escrutin</text><rect x="297.0" y="195.0" width="76.0" height="20" fill="#00796b" opacity="0.18"/><circle cx="335.0" cy="205.0" r="6" fill="#00796b" stroke="white" stroke-width="2"/><text x="628" y="209.0" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="11" font-weight="700" fill="#004d40">25%</text><text x="230" y="255.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Reforma legislativa post-proceso s</text><rect x="335.0" y="241.0" width="76.0" height="20" fill="#00796b" opacity="0.18"/><circle cx="373.0" cy="251.0" r="6" fill="#00796b" stroke="white" stroke-width="2"/><text x="628" y="255.0" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="11" font-weight="700" fill="#004d40">35%</text></svg></div><figcaption class="viz-caption">Horizonte de 2 semanas post-informe.</figcaption></figure>
+<figure class="viz"><figcaption class="viz-title">Probabilidad por escenario (vista compacta)</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 192" role="img" aria-label="Probabilidad de escenarios"><rect width="640" height="192" fill="#ffffff"/><text x="212" y="30" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Disputa post-electoral prolong</text><rect x="220" y="18" width="370" height="16" rx="3" fill="#fafafa"/><rect x="220" y="18" width="111.0" height="16" rx="3" fill="#00796b" opacity="0.8"/><text x="596" y="30" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#004d40">30%</text><text x="212" y="62" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Nulidad parcial por el JNE (ar</text><rect x="220" y="50" width="370" height="16" rx="3" fill="#fafafa"/><rect x="220" y="50" width="37.0" height="16" rx="3" fill="#00796b" opacity="0.8"/><text x="596" y="62" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#004d40">10%</text><text x="212" y="94" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Segunda vuelta electoral con a</text><rect x="220" y="82" width="370" height="16" rx="3" fill="#fafafa"/><rect x="220" y="82" width="203.5" height="16" rx="3" fill="#00796b" opacity="0.8"/><text x="596" y="94" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#004d40">55%</text><text x="212" y="126" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Crisis institucional post-escr</text><rect x="220" y="114" width="370" height="16" rx="3" fill="#fafafa"/><rect x="220" y="114" width="92.5" height="16" rx="3" fill="#00796b" opacity="0.8"/><text x="596" y="126" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#004d40">25%</text><text x="212" y="158" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#1a1a1a">Reforma legislativa post-proce</text><rect x="220" y="146" width="370" height="16" rx="3" fill="#fafafa"/><rect x="220" y="146" width="129.5" height="16" rx="3" fill="#00796b" opacity="0.8"/><text x="596" y="158" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="10" font-weight="700" fill="#004d40">35%</text></svg></div><figcaption class="viz-caption"></figcaption></figure>
+
+</section>
+<section class="chapter" id="chapter-conclusiones">
+<h2><span class="ch-num">Cap. 10</span>Conclusiones</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+<figure class="viz"><figcaption class="viz-title">Evaluación institucional por órgano</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 230" role="img" aria-label="Semáforo institucional"><rect width="680" height="230" fill="#ffffff"/><circle cx="85.0" cy="28" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="85.0" cy="64" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="85.0" cy="100" r="16" fill="#ca8a04" stroke="#ffffff" stroke-width="2"/><circle cx="85.0" cy="100" r="20" fill="none" stroke="#ca8a04" stroke-width="1.5" opacity="0.4"/><circle cx="85.0" cy="136" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><text x="85.0" y="195" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="700" fill="#1a1a1a">JNE</text><text x="85.0" y="213" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#64748b">Activo pero bajo tensión con ONPE</text><circle cx="255.0" cy="28" r="16" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><circle cx="255.0" cy="28" r="20" fill="none" stroke="#dc2626" stroke-width="1.5" opacity="0.4"/><circle cx="255.0" cy="64" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="255.0" cy="100" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="255.0" cy="136" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><text x="255.0" y="195" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="700" fill="#1a1a1a">ONPE</text><text x="255.0" y="213" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#64748b">Crisis operativa + investigación penal</text><circle cx="425.0" cy="28" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="425.0" cy="64" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="425.0" cy="100" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="425.0" cy="136" r="16" fill="#16a34a" stroke="#ffffff" stroke-width="2"/><circle cx="425.0" cy="136" r="20" fill="none" stroke="#16a34a" stroke-width="1.5" opacity="0.4"/><text x="425.0" y="195" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="700" fill="#1a1a1a">RENIEC</text><text x="425.0" y="213" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#64748b">Operando sin incidentes reportados</text><circle cx="595.0" cy="28" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="595.0" cy="64" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><circle cx="595.0" cy="100" r="16" fill="#ca8a04" stroke="#ffffff" stroke-width="2"/><circle cx="595.0" cy="100" r="20" fill="none" stroke="#ca8a04" stroke-width="1.5" opacity="0.4"/><circle cx="595.0" cy="136" r="11" fill="#e5e7eb" stroke="#ffffff" stroke-width="2"/><text x="595.0" y="195" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="700" fill="#1a1a1a">Proceso global</text><text x="595.0" y="213" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#64748b">Legítimo con observaciones estructurales</text></svg></div><figcaption class="viz-caption">Semáforo de estado al cierre del período observado.</figcaption></figure>
+<figure class="viz"><figcaption class="viz-title">8 Dimensiones PEIRS</figcaption><div class="viz-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 420" role="img" aria-label="Radar 8 dimensiones"><rect width="500" height="420" fill="#ffffff"/><circle cx="250.0" cy="210.0" r="35.0" fill="none" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><circle cx="250.0" cy="210.0" r="70.0" fill="none" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><circle cx="250.0" cy="210.0" r="105.0" fill="none" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><circle cx="250.0" cy="210.0" r="140.0" fill="none" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="2,3"/><line x1="250.0" y1="210.0" x2="250.0" y2="70.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="250.0" y1="210.0" x2="349.0" y2="111.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="250.0" y1="210.0" x2="390.0" y2="210.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="250.0" y1="210.0" x2="349.0" y2="309.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="250.0" y1="210.0" x2="250.0" y2="350.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="250.0" y1="210.0" x2="151.0" y2="309.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="250.0" y1="210.0" x2="110.0" y2="210.0" stroke="#e5e7eb" stroke-width="0.5"/><line x1="250.0" y1="210.0" x2="151.0" y2="111.0" stroke="#e5e7eb" stroke-width="0.5"/><path d="M 250.0 133.0 L 321.3 138.7 L 289.2 210.0 L 307.4 267.4 L 250.0 280.0 L 215.4 244.6 L 166.0 210.0 L 188.6 148.6 Z" fill="#00796b" opacity="0.25" stroke="#00796b" stroke-width="2"/><circle cx="250.0" cy="133.0" r="3" fill="#004d40"/><circle cx="321.3" cy="138.7" r="3" fill="#004d40"/><circle cx="289.2" cy="210.0" r="3" fill="#004d40"/><circle cx="307.4" cy="267.4" r="3" fill="#004d40"/><circle cx="250.0" cy="280.0" r="3" fill="#004d40"/><circle cx="215.4" cy="244.6" r="3" fill="#004d40"/><circle cx="166.0" cy="210.0" r="3" fill="#004d40"/><circle cx="188.6" cy="148.6" r="3" fill="#004d40"/><text x="250.0" y="44.0" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Sufragio</text><text x="250.0" y="55.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">55</text><text x="367.4" y="92.6" text-anchor="start" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Marco legal</text><text x="367.4" y="103.6" text-anchor="start" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">72</text><text x="416.0" y="210.0" text-anchor="start" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Org. electoral</text><text x="416.0" y="221.0" text-anchor="start" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">28</text><text x="367.4" y="327.4" text-anchor="start" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Medios</text><text x="367.4" y="338.4" text-anchor="start" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">58</text><text x="250.0" y="376.0" text-anchor="middle" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Financiamiento</text><text x="250.0" y="387.0" text-anchor="middle" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">50</text><text x="132.6" y="327.4" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Digital / IA</text><text x="132.6" y="338.4" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">35</text><text x="84.0" y="210.0" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Justicia elect</text><text x="84.0" y="221.0" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">60</text><text x="132.6" y="92.6" text-anchor="end" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#1a1a1a">Inclusividad</text><text x="132.6" y="103.6" text-anchor="end" font-family="'DM Mono', 'SF Mono', Menlo, monospace" font-size="9" font-weight="700" fill="#004d40">62</text></svg></div><figcaption class="viz-caption">Evaluación cualitativa ajustada por hallazgos del ciclo.</figcaption></figure>
+
+</section>
+<section class="chapter" id="chapter-recomendaciones">
+<h2><span class="ch-num">Cap. 11</span>Recomendaciones</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+
+
+</section>
+<section class="chapter" id="chapter-ia_regulacion">
+<h2><span class="ch-num">Cap. 12</span>Inteligencia Artificial en el proceso electoral</h2>
+<p style="color:var(--text-dim);"><em>Contenido pendiente.</em></p>
+
+
+</section>
+<aside class="appendix" id="appendix-a">
+<h2>Anexo A — Metodología técnica</h2>
+<h3>Pipeline PEIRS</h3>
+<p>Este informe fue generado con el sistema DemocracIA / PEIRS (Predictive Electoral Integrity &amp; Risk System), aplicando el pipeline de 6 etapas:</p>
+<ol>
+<li><strong>EliteLoader</strong> — carga paralela de evidencia: entries del Hunter, alertas dispatchadas, corpus constitucionalista RAG filtrado por país, y series históricas V-Dem, Freedom House, PEI, RSF. Cache TTL 1 hora.</li>
+<li><strong>PhaseOrganizer</strong> — agrupa 1119 hallazgos en las 9 fases del ciclo electoral según fecha y calendario electoral.</li>
+<li><strong>CrossReferenceBuilder</strong> — linkea hallazgos high/critical con artículos del marco normativo (Constitución, LOE, LOP, jurisprudencia, ICCPR, CADH, CDI) mediante mapeo curado de 14 categorías.</li>
+<li><strong>PredictiveEngine</strong> — motor híbrido de reglas deterministas + Claude Sonnet 4.6 para estimar escenarios probabilísticos de dinámica institucional post-proceso.</li>
+<li><strong>ChapterComposer</strong> — 12 prompts especializados con prompt caching de Anthropic, concurrency limit 4. Cada capítulo se genera con contexto compartido y datos específicos.</li>
+<li><strong>Visualizer + Renderer</strong> — SVG server-side con paleta institucional, HTML responsive, PDF A4 con tipografía Fraunces+DM Sans+DM Mono.</li>
+</ol>
+<h3>Fuentes Hunter</h3>
+<p>Monitoreo RSS cada 4 horas sobre medios peruanos: Andina, El Comercio, Gestión, IDL-Reporteros, RPP Noticias. Clasificación automática con Claude Sonnet 4.6. Dedupe semántico por (categoría, URL normalizada, fecha). Priorización ponderada: severidad × recencia (decay exp. 3 días) × credibilidad de fuente.</p>
+<h3>Limitaciones reconocidas</h3>
+<ul>
+<li>Sesgo de fuentes: los medios monitoreados son mayoritariamente limeños; la cobertura regional es indirecta.</li>
+<li>Horizonte predictivo: las estimaciones del PredictiveEngine cubren 2-4 semanas. Más allá pierden precisión.</li>
+<li>No reemplaza observación presencial: este informe complementa, no sustituye, las misiones oficiales de observación.</li>
+</ul>
+</aside>
+<aside class="appendix" id="appendix-b">
+<h2>Anexo B — Bibliografía (APA 7)</h2>
+<p style="color:var(--text-muted); font-size:11px; margin-bottom:20px;">5 referencias ordenadas alfabéticamente.</p>
+<ol class="bibliography">
+<li>Norris, P., &amp; Grömping, M. (2024). *Perceptions of Electoral Integrity (PEI-10.0) Dataset*. Electoral Integrity Project, University of Sydney &amp; Harvard Kennedy School. https://www.electoralintegrityproject.com</li>
+<li>Organización de Estados Americanos. (1969). *Convención Americana sobre Derechos Humanos — Pacto de San José*. Suscrita el 22 de noviembre de 1969, en vigor desde el 18 de julio de 1978. Ratificada por el Perú el 28 de julio de 1978.</li>
+<li>Organización de Estados Americanos. (2001, 11 de septiembre). *Carta Democrática Interamericana*. Adoptada en la Primera Sesión Plenaria celebrada en Lima, Perú.</li>
+<li>Organización de las Naciones Unidas. (1966). *Pacto Internacional de Derechos Civiles y Políticos*. Resolución 2200A (XXI) de la Asamblea General, 16 de diciembre de 1966. Ratificado por el Perú en 1978.</li>
+<li>Organización de las Naciones Unidas. (2005, 27 de octubre). *Declaración de Principios para la Observación Internacional de Elecciones y Código de Conducta para Observadores Internacionales*. Adoptada en conmemoración del 60° aniversario de la ONU.</li>
+</ol>
+</aside>
+<aside class="appendix" id="appendix-c">
+<h2>Anexo C — Hallazgos completos</h2>
+<p style="color:var(--text-muted); font-size:11px;">Listado completo de hallazgos del Hunter disponible en formato Markdown descargable. Incluye entry_id, fecha, severidad, categoría, finding, medio, URL y priority_score.</p>
+</aside>
+<footer class="elite-footer">
+DemocracIA · PEIRS Elite Report · 239a09b5-310 · 2026-04-28 22:44 UTC<br>
+Generado con pipeline de 6 etapas · SVG server-side · Citas APA 7 · Compatible con estándares OEA / EU EOM / Carter Center / IDEA
+</footer>
+</article>
+</body>
+</html>

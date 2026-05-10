@@ -687,26 +687,47 @@ class PEIRSEliteReport:
             })
         compliance_data = {"rows": compliance_rows}
 
-        # early_warning_meter (cap 9) — derivado del forecast.early_warning_level
-        warning_score_map = {"green": 0.15, "amber": 0.40, "orange": 0.65, "red": 0.88}
+        # early_warning_meter (cap 9) — auditoria 10-may-2026
+        # ANTES: score era magic number {green:0.15, amber:0.40, orange:0.65, red:0.88}
+        # asignado por nivel. NO derivado del corpus. Period con 1 critical o 100
+        # critical mostraba el mismo 0.88 si caia en "red". No auditable.
+        #
+        # AHORA: PEIRS Crisis Index — severity-weighted average del corpus.
+        # Formula auditable, citable en informes formales:
+        #
+        #   crisis_index = Σ(SEV_W[severity] × count_by_severity) / total_findings
+        #
+        #   SEV_W = {critical: 1.00, high: 0.55, medium: 0.20, low: 0.05, info: 0}
+        #
+        # Range [0, 1]. Mappeo a level:
+        #   >= 0.60: red
+        #   >= 0.40: orange
+        #   >= 0.20: amber
+        #   <  0.20: green
+        #
+        # Si forecast.early_warning_level esta seteado, lo respetamos como source
+        # of truth (LLM-refined) pero el score numerico sigue siendo el calculado.
+        _SEV_W = {"critical": 1.00, "high": 0.55, "medium": 0.20, "low": 0.05, "info": 0.0}
+        _by_sev = stats.get("by_severity", {}) or {}
+        _total_w = sum(_SEV_W.get(s, 0) * c for s, c in _by_sev.items())
+        _total_n = max(sum(_by_sev.values()), 1)
+        crisis_index = max(0.0, min(1.0, _total_w / _total_n))
+
         if forecast and forecast.early_warning_level:
             level = forecast.early_warning_level
         else:
-            # Fallback: derivar score de critical/total
-            crit = stats.get("by_severity", {}).get("critical", 0)
-            total = max(stats.get("total", 1), 1)
-            ratio = crit / total
-            if ratio >= 0.05: level = "red"
-            elif ratio >= 0.02: level = "orange"
-            elif ratio >= 0.005: level = "amber"
-            else: level = "green"
+            # Derivar level del crisis_index calculado (consistente con el score)
+            if crisis_index >= 0.60:   level = "red"
+            elif crisis_index >= 0.40: level = "orange"
+            elif crisis_index >= 0.20: level = "amber"
+            else:                      level = "green"
+
         # Drivers: top categorías
         top_drivers = [c for c, _ in all_cats.most_common(3)]
 
-        # Sprint 2: todos estos data dicts vienen del adapter ahora.
         early_warning_data = {
             "level": level,
-            "score": warning_score_map.get(level, 0.5),
+            "score": round(crisis_index, 3),
             "label": _adapter.early_warning_label(level, language),
             "drivers": top_drivers,
         }
