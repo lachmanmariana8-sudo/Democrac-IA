@@ -497,16 +497,47 @@ class PEIRSEliteReport:
             "start_hour": 8, "end_hour": 18,
         }
 
-        # progress_chart: % actas procesadas (cap 6) — MOCK por ahora,
-        # data real viene de ONPE escrutinio si está disponible.
-        progress_data = {
-            "points": [
-                {"t": "21:00", "pct": 12.4}, {"t": "00:00", "pct": 38.2},
-                {"t": "06:00", "pct": 67.5}, {"t": "12:00", "pct": 84.1},
-                {"t": "18:00", "pct": 92.3}, {"t": "00:00+", "pct": 95.1},
-            ],
-            "current_pct": 95.1,
-        }
+        # progress_chart: % actas procesadas (cap 6) — auditoria 9-may-2026:
+        #   Antes era MOCK con 6 puntos hardcoded (12.4%, 38.2%, ..., 95.1%).
+        #   Cualquier informe mostraba siempre los mismos numeros. Riesgo
+        #   credibilidad si dos informes distintos exhiben identicos %.
+        #
+        # Ahora: best-effort derivacion desde bundle.hunter_entries que
+        # mencionen "% actas" o similar en finding text + timestamp. Si no
+        # hay >= 3 puntos coherentes, progress_data.points queda vacio y la
+        # viz NO se attachea al capitulo (ver attach_visualizations).
+        import re as _re
+        _PCT_RE = _re.compile(r"\b(\d{1,3}(?:[.,]\d+)?)\s*%")
+        _progress_points = []
+        for _f in bundle.hunter_entries:
+            _cat = (_f.category or "").lower()
+            if _cat not in ("counting", "results"):
+                continue
+            _text = (_f.finding or "")
+            _m = _PCT_RE.search(_text)
+            if not _m:
+                continue
+            try:
+                _pct = float(_m.group(1).replace(",", "."))
+            except ValueError:
+                continue
+            if not 0 <= _pct <= 100:
+                continue
+            _ts = _f.recorded_at
+            if not _ts:
+                continue
+            _progress_points.append({"t": _ts[:16].replace("T", " "), "pct": _pct})
+        # Necesitamos al menos 3 puntos coherentes para tener una curva
+        # informativa. Si hay menos, el grafico se omite (no se renderiza
+        # empty-state porque la viz no se agrega a chapter.visualizations).
+        if len(_progress_points) >= 3:
+            _progress_points.sort(key=lambda p: p["t"])
+            progress_data = {
+                "points": _progress_points,
+                "current_pct": _progress_points[-1]["pct"],
+            }
+        else:
+            progress_data = {"points": [], "current_pct": None}
 
         # integrity_incidents_grid: regiones × categorías (cap 6)
         # Top regiones del PERU_REGIONS_DATA si país es PER
@@ -895,7 +926,11 @@ class PEIRSEliteReport:
                 if regions_affected_data["regions"]:
                     ch.visualizations.append(_vs("map_regions_affected", regions_affected_data))
             elif ch.chapter_id == "escrutinio_computo":
-                ch.visualizations.append(_vs("progress_chart", progress_data))
+                # Solo emitir progress_chart si hay puntos derivados reales (>=3)
+                # del Hunter. Sin data real, omitimos la viz: no mostramos mock
+                # ni un empty-state generico (ver construccion arriba).
+                if progress_data["points"]:
+                    ch.visualizations.append(_vs("progress_chart", progress_data))
                 if any(any(v > 0 for v in row) for row in incidents_grid_data["values"]):
                     ch.visualizations.append(_vs("integrity_incidents_grid", incidents_grid_data))
             elif ch.chapter_id == "post_electoral":
