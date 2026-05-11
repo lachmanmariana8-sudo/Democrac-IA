@@ -13,6 +13,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
+from .base import EMBBody, InstitutionalModel, LegalLayer
+
 
 # Diccionarios i18n para los strings locales del adapter.
 # Las palabras descriptivas (actor types, recomendaciones, etc.) varian
@@ -315,3 +317,77 @@ class PeruAdapter:
         except ImportError:
             return None
         return PERU_REGIONS_DATA
+
+    # ── Modelo institucional (Sprint 3) ────────────────────────────────
+
+    def institutional_model(self) -> InstitutionalModel:
+        """Peru: sistema UNITARIO. Tres organismos nacionales (JNE, ONPE,
+        RENIEC) sin subdivisiones electorales subnacionales con autoridad
+        propia. Tabulacion centralizada via STAE/SCE/SPR."""
+        return InstitutionalModel(
+            system_type="unitary",
+            national_emb=EMBBody(
+                name="JNE",
+                role="arbiter",
+                scope="national",
+                description="Jurado Nacional de Elecciones — máxima autoridad "
+                            "electoral del Perú. Califica resultados, resuelve "
+                            "impugnaciones, proclama elegidos.",
+            ),
+            subnational_embs=[
+                EMBBody(
+                    name="ONPE",
+                    role="operations",
+                    scope="national",
+                    description="Oficina Nacional de Procesos Electorales — "
+                                "organiza y ejecuta los procesos. Opera STAE/SCE/SPR.",
+                ),
+                EMBBody(
+                    name="RENIEC",
+                    role="registry",
+                    scope="national",
+                    description="Registro Nacional de Identificación y Estado "
+                                "Civil — administra el padrón electoral.",
+                ),
+                # JEE (Jurados Electorales Especiales) son temporales por
+                # proceso, subordinados al JNE — los modelamos como apoyo
+                # operativo subnacional.
+                EMBBody(
+                    name="JEE",
+                    role="oversight",
+                    scope="subnational",
+                    description="Jurados Electorales Especiales — fiscalización "
+                                "regional temporal por proceso, subordinados al JNE.",
+                ),
+            ],
+            legal_layers=[
+                LegalLayer(
+                    layer="constitutional",
+                    instruments=["Constitución Política del Perú (1993)"],
+                ),
+                LegalLayer(
+                    layer="federal",
+                    instruments=[
+                        "Ley Orgánica de Elecciones (LOE) N° 26859",
+                        "Ley de Organizaciones Políticas (LOP) N° 28094",
+                        "Ley N° 31030 — Paridad y alternancia (2020)",
+                        "Ley N° 31170 — Acoso político (2021)",
+                    ],
+                ),
+                LegalLayer(layer="subnational", instruments=[]),
+                LegalLayer(
+                    layer="international",
+                    instruments=[
+                        "ICCPR — Pacto Internacional de Derechos Civiles y Políticos (ratificado 1978)",
+                        "CADH — Convención Americana sobre Derechos Humanos (ratificada 1978)",
+                        "CDI — Carta Democrática Interamericana (2001)",
+                    ],
+                ),
+            ],
+            transmission_chain_type="centralized",
+            notes="Sistema unitario con tres organismos nacionales (JNE/ONPE/"
+                  "RENIEC) y tabulación electrónica centralizada vía STAE/SCE/SPR. "
+                  "Los Jurados Electorales Especiales (JEE) operan regionalmente "
+                  "pero subordinados al JNE — no constituyen autoridad electoral "
+                  "subnacional independiente. Incluye componente de IA dual en SCE.",
+        )

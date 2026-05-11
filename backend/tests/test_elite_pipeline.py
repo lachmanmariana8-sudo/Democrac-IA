@@ -386,3 +386,39 @@ def test_disclosure_present_in_cover_render():
     # NO debe nombrar organismos especificos en el cover (politica 4-may)
     for org in ["Comisión de Venecia", "OEA/DECO", "OSCE/ODIHR", "Carter Center"]:
         assert org not in cover, f"Cover nombra organismo {org!r} (no permitido)"
+
+
+def test_peru_adapter_institutional_model():
+    """Sprint 3 — PeruAdapter implementa institutional_model() con la
+    topologia unitaria peruana correcta (JNE arbiter + ONPE/RENIEC/JEE
+    subnacionales + 4 layers normativas + tabulacion centralizada)."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.country_adapters.base import (
+        EMBBody, InstitutionalModel, LegalLayer
+    )
+
+    adapter = get_adapter("PER")
+    model = adapter.institutional_model()
+
+    assert isinstance(model, InstitutionalModel)
+    assert model.system_type == "unitary"
+    assert isinstance(model.national_emb, EMBBody)
+    assert model.national_emb.name == "JNE"
+    assert model.national_emb.role == "arbiter"
+    assert model.transmission_chain_type == "centralized"
+
+    # Verificar bodies subnacionales/auxiliares (ONPE, RENIEC, JEE)
+    sub_names = {b.name for b in model.subnational_embs}
+    assert {"ONPE", "RENIEC", "JEE"}.issubset(sub_names)
+
+    # 4 capas normativas presentes
+    layer_names = {layer.layer for layer in model.legal_layers}
+    assert layer_names == {"constitutional", "federal", "subnational", "international"}
+
+    # Constitucion presente en la layer constitucional
+    constitutional_layer = next(
+        layer for layer in model.legal_layers if layer.layer == "constitutional"
+    )
+    assert any("Constitución" in inst for inst in constitutional_layer.instruments), (
+        "Constitución Política del Perú debe estar en la layer constitutional"
+    )
