@@ -132,14 +132,36 @@ class ChapterComposer:
         self.concurrency_limit = concurrency_limit
         self.retries = retries
         self._prompts_dir = Path(__file__).parent / "prompts"
-        self._base_context_template = self._load_prompt_file("base_context.md")
+        # base_context se carga al hablar shared_context con lang del req.
+        # El cache acepta language como key para no re-leer disk.
+        self._prompt_cache: Dict[str, str] = {}
 
     # ── Utilitarios de carga ────────────────────────────────────────────
-    def _load_prompt_file(self, filename: str) -> str:
-        p = self._prompts_dir / filename
+    def _load_prompt_file(self, filename: str, language: str = "es") -> str:
+        """Carga un prompt en el idioma pedido con fallback a ES.
+
+        Sprint 4 (11-may-2026): los prompts estan en
+        prompts/{es,en,pt}/{filename}. Si no existe la version del idioma
+        pedido, cae a es (idioma source que siempre esta presente).
+        """
+        lang = (language or "es").lower()
+        cache_key = f"{lang}::{filename}"
+        if cache_key in self._prompt_cache:
+            return self._prompt_cache[cache_key]
+        # Try language-specific first
+        p = self._prompts_dir / lang / filename
+        if not p.exists() and lang != "es":
+            # Fallback a ES (idioma source)
+            p = self._prompts_dir / "es" / filename
         if not p.exists():
+            # Compat: prompts en la raiz (pre-Sprint 4)
+            p = self._prompts_dir / filename
+        if not p.exists():
+            self._prompt_cache[cache_key] = ""
             return ""
-        return p.read_text(encoding="utf-8")
+        content = p.read_text(encoding="utf-8")
+        self._prompt_cache[cache_key] = content
+        return content
 
     # ── Formateo del contexto compartido ────────────────────────────────
     def _build_shared_context(
@@ -157,7 +179,7 @@ class ChapterComposer:
         country_name: str = "Perú",
     ) -> str:
         """Rellena base_context.md con la evidencia del bundle."""
-        ctx = self._base_context_template
+        ctx = self._load_prompt_file("base_context.md", req.language or "es")
 
         # Sustituciones simples
         replacements = {
@@ -369,7 +391,7 @@ class ChapterComposer:
     ) -> EliteChapter:
         """Genera la narrativa de UN capítulo con reintentos."""
         prompt_file = chapter_meta["prompt_file"]
-        user_prompt = self._load_prompt_file(prompt_file)
+        user_prompt = self._load_prompt_file(prompt_file, req.language or "es")
         if not user_prompt:
             # Fallback: capítulo vacío con warning
             return EliteChapter(
