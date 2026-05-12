@@ -2,17 +2,32 @@
 
 ## Plataforma de Inteligencia Electoral con IA
 
-*Version: 0.5.2 — Fecha: 2026-05-04 (sesión cierre)*
+*Version: 0.6.0 — Fecha: 2026-05-12 (cierre Sprint 4)*
 *Clasificacion: Uso interno — Fundadora y equipo tecnico*
 
-> **Nota de versionado:** Esta versión refleja la arquitectura y trabajo
-> realizado al cierre del 4-may-2026. Se actualizó respecto a v0.5.1 con la
-> sesión completa: i18n profundo del Elite Report (es/en/pt) cubriendo +180
-> claves, upgrade a V-Dem v16 (1789-2025), Sprint 1 de tests integrados (9
-> nuevos), eliminación accidental + restauración del proyecto Railway primario
-> (volumen preservado), retiro del proyecto secundario `api.democracia.ar`
-> y deep-fix de subchapter titles (50 títulos × 3 idiomas) más Appendix A
-> traducido.
+> **Nota de versionado:** v0.6.0 refleja el trabajo del 4 al 12 de mayo
+> 2026. Sumario de cambios vs v0.5.2:
+>
+> - **Sprint Hunter-International (7-may):** 8 → 14 fuentes RSS (6 intl
+>   filtradas por keyword "Peru"). Cadencia bajada a 24h (`HUNTER_INTERVAL_MINUTES=1440`).
+> - **Automatizaciones diarias (8-may):** phase auto-advance cada 6h,
+>   daily digest a Discord 10:00 ART, daily backup volumen 00:00 ART.
+> - **Auditoría 9-may de visualizaciones:** G1 Radar 8 dims, G2 Semáforo
+>   institucional, G3 Progress chart — todos derivaban de mock data
+>   hardcoded. Fixeados con derivación real del corpus + L1 (citation
+>   builder language-aware).
+> - **PEIRS Crisis Index v1.0 (10-may):** el "0.88 Crisis" era magic number
+>   cosmético. Reemplazado por fórmula auditable severity-weighted documentada
+>   en `PEIRS_Indices_Methodology_v1.0.md` (citable para Ágora Data y
+>   tribunales).
+> - **Sprint 2 — CountryAdapter (10-may):** interfaz `CountryAdapter`
+>   pluggable, `PeruAdapter` consolida ~200 líneas PER-específicas que antes
+>   estaban inline. Foundation para Brasil/USA.
+> - **Sprint 3 — InstitutionalModel (11-may):** dataclasses abstractas para
+>   tipos unitary / federal_centralized / federal_descentralized.
+> - **Sprint 4 — Prompts EN traducidos (12-may):** 14 archivos cap_NN.md a
+>   `prompts/en/`. Loader trilingüe con fallback a ES. Reportes en inglés
+>   ahora con narrativa nativa sin Spanish bleed-through.
 >
 > **Documentos hermanos (consultar):**
 >
@@ -162,6 +177,92 @@ Centro Carter -- pero automatizados, escalables y disponibles en minutos, no en 
 > por fecha, con los entregables especificos. Util para auditoria de
 > producto, presentacion a inversores/partners, y como evidencia
 > historica del crecimiento del codebase.
+
+### Sesiones 7 al 12-may-2026 (cierre v0.6.0)
+
+Bloque de trabajo de una semana cubriendo Sprint Hunter-International,
+automatizaciones, auditoria de visualizaciones, methodology doc para
+partners, y los Sprints 2-4 del roadmap multipais.
+
+#### 7-may-2026 — Sprint Hunter-International
+
+- `integrations/peru_sources.py`: 8 fuentes peruanas + 6 internacionales
+  (BBC LatAm, BBC Mundo, DW español, El País Internacional, Guardian
+  World, NYT Americas). Filtro `_filter_intl_relevant` con keywords
+  "peru/perú/lima".
+- `loaders/hunter_loader.py`: credibility scores 1.1-1.2 para fuentes
+  intl. Commit `3ca2e22`.
+
+#### 8-may-2026 — Cadencia 24h + automatizaciones
+
+- `HUNTER_INTERVAL_MINUTES=1440` (era 240): reduce costo LLM ~6×.
+- 3 background loops nuevos en `app.py`:
+  - `_phase_auto_advance_loop()` cada 6h con calendar 1ra+2da vuelta PER
+  - `_daily_digest_loop()` a las 13:00 UTC con resumen 24h a Discord
+  - `_daily_backup_loop()` a las 03:00 UTC tar.gz del volumen
+- Opt-out via env vars `AUTO_PHASE_ADVANCE`/`DAILY_DIGEST_ENABLED`/
+  `DAILY_BACKUP_ENABLED`. Commit `a147f77`.
+
+#### 9-may-2026 — Auditoria visualizaciones + brand
+
+- **Brand:** logo `BrandLogo` target glyph (dos círculos + punto
+  terracota) + wordmark Democrac.IA. Reemplaza "D" gradiente. Favicon
+  con fondo dark. Commit `0ecc2ee`.
+- **Sprint Hunter-International cobertura Peru:** sumado `Informe_Elite_PER_preliminar_2026-05-03.html` al repo para acceso rápido.
+- **Auditoría 9-may** detectó 3 visualizaciones con mock hardcoded:
+  - G1 Radar 8 dimensiones (55, 72, 28, ...) — fixeado con
+    severity-weighted del corpus
+  - G2 Semáforo institucional (JNE=amber/ONPE=red/RENIEC=green
+    hardcoded) — fixeado con keyword match + status derivado
+  - G3 Progress chart (6 puntos mock 21:00 12.4%, ...) — fixeado con
+    regex `\b(\d{1,3}(?:[.,]\d+)?)\s*%` sobre Hunter findings
+  - L1 Citation builder "Recuperado de" no traducido — fixeado APA 7
+    trilingüe
+  - M1-M5 PER hardcoded (matrix_normativa, actor_network, etc.) —
+    diferido a Sprint 2
+- Heatmap derechos × categorías: 3 fixes (match exacto, rights
+  dinámicos, i18n de instrumentos). Commit `87e5e24`.
+- Lead observer eliminado del cover (default "" + render condicional).
+- Logo target glyph embedded en cover del informe. Disclosure neutral
+  preservado. Commit `25a604e`.
+
+#### 10-may-2026 — Crisis Index real + Sprint 2
+
+- **Crisis Index v1.0:** fórmula `Σ(SEV_W × count) / total_findings`
+  con pesos `{critical:1.00, high:0.55, medium:0.20, low:0.05, info:0}`.
+  Reemplaza magic number 0.88. Commit `2793a70`.
+- **`PEIRS_Indices_Methodology_v1.0.md` (NUEVO)** — documento
+  técnico-académico para citas formales por Ágora Data, tribunales,
+  organismos supranacionales. 8 secciones cubriendo Crisis Index,
+  Forecast, Compliance Matrix, Radar, datasets de origen con DOIs.
+- **Sprint 2 — CountryAdapter:** `country_adapters/{base.py, peru.py,
+  __init__.py}`. Movidas ~200 líneas PER-específicas de
+  `elite_report.py:_attach_visualizations`. Pluggable para BRA/USA via
+  registro en `_ADAPTERS`. Commit `5d4fa16`.
+
+#### 11-may-2026 — Sprint 3 InstitutionalModel
+
+- **Sprint 3 — Modelo institucional generalizado:** dataclasses
+  `EMBBody`, `LegalLayer`, `InstitutionalModel` cubriendo 3 tipos
+  (unitary, federal_centralized, federal_descentralized).
+  `PeruAdapter.institutional_model()` declara sistema unitario con
+  JNE+ONPE+RENIEC+JEE + 4 capas normativas. Test integrado nuevo.
+  Foundation para BrazilAdapter (TSE+TREs) y USAAdapter (50 estados
+  sin EMB nacional). Commit `248cc41`.
+
+#### 12-may-2026 — Sprint 4 prompts EN
+
+- **Sprint 4 — Traducción de 14 prompts a EN:**
+  `composer/prompts/{es,en,pt}/` estructura nueva. Loader trilingüe
+  con fallback a ES. 14 archivos traducidos: `base_context.md` +
+  `cap_00..cap_12.md`. PT cae a ES (pendiente Sprint 5). Cierra el
+  último bolsillo de español en narrativa LLM para reportes EN.
+  Commit `810e2db`.
+- **Memory updates:** project memories `project_peru2026.md`
+  (estado al 12-may) + `project_brazil_usa_2026.md` (nuevo,
+  Sprints 5/6 con plantillas) + 4 feedback memories nuevas
+  (railway_edge_sync, no_magic_numbers, no_mock_data_in_prod,
+  railway_redeploy_vs_build).
 
 ### Sesion 4-may-2026 (cierre v0.5.2)
 
