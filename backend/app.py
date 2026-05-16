@@ -6170,18 +6170,16 @@ async def get_dashboard_data(force_refresh: bool = False):
                 except Exception:
                     pass
 
-        # Sin caché válida: correr pipeline completo
+        # Sin caché válida: SKIP en lugar de correr pipeline sincronamente.
+        # Auditoria 16-may: correr peirs_pipeline.invoke(state) bloqueaba el
+        # event loop ~60s por pais x 38 paises = posible cuelgue de 30+ min
+        # del endpoint /api/dashboard, congelando TODA la API (frontend
+        # se quedaba en loading screen indefinidamente).
+        # Para generar reporte de un pais sin cache, usar POST /api/analyze
+        # con country_code (devuelve run_id) — endpoint dedicado, no en
+        # listing handler.
         if result is None:
-            state = create_initial_state(
-                country=info["name"],
-                country_code=code,
-                election_date=info["election_date"],
-            )
-            result = peirs_pipeline.invoke(state)
-            reports_store[result["run_id"]] = result
-            save_report(result)
-            index = _load_reports_index()
-            generated_count += 1
+            continue
 
         context = result.get("context_data", {})
         political = result.get("political_data", {})
