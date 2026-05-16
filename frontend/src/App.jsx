@@ -467,46 +467,68 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
 const CountryCard = ({ country, isSelected, onClick }) => {
   const rl = RISK_LEVELS[country.riskLevel] || RISK_LEVELS.moderate;
   return (
-    <Card onClick={onClick} style={{
+    <div onClick={onClick} style={{
       cursor: "pointer",
-      border: `1px solid ${isSelected ? COLORS.accent : COLORS.border}`,
-      background: isSelected ? COLORS.surfaceLight : COLORS.surface,
-      transform: isSelected ? "scale(1.02)" : "scale(1)",
+      padding: 20,
+      borderRadius: 12,
+      background: LIGHT.surface,
+      border: `1px solid ${isSelected ? LIGHT.terracotta : LIGHT.border}`,
+      boxShadow: isSelected
+        ? `0 4px 16px ${LIGHT.terracotta}33`
+        : "0 2px 8px rgba(28, 34, 48, 0.04)",
+      transform: isSelected ? "translateY(-2px)" : "translateY(0)",
       transition: "all 0.25s ease",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span style={{ fontSize: 28 }}>{country.flag}</span>
+          <span style={{ fontSize: 32 }}>{country.flag}</span>
           <div>
-            <div style={{ fontWeight: 700, color: COLORS.text, fontSize: 17 }}>{country.name}</div>
-            <div style={{ fontSize: 11, color: COLORS.textMuted, fontFamily: "'DM Mono', monospace" }}>
-              Elección: {country.date}
+            <div style={{ fontWeight: 800, color: LIGHT.ink, fontSize: 18,
+              fontFamily: "Inter, sans-serif", letterSpacing: -0.3 }}>{country.name}</div>
+            <div style={{ fontSize: 11, color: LIGHT.textMuted, fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
+              Elección · {country.date}
             </div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 28, fontWeight: 800, color: rl.color, fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ fontSize: 32, fontWeight: 900, color: rl.color,
+            fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1, lineHeight: 1 }}>
             {country.riskScore}
           </div>
-          <Tag color={rl.color}>{rl.label}</Tag>
+          <div style={{
+            display: "inline-block", marginTop: 6,
+            padding: "3px 10px", borderRadius: 4,
+            background: rl.color + "1a", color: rl.color,
+            fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase",
+          }}>{rl.label}</div>
         </div>
       </div>
       <div style={{
-        marginTop: 12, height: 4, borderRadius: 2, background: COLORS.border, overflow: "hidden"
+        marginTop: 14, height: 4, borderRadius: 2, background: LIGHT.bgAlt, overflow: "hidden"
       }}>
         <div style={{
           height: "100%", width: `${country.riskScore}%`, borderRadius: 2,
-          background: `linear-gradient(90deg, ${COLORS.accent}, ${rl.color})`,
+          background: rl.color,
           transition: "width 1s ease",
         }} />
       </div>
       <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
         {country.violations.slice(0, 3).map((v, i) => (
-          <Tag key={i} color={COLORS.danger}>{v}</Tag>
+          <span key={i} style={{
+            padding: "2px 8px", borderRadius: 4,
+            background: rl.color + "15", color: rl.color,
+            fontSize: 10, fontWeight: 600,
+          }}>{v}</span>
         ))}
-        {country.violations.length > 3 && <Tag color={COLORS.textDim}>+{country.violations.length - 3}</Tag>}
+        {country.violations.length > 3 && (
+          <span style={{
+            padding: "2px 8px", borderRadius: 4,
+            background: LIGHT.bgAlt, color: LIGHT.textMuted,
+            fontSize: 10, fontWeight: 600,
+          }}>+{country.violations.length - 3}</span>
+        )}
       </div>
-    </Card>
+    </div>
   );
 };
 
@@ -518,53 +540,59 @@ const OverviewView = ({ countries, onSelectCountry }) => {
   return (
     <div style={{ padding: 28 }}>
 
-      {/* ── Sección Quiénes Somos ── */}
+      {/* ── Hero institucional ── */}
       <div style={{
-        marginBottom: 32, padding: "28px 32px",
-        background: `linear-gradient(135deg, #0d1625 0%, #0a1220 100%)`,
-        border: `1px solid ${COLORS.accent}33`,
-        borderLeft: `4px solid ${COLORS.accent}`,
+        marginBottom: 32, padding: "32px 36px",
+        background: LIGHT.surface,
+        border: `1px solid ${LIGHT.border}`,
+        borderLeft: `4px solid ${LIGHT.terracotta}`,
         borderRadius: 14,
+        boxShadow: "0 2px 12px rgba(28, 34, 48, 0.04)",
       }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 20 }}>
-          <div style={{
-            flexShrink: 0,
-          }}><BrandLogo size={56} /></div>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+          <div style={{ flexShrink: 0 }}>
+            <BrandLogo size={56} lightOnDark={false} />
+          </div>
           <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-              <h1 style={{ margin: 0, fontSize: 30, fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
-                <strong style={{ color: "#ffffff", fontWeight: 900 }}>Democrac</strong>
-                <strong style={{ color: BRAND.terracotta, fontWeight: 900 }}>.IA</strong>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" }}>
+              <h1 style={{ margin: 0, fontSize: 36, lineHeight: 1,
+                fontFamily: "Fraunces, Georgia, serif", fontWeight: 900, letterSpacing: -1, color: LIGHT.ink }}>
+                Democrac<span style={{ color: LIGHT.terracotta }}>.IA</span>
               </h1>
               <span style={{
-                fontSize: 11, padding: "3px 10px", borderRadius: 6,
-                background: "transparent", color: "#e2e8f0",
-                fontFamily: "'DM Mono', monospace", fontWeight: 400, letterSpacing: 0.5,
-              }}>PEIRS v0.4.0</span>
+                fontSize: 10, padding: "3px 10px", borderRadius: 4,
+                background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+                fontFamily: "'DM Mono', monospace", fontWeight: 700, letterSpacing: 1.2,
+                textTransform: "uppercase",
+              }}>PEIRS v0.6.0</span>
             </div>
-            <p style={{ margin: "0 0 14px", fontSize: 15, color: "#e2e8f0", lineHeight: 1.8, fontWeight: 500 }}>
-              Plataforma de Inteligencia Artificial creada para el monitoreo electoral a nivel global. Trabajamos siguiendo los lineamientos y estándares internacionales de Observación Electoral sin sesgo político-partidario. Nuestro propósito es fortalecer la democracia mediante el análisis transparente, oportuno y objetivo de los procesos electorales en todo el mundo.
+            <p style={{ margin: "0 0 12px", fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, fontWeight: 500 }}>
+              Plataforma de inteligencia electoral basada en evidencia con
+              trazabilidad verificable. Monitoreo automatizado de fuentes verificadas
+              + análisis asistido por inteligencia artificial sobre los principales
+              índices internacionales de calidad democrática.
             </p>
-            <p style={{ margin: "0 0 14px", fontSize: 14, color: "#94a3b8", lineHeight: 1.8 }}>
-              Empleamos monitoreo automatizado de medios combinado con análisis asistido por inteligencia artificial para proporcionar una evaluación integral de los entornos electorales, siguiendo las metodologías establecidas por las más importantes misiones de observación electoral — OSCE/ODIHR, Unión Europea, Organización de Estados Americanos, Centro Carter, entre otras — y la Declaración de Principios de Naciones Unidas para la Observación Internacional de Elecciones (2005).
+            <p style={{ margin: "0 0 18px", fontSize: 13, color: LIGHT.textMuted, lineHeight: 1.7 }}>
+              Sigue las metodologías de las misiones de observación electoral
+              internacionales y la Declaración de Principios de Naciones Unidas
+              para la Observación Internacional de Elecciones (2005), sin sesgo
+              político-partidario.
             </p>
-            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#94a3b8", lineHeight: 1.8 }}>
-              Proporcionamos observación electoral independiente y apartidaria mediante inteligencia artificial y el análisis experto de profesionales con amplia experiencia en observación electoral internacional, contribuyendo a la protección de los derechos democráticos y la integridad electoral a nivel global. Democrac.IA evalúa la integridad de procesos electorales en 38 países a través de un pipeline de 4 agentes de inteligencia artificial que cruzan datos verificados de organismos académicos e internacionales, generando un Índice Predictivo de Riesgo Electoral (0-100) fundamentado en el derecho internacional público — el Pacto Internacional de Derechos Civiles y Políticos, la Convención Americana sobre Derechos Humanos, la Carta Democrática Interamericana, la Carta Africana sobre Democracia y el Convenio Europeo de Derechos Humanos — con trazabilidad completa de cada hallazgo hasta su fuente primaria.
-            </p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[
-                { label: "V-Dem v15", sub: "27,913 observaciones" },
-                { label: "Freedom House FIW 2025", sub: "195 países" },
-                { label: "PEI 10.0", sub: "586 elecciones" },
+                { label: "V-Dem v16", sub: "1789–2025 · 202 países" },
+                { label: "Freedom House FIW", sub: "2013-2025 · 195 países" },
+                { label: "PEI 10.0", sub: "2012-2023 · 586 elecciones" },
                 { label: "RSF 2025", sub: "180 países" },
-                { label: "LangGraph + Claude Sonnet", sub: "4 agentes IA" },
+                { label: "LangGraph + RAG + IA", sub: "Claude Sonnet 4.6" },
               ].map((s, i) => (
                 <div key={i} style={{
-                  padding: "6px 14px", borderRadius: 8,
-                  background: COLORS.surfaceLight, border: `1px solid ${COLORS.border}`,
+                  padding: "6px 12px", borderRadius: 8,
+                  background: LIGHT.bgAlt, border: `1px solid ${LIGHT.border}`,
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>{s.label}</div>
-                  <div style={{ fontSize: 10, color: COLORS.textDim }}>{s.sub}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: LIGHT.ink,
+                    fontFamily: "Inter, sans-serif" }}>{s.label}</div>
+                  <div style={{ fontSize: 10, color: LIGHT.textMuted }}>{s.sub}</div>
                 </div>
               ))}
             </div>
@@ -573,60 +601,84 @@ const OverviewView = ({ countries, onSelectCountry }) => {
       </div>
 
       <div style={{ marginBottom: 28 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: COLORS.text }}>
-          Panel de Inteligencia Electoral
+        <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: LIGHT.ink,
+          fontFamily: "Fraunces, Georgia, serif", letterSpacing: -0.5 }}>
+          Panel de inteligencia electoral
         </h2>
-        <p style={{ margin: "6px 0 0", fontSize: 13, color: COLORS.textMuted }}>
-          Datos generados en tiempo real por el pipeline PEIRS — 4 agentes IA ejecutados vía LangGraph
+        <p style={{ margin: "6px 0 0", fontSize: 14, color: LIGHT.textMuted, lineHeight: 1.6 }}>
+          Datos generados en tiempo real por el pipeline PEIRS — agentes IA orquestados vía LangGraph
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 16, marginBottom: 32 }}>
         {[
-          { label: "Elecciones Monitoreadas", value: countries.length, icon: "🗳️", color: COLORS.info },
-          { label: "Riesgo Promedio", value: avgRisk, icon: "📊", suffix: "/100", color: avgRisk > 50 ? COLORS.warning : COLORS.accent },
-          { label: "Alertas Críticas", value: criticalCount, icon: "🔴", color: COLORS.danger },
-          { label: "Violaciones ICCPR", value: totalViolations, icon: "⚖️", color: COLORS.purple },
+          { label: "Elecciones monitoreadas", value: countries.length, color: LIGHT.ink },
+          { label: "Riesgo promedio", value: avgRisk, suffix: "/100", color: avgRisk > 50 ? LIGHT.warning : LIGHT.success },
+          { label: "Alertas críticas", value: criticalCount, color: LIGHT.terracotta },
+          { label: "Violaciones ICCPR", value: totalViolations, color: LIGHT.ink },
         ].map((stat, i) => (
-          <Card key={i} style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>{stat.icon}</div>
-            <div style={{ fontSize: 44, fontWeight: 800, color: stat.color, fontFamily: "'DM Mono', monospace" }}>
-              <AnimatedCounter value={stat.value} suffix={stat.suffix || ""} />
-            </div>
-            <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 6, textTransform: "uppercase", letterSpacing: 1 }}>
+          <div key={i} style={{
+            padding: 22, borderRadius: 12,
+            background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+            boxShadow: "0 2px 8px rgba(28, 34, 48, 0.03)",
+          }}>
+            <div style={{ fontSize: 11, color: LIGHT.textMuted, marginBottom: 10,
+              textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>
               {stat.label}
             </div>
-          </Card>
+            <div style={{ fontSize: 48, fontWeight: 900, color: stat.color,
+              fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1.5, lineHeight: 1 }}>
+              <AnimatedCounter value={stat.value} suffix={stat.suffix || ""} />
+            </div>
+          </div>
         ))}
       </div>
 
-      <SectionTitle icon="🌎">Elecciones en Seguimiento</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: LIGHT.ink,
+          fontFamily: "Fraunces, Georgia, serif", letterSpacing: -0.3 }}>
+          Elecciones en seguimiento
+        </h3>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+        gap: 16, marginBottom: 32 }}>
         {countries.map(c => (
           <CountryCard key={c.id} country={c} isSelected={false} onClick={() => onSelectCountry(c.id)} />
         ))}
       </div>
 
-      <SectionTitle icon="📈">Comparativa de Integridad — Radar Multidimensional</SectionTitle>
-      <Card>
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: LIGHT.ink,
+          fontFamily: "Fraunces, Georgia, serif", letterSpacing: -0.3 }}>
+          Comparativa de integridad — Radar multidimensional
+        </h3>
+      </div>
+      <div style={{
+        padding: 24, borderRadius: 12,
+        background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+        boxShadow: "0 2px 8px rgba(28, 34, 48, 0.03)",
+      }}>
         <ResponsiveContainer width="100%" height={340}>
           <RadarChart data={Object.keys(DIMENSION_LABELS).map(key => ({
             dimension: DIMENSION_LABELS[key],
             ...Object.fromEntries(countries.map(c => [c.name, c.dimensions[key]])),
           }))}>
-            <PolarGrid stroke={COLORS.border} />
-            <PolarAngleAxis dataKey="dimension" tick={{ fill: COLORS.textMuted, fontSize: 12 }} />
-            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: COLORS.textDim, fontSize: 9 }} />
-            {countries.map((c, i) => (
-              <Radar key={c.id} name={c.name} dataKey={c.name}
-                stroke={[COLORS.danger, "#f97316", COLORS.warning, COLORS.accent][i]}
-                fill={[COLORS.danger, "#f97316", COLORS.warning, COLORS.accent][i]}
-                fillOpacity={0.08} strokeWidth={2} />
-            ))}
-            <Legend wrapperStyle={{ fontSize: 11, color: COLORS.textMuted }} />
+            <PolarGrid stroke={LIGHT.border} />
+            <PolarAngleAxis dataKey="dimension" tick={{ fill: LIGHT.textMuted, fontSize: 11 }} />
+            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: LIGHT.textDim, fontSize: 9 }} />
+            {countries.map((c, i) => {
+              const palette = [LIGHT.terracotta, "#8b7355", LIGHT.warning, LIGHT.success];
+              const color = palette[i % palette.length];
+              return (
+                <Radar key={c.id} name={c.name} dataKey={c.name}
+                  stroke={color} fill={color} fillOpacity={0.08} strokeWidth={2} />
+              );
+            })}
+            <Legend wrapperStyle={{ fontSize: 11, color: LIGHT.inkSoft, paddingTop: 12 }} />
           </RadarChart>
         </ResponsiveContainer>
-      </Card>
+      </div>
     </div>
   );
 };
