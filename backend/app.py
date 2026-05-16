@@ -5850,6 +5850,24 @@ async def get_system_stats():
     }
 
 
+@app.get("/api/public/tiers")
+async def get_public_tiers():
+    """Listado publico de tiers de acceso para mostrar en pricing page.
+
+    Devuelve los 5 tiers (Public, Researcher, Institutional, Mission,
+    Enterprise) con features y limites. Sin auth — datos publicos para
+    landing.
+
+    Implementacion del modelo en backend/modules/tiers.py. Auth multi-tier
+    y billing Stripe son sprints posteriores.
+    """
+    try:
+        from modules.tiers import list_public_tiers
+        return {"tiers": list_public_tiers()}
+    except Exception as e:
+        return {"tiers": [], "error": str(e)}
+
+
 @app.get("/api/public/stats")
 async def get_public_stats():
     """Estadisticas publicas agregadas para landing pagina.

@@ -395,17 +395,18 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
   <nav style={{
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "14px 28px",
-    background: "linear-gradient(180deg, #0d1220 0%, #0a0e17 100%)",
-    borderBottom: `1px solid ${COLORS.border}`,
+    background: LIGHT.surface,
+    borderBottom: `1px solid ${LIGHT.border}`,
     position: "sticky", top: 0, zIndex: 100,
+    boxShadow: "0 1px 4px rgba(28, 34, 48, 0.04)",
   }}>
     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-      <BrandLogo size={36} />
+      <BrandLogo size={36} lightOnDark={false} />
       <div>
-        <span style={{ fontSize: 22, fontWeight: 800, color: COLORS.text, letterSpacing: 1, fontFamily: "'DM Mono', monospace" }}>
-          Democrac<span style={{ color: BRAND.terracotta }}>.IA</span>
+        <span style={{ fontSize: 22, fontWeight: 800, color: LIGHT.ink, letterSpacing: -0.5, fontFamily: "Inter, sans-serif" }}>
+          Democrac<span style={{ color: LIGHT.terracotta }}>.IA</span>
         </span>
-        <div style={{ fontSize: 9, color: COLORS.textDim, letterSpacing: 3, textTransform: "uppercase", marginTop: 1 }}>
+        <div style={{ fontSize: 9, color: LIGHT.textMuted, letterSpacing: 3, textTransform: "uppercase", marginTop: 1 }}>
           Predictive Electoral Integrity & Risk System
         </div>
       </div>
@@ -414,16 +415,16 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
       {[
         { id: "overview", label: "Overview" },
         { id: "detail", label: "Análisis País" },
-        { id: "sentinel", label: "🔴 Sentinel" },
+        { id: "sentinel", label: "Sentinel" },
         { id: "peru", label: "🇵🇪 Perú 2026" },
-        { id: "observer", label: "📡 Observación" },
+        { id: "observer", label: "Observación" },
         { id: "methodology", label: "Metodología" },
       ].map(tab => (
         <button key={tab.id} onClick={() => setActiveView(tab.id)} style={{
-          padding: "8px 20px", borderRadius: 8, border: "none", cursor: "pointer",
-          fontSize: 14, fontWeight: 600, letterSpacing: 0.5,
-          background: activeView === tab.id ? COLORS.accent + "22" : "transparent",
-          color: activeView === tab.id ? COLORS.accent : COLORS.textMuted,
+          padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer",
+          fontSize: 14, fontWeight: 600, letterSpacing: 0.2,
+          background: activeView === tab.id ? LIGHT.terracottaBg : "transparent",
+          color: activeView === tab.id ? LIGHT.terracotta : LIGHT.inkSoft,
           transition: "all 0.2s ease",
         }}>
           {tab.label}
@@ -433,26 +434,32 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
       <SystemHealth health={systemHealth} />
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <GlowDot color={apiStatus === "connected" ? COLORS.accent : COLORS.danger} size={6} />
-        <span style={{ fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+        <GlowDot color={apiStatus === "connected" ? LIGHT.success : "#c04141"} size={6} />
+        <span style={{ fontSize: 10, color: LIGHT.textMuted, fontFamily: "'DM Mono', monospace" }}>
           {apiStatus === "connected" ? "API LIVE" : "OFFLINE"}
         </span>
       </div>
       {generatedAt && (
-        <span style={{ fontSize: 10, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+        <span style={{ fontSize: 10, color: LIGHT.textMuted, fontFamily: "'DM Mono', monospace" }}>
           {new Date(generatedAt).toLocaleString("es-AR", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
         </span>
       )}
       <button onClick={onRefresh} disabled={refreshing} style={{
-        padding: "5px 12px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
-        background: refreshing ? COLORS.surface : COLORS.accentDim,
-        color: refreshing ? COLORS.textDim : COLORS.accent,
-        fontSize: 11, fontWeight: 600, cursor: refreshing ? "not-allowed" : "pointer",
+        padding: "5px 12px", borderRadius: 6, border: `1px solid ${LIGHT.borderStrong}`,
+        background: refreshing ? LIGHT.surface : LIGHT.terracottaBg,
+        color: refreshing ? LIGHT.textDim : LIGHT.terracotta,
+        fontSize: 11, fontWeight: 700, cursor: refreshing ? "not-allowed" : "pointer",
         fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
         transition: "all 0.2s ease",
       }}>
         {refreshing ? "..." : "↻ Refresh"}
       </button>
+      <a href="/" style={{
+        padding: "5px 12px", borderRadius: 6, border: `1px solid ${LIGHT.border}`,
+        background: "transparent", color: LIGHT.textMuted,
+        fontSize: 11, fontWeight: 600, textDecoration: "none",
+        fontFamily: "Inter, sans-serif", letterSpacing: 0.3,
+      }}>← Landing</a>
     </div>
   </nav>
 );
@@ -9200,18 +9207,18 @@ function DemocracIADashboard() {
     <div style={{
       minHeight: "100vh",
       width: "100%",
-      background: COLORS.bg,
-      color: COLORS.text,
-      fontFamily: "'DM Sans', 'Segoe UI', sans-serif", fontSize: 16,
+      background: LIGHT.bg,
+      color: LIGHT.ink,
+      fontFamily: "Inter, 'DM Sans', system-ui, sans-serif", fontSize: 16,
       margin: 0,
       padding: 0,
       boxSizing: "border-box",
     }}>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
-        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; background: ${COLORS.bg}; }
+        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; background: ${LIGHT.bg}; }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&family=Fraunces:wght@300;500;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       <Navbar activeView={activeView} setActiveView={setActiveView} apiStatus={apiStatus}
         onRefresh={() => fetchDashboardData(true)} refreshing={refreshing} generatedAt={generatedAt}
         systemHealth={systemHealth} />
@@ -9232,14 +9239,15 @@ function DemocracIADashboard() {
       {activeView === "methodology" && <MethodologyView />}
 
       <footer style={{
-        padding: "16px 28px", borderTop: `1px solid ${COLORS.border}`,
+        padding: "16px 28px", borderTop: `1px solid ${LIGHT.border}`,
+        background: LIGHT.bgAlt,
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
-        <span style={{ fontSize: 10, color: COLORS.textDim, letterSpacing: 1 }}>
-          DEMOCRAC.IA — PEIRS v0.4.0 — CONECTADO A BACKEND LANGGRAPH
+        <span style={{ fontSize: 10, color: LIGHT.textMuted, letterSpacing: 1 }}>
+          DEMOCRAC.IA — PEIRS v0.6.0 — Predictive Electoral Integrity & Risk System
         </span>
-        <span style={{ fontSize: 10, color: COLORS.textDim }}>
-          © 2026 — Inteligencia Electoral OSINT
+        <span style={{ fontSize: 10, color: LIGHT.textMuted }}>
+          © 2026 — Inteligencia Electoral
         </span>
       </footer>
     </div>
