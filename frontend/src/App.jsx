@@ -5,7 +5,7 @@ const CHART_METHODOLOGY = {
     how: "El IPRE se calcula ponderando 8 dimensiones: Freedom House (15%), V-Dem democracia liberal (15%), independencia del EMB (15%), sesgo mediático (10%), transparencia financiera (10%), ecosistema digital (10%), violaciones legales (15%) y observación internacional (10%). La trayectoria histórica se construye con variación aleatoria controlada sobre el score actual — los datos históricos precisos requieren integración de series temporales V-Dem.",
     sources: ["V-Dem v15 — Coppedge et al. 2025", "Freedom House FIW 2025", "PEI Dataset 10.0"],
     interpretation: "Un índice en ascenso indica deterioro de las condiciones electorales. Valores sobre 75 activan protocolo de alerta máxima. Valores bajo 25 indican condiciones estables.",
-    color: "#00d4aa",
+    color: "#c25a3a",
   },
   "medios": {
     title: "Distribución de Exposición Mediática",
@@ -65,7 +65,7 @@ const ChartMethodologyBtn = ({ chartKey }) => {
       {open && (
         <div style={{
           position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 200,
-          width: 380, background: "#0d1625",
+          width: 380, background: "#ffffff",
           border: `1px solid ${meta.color}44`,
           borderRadius: 12, padding: 16,
           boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
@@ -111,27 +111,44 @@ const ChartMethodologyBtn = ({ chartKey }) => {
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area, ReferenceLine } from "recharts";
 
+// Paleta UNIFICADA con la landing: cremas cálidas + navy + terracota.
+// Antes el dashboard usaba dark theme separado; consolidamos para coherencia
+// visual en toda la web (16-may-2026).
+//
+// Mapeo semantico:
+//   bg        : fondo principal (crema cálida)
+//   surface   : cards y bloques
+//   surfaceLight: highlight/hover
+//   border    : separadores
+//   text      : ink navy del brand
+//   textMuted : grey-navy medio (subtítulos)
+//   textDim   : grey-navy claro (timestamps)
+//   accent    : terracota brand (CTAs, hover state)
+//   danger    : rojo apagado en gama
+//   warning   : ámbar dorado
+//   info      : navy medio
+//   purple    : violeta apagado
 const COLORS = {
-  bg: "#0a0e17",
-  surface: "#111827",
-  surfaceLight: "#1a2332",
-  border: "#1e2d3d",
-  text: "#e2e8f0",
-  textMuted: "#64748b",
-  textDim: "#475569",
-  accent: "#00d4aa",
-  accentDim: "#00d4aa33",
-  danger: "#ef4444",
-  dangerDim: "#ef444433",
-  warning: "#f59e0b",
-  warningDim: "#f59e0b33",
-  info: "#3b82f6",
-  infoDim: "#3b82f633",
-  purple: "#a855f7",
-  purpleDim: "#a855f733",
-  textPrimary: "#e2e8f0",
-  textSecondary: "#94a3b8",
-  cardBg: "#0f1929",
+  bg: "#fbf9f6",
+  surface: "#ffffff",
+  surfaceLight: "#f7f3ed",
+  border: "#e5dcd0",
+  text: "#1c2230",
+  textMuted: "#5d6878",
+  textDim: "#8b94a3",
+  accent: "#c25a3a",
+  accentDim: "#c25a3a1a",
+  danger: "#c04141",
+  dangerDim: "#c041411a",
+  warning: "#c8893a",
+  warningDim: "#c8893a1a",
+  info: "#3a4356",
+  infoDim: "#3a43561a",
+  purple: "#7c5f8a",
+  purpleDim: "#7c5f8a1a",
+  textPrimary: "#1c2230",
+  textSecondary: "#3a4356",
+  cardBg: "#ffffff",
 };
 
 // ═══ Brand identity ════════════════════════════════════════════════════════
@@ -1780,7 +1797,7 @@ const TooltipInfo = ({ text, children }) => {
         <div style={{
           position: "absolute", bottom: "calc(100% + 8px)", left: "50%",
           transform: "translateX(-50%)", zIndex: 1000,
-          background: "#0d1625", border: `1px solid ${COLORS.accent}44`,
+          background: "#ffffff", border: `1px solid ${COLORS.accent}44`,
           borderRadius: 8, padding: "10px 14px", width: 280,
           boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
           pointerEvents: "none",
@@ -1827,8 +1844,8 @@ const CHAPTER_ICONS = {
 };
 
 const CHAPTER_COLORS = {
-  "1.": "#00d4aa", "2.": "#3b82f6", "3.": "#a855f7", "4.": "#f59e0b",
-  "5.": "#ec4899", "6.": "#06b6d4", "7.": "#64748b", "8.": "#ef4444", "9.": "#00d4aa",
+  "1.": "#c25a3a", "2.": "#3b82f6", "3.": "#a855f7", "4.": "#f59e0b",
+  "5.": "#ec4899", "6.": "#06b6d4", "7.": "#64748b", "8.": "#ef4444", "9.": "#c25a3a",
 };
 
 const renderMarkdownWithTooltips = (md) => {
@@ -3660,7 +3677,7 @@ const RISK_CONFIG = {
   critical: { color: "#ef4444", bg: "#ef444418", label: "CRÍTICO", glow: "#ef444466" },
   high:     { color: "#f97316", bg: "#f9731618", label: "ALTO",     glow: "#f9731666" },
   moderate: { color: "#f59e0b", bg: "#f59e0b18", label: "MODERADO", glow: "#f59e0b66" },
-  low:      { color: "#00d4aa", bg: "#00d4aa18", label: "BAJO",     glow: "#00d4aa66" },
+  low:      { color: "#c25a3a", bg: "#c25a3a14", label: "BAJO",     glow: "#c25a3a66" },
 };
 
 const DIMENSION_META = {
@@ -3675,13 +3692,13 @@ const DIMENSION_META = {
 };
 
 const CIVIL_LIBERTY_LABELS = {
-  guaranteed:           { color: "#00d4aa", icon: "✅", label: "Garantizada" },
+  guaranteed:           { color: "#c25a3a", icon: "✅", label: "Garantizada" },
   mostly_free:          { color: "#22c55e", icon: "🟢", label: "Mayormente libre" },
   partially_restricted: { color: "#f59e0b", icon: "🟡", label: "Parcialmente restringida" },
   restricted:           { color: "#f97316", icon: "🟠", label: "Restringida" },
   severely_restricted:  { color: "#ef4444", icon: "🔴", label: "Severamente restringida" },
   banned:               { color: "#7f1d1d", icon: "⛔", label: "Prohibida" },
-  strong:               { color: "#00d4aa", icon: "✅", label: "Independiente" },
+  strong:               { color: "#c25a3a", icon: "✅", label: "Independiente" },
   mostly_independent:   { color: "#22c55e", icon: "🟢", label: "Mayormente independiente" },
   under_pressure:       { color: "#f59e0b", icon: "🟡", label: "Bajo presión" },
   compromised:          { color: "#f97316", icon: "🟠", label: "Comprometida" },
@@ -3703,10 +3720,10 @@ const RiskGaugeElite = ({ score, riskLevel, size = 200 }) => {
         <svg width={size} height={size / 2 + 20} viewBox={`0 0 ${size} ${size / 2 + 20}`}>
           {/* Track */}
           <path d={`M 18,${size/2} A ${r},${r} 0 0,1 ${size-18},${size/2}`}
-            fill="none" stroke="#1e2d3d" strokeWidth="14" strokeLinecap="round" />
+            fill="none" stroke="#e5dcd0" strokeWidth="14" strokeLinecap="round" />
           {/* Zones */}
           {[
-            { pct: 0.25, color: "#00d4aa44" },
+            { pct: 0.25, color: "#c25a3a44" },
             { pct: 0.25, color: "#f59e0b44" },
             { pct: 0.25, color: "#f9731644" },
             { pct: 0.25, color: "#ef444444" },
@@ -3776,8 +3793,8 @@ const DimensionBar = ({ dimKey, value, delay = 0 }) => {
   const anim = value || 0;
   const meta = DIMENSION_META[dimKey] || { label: dimKey, icon: "📊", desc: "" };
 
-  const color = value >= 70 ? "#00d4aa" : value >= 45 ? "#f59e0b" : value >= 25 ? "#f97316" : "#ef4444";
-  const bgColor = value >= 70 ? "#00d4aa18" : value >= 45 ? "#f59e0b18" : value >= 25 ? "#f9731618" : "#ef444418";
+  const color = value >= 70 ? "#c25a3a" : value >= 45 ? "#f59e0b" : value >= 25 ? "#f97316" : "#ef4444";
+  const bgColor = value >= 70 ? "#c25a3a14" : value >= 45 ? "#f59e0b18" : value >= 25 ? "#f9731618" : "#ef444418";
 
   return (
     <TooltipInfo text={{ title: meta.label, desc: meta.desc, source: "PEIRS", confidence: "confirmed" }}>
@@ -3792,7 +3809,7 @@ const DimensionBar = ({ dimKey, value, delay = 0 }) => {
             background: bgColor, padding: "1px 8px", borderRadius: 10,
           }}>{Math.round(anim)}</span>
         </div>
-        <div style={{ height: 6, background: "#1e2d3d", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ height: 6, background: "#e5dcd0", borderRadius: 3, overflow: "hidden" }}>
           <div style={{
             height: "100%", width: `${anim}%`, borderRadius: 3,
             background: `linear-gradient(90deg, ${color}88, ${color})`,
@@ -3870,7 +3887,7 @@ const CivilLibertiesSemaphore = ({ civil }) => {
 const ViolationHeatmap = ({ violations }) => {
   if (!violations || violations.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: "20px", color: "#00d4aa" }}>
+      <div style={{ textAlign: "center", padding: "20px", color: "#c25a3a" }}>
         <div style={{ fontSize: 28, marginBottom: 8 }}>✓</div>
         <div style={{ fontSize: 13 }}>Sin violaciones detectadas</div>
       </div>
@@ -3886,7 +3903,7 @@ const ViolationHeatmap = ({ violations }) => {
     critical: { color: "#ef4444", bg: "#ef444418", border: "#ef444444", label: "CRÍTICO" },
     high:     { color: "#f97316", bg: "#f9731618", border: "#f9731644", label: "ALTO" },
     moderate: { color: "#f59e0b", bg: "#f59e0b18", border: "#f59e0b44", label: "MODERADO" },
-    low:      { color: "#00d4aa", bg: "#00d4aa18", border: "#00d4aa44", label: "BAJO" },
+    low:      { color: "#c25a3a", bg: "#c25a3a14", border: "#c25a3a44", label: "BAJO" },
   };
 
   return (
@@ -3923,8 +3940,8 @@ const ViolationHeatmap = ({ violations }) => {
               }}>{sc.label}</span>
               <span style={{
                 fontSize: 9, padding: "1px 6px", borderRadius: 4,
-                background: isConf ? "#00d4aa18" : "#f59e0b18",
-                color: isConf ? "#00d4aa" : "#f59e0b",
+                background: isConf ? "#c25a3a14" : "#f59e0b18",
+                color: isConf ? "#c25a3a" : "#f59e0b",
                 fontFamily: "'DM Mono', monospace",
               }}>{isConf ? "✓ VERIF." : "⚠ ESTIM."}</span>
             </div>
@@ -3940,15 +3957,15 @@ const SourceBadge = ({ label, value, confidence, year, color }) => (
   <div style={{
     padding: "12px 16px", borderRadius: 12,
     background: confidence === "confirmed" ? color + "0f" : "#1a233218",
-    border: `1px solid ${confidence === "confirmed" ? color + "44" : "#1e2d3d"}`,
+    border: `1px solid ${confidence === "confirmed" ? color + "44" : "#e5dcd0"}`,
     borderLeft: `3px solid ${confidence === "confirmed" ? color : "#475569"}`,
   }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0", textTransform: "uppercase", letterSpacing: 1 }}>{label}</span>
       <span style={{
         fontSize: 9, padding: "1px 7px", borderRadius: 10,
-        background: confidence === "confirmed" ? "#00d4aa18" : "#f59e0b18",
-        color: confidence === "confirmed" ? "#00d4aa" : "#f59e0b",
+        background: confidence === "confirmed" ? "#c25a3a14" : "#f59e0b18",
+        color: confidence === "confirmed" ? "#c25a3a" : "#f59e0b",
         fontFamily: "'DM Mono', monospace", fontWeight: 700,
       }}>{confidence === "confirmed" ? "✓ VERIFICADO" : "⚠ ESTIMADO"}</span>
     </div>
@@ -4065,7 +4082,7 @@ const ReportViewer = ({ runId, country }) => {
   const trend = dictamen.trend || {};
   const regComp = dictamen.regional_comparison || {};
   const dataConf = dictamen.data_confidence || "MEDIUM";
-  const confColor = dataConf === "HIGH" ? "#00d4aa" : dataConf === "MEDIUM" ? "#f59e0b" : "#ef4444";
+  const confColor = dataConf === "HIGH" ? "#c25a3a" : dataConf === "MEDIUM" ? "#f59e0b" : "#ef4444";
 
   const md = reportData.final_report_markdown || "";
   const reportChapters = reportData.report_chapters || {};
@@ -4166,7 +4183,7 @@ const ReportViewer = ({ runId, country }) => {
       {/* Chapter Navigation */}
       <div style={{
         display: "flex", gap: 6, overflowX: "auto", padding: "12px 16px",
-        background: "#0d1220", border: `1px solid ${COLORS.border}`,
+        background: "#ffffff", border: `1px solid ${COLORS.border}`,
         borderTop: "none", borderBottom: "none",
         scrollbarWidth: "thin",
       }}>
@@ -4282,7 +4299,7 @@ const ReportViewer = ({ runId, country }) => {
                         {trend.trend_direction === "up" ? "📈" : trend.trend_direction === "down" ? "📉" : "➡️"}
                         <span style={{
                           marginLeft: 8, fontWeight: 700, fontSize: 12,
-                          color: trend.trend_direction === "up" ? "#00d4aa" : trend.trend_direction === "down" ? "#ef4444" : "#f59e0b",
+                          color: trend.trend_direction === "up" ? "#c25a3a" : trend.trend_direction === "down" ? "#ef4444" : "#f59e0b",
                         }}>{trend.trend?.toUpperCase()}</span>
                       </div>
                       <div style={{ fontSize: 11, color: "#94a3b8" }}>
@@ -4323,7 +4340,7 @@ const ReportViewer = ({ runId, country }) => {
                     { label: "V-Dem", value: regComp.vdem_vs_region },
                     { label: "RSF", value: regComp.rsf_vs_region },
                   ].filter(r => r.value).map((r, i) => (
-                    <div key={i} style={{ padding: "8px 12px", borderRadius: 8, background: "#111827", border: "1px solid #1e2d3d" }}>
+                    <div key={i} style={{ padding: "8px 12px", borderRadius: 8, background: "#ffffff", border: "1px solid #1e2d3d" }}>
                       <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>{r.label}</div>
                       <div style={{ fontSize: 11, color: "#e2e8f0", lineHeight: 1.4 }}>{r.value}</div>
                     </div>
@@ -4360,7 +4377,7 @@ const ReportViewer = ({ runId, country }) => {
                   display: "flex", justifyContent: "space-between", alignItems: "flex-start",
                 }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#00d4aa", fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#c25a3a", fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
                       DICTAMEN TÉCNICO — {dictamen.dictamen_id}
                     </div>
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
@@ -4379,12 +4396,12 @@ const ReportViewer = ({ runId, country }) => {
                   <p key={i} style={{
                     margin: "0 0 16px", fontSize: 14, color: "#e2e8f0",
                     lineHeight: 1.9, letterSpacing: 0.1,
-                    paddingLeft: 14, borderLeft: `3px solid ${["#00d4aa", "#3b82f6", "#a855f7", "#f59e0b"][i % 4]}`,
+                    paddingLeft: 14, borderLeft: `3px solid ${["#c25a3a", "#3b82f6", "#a855f7", "#f59e0b"][i % 4]}`,
                   }}>{para}</p>
                 ))}
                 <div style={{
                   marginTop: 20, padding: "12px 16px", borderRadius: 10,
-                  background: "#0d1625", border: "1px solid #1e2d3d",
+                  background: "#ffffff", border: "1px solid #1e2d3d",
                   fontSize: 11, color: "#475569", lineHeight: 1.6,
                   fontFamily: "'DM Mono', monospace",
                 }}>
@@ -4519,7 +4536,7 @@ const GLOSSARY = [
     term: "PEI",
     full: "Perceptions of Electoral Integrity",
     category: "Dataset",
-    color: "#00d4aa",
+    color: "#c25a3a",
     def: "Encuesta a expertos electorales sobre percepción de integridad en 586 elecciones (2012-2023) en 164 países. Financiado por Harvard Kennedy School. Versión 10.0. Evalúa 11 dimensiones del ciclo electoral.",
     source: "Garnett, James & Caal-Lam. Harvard Dataverse, 2024",
     url: "https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/FQ5ECC",
@@ -4569,7 +4586,7 @@ const GLOSSARY = [
     term: "PEIRS",
     full: "Predictive Electoral Integrity & Risk System",
     category: "Sistema",
-    color: "#00d4aa",
+    color: "#c25a3a",
     def: "Sistema propietario de DEMOCRAC.IA. Pipeline de 4 agentes de IA (LangGraph) que ingesta datos OSINT, analiza el contexto político-digital, evalúa cumplimiento del derecho internacional y genera informes VIP con trazabilidad completa.",
     source: "DEMOCRAC.IA v0.4.0",
     url: null,
@@ -4599,7 +4616,7 @@ const GLOSSARY = [
     term: "Trazabilidad",
     full: "Cadena de Custodia de Datos",
     category: "Metodología",
-    color: "#00d4aa",
+    color: "#c25a3a",
     def: "Cada dato en PEIRS incluye metadatos de origen: source_id, source_type, confidence (confirmed/mock), legal_basis, data_hash y is_publishable. Permite auditar la procedencia de cada hallazgo del informe hasta su fuente primaria.",
     source: "PEIRS Traceability Framework v0.2.0",
     url: null,
@@ -5182,7 +5199,7 @@ const ALERT_COLORS = {
   RED:    "#ef4444",
   ORANGE: "#f97316",
   AMBER:  "#f59e0b",
-  GREEN:  "#00d4aa",
+  GREEN:  "#c25a3a",
 };
 
 const MOE_TABS = [
@@ -5273,7 +5290,7 @@ const ElectionCountdown = React.memo(({ electionTs, alertColor }) => {
       ].map(({ val, label }) => (
         <div key={label} style={{
           textAlign: "center", padding: "4px 10px",
-          background: "#111827", borderRadius: 7,
+          background: "#ffffff", borderRadius: 7,
           border: "1px solid #1e2d3d",
         }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: alertColor, fontFamily: "'DM Mono', monospace", lineHeight: 1.1 }}>
@@ -6541,7 +6558,7 @@ function PeruSituationRoom() {
                     <text x={cx + 4} y={cy - (BASE_R + 4 * ROW_GAP + 16)} fill="#ffffff55" fontSize={8} fontFamily="'DM Mono', monospace">66 mayoría</text>
                     {/* Seats */}
                     {circles.map((c, i) => (
-                      <circle key={i} cx={c.x} cy={c.y} r={SEAT_R} fill={c.color} fillOpacity={0.88} stroke="#0a0e17" strokeWidth={0.8} />
+                      <circle key={i} cx={c.x} cy={c.y} r={SEAT_R} fill={c.color} fillOpacity={0.88} stroke="#fbf9f6" strokeWidth={0.8} />
                     ))}
                   </svg>
                 );
@@ -7663,7 +7680,7 @@ function PeruSituationRoom() {
                                   </span>
                                 )}
                                 {platScore !== null && platScore !== undefined && (
-                                  <span style={{ fontSize: 9, color: "#00d4aa", background: "#00d4aa11", padding: "1px 6px", borderRadius: 4, border: "1px solid #00d4aa22" }}>
+                                  <span style={{ fontSize: 9, color: "#c25a3a", background: "#c25a3a14", padding: "1px 6px", borderRadius: 4, border: "1px solid #00d4aa22" }}>
                                     Plataforma: {Math.round(platScore)}/100
                                   </span>
                                 )}
