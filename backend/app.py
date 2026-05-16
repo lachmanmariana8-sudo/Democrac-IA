@@ -5850,6 +5850,106 @@ async def get_system_stats():
     }
 
 
+@app.get("/api/public/stats")
+async def get_public_stats():
+    """Estadisticas publicas agregadas para landing pagina.
+
+    No requiere auth. Datos seguros para exposicion publica:
+    - Countries en catalogo + paises con cobertura activa
+    - Total findings del Hunter (de observation_sessions reales)
+    - Reportes Elite generados
+    - Days running (desde el inicio de la sesion mas antigua)
+    - Last activity timestamp (Hunter ultimo ciclo)
+
+    NO expone: secrets, observer keys, user data, run_ids, contenido
+    de findings o reports.
+    """
+    from collections import Counter
+    countries_total = len(COUNTRY_CATALOG)
+    active_session_countries = list(observation_store.keys())
+    countries_active = len(active_session_countries)
+
+    # Aggregar findings reales del Hunter desde observation_sessions
+    total_findings = 0
+    severity_breakdown = Counter()
+    days_monitoring = 0
+    last_finding_at: Optional[str] = None
+    primary_country: Optional[Dict[str, Any]] = None
+
+    for cc, session in observation_store.items():
+        entries = session.get("entries", []) or []
+        total_findings += len(entries)
+        for e in entries:
+            sev = (e.get("severity") or "info").lower()
+            severity_breakdown[sev] += 1
+            recorded = e.get("recorded_at")
+            if recorded and (last_finding_at is None or recorded > last_finding_at):
+                last_finding_at = recorded
+
+        # Calculate days monitoring desde started_at
+        started = session.get("started_at")
+        if started:
+            try:
+                started_dt = datetime.fromisoformat(started.replace("Z", "+00:00"))
+                delta_days = (datetime.now(timezone.utc) - started_dt).days
+                if delta_days > days_monitoring:
+                    days_monitoring = delta_days
+            except Exception:
+                pass
+
+        # Primary country = first active session
+        if primary_country is None:
+            cat = COUNTRY_CATALOG.get(cc, {})
+            primary_country = {
+                "code": cc,
+                "name": cat.get("name", cc),
+                "flag": cat.get("flag", ""),
+                "election_date": cat.get("election_date"),
+                "phase": session.get("phase"),
+                "phase_label": _PHASE_LABELS.get(session.get("phase", ""), ""),
+            }
+
+    # Reports generated count via SQLite
+    elite_reports_count = 0
+    if DB_AVAILABLE:
+        try:
+            with _get_db() as conn:
+                row = conn.execute("SELECT COUNT(*) AS n FROM elite_reports").fetchone()
+                elite_reports_count = row["n"] if row else 0
+        except Exception:
+            pass
+
+    return {
+        "platform": {
+            "version": "0.6.0",
+            "operational": True,
+            "languages": ["es", "en", "pt"],
+        },
+        "coverage": {
+            "countries_catalog": countries_total,
+            "countries_active": countries_active,
+            "primary_country": primary_country,
+        },
+        "monitoring": {
+            "total_findings": total_findings,
+            "severity_breakdown": dict(severity_breakdown),
+            "days_running": days_monitoring,
+            "last_finding_at": last_finding_at,
+            "hunter_active": True,
+        },
+        "outputs": {
+            "elite_reports_generated": elite_reports_count,
+        },
+        "datasets": [
+            {"name": "V-Dem", "version": "v16", "coverage": "1789-2025", "countries": 202},
+            {"name": "Freedom House FIW", "coverage": "2013-2025", "countries": 195},
+            {"name": "PEI", "version": "10.0", "coverage": "2012-2023", "elections": 586},
+            {"name": "RSF", "version": "2025", "countries": 180},
+        ],
+        "as_of": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @app.get("/api/countries")
 async def list_countries():
     return {

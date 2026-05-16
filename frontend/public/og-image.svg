@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0e17"/>
+
+  <!-- Decorative grid -->
+  <g stroke="#1e2d3d" stroke-width="0.5" opacity="0.5">
+    <line x1="0" y1="100" x2="1200" y2="100"/>
+    <line x1="0" y1="200" x2="1200" y2="200"/>
+    <line x1="0" y1="300" x2="1200" y2="300"/>
+    <line x1="0" y1="400" x2="1200" y2="400"/>
+    <line x1="0" y1="500" x2="1200" y2="500"/>
+    <line x1="200" y1="0" x2="200" y2="630"/>
+    <line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+
+  <!-- Logo target glyph (centro-izquierda) -->
+  <g transform="translate(100,225)">
+    <circle cx="90" cy="90" r="80" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+    <circle cx="90" cy="90" r="45" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+    <circle cx="90" cy="90" r="14" fill="#c25a3a"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="340" y="290" font-family="Inter, system-ui, sans-serif" font-size="88" font-weight="800" fill="#e2e8f0" letter-spacing="-2">Democrac<tspan fill="#c25a3a">.IA</tspan></text>
+
+  <!-- Tagline -->
+  <text x="340" y="350" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="500" fill="#94a3b8" letter-spacing="-0.5">Predictive Electoral Integrity &amp; Risk System</text>
+
+  <!-- Bullets -->
+  <text x="340" y="420" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="600" fill="#00d4aa">▸ V-Dem · Freedom House · PEI · RSF</text>
+  <text x="340" y="460" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="600" fill="#00d4aa">▸ Monitoreo en tiempo real con IA</text>
+  <text x="340" y="500" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="600" fill="#00d4aa">▸ Análisis predictivo · 8 dimensiones PEIRS</text>
+
+  <!-- URL -->
+  <text x="340" y="570" font-family="DM Mono, monospace" font-size="20" fill="#64748b">democracia.ar</text>
+</svg>

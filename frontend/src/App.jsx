@@ -8818,7 +8818,287 @@ function CountrySelector({ countries, selectedCountry, onSelect }) {
   );
 }
 
-export default function DemocracIADashboard() {
+// ═══════════════════════════════════════════════════════════════════════
+// LANDING PAGE PUBLICA — accesible en / (root) sin auth
+// El dashboard tecnico vive en /?app=true (toggle)
+// ═══════════════════════════════════════════════════════════════════════
+
+function LandingPage({ onEnterApp }) {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/public/stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setStats(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const numFindings = stats?.monitoring?.total_findings ?? "—";
+  const numReports = stats?.outputs?.elite_reports_generated ?? "—";
+  const numDays = stats?.monitoring?.days_running ?? "—";
+  const numCountries = stats?.coverage?.countries_catalog ?? 38;
+  const primary = stats?.coverage?.primary_country;
+  const sevCritical = stats?.monitoring?.severity_breakdown?.critical ?? 0;
+  const sevHigh = stats?.monitoring?.severity_breakdown?.high ?? 0;
+  const lastUpdate = stats?.monitoring?.last_finding_at;
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: COLORS.bg, color: COLORS.text,
+      fontFamily: "Inter, 'DM Sans', system-ui, sans-serif",
+    }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&family=Fraunces:wght@300;500;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+      {/* NAV */}
+      <nav style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "20px 7%", borderBottom: `1px solid ${COLORS.border}`,
+        position: "sticky", top: 0, zIndex: 100, background: COLORS.bg + "ee",
+        backdropFilter: "blur(10px)",
+      }}>
+        <BrandLogo size={42} withWordmark wordmarkSize={26} />
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <a href="#producto" style={{ color: COLORS.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Producto</a>
+          <a href="#datos" style={{ color: COLORS.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Datos</a>
+          <a href="#metodologia" style={{ color: COLORS.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Metodología</a>
+          <button onClick={onEnterApp} style={{
+            padding: "10px 20px", borderRadius: 8, border: `1px solid ${BRAND.terracotta}`,
+            background: BRAND.terracotta, color: "#fff", fontSize: 14, fontWeight: 700,
+            cursor: "pointer", letterSpacing: 0.3,
+          }}>Acceder al dashboard →</button>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <section style={{ padding: "80px 7% 60px", maxWidth: 1400, margin: "0 auto" }}>
+        <div style={{
+          display: "inline-block", padding: "6px 14px", borderRadius: 20,
+          background: BRAND.terracotta + "22", border: `1px solid ${BRAND.terracotta}66`,
+          color: BRAND.terracotta, fontSize: 12, fontWeight: 700, letterSpacing: 1.5,
+          textTransform: "uppercase", marginBottom: 24,
+        }}>
+          Predictive Electoral Integrity & Risk System
+        </div>
+        <h1 style={{
+          fontSize: 64, fontWeight: 900, lineHeight: 1.1, letterSpacing: -2,
+          margin: "0 0 24px", maxWidth: 900,
+          fontFamily: "Fraunces, Georgia, serif",
+        }}>
+          Inteligencia electoral basada en evidencia,<br />
+          <span style={{ color: BRAND.terracotta }}>con trazabilidad verificable.</span>
+        </h1>
+        <p style={{
+          fontSize: 22, lineHeight: 1.6, color: COLORS.textMuted, maxWidth: 800,
+          margin: "0 0 40px", fontWeight: 400,
+        }}>
+          Plataforma de inteligencia artificial diseñada para anticipar riesgos
+          sobre la integridad electoral y la calidad democrática. Análisis basado
+          en datasets internacionales con transparencia metodológica completa.
+        </p>
+        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+          <button onClick={onEnterApp} style={{
+            padding: "16px 32px", borderRadius: 10, border: "none",
+            background: BRAND.terracotta, color: "#fff", fontSize: 16, fontWeight: 800,
+            cursor: "pointer", letterSpacing: 0.3,
+            boxShadow: `0 4px 20px ${BRAND.terracotta}44`,
+          }}>Ver dashboard en vivo →</button>
+          <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs/blob/main/DOCS%20Proyect/PEIRS_Indices_Methodology_v1.0.md"
+             target="_blank" rel="noopener noreferrer" style={{
+            padding: "16px 32px", borderRadius: 10, border: `1px solid ${COLORS.border}`,
+            background: "transparent", color: COLORS.text, fontSize: 16, fontWeight: 700,
+            textDecoration: "none", letterSpacing: 0.3,
+          }}>Leer metodología</a>
+        </div>
+      </section>
+
+      {/* STATS LIVE */}
+      <section id="datos" style={{
+        padding: "60px 7%", maxWidth: 1400, margin: "0 auto",
+        borderTop: `1px solid ${COLORS.border}`, borderBottom: `1px solid ${COLORS.border}`,
+      }}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 12, color: COLORS.textMuted, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
+            Datos en vivo · {lastUpdate ? `actualizado ${new Date(lastUpdate).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })}` : "sincronizando..."}
+          </div>
+          <h2 style={{ fontSize: 36, fontWeight: 800, margin: 0, fontFamily: "Fraunces, serif" }}>
+            La plataforma en números
+          </h2>
+        </div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 24,
+        }}>
+          <StatCard label="Hallazgos OSINT verificados" value={numFindings} hint="Hunter scheduler 24h" />
+          <StatCard label="Países en catálogo" value={numCountries} hint="V-Dem · FH · PEI · RSF" />
+          <StatCard label="Informes Elite generados" value={numReports} hint="12 capítulos + 3 anexos" />
+          <StatCard label="Días de monitoreo" value={numDays} hint={primary ? `${primary.flag} ${primary.name}` : "—"} />
+          <StatCard label="Hallazgos críticos" value={sevCritical} hint="Severity: critical" accent />
+          <StatCard label="Hallazgos altos" value={sevHigh} hint="Severity: high" />
+        </div>
+      </section>
+
+      {/* COBERTURA ACTIVA */}
+      {primary && (
+        <section style={{ padding: "60px 7%", maxWidth: 1400, margin: "0 auto" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 32, padding: 32,
+            background: COLORS.surface, borderRadius: 16, border: `1px solid ${COLORS.border}`,
+            flexWrap: "wrap",
+          }}>
+            <div style={{ fontSize: 80, lineHeight: 1 }}>{primary.flag}</div>
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, letterSpacing: 2,
+                textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
+                Cobertura activa
+              </div>
+              <h3 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 8px",
+                fontFamily: "Fraunces, serif" }}>
+                {primary.name} {primary.election_date && `· Elecciones ${primary.election_date.slice(0, 4)}`}
+              </h3>
+              <p style={{ color: COLORS.textMuted, fontSize: 16, margin: "0 0 16px" }}>
+                Fase actual: <span style={{ color: COLORS.text, fontWeight: 700 }}>{primary.phase_label || primary.phase}</span>
+              </p>
+              <button onClick={onEnterApp} style={{
+                padding: "12px 24px", borderRadius: 8, border: `1px solid ${BRAND.terracotta}`,
+                background: "transparent", color: BRAND.terracotta, fontSize: 14, fontWeight: 700,
+                cursor: "pointer",
+              }}>Explorar el monitoreo →</button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* QUE HACE */}
+      <section id="producto" style={{ padding: "80px 7%", maxWidth: 1400, margin: "0 auto" }}>
+        <div style={{ marginBottom: 48 }}>
+          <h2 style={{ fontSize: 42, fontWeight: 800, margin: "0 0 16px",
+            fontFamily: "Fraunces, serif" }}>¿Qué hace Democrac.IA?</h2>
+          <p style={{ fontSize: 18, color: COLORS.textMuted, maxWidth: 700, lineHeight: 1.6 }}>
+            Pipeline híbrido de análisis: reglas determinísticas sobre datasets
+            estructurales + clasificación automática con Claude Sonnet 4.6 sobre
+            evidencia OSINT en tiempo real.
+          </p>
+        </div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 24,
+        }}>
+          <FeatureCard icon="🔍" title="Monitoreo OSINT 24/7" desc="Hunter scheduler que ingesta RSS verificadas y clasifica con IA. 14 fuentes activas (nacionales + internacionales)." />
+          <FeatureCard icon="📊" title="Datasets internacionales" desc="V-Dem v16, Freedom House FIW, Perceptions of Electoral Integrity 10.0, RSF Press Freedom Index." />
+          <FeatureCard icon="⚖️" title="Marco normativo" desc="14 instrumentos del derecho internacional (ICCPR, CADH, CDI, CEDAW) + marcos nacionales por país." />
+          <FeatureCard icon="🚨" title="Alertas tempranas" desc="Crisis Index auditable derivado del corpus. Notificación automática para severidades altas y críticas." />
+          <FeatureCard icon="🤖" title="Análisis predictivo" desc="6 escenarios probabilísticos con bandas de confianza. Pipeline LangGraph + RAG legal + reglas determinísticas." />
+          <FeatureCard icon="📑" title="Informe Elite" desc="12 capítulos + 3 anexos. Citas APA 7 con URL verificable. Trilingüe (es/en/pt). Comparable a misiones OSCE/OEA/EU EOM." />
+        </div>
+      </section>
+
+      {/* METODOLOGIA */}
+      <section id="metodologia" style={{
+        padding: "80px 7%", maxWidth: 1400, margin: "0 auto",
+        borderTop: `1px solid ${COLORS.border}`,
+      }}>
+        <h2 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px",
+          fontFamily: "Fraunces, serif" }}>Transparencia metodológica</h2>
+        <p style={{ fontSize: 17, color: COLORS.textMuted, maxWidth: 720, lineHeight: 1.6, marginBottom: 32 }}>
+          Cada índice cuantitativo del informe Elite tiene fórmula auditable
+          documentada. Citable formalmente por tribunales, organismos
+          supranacionales y dataset partners.
+        </p>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs/blob/main/DOCS%20Proyect/PEIRS_Indices_Methodology_v1.0.md"
+             target="_blank" rel="noopener noreferrer" style={{
+            padding: "14px 24px", borderRadius: 10, border: `1px solid ${COLORS.border}`,
+            background: COLORS.surface, color: COLORS.text, fontSize: 14, fontWeight: 700,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
+          }}>📄 Metodología de Índices v1.0</a>
+          <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs"
+             target="_blank" rel="noopener noreferrer" style={{
+            padding: "14px 24px", borderRadius: 10, border: `1px solid ${COLORS.border}`,
+            background: COLORS.surface, color: COLORS.text, fontSize: 14, fontWeight: 700,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
+          }}>💻 Código fuente</a>
+        </div>
+      </section>
+
+      {/* DISCLOSURE */}
+      <section style={{ padding: "60px 7%", maxWidth: 1400, margin: "0 auto" }}>
+        <div style={{
+          padding: 32, background: COLORS.surface, borderRadius: 16,
+          border: `2px solid ${COLORS.border}`,
+        }}>
+          <div style={{ fontSize: 11, color: BRAND.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Disclosure institucional
+          </div>
+          <p style={{ fontSize: 17, color: COLORS.text, margin: 0, lineHeight: 1.7, fontWeight: 500 }}>
+            <strong>Democrac.IA no legitima ni valida resultados electorales.</strong>
+            Esta plataforma emite inteligencia electoral con trazabilidad
+            verificable bajo estándares internacionales de observación electoral,
+            sin sesgo político-partidario.
+          </p>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{
+        padding: "40px 7%", borderTop: `1px solid ${COLORS.border}`,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: 16, color: COLORS.textDim, fontSize: 13,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <BrandLogo size={28} />
+          <span>Democrac.IA · PEIRS v0.6.0</span>
+        </div>
+        <div style={{ display: "flex", gap: 24 }}>
+          <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs"
+             target="_blank" rel="noopener noreferrer"
+             style={{ color: COLORS.textDim, textDecoration: "none" }}>GitHub</a>
+          <a href="#metodologia" style={{ color: COLORS.textDim, textDecoration: "none" }}>Metodología</a>
+          <button onClick={onEnterApp} style={{
+            background: "transparent", border: "none", color: COLORS.textDim,
+            cursor: "pointer", fontSize: 13, padding: 0,
+          }}>Dashboard</button>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function StatCard({ label, value, hint, accent = false }) {
+  return (
+    <div style={{
+      padding: 24, background: COLORS.surface, borderRadius: 12,
+      border: `1px solid ${accent ? BRAND.terracotta + "66" : COLORS.border}`,
+    }}>
+      <div style={{ fontSize: 11, color: COLORS.textMuted, letterSpacing: 1.5,
+        textTransform: "uppercase", fontWeight: 700, marginBottom: 10 }}>{label}</div>
+      <div style={{
+        fontSize: 48, fontWeight: 900, lineHeight: 1, marginBottom: 8,
+        color: accent ? BRAND.terracotta : COLORS.text,
+        fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1.5,
+      }}>{typeof value === "number" ? value.toLocaleString('es-AR') : value}</div>
+      <div style={{ fontSize: 12, color: COLORS.textDim }}>{hint}</div>
+    </div>
+  );
+}
+
+function FeatureCard({ icon, title, desc }) {
+  return (
+    <div style={{
+      padding: 24, background: COLORS.surface, borderRadius: 12,
+      border: `1px solid ${COLORS.border}`,
+    }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>
+      <h3 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 8px",
+        fontFamily: "Inter, sans-serif" }}>{title}</h3>
+      <p style={{ fontSize: 14, color: COLORS.textMuted, margin: 0, lineHeight: 1.6 }}>{desc}</p>
+    </div>
+  );
+}
+
+function DemocracIADashboard() {
   const [activeView, setActiveView] = useState("overview");
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [countries, setCountries] = useState([]);
@@ -8935,3 +9215,33 @@ export default function DemocracIADashboard() {
 }
 
 // Test auto-deploy 1776605450
+
+// ═══════════════════════════════════════════════════════════════════════
+// APP WRAPPER — decide entre Landing publica y Dashboard tecnico
+// Landing en /     |     Dashboard en /?app=true
+// ═══════════════════════════════════════════════════════════════════════
+
+export default function App() {
+  const [showApp, setShowApp] = useState(() => {
+    try {
+      const url = new URL(window.location.href);
+      return url.searchParams.get("app") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const enterApp = useCallback(() => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("app", "true");
+      window.history.pushState({}, "", url.toString());
+    } catch {}
+    setShowApp(true);
+  }, []);
+
+  if (!showApp) {
+    return <LandingPage onEnterApp={enterApp} />;
+  }
+  return <DemocracIADashboard />;
+}
