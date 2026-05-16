@@ -8821,7 +8821,31 @@ function CountrySelector({ countries, selectedCountry, onSelect }) {
 // ═══════════════════════════════════════════════════════════════════════
 // LANDING PAGE PUBLICA — accesible en / (root) sin auth
 // El dashboard tecnico vive en /?app=true (toggle)
+// Paleta CLARA en la misma gama que el brand (navy + terracota).
 // ═══════════════════════════════════════════════════════════════════════
+
+const LIGHT = {
+  // Backgrounds en tonos cálidos para acompañar la terracota
+  bg:           "#fbf9f6",   // crema cálida muy suave
+  bgAlt:        "#f4efe8",   // crema un tono más oscuro
+  surface:      "#ffffff",   // cards
+  surfaceAlt:   "#f7f3ed",   // segundo nivel
+  // Bordes
+  border:       "#e5dcd0",   // beige muy suave
+  borderStrong: "#d0c4b0",
+  // Texto
+  ink:          "#1c2230",   // navy brand — headings + texto principal
+  inkSoft:      "#3a4356",   // navy más claro
+  textMuted:    "#5d6878",   // grey-navy medio
+  textDim:      "#8b94a3",   // grey-navy claro
+  // Accent brand
+  terracotta:   "#c25a3a",
+  terracottaSoft: "#e8b8a6",
+  terracottaBg: "#fdf2ed",
+  // Status (mantenidos en la gama)
+  success:      "#4a7c59",   // verde apagado
+  warning:      "#c8893a",   // ámbar dorado
+};
 
 function LandingPage({ onEnterApp }) {
   const [stats, setStats] = useState(null);
@@ -8845,7 +8869,7 @@ function LandingPage({ onEnterApp }) {
 
   return (
     <div style={{
-      minHeight: "100vh", background: COLORS.bg, color: COLORS.text,
+      minHeight: "100vh", background: LIGHT.bg, color: LIGHT.ink,
       fontFamily: "Inter, 'DM Sans', system-ui, sans-serif",
     }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&family=Fraunces:wght@300;500;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -8853,18 +8877,18 @@ function LandingPage({ onEnterApp }) {
       {/* NAV */}
       <nav style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: "20px 7%", borderBottom: `1px solid ${COLORS.border}`,
-        position: "sticky", top: 0, zIndex: 100, background: COLORS.bg + "ee",
+        padding: "20px 7%", borderBottom: `1px solid ${LIGHT.border}`,
+        position: "sticky", top: 0, zIndex: 100, background: LIGHT.bg + "ee",
         backdropFilter: "blur(10px)",
       }}>
-        <BrandLogo size={42} withWordmark wordmarkSize={26} />
+        <BrandLogo size={42} withWordmark wordmarkSize={26} lightOnDark={false} />
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <a href="#producto" style={{ color: COLORS.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Producto</a>
-          <a href="#datos" style={{ color: COLORS.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Datos</a>
-          <a href="#metodologia" style={{ color: COLORS.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Metodología</a>
+          <a href="#producto" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Producto</a>
+          <a href="#datos" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Datos</a>
+          <a href="#metodologia" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Metodología</a>
           <button onClick={onEnterApp} style={{
-            padding: "10px 20px", borderRadius: 8, border: `1px solid ${BRAND.terracotta}`,
-            background: BRAND.terracotta, color: "#fff", fontSize: 14, fontWeight: 700,
+            padding: "10px 20px", borderRadius: 8, border: `1px solid ${LIGHT.terracotta}`,
+            background: LIGHT.terracotta, color: "#fff", fontSize: 14, fontWeight: 700,
             cursor: "pointer", letterSpacing: 0.3,
           }}>Acceder al dashboard →</button>
         </div>
@@ -8874,8 +8898,8 @@ function LandingPage({ onEnterApp }) {
       <section style={{ padding: "80px 7% 60px", maxWidth: 1400, margin: "0 auto" }}>
         <div style={{
           display: "inline-block", padding: "6px 14px", borderRadius: 20,
-          background: BRAND.terracotta + "22", border: `1px solid ${BRAND.terracotta}66`,
-          color: BRAND.terracotta, fontSize: 12, fontWeight: 700, letterSpacing: 1.5,
+          background: LIGHT.terracottaBg, border: `1px solid ${LIGHT.terracottaSoft}`,
+          color: LIGHT.terracotta, fontSize: 12, fontWeight: 700, letterSpacing: 1.5,
           textTransform: "uppercase", marginBottom: 24,
         }}>
           Predictive Electoral Integrity & Risk System
@@ -8883,13 +8907,13 @@ function LandingPage({ onEnterApp }) {
         <h1 style={{
           fontSize: 64, fontWeight: 900, lineHeight: 1.1, letterSpacing: -2,
           margin: "0 0 24px", maxWidth: 900,
-          fontFamily: "Fraunces, Georgia, serif",
+          fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink,
         }}>
           Inteligencia electoral basada en evidencia,<br />
-          <span style={{ color: BRAND.terracotta }}>con trazabilidad verificable.</span>
+          <span style={{ color: LIGHT.terracotta }}>con trazabilidad verificable.</span>
         </h1>
         <p style={{
-          fontSize: 22, lineHeight: 1.6, color: COLORS.textMuted, maxWidth: 800,
+          fontSize: 22, lineHeight: 1.6, color: LIGHT.inkSoft, maxWidth: 800,
           margin: "0 0 40px", fontWeight: 400,
         }}>
           Plataforma de inteligencia artificial diseñada para anticipar riesgos
@@ -8899,14 +8923,14 @@ function LandingPage({ onEnterApp }) {
         <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
           <button onClick={onEnterApp} style={{
             padding: "16px 32px", borderRadius: 10, border: "none",
-            background: BRAND.terracotta, color: "#fff", fontSize: 16, fontWeight: 800,
+            background: LIGHT.terracotta, color: "#fff", fontSize: 16, fontWeight: 800,
             cursor: "pointer", letterSpacing: 0.3,
-            boxShadow: `0 4px 20px ${BRAND.terracotta}44`,
+            boxShadow: `0 6px 24px ${LIGHT.terracotta}33`,
           }}>Ver dashboard en vivo →</button>
           <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs/blob/main/DOCS%20Proyect/PEIRS_Indices_Methodology_v1.0.md"
              target="_blank" rel="noopener noreferrer" style={{
-            padding: "16px 32px", borderRadius: 10, border: `1px solid ${COLORS.border}`,
-            background: "transparent", color: COLORS.text, fontSize: 16, fontWeight: 700,
+            padding: "16px 32px", borderRadius: 10, border: `1px solid ${LIGHT.borderStrong}`,
+            background: LIGHT.surface, color: LIGHT.ink, fontSize: 16, fontWeight: 700,
             textDecoration: "none", letterSpacing: 0.3,
           }}>Leer metodología</a>
         </div>
@@ -8915,14 +8939,15 @@ function LandingPage({ onEnterApp }) {
       {/* STATS LIVE */}
       <section id="datos" style={{
         padding: "60px 7%", maxWidth: 1400, margin: "0 auto",
-        borderTop: `1px solid ${COLORS.border}`, borderBottom: `1px solid ${COLORS.border}`,
+        borderTop: `1px solid ${LIGHT.border}`, borderBottom: `1px solid ${LIGHT.border}`,
+        background: LIGHT.bgAlt,
       }}>
         <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 12, color: COLORS.textMuted, letterSpacing: 2,
+          <div style={{ fontSize: 12, color: LIGHT.textMuted, letterSpacing: 2,
             textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
             Datos en vivo · {lastUpdate ? `actualizado ${new Date(lastUpdate).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })}` : "sincronizando..."}
           </div>
-          <h2 style={{ fontSize: 36, fontWeight: 800, margin: 0, fontFamily: "Fraunces, serif" }}>
+          <h2 style={{ fontSize: 36, fontWeight: 800, margin: 0, fontFamily: "Fraunces, serif", color: LIGHT.ink }}>
             La plataforma en números
           </h2>
         </div>
@@ -8944,25 +8969,27 @@ function LandingPage({ onEnterApp }) {
         <section style={{ padding: "60px 7%", maxWidth: 1400, margin: "0 auto" }}>
           <div style={{
             display: "flex", alignItems: "center", gap: 32, padding: 32,
-            background: COLORS.surface, borderRadius: 16, border: `1px solid ${COLORS.border}`,
+            background: LIGHT.surface, borderRadius: 16,
+            border: `1px solid ${LIGHT.border}`,
+            boxShadow: "0 2px 12px rgba(28, 34, 48, 0.04)",
             flexWrap: "wrap",
           }}>
             <div style={{ fontSize: 80, lineHeight: 1 }}>{primary.flag}</div>
             <div style={{ flex: 1, minWidth: 280 }}>
-              <div style={{ fontSize: 11, color: COLORS.textMuted, letterSpacing: 2,
+              <div style={{ fontSize: 11, color: LIGHT.textMuted, letterSpacing: 2,
                 textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
                 Cobertura activa
               </div>
               <h3 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 8px",
-                fontFamily: "Fraunces, serif" }}>
+                fontFamily: "Fraunces, serif", color: LIGHT.ink }}>
                 {primary.name} {primary.election_date && `· Elecciones ${primary.election_date.slice(0, 4)}`}
               </h3>
-              <p style={{ color: COLORS.textMuted, fontSize: 16, margin: "0 0 16px" }}>
-                Fase actual: <span style={{ color: COLORS.text, fontWeight: 700 }}>{primary.phase_label || primary.phase}</span>
+              <p style={{ color: LIGHT.inkSoft, fontSize: 16, margin: "0 0 16px" }}>
+                Fase actual: <span style={{ color: LIGHT.ink, fontWeight: 700 }}>{primary.phase_label || primary.phase}</span>
               </p>
               <button onClick={onEnterApp} style={{
-                padding: "12px 24px", borderRadius: 8, border: `1px solid ${BRAND.terracotta}`,
-                background: "transparent", color: BRAND.terracotta, fontSize: 14, fontWeight: 700,
+                padding: "12px 24px", borderRadius: 8, border: `1px solid ${LIGHT.terracotta}`,
+                background: "transparent", color: LIGHT.terracotta, fontSize: 14, fontWeight: 700,
                 cursor: "pointer",
               }}>Explorar el monitoreo →</button>
             </div>
@@ -8974,8 +9001,8 @@ function LandingPage({ onEnterApp }) {
       <section id="producto" style={{ padding: "80px 7%", maxWidth: 1400, margin: "0 auto" }}>
         <div style={{ marginBottom: 48 }}>
           <h2 style={{ fontSize: 42, fontWeight: 800, margin: "0 0 16px",
-            fontFamily: "Fraunces, serif" }}>¿Qué hace Democrac.IA?</h2>
-          <p style={{ fontSize: 18, color: COLORS.textMuted, maxWidth: 700, lineHeight: 1.6 }}>
+            fontFamily: "Fraunces, serif", color: LIGHT.ink }}>¿Qué hace Democrac.IA?</h2>
+          <p style={{ fontSize: 18, color: LIGHT.inkSoft, maxWidth: 700, lineHeight: 1.6 }}>
             Pipeline híbrido de análisis: reglas determinísticas sobre datasets
             estructurales + clasificación automática con Claude Sonnet 4.6 sobre
             evidencia OSINT en tiempo real.
@@ -8997,11 +9024,12 @@ function LandingPage({ onEnterApp }) {
       {/* METODOLOGIA */}
       <section id="metodologia" style={{
         padding: "80px 7%", maxWidth: 1400, margin: "0 auto",
-        borderTop: `1px solid ${COLORS.border}`,
+        borderTop: `1px solid ${LIGHT.border}`,
+        background: LIGHT.bgAlt,
       }}>
         <h2 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px",
-          fontFamily: "Fraunces, serif" }}>Transparencia metodológica</h2>
-        <p style={{ fontSize: 17, color: COLORS.textMuted, maxWidth: 720, lineHeight: 1.6, marginBottom: 32 }}>
+          fontFamily: "Fraunces, serif", color: LIGHT.ink }}>Transparencia metodológica</h2>
+        <p style={{ fontSize: 17, color: LIGHT.inkSoft, maxWidth: 720, lineHeight: 1.6, marginBottom: 32 }}>
           Cada índice cuantitativo del informe Elite tiene fórmula auditable
           documentada. Citable formalmente por tribunales, organismos
           supranacionales y dataset partners.
@@ -9009,14 +9037,14 @@ function LandingPage({ onEnterApp }) {
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs/blob/main/DOCS%20Proyect/PEIRS_Indices_Methodology_v1.0.md"
              target="_blank" rel="noopener noreferrer" style={{
-            padding: "14px 24px", borderRadius: 10, border: `1px solid ${COLORS.border}`,
-            background: COLORS.surface, color: COLORS.text, fontSize: 14, fontWeight: 700,
+            padding: "14px 24px", borderRadius: 10, border: `1px solid ${LIGHT.borderStrong}`,
+            background: LIGHT.surface, color: LIGHT.ink, fontSize: 14, fontWeight: 700,
             textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
           }}>📄 Metodología de Índices v1.0</a>
           <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs"
              target="_blank" rel="noopener noreferrer" style={{
-            padding: "14px 24px", borderRadius: 10, border: `1px solid ${COLORS.border}`,
-            background: COLORS.surface, color: COLORS.text, fontSize: 14, fontWeight: 700,
+            padding: "14px 24px", borderRadius: 10, border: `1px solid ${LIGHT.borderStrong}`,
+            background: LIGHT.surface, color: LIGHT.ink, fontSize: 14, fontWeight: 700,
             textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
           }}>💻 Código fuente</a>
         </div>
@@ -9025,15 +9053,16 @@ function LandingPage({ onEnterApp }) {
       {/* DISCLOSURE */}
       <section style={{ padding: "60px 7%", maxWidth: 1400, margin: "0 auto" }}>
         <div style={{
-          padding: 32, background: COLORS.surface, borderRadius: 16,
-          border: `2px solid ${COLORS.border}`,
+          padding: 32, background: LIGHT.surfaceAlt, borderRadius: 16,
+          border: `1px solid ${LIGHT.terracottaSoft}`,
+          borderLeft: `4px solid ${LIGHT.terracotta}`,
         }}>
-          <div style={{ fontSize: 11, color: BRAND.terracotta, letterSpacing: 2,
+          <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
             textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
             Disclosure institucional
           </div>
-          <p style={{ fontSize: 17, color: COLORS.text, margin: 0, lineHeight: 1.7, fontWeight: 500 }}>
-            <strong>Democrac.IA no legitima ni valida resultados electorales.</strong>
+          <p style={{ fontSize: 17, color: LIGHT.ink, margin: 0, lineHeight: 1.7, fontWeight: 500 }}>
+            <strong>Democrac.IA no legitima ni valida resultados electorales.</strong>{" "}
             Esta plataforma emite inteligencia electoral con trazabilidad
             verificable bajo estándares internacionales de observación electoral,
             sin sesgo político-partidario.
@@ -9043,21 +9072,22 @@ function LandingPage({ onEnterApp }) {
 
       {/* FOOTER */}
       <footer style={{
-        padding: "40px 7%", borderTop: `1px solid ${COLORS.border}`,
+        padding: "40px 7%", borderTop: `1px solid ${LIGHT.border}`,
+        background: LIGHT.bgAlt,
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        flexWrap: "wrap", gap: 16, color: COLORS.textDim, fontSize: 13,
+        flexWrap: "wrap", gap: 16, color: LIGHT.textMuted, fontSize: 13,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <BrandLogo size={28} />
+          <BrandLogo size={28} lightOnDark={false} />
           <span>Democrac.IA · PEIRS v0.6.0</span>
         </div>
         <div style={{ display: "flex", gap: 24 }}>
           <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs"
              target="_blank" rel="noopener noreferrer"
-             style={{ color: COLORS.textDim, textDecoration: "none" }}>GitHub</a>
-          <a href="#metodologia" style={{ color: COLORS.textDim, textDecoration: "none" }}>Metodología</a>
+             style={{ color: LIGHT.textMuted, textDecoration: "none" }}>GitHub</a>
+          <a href="#metodologia" style={{ color: LIGHT.textMuted, textDecoration: "none" }}>Metodología</a>
           <button onClick={onEnterApp} style={{
-            background: "transparent", border: "none", color: COLORS.textDim,
+            background: "transparent", border: "none", color: LIGHT.textMuted,
             cursor: "pointer", fontSize: 13, padding: 0,
           }}>Dashboard</button>
         </div>
@@ -9069,17 +9099,18 @@ function LandingPage({ onEnterApp }) {
 function StatCard({ label, value, hint, accent = false }) {
   return (
     <div style={{
-      padding: 24, background: COLORS.surface, borderRadius: 12,
-      border: `1px solid ${accent ? BRAND.terracotta + "66" : COLORS.border}`,
+      padding: 24, background: LIGHT.surface, borderRadius: 12,
+      border: `1px solid ${accent ? LIGHT.terracottaSoft : LIGHT.border}`,
+      boxShadow: "0 2px 12px rgba(28, 34, 48, 0.04)",
     }}>
-      <div style={{ fontSize: 11, color: COLORS.textMuted, letterSpacing: 1.5,
+      <div style={{ fontSize: 11, color: LIGHT.textMuted, letterSpacing: 1.5,
         textTransform: "uppercase", fontWeight: 700, marginBottom: 10 }}>{label}</div>
       <div style={{
         fontSize: 48, fontWeight: 900, lineHeight: 1, marginBottom: 8,
-        color: accent ? BRAND.terracotta : COLORS.text,
+        color: accent ? LIGHT.terracotta : LIGHT.ink,
         fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1.5,
       }}>{typeof value === "number" ? value.toLocaleString('es-AR') : value}</div>
-      <div style={{ fontSize: 12, color: COLORS.textDim }}>{hint}</div>
+      <div style={{ fontSize: 12, color: LIGHT.textDim }}>{hint}</div>
     </div>
   );
 }
@@ -9087,13 +9118,14 @@ function StatCard({ label, value, hint, accent = false }) {
 function FeatureCard({ icon, title, desc }) {
   return (
     <div style={{
-      padding: 24, background: COLORS.surface, borderRadius: 12,
-      border: `1px solid ${COLORS.border}`,
+      padding: 24, background: LIGHT.surface, borderRadius: 12,
+      border: `1px solid ${LIGHT.border}`,
+      boxShadow: "0 2px 12px rgba(28, 34, 48, 0.04)",
     }}>
       <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>
       <h3 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 8px",
-        fontFamily: "Inter, sans-serif" }}>{title}</h3>
-      <p style={{ fontSize: 14, color: COLORS.textMuted, margin: 0, lineHeight: 1.6 }}>{desc}</p>
+        fontFamily: "Inter, sans-serif", color: LIGHT.ink }}>{title}</h3>
+      <p style={{ fontSize: 14, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.6 }}>{desc}</p>
     </div>
   );
 }
