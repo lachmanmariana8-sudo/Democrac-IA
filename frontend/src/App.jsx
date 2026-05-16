@@ -1328,7 +1328,7 @@ const DetailView = ({ country }) => {
           CAPA 1 — HERO: Snapshot integrado
       ══════════════════════════════════════════════════════════════ */}
       <div style={{
-        background: `linear-gradient(135deg, #0d1625 0%, ${COLORS.surface} 100%)`,
+        background: COLORS.surface,
         border: `1px solid ${rl.color}33`,
         borderRadius: 14, padding: "20px 24px", marginBottom: 24,
         boxShadow: `0 0 40px ${rl.color}0a`,
@@ -1425,7 +1425,7 @@ const DetailView = ({ country }) => {
           </div>
 
           {/* Scores circulares */}
-          <Card className="intel-card" style={{ background: "linear-gradient(135deg, #0d1625 0%, #111827 100%)", marginBottom: 16 }}>
+          <Card className="intel-card" style={{ background: COLORS.surface, marginBottom: 16 }}>
             <SectionTitle icon="📡">Evidencia Estructural — Fuentes Verificadas</SectionTitle>
             <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-end", padding: "12px 0 4px" }}>
               <CircularScore value={country.freedomScore} max={100} label="Freedom House" sublabel="FIW 2025"
@@ -1867,7 +1867,7 @@ const renderMarkdownWithTooltips = (md) => {
       <div key={`table-${key}`} style={{ overflowX: "auto", marginBottom: 20, borderRadius: 10, border: `1px solid ${COLORS.border}`, boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr style={{ background: "linear-gradient(90deg, #0d1625, #111827)" }}>
+            <tr style={{ background: COLORS.surfaceLight }}>
               {header.map((h, hi) => (
                 <th key={hi} style={{
                   padding: "12px 16px", textAlign: "left", fontSize: 11,
@@ -2014,8 +2014,8 @@ const renderMarkdownWithTooltips = (md) => {
       elements.push(
         <div key={i} style={{
           margin: "20px 0 10px", padding: "10px 16px",
-          background: "linear-gradient(90deg, #00d4aa0a, transparent)",
-          borderLeft: "3px solid #00d4aa",
+          background: "linear-gradient(90deg, #c25a3a0d, transparent)",
+          borderLeft: "3px solid #c25a3a",
           borderRadius: "0 8px 8px 0",
           display: "flex", alignItems: "center", gap: 8,
         }}>
@@ -3956,7 +3956,7 @@ const ViolationHeatmap = ({ violations }) => {
 const SourceBadge = ({ label, value, confidence, year, color }) => (
   <div style={{
     padding: "12px 16px", borderRadius: 12,
-    background: confidence === "confirmed" ? color + "0f" : "#1a233218",
+    background: confidence === "confirmed" ? color + "0f" : "#f7f3ed18",
     border: `1px solid ${confidence === "confirmed" ? color + "44" : "#e5dcd0"}`,
     borderLeft: `3px solid ${confidence === "confirmed" ? color : "#475569"}`,
   }}>
@@ -4145,7 +4145,7 @@ const ReportViewer = ({ runId, country }) => {
       {/* Header del reporte */}
       <div style={{
         padding: "20px 24px",
-        background: "linear-gradient(135deg, #0d1625 0%, #111827 100%)",
+        background: COLORS.surface,
         borderRadius: "14px 14px 0 0",
         border: `1px solid ${rc.color}33`,
         borderBottom: "none",
@@ -4292,8 +4292,8 @@ const ReportViewer = ({ runId, country }) => {
                     </div>
                     <div style={{
                       padding: "12px 14px", borderRadius: 10,
-                      background: trend.trend_direction === "up" ? "#00d4aa0f" : trend.trend_direction === "down" ? "#ef44440f" : "#f59e0b0f",
-                      border: `1px solid ${trend.trend_direction === "up" ? "#00d4aa33" : trend.trend_direction === "down" ? "#ef444433" : "#f59e0b33"}`,
+                      background: trend.trend_direction === "up" ? "#c25a3a0f" : trend.trend_direction === "down" ? "#ef44440f" : "#f59e0b0f",
+                      border: `1px solid ${trend.trend_direction === "up" ? "#c25a3a33" : trend.trend_direction === "down" ? "#ef444433" : "#f59e0b33"}`,
                     }}>
                       <div style={{ fontSize: 14, marginBottom: 6 }}>
                         {trend.trend_direction === "up" ? "📈" : trend.trend_direction === "down" ? "📉" : "➡️"}
@@ -4330,7 +4330,7 @@ const ReportViewer = ({ runId, country }) => {
 
             {/* Comparación regional */}
             {(regComp.fh_vs_region || regComp.vdem_vs_region) && (
-              <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 10, background: "#0d162518", border: "1px solid #1e2d3d" }}>
+              <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 10, background: "#ffffff18", border: "1px solid #e5dcd0" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
                   Comparación Regional — {regComp.region}
                 </div>
@@ -4340,7 +4340,7 @@ const ReportViewer = ({ runId, country }) => {
                     { label: "V-Dem", value: regComp.vdem_vs_region },
                     { label: "RSF", value: regComp.rsf_vs_region },
                   ].filter(r => r.value).map((r, i) => (
-                    <div key={i} style={{ padding: "8px 12px", borderRadius: 8, background: "#ffffff", border: "1px solid #1e2d3d" }}>
+                    <div key={i} style={{ padding: "8px 12px", borderRadius: 8, background: "#ffffff", border: "1px solid #e5dcd0" }}>
                       <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>{r.label}</div>
                       <div style={{ fontSize: 11, color: "#e2e8f0", lineHeight: 1.4 }}>{r.value}</div>
                     </div>
@@ -4372,8 +4372,8 @@ const ReportViewer = ({ runId, country }) => {
               <div style={{ marginBottom: 20 }}>
                 <div style={{
                   padding: "16px 20px", borderRadius: 12, marginBottom: 16,
-                  background: "linear-gradient(135deg, #00d4aa0a, #111827)",
-                  border: "1px solid #00d4aa33",
+                  background: "linear-gradient(135deg, #c25a3a0d, #ffffff)",
+                  border: "1px solid #c25a3a33",
                   display: "flex", justifyContent: "space-between", alignItems: "flex-start",
                 }}>
                   <div>
@@ -4401,7 +4401,7 @@ const ReportViewer = ({ runId, country }) => {
                 ))}
                 <div style={{
                   marginTop: 20, padding: "12px 16px", borderRadius: 10,
-                  background: "#ffffff", border: "1px solid #1e2d3d",
+                  background: "#ffffff", border: "1px solid #e5dcd0",
                   fontSize: 11, color: "#475569", lineHeight: 1.6,
                   fontFamily: "'DM Mono', monospace",
                 }}>
@@ -5291,7 +5291,7 @@ const ElectionCountdown = React.memo(({ electionTs, alertColor }) => {
         <div key={label} style={{
           textAlign: "center", padding: "4px 10px",
           background: "#ffffff", borderRadius: 7,
-          border: "1px solid #1e2d3d",
+          border: "1px solid #e5dcd0",
         }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: alertColor, fontFamily: "'DM Mono', monospace", lineHeight: 1.1 }}>
             {String(val).padStart(2, "0")}
@@ -5779,19 +5779,20 @@ function PeruSituationRoom() {
       {/* STICKY: Zone 1 command strip + inner navigation */}
       <div style={{ position: "sticky", top: 65, zIndex: 90 }}>
         <div style={{
-          background: "linear-gradient(135deg, #0d1220 0%, #0f172a 100%)",
-          borderBottom: `1px solid ${alertColor}33`,
+          background: COLORS.surface,
+          borderBottom: `1px solid ${COLORS.border}`,
           padding: "20px 28px 16px",
-          boxShadow: `0 4px 24px ${alertColor}18`,
+          boxShadow: "0 1px 8px rgba(28, 34, 48, 0.05)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 36 }}>&#127477;&#127466;</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <span style={{ fontSize: 40, lineHeight: 1 }}>&#127477;&#127466;</span>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: COLORS.text, fontFamily: "'Fraunces', serif", letterSpacing: -0.5 }}>
+                <div style={{ fontSize: 26, fontWeight: 900, color: COLORS.text,
+                  fontFamily: "Fraunces, Georgia, serif", letterSpacing: -0.8, lineHeight: 1.1 }}>
                   Sala de Situación Electoral — Perú 2026
                 </div>
-                <div style={{ fontSize: 10, color: COLORS.textDim, letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>
+                <div style={{ fontSize: 10, color: COLORS.textMuted, letterSpacing: 2, textTransform: "uppercase", marginTop: 4, fontWeight: 600 }}>
                   Elecciones Generales · 12 de Abril de 2026 · JNE / ONPE / RENIEC
                 </div>
               </div>
@@ -6369,7 +6370,7 @@ function PeruSituationRoom() {
                               <div style={{ height: 4, borderRadius: 2, background: COLORS.border, position: "relative" }}>
                                 <div style={{
                                   position: "absolute", top: -3, width: 10, height: 10, borderRadius: "50%",
-                                  background: actor.color, border: "2px solid #0a0e17",
+                                  background: actor.color, border: "2px solid #fbf9f6",
                                   left: `calc(${actor.position}% - 5px)`,
                                   boxShadow: `0 0 6px ${actor.color}`,
                                 }} />
@@ -7680,7 +7681,7 @@ function PeruSituationRoom() {
                                   </span>
                                 )}
                                 {platScore !== null && platScore !== undefined && (
-                                  <span style={{ fontSize: 9, color: "#c25a3a", background: "#c25a3a14", padding: "1px 6px", borderRadius: 4, border: "1px solid #00d4aa22" }}>
+                                  <span style={{ fontSize: 9, color: "#c25a3a", background: "#c25a3a14", padding: "1px 6px", borderRadius: 4, border: "1px solid #c25a3a22" }}>
                                     Plataforma: {Math.round(platScore)}/100
                                   </span>
                                 )}
