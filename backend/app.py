@@ -4807,6 +4807,32 @@ def _init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_obs_country
             ON observation_sessions(country_code, started_at)
         """)
+        # Tabla waitlist para Sprint B1 (17-may-2026): captura emails de
+        # interesados en tiers de pago antes de tener Stripe configurado.
+        # El admin endpoint /api/admin/waitlist permite exportar el listado.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS waitlist_signups (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                email           TEXT NOT NULL,
+                tier_interested TEXT NOT NULL,
+                organization    TEXT,
+                role            TEXT,
+                note            TEXT,
+                source          TEXT DEFAULT 'landing',
+                signed_up_at    TEXT NOT NULL,
+                user_agent      TEXT,
+                contacted_at    TEXT,
+                converted       INTEGER DEFAULT 0
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_waitlist_tier_date
+            ON waitlist_signups(tier_interested, signed_up_at)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_waitlist_email
+            ON waitlist_signups(email)
+        """)
         conn.commit()
     print("[DB] SQLite iniciado:", DB_PATH)
 
@@ -5848,6 +5874,97 @@ async def get_system_stats():
         "rag_available": RAG_AVAILABLE,
         "stats": stats,
     }
+
+
+class WaitlistSignupInput(BaseModel):
+    """Payload del form de waitlist en la landing.
+
+    Sprint B1 (17-may-2026): captura email + tier interesado antes de
+    que el sistema de billing real (Stripe) este live. Mariana exporta
+    los signups via /api/admin/waitlist y contacta uno a uno.
+    """
+    email: str = Field(..., min_length=4, max_length=320)
+    tier_interested: str = Field(..., description="public|researcher_press|institutional|mission|enterprise")
+    organization: Optional[str] = Field(None, max_length=200)
+    role: Optional[str] = Field(None, max_length=100)
+    note: Optional[str] = Field(None, max_length=1000)
+    source: Optional[str] = Field("landing", max_length=50)
+
+
+@app.post("/api/public/waitlist/signup")
+async def waitlist_signup(payload: WaitlistSignupInput, request: Request):
+    """Captura email de interesado en un tier de pago.
+
+    Sin auth — endpoint publico. Validacion minima de email (regex basico
+    + longitud). Devuelve {ok, position} donde position es el orden de
+    signup para el tier (1-indexed).
+    """
+    import re
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", payload.email or ""):
+        raise HTTPException(status_code=422, detail="Email invalido.")
+    valid_tiers = {"public", "researcher_press", "institutional", "mission", "enterprise"}
+    if payload.tier_interested not in valid_tiers:
+        raise HTTPException(status_code=422, detail=f"tier_interested invalido. Opciones: {valid_tiers}")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    user_agent = request.headers.get("user-agent", "")[:300]
+
+    try:
+        with _get_db() as conn:
+            cur = conn.execute(
+                "INSERT INTO waitlist_signups "
+                "(email, tier_interested, organization, role, note, source, signed_up_at, user_agent) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    payload.email.strip().lower(),
+                    payload.tier_interested,
+                    (payload.organization or "").strip()[:200] or None,
+                    (payload.role or "").strip()[:100] or None,
+                    (payload.note or "").strip()[:1000] or None,
+                    payload.source or "landing",
+                    now_iso,
+                    user_agent,
+                ),
+            )
+            conn.commit()
+            position_row = conn.execute(
+                "SELECT COUNT(*) AS n FROM waitlist_signups WHERE tier_interested=?",
+                (payload.tier_interested,),
+            ).fetchone()
+            position = position_row["n"] if position_row else 0
+        print(f"[waitlist] {payload.tier_interested} signup: {payload.email}")
+        return {"ok": True, "position": position}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar signup: {type(e).__name__}")
+
+
+@app.get("/api/admin/waitlist")
+async def waitlist_list(_key: str = Depends(_require_observer_key)):
+    """Lista de signups del waitlist. Requiere X-Observer-Key.
+
+    Devuelve agregados por tier + ultimos signups. Para Mariana, el panel
+    de admin para contactar leads. Sin info sensible adicional al email
+    (no IP, no datos personales mas alla de los que el usuario provee
+    voluntariamente)."""
+    from collections import Counter
+    try:
+        with _get_db() as conn:
+            rows = conn.execute(
+                "SELECT id, email, tier_interested, organization, role, note, source, "
+                "signed_up_at, contacted_at, converted "
+                "FROM waitlist_signups ORDER BY signed_up_at DESC LIMIT 500"
+            ).fetchall()
+        signups = [dict(r) for r in rows]
+        by_tier = Counter(s["tier_interested"] for s in signups)
+        converted = sum(1 for s in signups if s.get("converted"))
+        return {
+            "total": len(signups),
+            "converted": converted,
+            "by_tier": dict(by_tier),
+            "signups": signups,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al listar waitlist: {type(e).__name__}")
 
 
 @app.get("/api/public/tiers")

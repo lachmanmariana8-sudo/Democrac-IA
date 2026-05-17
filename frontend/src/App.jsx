@@ -8927,13 +8927,62 @@ const LIGHT = {
 function LandingPage({ onEnterApp }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tiers, setTiers] = useState(null);
+  const [waitlistOpen, setWaitlistOpen] = useState(null);  // tier slug
+  const [waitlistForm, setWaitlistForm] = useState({ email: "", organization: "", role: "", note: "" });
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistResult, setWaitlistResult] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/public/stats`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
+    fetch(`${API_BASE}/api/public/tiers`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.tiers) setTiers(data.tiers); })
+      .catch(() => {});
   }, []);
+
+  const submitWaitlist = async () => {
+    if (waitlistSubmitting || !waitlistOpen) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(waitlistForm.email)) {
+      setWaitlistResult({ error: "Email inválido. Verificá el formato." });
+      return;
+    }
+    setWaitlistSubmitting(true);
+    setWaitlistResult(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/public/waitlist/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: waitlistForm.email.trim(),
+          tier_interested: waitlistOpen,
+          organization: waitlistForm.organization.trim() || null,
+          role: waitlistForm.role.trim() || null,
+          note: waitlistForm.note.trim() || null,
+          source: "landing",
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setWaitlistResult({ error: data.detail || `HTTP ${r.status}` });
+      } else {
+        setWaitlistResult({ ok: true, position: data.position });
+      }
+    } catch (e) {
+      setWaitlistResult({ error: e.message });
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  };
+
+  const closeWaitlist = () => {
+    setWaitlistOpen(null);
+    setWaitlistForm({ email: "", organization: "", role: "", note: "" });
+    setWaitlistResult(null);
+  };
 
   const numFindings = stats?.monitoring?.total_findings ?? "—";
   const numReports = stats?.outputs?.elite_reports_generated ?? "—";
@@ -8962,6 +9011,7 @@ function LandingPage({ onEnterApp }) {
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <a href="#producto" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Producto</a>
           <a href="#datos" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Datos</a>
+          <a href="#planes" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Planes</a>
           <a href="#metodologia" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Metodología</a>
           <button onClick={onEnterApp} style={{
             padding: "10px 20px", borderRadius: 8, border: `1px solid ${LIGHT.terracotta}`,
@@ -9098,6 +9148,168 @@ function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
+      {/* PLANES — Pricing tiers */}
+      <section id="planes" style={{
+        padding: "80px 7%", maxWidth: 1400, margin: "0 auto",
+        borderTop: `1px solid ${LIGHT.border}`,
+      }}>
+        <div style={{ marginBottom: 48, textAlign: "center", maxWidth: 720, margin: "0 auto 48px" }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Niveles de acceso
+          </div>
+          <h2 style={{ fontSize: 42, fontWeight: 800, margin: "0 0 16px",
+            fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink, letterSpacing: -1 }}>
+            Planes para cada caso de uso
+          </h2>
+          <p style={{ fontSize: 17, color: LIGHT.inkSoft, lineHeight: 1.6, margin: 0 }}>
+            Desde acceso público a la metodología hasta misiones de observación
+            con white-label y multi-país. Capturamos interés ahora; el billing
+            via Stripe se activa en las próximas semanas.
+          </p>
+        </div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 20,
+        }}>
+          {(tiers || []).map((t) => (
+            <PricingCard
+              key={t.tier}
+              tier={t}
+              isFeatured={t.tier === "mission"}
+              onWaitlist={() => {
+                setWaitlistOpen(t.tier);
+                setWaitlistResult(null);
+              }}
+              onEnterApp={onEnterApp}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* WAITLIST MODAL */}
+      {waitlistOpen && (
+        <div onClick={closeWaitlist} style={{
+          position: "fixed", inset: 0, background: "rgba(28, 34, 48, 0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 1000, padding: 20,
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: LIGHT.surface, borderRadius: 16, padding: 32,
+            maxWidth: 480, width: "100%",
+            boxShadow: "0 20px 60px rgba(28, 34, 48, 0.25)",
+            border: `1px solid ${LIGHT.border}`,
+          }}>
+            {!waitlistResult?.ok ? (
+              <>
+                <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+                  textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
+                  Waitlist · {(tiers?.find(t => t.tier === waitlistOpen)?.display_name) || waitlistOpen}
+                </div>
+                <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 12px",
+                  fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink, letterSpacing: -0.5 }}>
+                  Sumate al waitlist
+                </h3>
+                <p style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.6, margin: "0 0 24px" }}>
+                  Capturamos tu interés y te contactamos cuando el plan esté
+                  disponible. Sin obligación de pago.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <input type="email" placeholder="tu@email.com *" required
+                    value={waitlistForm.email}
+                    onChange={(e) => setWaitlistForm({ ...waitlistForm, email: e.target.value })}
+                    style={{
+                      padding: "12px 16px", borderRadius: 8,
+                      border: `1px solid ${LIGHT.borderStrong}`,
+                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
+                      fontFamily: "Inter, sans-serif",
+                    }} />
+                  <input type="text" placeholder="Organización (opcional)"
+                    value={waitlistForm.organization}
+                    onChange={(e) => setWaitlistForm({ ...waitlistForm, organization: e.target.value })}
+                    style={{
+                      padding: "12px 16px", borderRadius: 8,
+                      border: `1px solid ${LIGHT.borderStrong}`,
+                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
+                      fontFamily: "Inter, sans-serif",
+                    }} />
+                  <input type="text" placeholder="Rol / Cargo (opcional)"
+                    value={waitlistForm.role}
+                    onChange={(e) => setWaitlistForm({ ...waitlistForm, role: e.target.value })}
+                    style={{
+                      padding: "12px 16px", borderRadius: 8,
+                      border: `1px solid ${LIGHT.borderStrong}`,
+                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
+                      fontFamily: "Inter, sans-serif",
+                    }} />
+                  <textarea placeholder="¿Para qué lo querés usar? (opcional)"
+                    rows={3}
+                    value={waitlistForm.note}
+                    onChange={(e) => setWaitlistForm({ ...waitlistForm, note: e.target.value })}
+                    style={{
+                      padding: "12px 16px", borderRadius: 8,
+                      border: `1px solid ${LIGHT.borderStrong}`,
+                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
+                      fontFamily: "Inter, sans-serif", resize: "vertical",
+                    }} />
+                  {waitlistResult?.error && (
+                    <div style={{ padding: 12, borderRadius: 8,
+                      background: "#fdecec", border: "1px solid #f5b8b8",
+                      color: "#a02828", fontSize: 13 }}>
+                      {waitlistResult.error}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                    <button onClick={submitWaitlist} disabled={waitlistSubmitting}
+                      style={{
+                        flex: 1, padding: "12px 20px", borderRadius: 8, border: "none",
+                        background: LIGHT.terracotta, color: "#fff",
+                        fontSize: 14, fontWeight: 700, cursor: "pointer",
+                        opacity: waitlistSubmitting ? 0.6 : 1,
+                      }}>
+                      {waitlistSubmitting ? "Enviando..." : "Sumarme al waitlist"}
+                    </button>
+                    <button onClick={closeWaitlist}
+                      style={{
+                        padding: "12px 20px", borderRadius: 8,
+                        border: `1px solid ${LIGHT.border}`,
+                        background: "transparent", color: LIGHT.inkSoft,
+                        fontSize: 14, fontWeight: 600, cursor: "pointer",
+                      }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 56, marginBottom: 12 }}>✓</div>
+                <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 12px",
+                  fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink, letterSpacing: -0.5 }}>
+                  ¡Listo!
+                </h3>
+                <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.6, margin: "0 0 12px" }}>
+                  Tu interés quedó registrado.
+                  {waitlistResult.position && (
+                    <> Sos el <strong style={{ color: LIGHT.terracotta }}>#{waitlistResult.position}</strong> en la lista para este plan.</>
+                  )}
+                </p>
+                <p style={{ fontSize: 13, color: LIGHT.textMuted, margin: "0 0 24px" }}>
+                  Te contactamos por mail cuando el plan esté disponible.
+                </p>
+                <button onClick={closeWaitlist} style={{
+                  padding: "12px 32px", borderRadius: 8, border: "none",
+                  background: LIGHT.terracotta, color: "#fff",
+                  fontSize: 14, fontWeight: 700, cursor: "pointer",
+                }}>
+                  Cerrar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* METODOLOGIA */}
       <section id="metodologia" style={{
         padding: "80px 7%", maxWidth: 1400, margin: "0 auto",
@@ -9162,6 +9374,7 @@ function LandingPage({ onEnterApp }) {
           <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs"
              target="_blank" rel="noopener noreferrer"
              style={{ color: LIGHT.textMuted, textDecoration: "none" }}>GitHub</a>
+          <a href="#planes" style={{ color: LIGHT.textMuted, textDecoration: "none" }}>Planes</a>
           <a href="#metodologia" style={{ color: LIGHT.textMuted, textDecoration: "none" }}>Metodología</a>
           <button onClick={onEnterApp} style={{
             background: "transparent", border: "none", color: LIGHT.textMuted,
@@ -9188,6 +9401,114 @@ function StatCard({ label, value, hint, accent = false }) {
         fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1.5,
       }}>{typeof value === "number" ? value.toLocaleString('es-AR') : value}</div>
       <div style={{ fontSize: 12, color: LIGHT.textDim }}>{hint}</div>
+    </div>
+  );
+}
+
+function PricingCard({ tier, isFeatured, onWaitlist, onEnterApp }) {
+  // Feature flags relevantes para mostrar como bullets (subset de los 13)
+  const featureLabels = [
+    { key: "dashboard", label: "Dashboard técnico completo" },
+    { key: "country_detail", label: "Análisis detallado por país" },
+    { key: "search_findings", label: "Búsqueda + filtros sobre hallazgos" },
+    { key: "download_recent_reports", label: "Descarga de informes Elite recientes" },
+    { key: "generate_elite_report", label: "Generación on-demand de informes Elite" },
+    { key: "webhook", label: "Webhook integration (Slack/Discord/email)" },
+    { key: "api", label: "Acceso API read-only" },
+    { key: "multi_country", label: "Multi-país (Brasil, USA y otros)" },
+    { key: "custom_hunter_sources", label: "Custom Hunter sources por país" },
+    { key: "white_label", label: "White-label del informe" },
+    { key: "sla", label: "SLA garantizado" },
+    { key: "dedicated_support", label: "Soporte dedicado" },
+  ];
+  const active = featureLabels.filter(f => tier.features?.[f.key]);
+  const price = tier.monthly_price_usd;
+  const priceLabel = price === 0 ? "Gratis"
+                   : price === null ? "Personalizado"
+                   : `USD ${price}/mes`;
+  const priceSubLabel = tier.tier === "researcher_press" ? "Con verificación" : null;
+
+  const ctaLabel = tier.tier === "public"
+                 ? "Ver dashboard →"
+                 : tier.tier === "enterprise"
+                 ? "Contactar ventas →"
+                 : "Sumarme al waitlist →";
+  const ctaAction = tier.tier === "public" ? onEnterApp : onWaitlist;
+
+  return (
+    <div style={{
+      position: "relative",
+      padding: 28, borderRadius: 14,
+      background: isFeatured ? LIGHT.terracottaBg : LIGHT.surface,
+      border: `${isFeatured ? 2 : 1}px solid ${isFeatured ? LIGHT.terracotta : LIGHT.border}`,
+      boxShadow: isFeatured
+        ? `0 8px 24px ${LIGHT.terracotta}22`
+        : "0 2px 12px rgba(28, 34, 48, 0.04)",
+      display: "flex", flexDirection: "column",
+    }}>
+      {isFeatured && (
+        <div style={{
+          position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
+          padding: "4px 12px", borderRadius: 12,
+          background: LIGHT.terracotta, color: "#fff",
+          fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase",
+        }}>Recomendado para misiones</div>
+      )}
+      <div style={{ fontSize: 11, color: LIGHT.textMuted, letterSpacing: 2,
+        textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
+        {tier.display_name}
+      </div>
+      <div style={{ fontSize: 36, fontWeight: 900, color: LIGHT.ink,
+        fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1, lineHeight: 1, marginBottom: 4 }}>
+        {priceLabel}
+      </div>
+      {priceSubLabel && (
+        <div style={{ fontSize: 11, color: LIGHT.textMuted, marginBottom: 16 }}>
+          {priceSubLabel}
+        </div>
+      )}
+      {!priceSubLabel && <div style={{ height: 16 }} />}
+      <p style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.6, margin: "0 0 20px",
+        minHeight: 70 }}>
+        {tier.description}
+      </p>
+      <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px",
+        flex: 1, fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.7 }}>
+        {active.length === 0 ? (
+          <li style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <span style={{ color: LIGHT.terracotta, fontWeight: 700 }}>✓</span>
+            Acceso público sin auth
+          </li>
+        ) : active.map(f => (
+          <li key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+            <span style={{ color: LIGHT.terracotta, fontWeight: 700, flexShrink: 0 }}>✓</span>
+            <span>{f.label}</span>
+          </li>
+        ))}
+        {tier.limits?.elite_reports_per_day > 0 && (
+          <li style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 8,
+            paddingTop: 8, borderTop: `1px dashed ${LIGHT.border}`, fontSize: 12, color: LIGHT.textMuted }}>
+            <span style={{ flexShrink: 0 }}>·</span>
+            <span>{tier.limits.elite_reports_per_day} informes Elite/día · {tier.limits.api_requests_per_day.toLocaleString('es-AR')} req API/día</span>
+          </li>
+        )}
+        {tier.limits?.sla_uptime_pct && (
+          <li style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: LIGHT.textMuted }}>
+            <span style={{ flexShrink: 0 }}>·</span>
+            <span>SLA {tier.limits.sla_uptime_pct}% uptime</span>
+          </li>
+        )}
+      </ul>
+      <button onClick={ctaAction} style={{
+        padding: "12px 20px", borderRadius: 8, border: "none",
+        background: isFeatured ? LIGHT.terracotta : "transparent",
+        color: isFeatured ? "#fff" : LIGHT.terracotta,
+        border: isFeatured ? "none" : `1px solid ${LIGHT.terracotta}`,
+        fontSize: 14, fontWeight: 700, cursor: "pointer",
+        boxShadow: isFeatured ? `0 4px 16px ${LIGHT.terracotta}33` : "none",
+      }}>
+        {ctaLabel}
+      </button>
     </div>
   );
 }
