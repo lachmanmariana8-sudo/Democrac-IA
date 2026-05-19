@@ -9501,32 +9501,28 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
           <p style={{
             fontSize: 24, lineHeight: 1.5, color: LIGHT.inkSoft, fontStyle: "italic",
             fontFamily: "Source Serif Pro, Georgia, serif",
-            margin: "0 0 32px", maxWidth: 560,
+            margin: "0 0 24px", maxWidth: 560,
           }}>
             Saber antes de elegir. Una plataforma cívica para el ejercicio
             del voto consciente.
           </p>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{
-              padding: "8px 14px", borderRadius: 6,
-              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
-              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
-            }}>Apartidaria</span>
-            <span style={{
-              padding: "8px 14px", borderRadius: 6,
-              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
-              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
-            }}>Gratuita</span>
-            <span style={{
-              padding: "8px 14px", borderRadius: 6,
-              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
-              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
-            }}>Anónima</span>
-            <span style={{
-              padding: "8px 14px", borderRadius: 6,
-              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
-              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
-            }}>Open-source</span>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
+            {["Apartidaria", "Gratuita", "Anónima", "Verificable", "Open-source"].map((chip) => (
+              <span key={chip} style={{
+                padding: "8px 14px", borderRadius: 6,
+                background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+                fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
+              }}>{chip}</span>
+            ))}
+          </div>
+          <div style={{
+            padding: "12px 16px", borderRadius: 8,
+            background: LIGHT.bgAlt, border: `1px solid ${LIGHT.border}`,
+            fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.6, maxWidth: 560,
+          }}>
+            <strong style={{ color: LIGHT.ink }}>Lo que no hace:</strong>{" "}
+            no recomienda candidatos, no predice ganadores, no registra tu voto,
+            no captura datos personales identificables.
           </div>
         </div>
         <PhoneMockupWelcome />
@@ -9571,6 +9567,49 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
         </div>
       </section>
 
+      {/* PRIVACIDAD POR DISEÑO */}
+      <section style={{
+        padding: "60px 7%", maxWidth: 1100, margin: "0 auto",
+      }}>
+        <div style={{ marginBottom: 28, maxWidth: 820 }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Tu privacidad, por diseño
+          </div>
+          <h2 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 16px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -0.5 }}>
+            Es la pregunta #1 que se hace cualquier persona antes de bajar
+            una app que registra posiciones políticas. Esta es la respuesta corta.
+          </h2>
+        </div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 16, marginBottom: 24,
+        }}>
+          <PrivacyItem
+            title="Cero datos identificables"
+            desc="Sin email, sin teléfono, sin documento, sin dirección IP persistente, sin ID de dispositivo del fabricante." />
+          <PrivacyItem
+            title="Anonimización diferencial"
+            desc="El ruido estadístico se calibra en la ingesta — no después. Previene reconstrucción por correlación de queries." />
+          <PrivacyItem
+            title="K-anonymity ≥ 500"
+            desc="Ninguna métrica agregada se publica si la celda de datos contiene menos de 500 respuestas. Si una región no alcanza, sube al nivel superior." />
+          <PrivacyItem
+            title="Auditoría externa anual"
+            desc="Una firma independiente audita el pipeline completo. El reporte se publica íntegro, incluyendo cualquier hallazgo crítico." />
+        </div>
+        <div style={{
+          padding: "16px 20px", borderRadius: 8,
+          background: LIGHT.ink, color: "#fff",
+          fontSize: 15, lineHeight: 1.6, fontStyle: "italic",
+          fontFamily: "Source Serif Pro, Georgia, serif",
+        }}>
+          "Si nuestra base de datos completa se filtrara mañana, ningún
+          ciudadano podría ser identificado por sus respuestas."
+        </div>
+      </section>
+
       {/* PROPOSITO */}
       <section style={{
         padding: "60px 7%", maxWidth: 1400, margin: "0 auto",
@@ -9605,8 +9644,8 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
             />
             <PurposeItem
               n="02"
-              title="Promover deliberación"
-              desc="Del voto adhesivo (lealtad heredada) al voto deliberativo (decisión informada). Las dos formas son legítimas, pero la segunda fortalece al sistema."
+              title="Comparar antes de elegir"
+              desc="Vas a responder a veinte propuestas concretas sin saber a qué partido pertenecen. Al final vas a ver con qué agrupaciones coincidís realmente — y, frecuentemente, descubrir sorpresas."
             />
             <PurposeItem
               n="03"
@@ -9728,6 +9767,129 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
         </div>
       </section>
 
+      {/* DERECHOS QUE PROTEGE */}
+      <section style={{
+        padding: "80px 7%", maxWidth: 1200, margin: "0 auto",
+        borderTop: `1px solid ${LIGHT.border}`,
+      }}>
+        <div style={{ marginBottom: 40, maxWidth: 820 }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Marco normativo
+          </div>
+          <h2 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 20px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -1 }}>
+            Derechos civiles y políticos que materializa
+          </h2>
+          <p style={{ fontSize: 17, color: LIGHT.inkSoft, lineHeight: 1.7, margin: 0 }}>
+            Voto Informado no inventa derechos: hace operativos derechos ya
+            reconocidos en el sistema interamericano y universal de derechos
+            humanos. Cada función responde a una obligación convencional
+            concreta. El derecho al voto sin información disponible es un
+            derecho formal vacío — esta herramienta busca que deje de serlo.
+          </p>
+        </div>
+
+        {/* Derechos directos */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>
+            Derechos directamente protegidos
+          </div>
+          <div style={{
+            background: LIGHT.surface, borderRadius: 12,
+            border: `1px solid ${LIGHT.border}`, overflow: "hidden",
+          }}>
+            {[
+              ["Voto informado y elecciones auténticas",
+                "Condición material del derecho al voto: una elección sin información disponible no es 'auténtica' en sentido convencional.",
+                "Art. 23 CADH · Art. 25 PIDCP"],
+              ["Acceso a información pública",
+                "La aplicación hace accesible información que ya es pública pero está dispersa en documentos densos.",
+                "Art. 13 CADH · Claude Reyes vs. Chile (Corte IDH, 2006)"],
+              ["Libertad de pensamiento y expresión política",
+                "La libertad de formarse una opinión política presupone acceso a información plural y comparable.",
+                "Art. 13 CADH · Art. 19 PIDCP"],
+              ["Privacidad y protección de datos personales",
+                "Anonimización diferencial con ruido calibrado en captura. Sin recolección de datos identificables.",
+                "Art. 11 CADH · Art. 17 PIDCP"],
+              ["Secreto del voto",
+                "La app no captura datos identificables ni el voto efectivo. Solo coincidencia programática.",
+                "Derivado del Art. 23 CADH"],
+              ["Igualdad material en participación política",
+                "Diseño universal y modo inclusivo cumplen la igualdad sustantiva, no solo formal.",
+                "Arts. 1 y 24 CADH"],
+            ].map(([title, desc, cite], idx, arr) => (
+              <RightRow key={title} title={title} desc={desc} cite={cite}
+                last={idx === arr.length - 1} />
+            ))}
+          </div>
+        </div>
+
+        {/* Efectos sistémicos */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>
+            Derechos indirectamente fortalecidos (efectos sistémicos)
+          </div>
+          <div style={{
+            background: LIGHT.surface, borderRadius: 12,
+            border: `1px solid ${LIGHT.border}`, overflow: "hidden",
+          }}>
+            {[
+              ["Rendición de cuentas",
+                "La cita-fuente verificable convierte las plataformas en compromisos auditables ex-post.",
+                "Principio derivado · IDEA Internacional · OEA"],
+              ["Pluralismo y competencia partidaria",
+                "Comparación estructurada fortalece la competencia programática frente a la competencia puramente identitaria.",
+                "Art. 16 CADH · Art. 22 PIDCP"],
+              ["Participación de personas con discapacidad",
+                "El modo inclusivo (WCAG 2.2 AA) cumple la obligación convencional de garantizar accesibilidad electoral.",
+                "Art. 29 CDPD"],
+              ["Participación política de pueblos indígenas",
+                "El multilingüismo previsto (Quechua, Aymara, Guaraní, lenguas originarias) materializa este derecho.",
+                "Convenio 169 OIT · Declaración ONU sobre Pueblos Indígenas"],
+            ].map(([title, desc, cite], idx, arr) => (
+              <RightRow key={title} title={title} desc={desc} cite={cite}
+                last={idx === arr.length - 1} />
+            ))}
+          </div>
+        </div>
+
+        {/* Riesgos mitigados */}
+        <div style={{
+          padding: 24, borderRadius: 12,
+          background: LIGHT.surfaceAlt, border: `1px solid ${LIGHT.border}`,
+          borderLeft: `4px solid ${LIGHT.terracotta}`,
+        }}>
+          <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Riesgos democráticos que mitiga
+          </div>
+          <ul style={{ margin: 0, padding: 0, listStyle: "none",
+            display: "grid", gap: 10 }}>
+            <li style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.6,
+              display: "flex", gap: 10 }}>
+              <span style={{ color: LIGHT.terracotta, fontWeight: 700 }}>·</span>
+              <span><strong style={{ color: LIGHT.ink }}>Desinformación electoral</strong> —
+                atenta contra el carácter "auténtico" de la elección exigido por el Art. 23.1 CADH.</span>
+            </li>
+            <li style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.6,
+              display: "flex", gap: 10 }}>
+              <span style={{ color: LIGHT.terracotta, fontWeight: 700 }}>·</span>
+              <span><strong style={{ color: LIGHT.ink }}>Polarización afectiva</strong> —
+                cuando los votantes rechazan al adversario por identidad grupal y no por desacuerdo programático real, el pluralismo se erosiona.</span>
+            </li>
+            <li style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.6,
+              display: "flex", gap: 10 }}>
+              <span style={{ color: LIGHT.terracotta, fontWeight: 700 }}>·</span>
+              <span><strong style={{ color: LIGHT.ink }}>Captura algorítmica de la agenda</strong> —
+                las plataformas digitales optimizan el conflicto sobre la deliberación. Voto Informado opera en sentido contrario.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
       {/* CIERRE */}
       <section style={{
         padding: "60px 7%", maxWidth: 1400, margin: "0 auto",
@@ -9803,6 +9965,52 @@ function FunctionRow({ n, title, desc }) {
       <div>
         <h4 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px", color: LIGHT.ink }}>{title}</h4>
         <p style={{ fontSize: 13, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.5 }}>{desc}</p>
+      </div>
+    </div>
+  );
+}
+
+function PrivacyItem({ title, desc }) {
+  return (
+    <div style={{
+      padding: 18, background: LIGHT.surface, borderRadius: 10,
+      border: `1px solid ${LIGHT.border}`,
+    }}>
+      <h4 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 6px", color: LIGHT.ink,
+        display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{
+          display: "inline-block", width: 6, height: 6, borderRadius: 3,
+          background: LIGHT.terracotta,
+        }} />
+        {title}
+      </h4>
+      <p style={{ fontSize: 13, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.55 }}>{desc}</p>
+    </div>
+  );
+}
+
+function RightRow({ title, desc, cite, last }) {
+  return (
+    <div style={{
+      padding: "18px 22px",
+      borderBottom: last ? "none" : `1px solid ${LIGHT.border}`,
+      display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24,
+      alignItems: "start",
+    }} className="right-row">
+      <div>
+        <h4 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 6px", color: LIGHT.ink }}>
+          {title}
+        </h4>
+        <p style={{ fontSize: 13.5, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.55 }}>
+          {desc}
+        </p>
+      </div>
+      <div style={{
+        fontSize: 12, color: LIGHT.terracotta, fontWeight: 700,
+        letterSpacing: 0.3, fontFamily: "DM Mono, ui-monospace, monospace",
+        lineHeight: 1.5, paddingTop: 2,
+      }}>
+        {cite}
       </div>
     </div>
   );
