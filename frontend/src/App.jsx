@@ -8924,65 +8924,16 @@ const LIGHT = {
   warning:      "#c8893a",   // ámbar dorado
 };
 
-function LandingPage({ onEnterApp }) {
+function LandingPage({ onEnterApp, onShowVoto }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tiers, setTiers] = useState(null);
-  const [waitlistOpen, setWaitlistOpen] = useState(null);  // tier slug
-  const [waitlistForm, setWaitlistForm] = useState({ email: "", organization: "", role: "", note: "" });
-  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
-  const [waitlistResult, setWaitlistResult] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/public/stats`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
-    fetch(`${API_BASE}/api/public/tiers`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.tiers) setTiers(data.tiers); })
-      .catch(() => {});
   }, []);
-
-  const submitWaitlist = async () => {
-    if (waitlistSubmitting || !waitlistOpen) return;
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(waitlistForm.email)) {
-      setWaitlistResult({ error: "Email inválido. Verificá el formato." });
-      return;
-    }
-    setWaitlistSubmitting(true);
-    setWaitlistResult(null);
-    try {
-      const r = await fetch(`${API_BASE}/api/public/waitlist/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: waitlistForm.email.trim(),
-          tier_interested: waitlistOpen,
-          organization: waitlistForm.organization.trim() || null,
-          role: waitlistForm.role.trim() || null,
-          note: waitlistForm.note.trim() || null,
-          source: "landing",
-        }),
-      });
-      const data = await r.json();
-      if (!r.ok) {
-        setWaitlistResult({ error: data.detail || `HTTP ${r.status}` });
-      } else {
-        setWaitlistResult({ ok: true, position: data.position });
-      }
-    } catch (e) {
-      setWaitlistResult({ error: e.message });
-    } finally {
-      setWaitlistSubmitting(false);
-    }
-  };
-
-  const closeWaitlist = () => {
-    setWaitlistOpen(null);
-    setWaitlistForm({ email: "", organization: "", role: "", note: "" });
-    setWaitlistResult(null);
-  };
 
   const numFindings = stats?.monitoring?.total_findings ?? "—";
   const numReports = stats?.outputs?.elite_reports_generated ?? "—";
@@ -9011,7 +8962,11 @@ function LandingPage({ onEnterApp }) {
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <a href="#producto" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Producto</a>
           <a href="#datos" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Datos</a>
-          <a href="#planes" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Planes</a>
+          <button onClick={onShowVoto} style={{
+            background: "transparent", border: "none", padding: 0,
+            color: LIGHT.terracotta, fontSize: 14, fontWeight: 700, cursor: "pointer",
+            letterSpacing: 0.2,
+          }}>Voto Informado →</button>
           <a href="#metodologia" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Metodología</a>
           <button onClick={onEnterApp} style={{
             padding: "10px 20px", borderRadius: 8, border: `1px solid ${LIGHT.terracotta}`,
@@ -9126,13 +9081,73 @@ function LandingPage({ onEnterApp }) {
 
       {/* QUE HACE */}
       <section id="producto" style={{ padding: "80px 7%", maxWidth: 1400, margin: "0 auto" }}>
-        <div style={{ marginBottom: 48 }}>
-          <h2 style={{ fontSize: 42, fontWeight: 800, margin: "0 0 16px",
-            fontFamily: "Fraunces, serif", color: LIGHT.ink }}>¿Qué hace Democrac.IA?</h2>
-          <p style={{ fontSize: 18, color: LIGHT.inkSoft, maxWidth: 700, lineHeight: 1.6 }}>
-            Pipeline híbrido de análisis: reglas determinísticas sobre datasets
-            estructurales + clasificación automática con Claude Sonnet 4.6 sobre
-            evidencia OSINT en tiempo real.
+        <div style={{ marginBottom: 56 }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            ¿Qué hace Democrac.IA?
+          </div>
+          <h2 style={{ fontSize: 42, fontWeight: 800, margin: "0 0 24px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -1, maxWidth: 900 }}>
+            Inteligencia electoral para anticipar riesgos,<br/>
+            no para describir crisis ya consumadas.
+          </h2>
+          <p style={{ fontSize: 18, color: LIGHT.inkSoft, maxWidth: 780, lineHeight: 1.7, margin: "0 0 16px" }}>
+            Democrac.IA nace de una constatación incómoda: los riesgos sobre la
+            integridad electoral se documentan tarde, cuando los daños sobre la
+            confianza institucional ya ocurrieron. La cobertura mediática se
+            concentra en la coyuntura del conflicto. Los informes académicos
+            llegan meses después. Las misiones de observación internacional
+            cubren ventanas estrechas. Entre todos ellos queda una zona ciega
+            donde se incuban los problemas que después se vuelven crisis.
+          </p>
+          <p style={{ fontSize: 18, color: LIGHT.inkSoft, maxWidth: 780, lineHeight: 1.7, margin: 0 }}>
+            Construimos un sistema que reduce esa ventana ciega. Monitoreo
+            OSINT continuo, datasets internacionales estandarizados, marco
+            normativo trazable y análisis predictivo con bandas de
+            confianza — todo bajo trazabilidad verificable, sin sesgo
+            partidario y con código abierto.
+          </p>
+        </div>
+
+        {/* VALORES */}
+        <div style={{
+          marginBottom: 56, padding: 32,
+          background: LIGHT.surfaceAlt, borderRadius: 16,
+          border: `1px solid ${LIGHT.border}`,
+          borderLeft: `4px solid ${LIGHT.terracotta}`,
+        }}>
+          <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 16 }}>
+            Nuestros valores
+          </div>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 24,
+          }}>
+            <ValueItem title="Trazabilidad por diseño"
+              desc="Cada índice cuantitativo tiene fórmula auditable. Cada hallazgo cita fuente con URL verificable. Sin números mágicos." />
+            <ValueItem title="Apartidismo verificable"
+              desc="No aceptamos financiamiento de partidos, candidatos ni fundaciones partidarias. La política se publica y se audita." />
+            <ValueItem title="Evidencia sobre opinión"
+              desc="Reglas determinísticas sobre datasets estructurales + IA sobre OSINT. La hipótesis sin evidencia no entra al informe." />
+            <ValueItem title="Open-source"
+              desc="Código bajo licencia abierta. Metodología publicada. Cualquier observador externo puede inspeccionar, cuestionar y replicar." />
+            <ValueItem title="Privacidad por defecto"
+              desc="Sin captura de datos personales identificables. Anonimización diferencial en cualquier métrica agregada." />
+            <ValueItem title="Auditabilidad externa"
+              desc="Reporte anual público de transparencia. Auditoría independiente sobre el pipeline. Comité de ética con poder de veto." />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink }}>
+            Cómo está construido
+          </h3>
+          <p style={{ fontSize: 16, color: LIGHT.inkSoft, maxWidth: 720, lineHeight: 1.6, margin: 0 }}>
+            Pipeline híbrido: reglas determinísticas sobre datasets estructurales
+            + clasificación automática con Claude Sonnet 4.6 sobre evidencia
+            OSINT en tiempo real.
           </p>
         </div>
         <div style={{
@@ -9148,167 +9163,46 @@ function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
-      {/* PLANES — Pricing tiers */}
-      <section id="planes" style={{
-        padding: "80px 7%", maxWidth: 1400, margin: "0 auto",
-        borderTop: `1px solid ${LIGHT.border}`,
+      {/* VOTO INFORMADO TEASER */}
+      <section style={{
+        padding: "60px 7%", maxWidth: 1400, margin: "0 auto",
       }}>
-        <div style={{ marginBottom: 48, textAlign: "center", maxWidth: 720, margin: "0 auto 48px" }}>
-          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
-            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
-            Niveles de acceso
-          </div>
-          <h2 style={{ fontSize: 42, fontWeight: 800, margin: "0 0 16px",
-            fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink, letterSpacing: -1 }}>
-            Planes para cada caso de uso
-          </h2>
-          <p style={{ fontSize: 17, color: LIGHT.inkSoft, lineHeight: 1.6, margin: 0 }}>
-            Desde acceso público a la metodología hasta misiones de observación
-            con white-label y multi-país. Capturamos interés ahora; el billing
-            via Stripe se activa en las próximas semanas.
-          </p>
-        </div>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: 20,
-        }}>
-          {(tiers || []).map((t) => (
-            <PricingCard
-              key={t.tier}
-              tier={t}
-              isFeatured={t.tier === "mission"}
-              onWaitlist={() => {
-                setWaitlistOpen(t.tier);
-                setWaitlistResult(null);
-              }}
-              onEnterApp={onEnterApp}
-            />
-          ))}
+          padding: 40, borderRadius: 16,
+          background: LIGHT.ink, color: "#fff",
+          display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 40,
+          alignItems: "center",
+        }} className="voto-teaser">
+          <div>
+            <div style={{ fontSize: 11, color: LIGHT.terracottaSoft, letterSpacing: 2,
+              textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+              Un proyecto de Democrac.IA
+            </div>
+            <h3 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px",
+              fontFamily: "Fraunces, serif", letterSpacing: -1 }}>
+              voto<span style={{ color: LIGHT.terracotta }}>.</span>informado
+            </h3>
+            <p style={{ fontSize: 17, lineHeight: 1.7, margin: "0 0 24px",
+              color: "#e5dcd0", maxWidth: 540 }}>
+              Una plataforma cívica, apartidaria y open-source para que cada
+              ciudadano pueda comparar sus propias posiciones con las propuestas
+              reales de cada agrupación política, antes de votar.
+            </p>
+            <button onClick={onShowVoto} style={{
+              padding: "14px 28px", borderRadius: 10, border: "none",
+              background: LIGHT.terracotta, color: "#fff", fontSize: 15, fontWeight: 800,
+              cursor: "pointer", letterSpacing: 0.3,
+            }}>Conocer Voto Informado →</button>
+          </div>
+          <div style={{
+            fontFamily: "Fraunces, Georgia, serif", fontStyle: "italic",
+            fontSize: 22, lineHeight: 1.5, color: LIGHT.terracottaSoft,
+            borderLeft: `3px solid ${LIGHT.terracotta}`, paddingLeft: 20,
+          }}>
+            "Saber antes de elegir."
+          </div>
         </div>
       </section>
-
-      {/* WAITLIST MODAL */}
-      {waitlistOpen && (
-        <div onClick={closeWaitlist} style={{
-          position: "fixed", inset: 0, background: "rgba(28, 34, 48, 0.5)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 1000, padding: 20,
-        }}>
-          <div onClick={(e) => e.stopPropagation()} style={{
-            background: LIGHT.surface, borderRadius: 16, padding: 32,
-            maxWidth: 480, width: "100%",
-            boxShadow: "0 20px 60px rgba(28, 34, 48, 0.25)",
-            border: `1px solid ${LIGHT.border}`,
-          }}>
-            {!waitlistResult?.ok ? (
-              <>
-                <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
-                  textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>
-                  Waitlist · {(tiers?.find(t => t.tier === waitlistOpen)?.display_name) || waitlistOpen}
-                </div>
-                <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 12px",
-                  fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink, letterSpacing: -0.5 }}>
-                  Sumate al waitlist
-                </h3>
-                <p style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.6, margin: "0 0 24px" }}>
-                  Capturamos tu interés y te contactamos cuando el plan esté
-                  disponible. Sin obligación de pago.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <input type="email" placeholder="tu@email.com *" required
-                    value={waitlistForm.email}
-                    onChange={(e) => setWaitlistForm({ ...waitlistForm, email: e.target.value })}
-                    style={{
-                      padding: "12px 16px", borderRadius: 8,
-                      border: `1px solid ${LIGHT.borderStrong}`,
-                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
-                      fontFamily: "Inter, sans-serif",
-                    }} />
-                  <input type="text" placeholder="Organización (opcional)"
-                    value={waitlistForm.organization}
-                    onChange={(e) => setWaitlistForm({ ...waitlistForm, organization: e.target.value })}
-                    style={{
-                      padding: "12px 16px", borderRadius: 8,
-                      border: `1px solid ${LIGHT.borderStrong}`,
-                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
-                      fontFamily: "Inter, sans-serif",
-                    }} />
-                  <input type="text" placeholder="Rol / Cargo (opcional)"
-                    value={waitlistForm.role}
-                    onChange={(e) => setWaitlistForm({ ...waitlistForm, role: e.target.value })}
-                    style={{
-                      padding: "12px 16px", borderRadius: 8,
-                      border: `1px solid ${LIGHT.borderStrong}`,
-                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
-                      fontFamily: "Inter, sans-serif",
-                    }} />
-                  <textarea placeholder="¿Para qué lo querés usar? (opcional)"
-                    rows={3}
-                    value={waitlistForm.note}
-                    onChange={(e) => setWaitlistForm({ ...waitlistForm, note: e.target.value })}
-                    style={{
-                      padding: "12px 16px", borderRadius: 8,
-                      border: `1px solid ${LIGHT.borderStrong}`,
-                      background: LIGHT.bg, color: LIGHT.ink, fontSize: 14,
-                      fontFamily: "Inter, sans-serif", resize: "vertical",
-                    }} />
-                  {waitlistResult?.error && (
-                    <div style={{ padding: 12, borderRadius: 8,
-                      background: "#fdecec", border: "1px solid #f5b8b8",
-                      color: "#a02828", fontSize: 13 }}>
-                      {waitlistResult.error}
-                    </div>
-                  )}
-                  <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                    <button onClick={submitWaitlist} disabled={waitlistSubmitting}
-                      style={{
-                        flex: 1, padding: "12px 20px", borderRadius: 8, border: "none",
-                        background: LIGHT.terracotta, color: "#fff",
-                        fontSize: 14, fontWeight: 700, cursor: "pointer",
-                        opacity: waitlistSubmitting ? 0.6 : 1,
-                      }}>
-                      {waitlistSubmitting ? "Enviando..." : "Sumarme al waitlist"}
-                    </button>
-                    <button onClick={closeWaitlist}
-                      style={{
-                        padding: "12px 20px", borderRadius: 8,
-                        border: `1px solid ${LIGHT.border}`,
-                        background: "transparent", color: LIGHT.inkSoft,
-                        fontSize: 14, fontWeight: 600, cursor: "pointer",
-                      }}>
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 56, marginBottom: 12 }}>✓</div>
-                <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 12px",
-                  fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink, letterSpacing: -0.5 }}>
-                  ¡Listo!
-                </h3>
-                <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.6, margin: "0 0 12px" }}>
-                  Tu interés quedó registrado.
-                  {waitlistResult.position && (
-                    <> Sos el <strong style={{ color: LIGHT.terracotta }}>#{waitlistResult.position}</strong> en la lista para este plan.</>
-                  )}
-                </p>
-                <p style={{ fontSize: 13, color: LIGHT.textMuted, margin: "0 0 24px" }}>
-                  Te contactamos por mail cuando el plan esté disponible.
-                </p>
-                <button onClick={closeWaitlist} style={{
-                  padding: "12px 32px", borderRadius: 8, border: "none",
-                  background: LIGHT.terracotta, color: "#fff",
-                  fontSize: 14, fontWeight: 700, cursor: "pointer",
-                }}>
-                  Cerrar
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* METODOLOGIA */}
       <section id="metodologia" style={{
@@ -9374,7 +9268,10 @@ function LandingPage({ onEnterApp }) {
           <a href="https://github.com/lachmanmariana8-sudo/democracia-peirs"
              target="_blank" rel="noopener noreferrer"
              style={{ color: LIGHT.textMuted, textDecoration: "none" }}>GitHub</a>
-          <a href="#planes" style={{ color: LIGHT.textMuted, textDecoration: "none" }}>Planes</a>
+          <button onClick={onShowVoto} style={{
+            background: "transparent", border: "none", padding: 0,
+            color: LIGHT.textMuted, fontSize: 13, cursor: "pointer",
+          }}>Voto Informado</button>
           <a href="#metodologia" style={{ color: LIGHT.textMuted, textDecoration: "none" }}>Metodología</a>
           <button onClick={onEnterApp} style={{
             background: "transparent", border: "none", color: LIGHT.textMuted,
@@ -9528,6 +9425,648 @@ function FeatureCard({ icon, title, desc }) {
   );
 }
 
+function ValueItem({ title, desc }) {
+  return (
+    <div>
+      <h4 style={{
+        fontSize: 15, fontWeight: 800, margin: "0 0 6px",
+        color: LIGHT.ink, fontFamily: "Inter, sans-serif",
+        display: "flex", alignItems: "center", gap: 8,
+      }}>
+        <span style={{
+          display: "inline-block", width: 8, height: 8, borderRadius: 4,
+          background: LIGHT.terracotta,
+        }} />
+        {title}
+      </h4>
+      <p style={{ fontSize: 14, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.6 }}>{desc}</p>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VOTO INFORMADO — solapa pública dedicada al proyecto cívico
+// ═══════════════════════════════════════════════════════════════════════
+function VotoInformadoPage({ onBack, onEnterApp }) {
+  return (
+    <div style={{
+      minHeight: "100vh", background: LIGHT.bg, color: LIGHT.ink,
+      fontFamily: "Inter, 'DM Sans', system-ui, sans-serif",
+    }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:wght@300;500;700;900&family=Inter:wght@400;500;600;700;800;900&family=Source+Serif+Pro:ital,wght@1,400;1,600&display=swap" rel="stylesheet" />
+
+      {/* NAV */}
+      <nav style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "20px 7%", borderBottom: `1px solid ${LIGHT.border}`,
+        position: "sticky", top: 0, zIndex: 100, background: LIGHT.bg + "ee",
+        backdropFilter: "blur(10px)",
+      }}>
+        <BrandLogo size={42} withWordmark wordmarkSize={26} lightOnDark={false} />
+        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+          <button onClick={onBack} style={{
+            background: "transparent", border: "none", padding: 0,
+            color: LIGHT.inkSoft, fontSize: 14, fontWeight: 600, cursor: "pointer",
+          }}>← Volver a Democrac.IA</button>
+          <button onClick={onEnterApp} style={{
+            padding: "10px 20px", borderRadius: 8, border: `1px solid ${LIGHT.borderStrong}`,
+            background: LIGHT.surface, color: LIGHT.ink, fontSize: 14, fontWeight: 700,
+            cursor: "pointer", letterSpacing: 0.3,
+          }}>Dashboard →</button>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <section style={{
+        padding: "100px 7% 60px", maxWidth: 1400, margin: "0 auto",
+        display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 60,
+        alignItems: "center",
+      }} className="voto-hero">
+        <div>
+          <div style={{
+            display: "inline-block", padding: "6px 14px", borderRadius: 20,
+            background: LIGHT.terracottaBg, border: `1px solid ${LIGHT.terracottaSoft}`,
+            color: LIGHT.terracotta, fontSize: 12, fontWeight: 700, letterSpacing: 1.5,
+            textTransform: "uppercase", marginBottom: 24,
+          }}>
+            Un proyecto de Democrac.IA
+          </div>
+          <h1 style={{
+            fontSize: 72, fontWeight: 900, lineHeight: 1, letterSpacing: -3,
+            margin: "0 0 24px",
+            fontFamily: "Fraunces, Georgia, serif", color: LIGHT.ink,
+          }}>
+            voto<span style={{ color: LIGHT.terracotta }}>.</span>informado
+          </h1>
+          <p style={{
+            fontSize: 24, lineHeight: 1.5, color: LIGHT.inkSoft, fontStyle: "italic",
+            fontFamily: "Source Serif Pro, Georgia, serif",
+            margin: "0 0 32px", maxWidth: 560,
+          }}>
+            Saber antes de elegir. Una plataforma cívica para el ejercicio
+            del voto consciente.
+          </p>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{
+              padding: "8px 14px", borderRadius: 6,
+              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
+            }}>Apartidaria</span>
+            <span style={{
+              padding: "8px 14px", borderRadius: 6,
+              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
+            }}>Gratuita</span>
+            <span style={{
+              padding: "8px 14px", borderRadius: 6,
+              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
+            }}>Anónima</span>
+            <span style={{
+              padding: "8px 14px", borderRadius: 6,
+              background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+              fontSize: 12, fontWeight: 700, color: LIGHT.inkSoft, letterSpacing: 0.5,
+            }}>Open-source</span>
+          </div>
+        </div>
+        <PhoneMockupWelcome />
+      </section>
+
+      {/* QUE ES */}
+      <section style={{
+        padding: "60px 7%", maxWidth: 1100, margin: "0 auto",
+      }}>
+        <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+          textTransform: "uppercase", fontWeight: 700, marginBottom: 16 }}>
+          ¿Qué es Voto Informado?
+        </div>
+        <h2 style={{ fontSize: 38, fontWeight: 800, margin: "0 0 24px",
+          fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -1,
+          maxWidth: 900 }}>
+          Una aplicación para comparar tus posiciones con las propuestas
+          reales de cada agrupación política — sin saber, mientras respondés,
+          a qué partido pertenece cada propuesta.
+        </h2>
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40,
+          marginTop: 32,
+        }} className="voto-twocol">
+          <p style={{ fontSize: 17, color: LIGHT.inkSoft, lineHeight: 1.7, margin: 0 }}>
+            En la mayoría de las democracias contemporáneas, los partidos
+            disponen de información sofisticada sobre los votantes mientras
+            los votantes disponen, en el mejor de los casos, de cobertura
+            mediática fragmentada y una intuición construida en pocos minutos
+            frente al cuarto oscuro. Voto Informado reduce esa asimetría con
+            un instrumento simple: comparación programática estructurada,
+            anónima y verificable.
+          </p>
+          <p style={{ fontSize: 17, color: LIGHT.inkSoft, lineHeight: 1.7, margin: 0 }}>
+            El usuario responde a veinte propuestas concretas presentadas
+            sin atribución partidaria. Recién al final se revela qué partido
+            sostiene cada propuesta. La devolución muestra los cinco partidos
+            más cercanos a sus respuestas — nunca un único ganador, siempre
+            con la advertencia explícita de que no es una recomendación de
+            voto sino una medida de coincidencia.
+          </p>
+        </div>
+      </section>
+
+      {/* PROPOSITO */}
+      <section style={{
+        padding: "60px 7%", maxWidth: 1400, margin: "0 auto",
+      }}>
+        <div style={{
+          padding: 40, borderRadius: 16,
+          background: LIGHT.surfaceAlt, border: `1px solid ${LIGHT.border}`,
+          borderLeft: `4px solid ${LIGHT.terracotta}`,
+        }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 16 }}>
+            Propósito
+          </div>
+          <p style={{
+            fontSize: 22, lineHeight: 1.6, color: LIGHT.ink, margin: 0,
+            fontFamily: "Source Serif Pro, Georgia, serif", fontStyle: "italic",
+            maxWidth: 900,
+          }}>
+            "El voto informado no es el voto correcto. Es el voto consciente.
+            Esa es la única corrección que una democracia debe perseguir."
+          </p>
+          <div style={{
+            marginTop: 24, paddingTop: 24,
+            borderTop: `1px solid ${LIGHT.border}`,
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 24,
+          }}>
+            <PurposeItem
+              n="01"
+              title="Reducir la asimetría"
+              desc="Entre lo que los partidos saben de los votantes y lo que los votantes saben de los partidos."
+            />
+            <PurposeItem
+              n="02"
+              title="Promover deliberación"
+              desc="Del voto adhesivo (lealtad heredada) al voto deliberativo (decisión informada). Las dos formas son legítimas, pero la segunda fortalece al sistema."
+            />
+            <PurposeItem
+              n="03"
+              title="Reactivar el sentido del voto"
+              desc="Cuando los ciudadanos comprueban que existen diferencias programáticas concretas entre las opciones, el voto vuelve a ser una decisión que importa."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* MOCKUPS */}
+      <section style={{
+        padding: "80px 7%", maxWidth: 1400, margin: "0 auto",
+        borderTop: `1px solid ${LIGHT.border}`,
+      }}>
+        <div style={{ marginBottom: 48, maxWidth: 760 }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Diseño para celulares
+          </div>
+          <h2 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -1 }}>
+            Una experiencia móvil sobria, sin gamificación
+          </h2>
+          <p style={{ fontSize: 17, color: LIGHT.inkSoft, lineHeight: 1.6, margin: 0 }}>
+            Tres momentos del recorrido: bienvenida, quiz de afinidad sobre
+            propuestas reales, devolución matizada con cinco coincidencias
+            principales. Sin notificaciones push, sin rankings, sin scoring
+            narrativo, sin algoritmo opaco.
+          </p>
+        </div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 32, alignItems: "start", justifyItems: "center",
+        }}>
+          <PhoneFrame label="Bienvenida">
+            <PhoneMockupWelcome compact />
+          </PhoneFrame>
+          <PhoneFrame label="Quiz · pregunta tipo">
+            <PhoneMockupQuiz />
+          </PhoneFrame>
+          <PhoneFrame label="Resultado de afinidad">
+            <PhoneMockupResult />
+          </PhoneFrame>
+        </div>
+      </section>
+
+      {/* DIEZ FUNCIONES */}
+      <section style={{
+        padding: "80px 7%", maxWidth: 1400, margin: "0 auto",
+        borderTop: `1px solid ${LIGHT.border}`, background: LIGHT.bgAlt,
+      }}>
+        <div style={{ marginBottom: 40, maxWidth: 760 }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Las diez funciones
+          </div>
+          <h2 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -1 }}>
+            Una herramienta para cada momento del ciclo electoral
+          </h2>
+        </div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 16,
+        }}>
+          {[
+            ["01", "Mini Quiz de afinidad", "Veinte propuestas reales presentadas sin atribución partidaria."],
+            ["02", "Plataformas partidarias", "Acceso curado a las plataformas oficiales con cita textual al documento original."],
+            ["03", "Tus derechos cívicos", "Catálogo de derechos del elector con cita legal y fuente normativa."],
+            ["04", "Cómo se vota", "Tutorial paso a paso del acto de votar, con audio guiado opcional."],
+            ["05", "Verificación de padrón", "Consulta directa al padrón electoral oficial. Sin almacenamiento."],
+            ["06", "Tu mesa de votación", "Localización geográfica de la mesa asignada con ruta sugerida."],
+            ["07", "Glosario interactivo", "PASO, balotaje, padrón, fiscal, voto en blanco, justicia electoral."],
+            ["08", "Línea de tiempo electoral", "Calendario completo del proceso, desde convocatoria hasta resultados."],
+            ["09", "Mitos vs. hechos", "Fact-checking permanente contrastado con la legislación vigente."],
+            ["10", "Diario cívico personal", "Notas privadas que viven solo en el dispositivo. Sin sincronización."],
+          ].map(([n, title, desc]) => (
+            <FunctionRow key={n} n={n} title={title} desc={desc} />
+          ))}
+        </div>
+      </section>
+
+      {/* APARTIDISMO */}
+      <section style={{
+        padding: "80px 7%", maxWidth: 1100, margin: "0 auto",
+      }}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            La promesa apartidaria
+          </div>
+          <h2 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 24px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -1 }}>
+            Trazabilidad como antídoto al sesgo
+          </h2>
+          <p style={{ fontSize: 17, color: LIGHT.inkSoft, lineHeight: 1.7, margin: 0,
+            maxWidth: 820 }}>
+            El apartidismo no es una afirmación que se hace. Es una propiedad
+            que se construye con mecanismos verificables. Cinco compromisos
+            arquitectónicos que cualquier observador externo puede
+            inspeccionar:
+          </p>
+        </div>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 20,
+        }}>
+          <CommitmentCard n="01" title="Cita literal verificable"
+            desc="Cada propuesta cita textualmente la plataforma oficial del partido, con referencia exacta al capítulo y artículo." />
+          <CommitmentCard n="02" title="Sub-comité de ética externo"
+            desc="El cuestionario es aprobado antes de cada elección por tres expertos sin afiliación partidaria. Acta pública." />
+          <CommitmentCard n="03" title="Algoritmo abierto"
+            desc="La fórmula de scoring es de código abierto, reproducible. Cualquier desarrollador puede verificar el cálculo." />
+          <CommitmentCard n="04" title="Test de balance por release"
+            desc="Antes de publicar, se ejecuta una simulación contra cada plataforma. Si un partido obtiene puntaje sesgado, se rebalancea." />
+          <CommitmentCard n="05" title="Sin financiamiento partidario"
+            desc="No aceptamos dinero de partidos, candidatos, fundaciones partidarias ni organismos vinculados a actores en contienda." />
+        </div>
+      </section>
+
+      {/* CIERRE */}
+      <section style={{
+        padding: "60px 7%", maxWidth: 1400, margin: "0 auto",
+      }}>
+        <div style={{
+          padding: 48, borderRadius: 16,
+          background: LIGHT.ink, color: "#fff",
+          textAlign: "center",
+        }}>
+          <p style={{
+            fontSize: 32, lineHeight: 1.4, margin: "0 0 12px",
+            fontFamily: "Fraunces, Georgia, serif", fontStyle: "italic",
+            color: LIGHT.terracottaSoft, fontWeight: 300,
+          }}>
+            "Saber antes de elegir."
+          </p>
+          <p style={{
+            fontSize: 15, color: "#e5dcd0", margin: 0, maxWidth: 640,
+            marginLeft: "auto", marginRight: "auto", lineHeight: 1.7,
+          }}>
+            Esa es toda la promesa. No la única promesa que la democracia
+            necesita, pero sí la más simple. Voto Informado quiere acompañar
+            ese proceso humilde y decisivo.
+          </p>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{
+        padding: "40px 7%", borderTop: `1px solid ${LIGHT.border}`,
+        background: LIGHT.bgAlt,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: 16, color: LIGHT.textMuted, fontSize: 13,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <BrandLogo size={28} lightOnDark={false} />
+          <span>Voto Informado · un proyecto de Democrac.IA</span>
+        </div>
+        <button onClick={onBack} style={{
+          background: "transparent", border: "none", color: LIGHT.textMuted,
+          cursor: "pointer", fontSize: 13, padding: 0,
+        }}>← Volver al sitio principal</button>
+      </footer>
+    </div>
+  );
+}
+
+function PurposeItem({ n, title, desc }) {
+  return (
+    <div>
+      <div style={{
+        fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+        fontWeight: 700, marginBottom: 6, fontFamily: "Fraunces, serif",
+      }}>{n}</div>
+      <h4 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 6px", color: LIGHT.ink }}>{title}</h4>
+      <p style={{ fontSize: 14, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.6 }}>{desc}</p>
+    </div>
+  );
+}
+
+function FunctionRow({ n, title, desc }) {
+  return (
+    <div style={{
+      padding: 20, background: LIGHT.surface, borderRadius: 10,
+      border: `1px solid ${LIGHT.border}`,
+      display: "flex", gap: 14, alignItems: "flex-start",
+    }}>
+      <div style={{
+        fontFamily: "Fraunces, Georgia, serif", fontSize: 22,
+        fontWeight: 700, color: LIGHT.terracotta, lineHeight: 1,
+        minWidth: 32, fontStyle: "italic",
+      }}>{n}</div>
+      <div>
+        <h4 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px", color: LIGHT.ink }}>{title}</h4>
+        <p style={{ fontSize: 13, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.5 }}>{desc}</p>
+      </div>
+    </div>
+  );
+}
+
+function CommitmentCard({ n, title, desc }) {
+  return (
+    <div style={{
+      padding: 24, background: LIGHT.surface, borderRadius: 12,
+      border: `1px solid ${LIGHT.border}`,
+      boxShadow: "0 2px 8px rgba(28, 34, 48, 0.04)",
+    }}>
+      <div style={{
+        fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+        fontWeight: 700, marginBottom: 8,
+      }}>{n}</div>
+      <h4 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 8px", color: LIGHT.ink }}>{title}</h4>
+      <p style={{ fontSize: 13.5, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.6 }}>{desc}</p>
+    </div>
+  );
+}
+
+// ── Phone mockups ─────────────────────────────────────────────────────
+function PhoneFrame({ label, children }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{
+        width: 260, height: 540, borderRadius: 36,
+        background: LIGHT.ink, padding: 14,
+        boxShadow: "0 18px 50px rgba(28, 34, 48, 0.18)",
+        position: "relative",
+      }}>
+        <div style={{
+          position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)",
+          width: 90, height: 6, borderRadius: 4, background: "#2a3247",
+        }} />
+        <div style={{
+          width: "100%", height: "100%", borderRadius: 24,
+          background: LIGHT.surface, overflow: "hidden", position: "relative",
+        }}>
+          {children}
+        </div>
+      </div>
+      {label && (
+        <div style={{
+          marginTop: 14, fontSize: 12, color: LIGHT.textMuted,
+          fontStyle: "italic", fontFamily: "Source Serif Pro, Georgia, serif",
+        }}>{label}</div>
+      )}
+    </div>
+  );
+}
+
+function PhoneMockupWelcome({ compact = false }) {
+  if (compact) {
+    return (
+      <div style={{
+        padding: "32px 20px", height: "100%",
+        background: LIGHT.ink, color: "#fff",
+        display: "flex", flexDirection: "column",
+        justifyContent: "space-between",
+      }}>
+        <div style={{
+          fontSize: 10, letterSpacing: 2, fontWeight: 700,
+          color: LIGHT.terracottaSoft, textTransform: "uppercase",
+        }}>Democrac.IA</div>
+        <div>
+          <div style={{
+            fontSize: 30, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5,
+            fontFamily: "Fraunces, Georgia, serif", marginBottom: 16,
+          }}>
+            voto<span style={{ color: LIGHT.terracotta }}>.</span>informado
+          </div>
+          <div style={{
+            fontFamily: "Source Serif Pro, Georgia, serif",
+            fontStyle: "italic", fontSize: 13, color: "#cdd3dd", marginBottom: 24,
+          }}>
+            "Saber antes de elegir."
+          </div>
+          <button style={{
+            width: "100%", padding: "12px", borderRadius: 8, border: "none",
+            background: LIGHT.terracotta, color: "#fff",
+            fontSize: 13, fontWeight: 700, cursor: "pointer",
+          }}>Empezá →</button>
+          <div style={{
+            textAlign: "center", marginTop: 14, fontSize: 11,
+            color: "#8b94a3", letterSpacing: 0.5,
+          }}>anónima · gratuita</div>
+        </div>
+        <div />
+      </div>
+    );
+  }
+  return (
+    <PhoneFrame>
+      <div style={{
+        padding: "40px 24px", height: "100%",
+        background: LIGHT.ink, color: "#fff",
+        display: "flex", flexDirection: "column",
+      }}>
+        <div style={{
+          fontSize: 10, letterSpacing: 2, fontWeight: 700,
+          color: LIGHT.terracottaSoft, textTransform: "uppercase",
+          marginBottom: 80,
+        }}>Democrac.IA</div>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontSize: 36, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5,
+            fontFamily: "Fraunces, Georgia, serif", marginBottom: 20,
+          }}>
+            voto<span style={{ color: LIGHT.terracotta }}>.</span>informado
+          </div>
+          <div style={{
+            fontFamily: "Source Serif Pro, Georgia, serif",
+            fontStyle: "italic", fontSize: 15, color: "#cdd3dd", marginBottom: 32,
+          }}>
+            "Saber antes de elegir."
+          </div>
+          <button style={{
+            width: "100%", padding: "14px", borderRadius: 8, border: "none",
+            background: LIGHT.terracotta, color: "#fff",
+            fontSize: 14, fontWeight: 700, cursor: "pointer",
+          }}>Empezá →</button>
+          <div style={{
+            textAlign: "center", marginTop: 16, fontSize: 12,
+            color: "#8b94a3", letterSpacing: 0.5,
+          }}>anónima · gratuita</div>
+        </div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function PhoneMockupQuiz() {
+  return (
+    <div style={{
+      padding: "18px 18px", height: "100%", background: LIGHT.surface,
+      display: "flex", flexDirection: "column",
+    }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        fontSize: 11, color: LIGHT.textMuted, fontWeight: 600, marginBottom: 8,
+      }}>
+        <span>×</span>
+        <span>4 de 20</span>
+      </div>
+      <div style={{
+        height: 3, background: LIGHT.border, borderRadius: 2, marginBottom: 18,
+        overflow: "hidden",
+      }}>
+        <div style={{ height: "100%", width: "20%", background: LIGHT.terracotta }} />
+      </div>
+      <div style={{
+        fontSize: 10, letterSpacing: 1.5, fontWeight: 700,
+        color: LIGHT.terracotta, textTransform: "uppercase", marginBottom: 14,
+      }}>📊 Economía</div>
+      <div style={{
+        padding: 14, background: LIGHT.surfaceAlt, borderRadius: 10,
+        border: `1px solid ${LIGHT.border}`, marginBottom: 16,
+      }}>
+        <div style={{
+          fontSize: 9, color: LIGHT.textMuted, letterSpacing: 1, fontWeight: 700,
+          textTransform: "uppercase", marginBottom: 6,
+        }}>Propuesta · plataforma oficial</div>
+        <div style={{ fontSize: 13, color: LIGHT.ink, lineHeight: 1.4, fontWeight: 500 }}>
+          Crear un régimen impositivo simplificado para monotributistas y pymes.
+        </div>
+      </div>
+      <div style={{
+        fontSize: 11, color: LIGHT.textMuted, textAlign: "center", marginBottom: 12,
+      }}>¿Cuán de acuerdo estás?</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{
+          padding: "11px 14px", borderRadius: 8,
+          border: `2px solid ${LIGHT.terracotta}`,
+          fontSize: 12, color: LIGHT.terracotta, fontWeight: 700, textAlign: "center",
+        }}>Muy de acuerdo</div>
+        <div style={{
+          padding: "11px 14px", borderRadius: 8,
+          border: `1px solid ${LIGHT.border}`,
+          fontSize: 12, color: LIGHT.inkSoft, textAlign: "center",
+        }}>De acuerdo</div>
+        <div style={{
+          padding: "11px 14px", borderRadius: 8,
+          border: `1px solid ${LIGHT.border}`,
+          fontSize: 12, color: LIGHT.inkSoft, textAlign: "center",
+        }}>No tengo postura</div>
+      </div>
+    </div>
+  );
+}
+
+function PhoneMockupResult() {
+  const bars = [
+    ["Frente Cívico Verde", 78, LIGHT.terracotta],
+    ["Coalición Reformista", 64, "#3a4356"],
+    ["Movimiento Social", 51, "#c25a3a99"],
+    ["Unión Federal", 42, "#c8893a"],
+  ];
+  return (
+    <div style={{
+      height: "100%", background: LIGHT.surface,
+      display: "flex", flexDirection: "column",
+    }}>
+      <div style={{
+        padding: "18px 18px 22px", background: LIGHT.terracotta, color: "#fff",
+      }}>
+        <div style={{
+          fontSize: 10, letterSpacing: 1.5, fontWeight: 700,
+          textTransform: "uppercase", opacity: 0.85, marginBottom: 6,
+          display: "flex", justifyContent: "space-between",
+        }}>
+          <span>×</span>
+          <span>Resultado</span>
+          <span>↗</span>
+        </div>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1,
+          opacity: 0.85, marginTop: 10, marginBottom: 4 }}>TU AFINIDAD</div>
+        <div style={{
+          fontSize: 15, fontWeight: 800, lineHeight: 1.3,
+          fontFamily: "Fraunces, Georgia, serif",
+        }}>Coincidís más con propuestas del Frente Cívico Verde</div>
+        <div style={{ fontSize: 11, opacity: 0.9, marginTop: 6 }}>
+          78% · 4 partidos cerca
+        </div>
+      </div>
+      <div style={{ padding: 14, flex: 1, background: LIGHT.surface }}>
+        <div style={{
+          padding: 12, background: LIGHT.surfaceAlt, borderRadius: 10,
+          border: `1px solid ${LIGHT.border}`,
+        }}>
+          <div style={{
+            fontSize: 9, color: LIGHT.textMuted, letterSpacing: 1, fontWeight: 700,
+            textTransform: "uppercase", marginBottom: 10,
+          }}>Las cinco principales</div>
+          {bars.map(([name, pct, color]) => (
+            <div key={name} style={{ marginBottom: 9 }}>
+              <div style={{
+                display: "flex", justifyContent: "space-between",
+                fontSize: 11, fontWeight: 600, color: LIGHT.ink, marginBottom: 3,
+              }}>
+                <span>{name}</span>
+                <span style={{ color: LIGHT.textMuted }}>{pct}%</span>
+              </div>
+              <div style={{
+                height: 4, background: LIGHT.border, borderRadius: 2, overflow: "hidden",
+              }}>
+                <div style={{ height: "100%", width: `${pct}%`, background: color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{
+          marginTop: 12, padding: 10, background: LIGHT.terracottaBg,
+          border: `1px solid ${LIGHT.terracottaSoft}`, borderRadius: 8,
+          fontSize: 10, color: LIGHT.terracotta, lineHeight: 1.4,
+        }}>
+          No es una recomendación de voto. Mide coincidencia con propuestas declaradas.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DemocracIADashboard() {
   const [activeView, setActiveView] = useState("overview");
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -9653,26 +10192,48 @@ function DemocracIADashboard() {
 // ═══════════════════════════════════════════════════════════════════════
 
 export default function App() {
-  const [showApp, setShowApp] = useState(() => {
+  const initialView = () => {
     try {
       const url = new URL(window.location.href);
-      return url.searchParams.get("app") === "true";
+      if (url.searchParams.get("app") === "true") return "dashboard";
+      if (url.searchParams.get("voto") === "true") return "voto";
+      return "landing";
     } catch {
-      return false;
+      return "landing";
     }
-  });
+  };
+  const [view, setView] = useState(initialView);
 
-  const enterApp = useCallback(() => {
+  const updateUrl = (params) => {
     try {
       const url = new URL(window.location.href);
-      url.searchParams.set("app", "true");
+      url.searchParams.delete("app");
+      url.searchParams.delete("voto");
+      Object.entries(params).forEach(([k, v]) => {
+        if (v) url.searchParams.set(k, v);
+      });
       window.history.pushState({}, "", url.toString());
     } catch {}
-    setShowApp(true);
+  };
+
+  const enterApp = useCallback(() => {
+    updateUrl({ app: "true" });
+    setView("dashboard");
   }, []);
 
-  if (!showApp) {
-    return <LandingPage onEnterApp={enterApp} />;
-  }
-  return <DemocracIADashboard />;
+  const showVoto = useCallback(() => {
+    updateUrl({ voto: "true" });
+    setView("voto");
+    try { window.scrollTo(0, 0); } catch {}
+  }, []);
+
+  const showLanding = useCallback(() => {
+    updateUrl({});
+    setView("landing");
+    try { window.scrollTo(0, 0); } catch {}
+  }, []);
+
+  if (view === "dashboard") return <DemocracIADashboard />;
+  if (view === "voto") return <VotoInformadoPage onBack={showLanding} onEnterApp={enterApp} />;
+  return <LandingPage onEnterApp={enterApp} onShowVoto={showVoto} />;
 }
