@@ -9743,9 +9743,10 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
             Qué hace a este proyecto distinto de un quiz de afinidad genérico
           </h2>
           <p style={{ fontSize: 16, color: LIGHT.inkSoft, lineHeight: 1.7, margin: 0 }}>
-            Tres definiciones de scope que respondieron a debates reales del
-            equipo. Las explicitamos porque cambian el resultado de la app y
-            porque cualquier observador externo debería poder cuestionarlas.
+            Ocho definiciones de scope que respondieron a debates reales del
+            equipo, agrupadas en tres bloques: modelo de datos, transparencia
+            y alcance. Las explicitamos porque cambian el resultado de la app
+            y porque cualquier observador externo debería poder cuestionarlas.
           </p>
         </div>
 
@@ -9974,6 +9975,357 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
             por el partido pero rechazada explícitamente por la candidata
             cabeza de lista, ambas posiciones se muestran. El usuario decide
             cuál pesa más.
+          </p>
+        </div>
+
+        {/* GROUP HEADER · TRANSPARENCIA */}
+        <div style={{ margin: "48px 0 20px", display: "flex",
+          alignItems: "center", gap: 14 }}>
+          <div style={{ flex: 1, height: 1, background: LIGHT.border }} />
+          <div style={{
+            fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2.5,
+            fontWeight: 700, textTransform: "uppercase",
+            padding: "4px 12px", background: LIGHT.bg,
+          }}>Transparencia y diseño</div>
+          <div style={{ flex: 1, height: 1, background: LIGHT.border }} />
+        </div>
+
+        {/* SUB-BLOQUE 4: Sesgo afectivo */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+          marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 04</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Sesgo afectivo visible</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            Convertir el sesgo identitario en aprendizaje cívico
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 16px" }}>
+            Cuando los votantes conocen la afiliación partidaria de una
+            propuesta, su evaluación se contamina por su disposición previa
+            hacia ese partido. El mismo enunciado se evalúa positivamente si
+            se atribuye al partido propio y negativamente si se atribuye al
+            rival. Esto está documentado en la literatura de psicología
+            política contemporánea.
+          </p>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 16px" }}>
+            En lugar de simplemente ocultar la atribución durante el quiz
+            (que ya hacemos) y revelarla al final, agregamos una segunda
+            pantalla opcional con esta pregunta:
+          </p>
+          <div style={{
+            padding: 20, background: LIGHT.bgAlt, borderRadius: 8,
+            border: `1px solid ${LIGHT.border}`,
+            fontFamily: "Source Serif Pro, Georgia, serif", fontStyle: "italic",
+            fontSize: 17, color: LIGHT.ink, lineHeight: 1.5, marginBottom: 16,
+          }}>
+            "Si hubieras sabido a qué partido pertenecía cada propuesta,
+            ¿hubieras respondido distinto? Estas tres propuestas las marcaste
+            con un grado de acuerdo distinto al promedio de respondentes con
+            tu perfil ideológico declarado."
+          </div>
+          <p style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.65, margin: 0,
+            padding: "12px 14px", background: LIGHT.terracottaBg,
+            border: `1px solid ${LIGHT.terracottaSoft}`, borderRadius: 8 }}>
+            <strong style={{ color: LIGHT.terracotta }}>No es humillación, es alfabetización.</strong>{" "}
+            Hacer el sesgo visible explícitamente lo convierte en herramienta
+            de auto-conocimiento, no en juicio. La feature es opcional y se
+            puede saltear sin penalización en el flujo.
+          </p>
+        </div>
+
+        {/* SUB-BLOQUE 5: Financiamiento + antecedentes */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+          marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 05</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Transparencia financiera y judicial</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            Lo que un partido recibe y arrastra es información pública —
+            la hacemos accesible
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 20px" }}>
+            Donantes registrados, gastos de campaña declarados, causas
+            judiciales abiertas, declaraciones juradas patrimoniales,
+            antecedentes empresariales. Toda esta información es pública en
+            registros estatales pero queda invisibilizada en documentos densos
+            y dispersos. Voto Informado la consolida en una vista por partido
+            y por candidato, citando siempre la fuente oficial:
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 12, marginBottom: 16,
+          }}>
+            <TransparencyLayer
+              icon="💰"
+              title="Financiamiento"
+              desc="Donantes en últimas 2 campañas (con montos y fechas) + gastos declarados ante la justicia electoral."
+            />
+            <TransparencyLayer
+              icon="⚖️"
+              title="Antecedentes judiciales"
+              desc="Causas penales y civiles vigentes con número de expediente y juzgado interviniente. Sin presunción de culpabilidad."
+            />
+            <TransparencyLayer
+              icon="📋"
+              title="Declaraciones juradas"
+              desc="Patrimonio declarado al inicio y al final de cada mandato. Variación porcentual visible."
+            />
+          </div>
+          <p style={{ fontSize: 13.5, color: LIGHT.textMuted, lineHeight: 1.6,
+            margin: 0, fontStyle: "italic" }}>
+            No reemplaza al periodismo de investigación: lo complementa con un
+            punto de entrada estructurado para que el ciudadano común pueda
+            mirar lo mismo que mira un periodista especializado.
+          </p>
+        </div>
+
+        {/* SUB-BLOQUE 6: Propuestas no-falsables */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+          marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 06</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Calidad programática</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            No toda propuesta es operacionalizable. Lo señalamos.
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 20px" }}>
+            Las plataformas usan a veces lenguaje retórico sin compromisos
+            verificables: "promoveremos el desarrollo sustentable",
+            "trabajaremos por la justicia social". Estas frases no son
+            falsables — no se puede chequear si se cumplieron ni si se
+            incumplieron. Voto Informado las identifica con un indicador
+            visual y no las incluye en el quiz de afinidad.
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12,
+            marginBottom: 16,
+          }} className="voto-twocol">
+            <div style={{
+              padding: 16, background: "#f0f7f0", borderRadius: 8,
+              border: `1px solid #bcd5bc`,
+            }}>
+              <div style={{ fontSize: 11, color: "#4a7c59", letterSpacing: 1.5,
+                fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>
+                ✓ Operacionalizable
+              </div>
+              <div style={{ fontSize: 14, color: LIGHT.ink, lineHeight: 1.5,
+                fontFamily: "Source Serif Pro, Georgia, serif", fontStyle: "italic" }}>
+                "Crear un régimen impositivo simplificado para monotributistas
+                y pymes con alícuota única del 12%."
+              </div>
+              <div style={{ fontSize: 12, color: "#5a8a6a", marginTop: 8 }}>
+                Verificable: se hizo o no se hizo. Existe vara para evaluar
+                cumplimiento.
+              </div>
+            </div>
+            <div style={{
+              padding: 16, background: LIGHT.bgAlt, borderRadius: 8,
+              border: `1px solid ${LIGHT.borderStrong}`,
+            }}>
+              <div style={{ fontSize: 11, color: LIGHT.textMuted, letterSpacing: 1.5,
+                fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>
+                ⚠ No-falsable
+              </div>
+              <div style={{ fontSize: 14, color: LIGHT.ink, lineHeight: 1.5,
+                fontFamily: "Source Serif Pro, Georgia, serif", fontStyle: "italic" }}>
+                "Promoveremos el crecimiento económico sostenible y la
+                inclusión social."
+              </div>
+              <div style={{ fontSize: 12, color: LIGHT.textMuted, marginTop: 8 }}>
+                No hay vara. Cualquier gestión puede declararse cumplidora
+                de esta promesa.
+              </div>
+            </div>
+          </div>
+          <p style={{ fontSize: 13.5, color: LIGHT.textMuted, lineHeight: 1.6,
+            margin: 0, fontStyle: "italic" }}>
+            Es alfabetización cívica: enseña a distinguir entre propuesta y
+            retórica. Los partidos pueden replicar — y publicamos sus
+            replicas — pero no negociamos la distinción.
+          </p>
+        </div>
+
+        {/* GROUP HEADER · ALCANCE */}
+        <div style={{ margin: "48px 0 20px", display: "flex",
+          alignItems: "center", gap: 14 }}>
+          <div style={{ flex: 1, height: 1, background: LIGHT.border }} />
+          <div style={{
+            fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2.5,
+            fontWeight: 700, textTransform: "uppercase",
+            padding: "4px 12px", background: LIGHT.bg,
+          }}>Alcance</div>
+          <div style={{ flex: 1, height: 1, background: LIGHT.border }} />
+        </div>
+
+        {/* SUB-BLOQUE 7: Multilingüismo */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+          marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 07</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Multilingüismo desde el lanzamiento</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            Lenguas originarias como derecho, no como feature opcional
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 20px" }}>
+            El voto informado en lenguas originarias está protegido por el
+            <strong> Convenio 169 OIT</strong> y por la <strong>Declaración
+            de Naciones Unidas sobre los Derechos de los Pueblos Indígenas</strong>.
+            Voto Informado se compromete a entregar la app en las lenguas
+            oficialmente reconocidas de cada país desde el lanzamiento — no
+            como agregado posterior cuando "haya recursos".
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 10, marginBottom: 16,
+          }}>
+            {[
+              ["Perú", "Quechua · Aymara"],
+              ["Bolivia", "Quechua · Aymara · Guaraní"],
+              ["Paraguay", "Guaraní (cooficial)"],
+              ["México", "Náhuatl · Maya · Mixteco · Zapoteco"],
+              ["Guatemala", "K'iche' · Q'eqchi' · Mam · Kaqchikel"],
+              ["Ecuador", "Quichua · Shuar"],
+            ].map(([country, langs]) => (
+              <div key={country} style={{
+                padding: "12px 14px", borderRadius: 8,
+                background: LIGHT.bgAlt, border: `1px solid ${LIGHT.border}`,
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: LIGHT.ink,
+                  marginBottom: 4 }}>{country}</div>
+                <div style={{ fontSize: 12, color: LIGHT.inkSoft,
+                  fontFamily: "DM Mono, ui-monospace, monospace" }}>{langs}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 13.5, color: LIGHT.textMuted, lineHeight: 1.6,
+            margin: 0, fontStyle: "italic" }}>
+            "Un derecho que no se ejerce en la lengua del titular es un
+            derecho que no se ejerce plenamente." La traducción es realizada
+            en colaboración con organizaciones de cada comunidad lingüística,
+            no por servicios automatizados.
+          </p>
+        </div>
+
+        {/* SUB-BLOQUE 8: Ciclo electoral completo */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 08</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Ciclo electoral completo</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            Más que presidenciales: legislativas, municipales y consultas
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 20px" }}>
+            La atención mediática se concentra en presidenciales, pero la
+            mayoría de las decisiones que afectan al ciudadano se toman en
+            legislativas, municipales y referéndums. Voto Informado tiene
+            arquitectura para soportar las cuatro categorías, cada una con
+            su lógica propia:
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 12,
+          }}>
+            <ElectionTypeCard
+              n="01"
+              title="Presidencial"
+              desc="Candidato único por boleta. Quiz sobre plataforma del partido + posiciones del candidato."
+            />
+            <ElectionTypeCard
+              n="02"
+              title="Legislativa"
+              desc="Lista + candidatos individuales. Quiz + análisis de divergencia entre partido y cabeza de lista."
+            />
+            <ElectionTypeCard
+              n="03"
+              title="Municipal"
+              desc="Candidato + plataforma local. Quiz adaptado a competencias municipales (no nacionales)."
+            />
+            <ElectionTypeCard
+              n="04"
+              title="Referéndum / Consulta"
+              desc="Pregunta única. Análisis de implicancias jurídicas y precedentes antes de votar."
+            />
+          </div>
+          <p style={{ fontSize: 13.5, color: LIGHT.textMuted, lineHeight: 1.6,
+            margin: "20px 0 0", fontStyle: "italic" }}>
+            Una elección sin entender qué se está decidiendo no es una
+            elección informada. Las consultas populares son las más
+            invisibilizadas y, paradójicamente, las más vinculantes.
           </p>
         </div>
       </section>
@@ -10214,6 +10566,44 @@ function FunctionRow({ n, title, desc }) {
       <div>
         <h4 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px", color: LIGHT.ink }}>{title}</h4>
         <p style={{ fontSize: 13, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.5 }}>{desc}</p>
+      </div>
+    </div>
+  );
+}
+
+function TransparencyLayer({ icon, title, desc }) {
+  return (
+    <div style={{
+      padding: 18, borderRadius: 10,
+      background: LIGHT.bgAlt, border: `1px solid ${LIGHT.border}`,
+    }}>
+      <div style={{ fontSize: 26, marginBottom: 8 }}>{icon}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: LIGHT.ink,
+        marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.55 }}>
+        {desc}
+      </div>
+    </div>
+  );
+}
+
+function ElectionTypeCard({ n, title, desc }) {
+  return (
+    <div style={{
+      padding: 18, borderRadius: 10,
+      background: LIGHT.bgAlt, border: `1px solid ${LIGHT.border}`,
+      display: "flex", flexDirection: "column", gap: 8,
+    }}>
+      <div style={{
+        fontSize: 11, color: LIGHT.terracotta, letterSpacing: 1.5,
+        fontWeight: 700, fontFamily: "Fraunces, Georgia, serif",
+        fontStyle: "italic",
+      }}>{n}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: LIGHT.ink }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.55 }}>
+        {desc}
       </div>
     </div>
   );
