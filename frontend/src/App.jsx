@@ -9729,6 +9729,255 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
         </div>
       </section>
 
+      {/* DECISIONES METODOLOGICAS */}
+      <section style={{
+        padding: "80px 7%", maxWidth: 1200, margin: "0 auto",
+      }}>
+        <div style={{ marginBottom: 40, maxWidth: 820 }}>
+          <div style={{ fontSize: 12, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>
+            Decisiones metodológicas
+          </div>
+          <h2 style={{ fontSize: 36, fontWeight: 800, margin: "0 0 16px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -1 }}>
+            Qué hace a este proyecto distinto de un quiz de afinidad genérico
+          </h2>
+          <p style={{ fontSize: 16, color: LIGHT.inkSoft, lineHeight: 1.7, margin: 0 }}>
+            Tres definiciones de scope que respondieron a debates reales del
+            equipo. Las explicitamos porque cambian el resultado de la app y
+            porque cualquier observador externo debería poder cuestionarlas.
+          </p>
+        </div>
+
+        {/* SUB-BLOQUE 1: Plataforma + trayectoria legislativa */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+          marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 01</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Plataforma + trayectoria</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            El partido no es solo lo que promete: también lo que vota
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 16px" }}>
+            Una plataforma escrita es una hipótesis. Lo que cuenta es cómo
+            votan los legisladores del partido cuando llega el momento de
+            decidir. En América Latina, la distancia entre promesa de campaña
+            y comportamiento en función es estructural — no anecdótica. Por eso
+            Voto Informado cruza dos capas:
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16,
+            marginBottom: 16,
+          }} className="voto-twocol">
+            <div style={{
+              padding: 16, background: LIGHT.bgAlt, borderRadius: 8,
+              border: `1px solid ${LIGHT.border}`,
+            }}>
+              <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 1.5,
+                fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Capa A</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: LIGHT.ink, marginBottom: 4 }}>
+                Plataforma declarada
+              </div>
+              <div style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.55 }}>
+                Las propuestas escritas para esta elección, presentadas ante
+                la justicia electoral. Citables, verificables, hipotéticas.
+              </div>
+            </div>
+            <div style={{
+              padding: 16, background: LIGHT.bgAlt, borderRadius: 8,
+              border: `1px solid ${LIGHT.border}`,
+            }}>
+              <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 1.5,
+                fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Capa B</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: LIGHT.ink, marginBottom: 4 }}>
+                Trayectoria legislativa
+              </div>
+              <div style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.55 }}>
+                Cómo votaron los legisladores del partido los últimos 4 años
+                en temas equivalentes. Citables, verificables, fácticas.
+              </div>
+            </div>
+          </div>
+          <p style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.65, margin: 0,
+            padding: "12px 14px", background: LIGHT.terracottaBg,
+            border: `1px solid ${LIGHT.terracottaSoft}`, borderRadius: 8 }}>
+            <strong style={{ color: LIGHT.terracotta }}>Coherencia visible.</strong>{" "}
+            Cuando hay distancia entre ambas capas — un partido prometió X
+            pero sus legisladores votaron Y — la app lo señala explícitamente.
+            La rendición de cuentas deja de depender de la memoria del votante.
+          </p>
+        </div>
+
+        {/* SUB-BLOQUE 2: 8 ejes */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+          marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 02</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>8 ejes, no 7</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            La calidad democrática como eje propio, no como tema dentro de otros
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 20px" }}>
+            Los quizzes cívicos suelen organizar el cuestionario por temas:
+            economía, salud, seguridad, ambiente. Eso funciona en democracias
+            estables. En contextos de erosión democrática — y en buena parte
+            de América Latina lo estamos — lo que está en juego no es solo
+            <em> qué políticas</em> se implementan, sino <em>bajo qué reglas
+            del juego</em> se implementan. Por eso separamos el eje:
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 10, marginBottom: 20,
+          }}>
+            {[
+              ["Economía y trabajo", false],
+              ["Salud y educación", false],
+              ["Seguridad y justicia", false],
+              ["Ambiente y energía", false],
+              ["Derechos humanos", false],
+              ["Reforma institucional", false],
+              ["Política internacional", false],
+              ["Calidad democrática procedimental", true],
+            ].map(([label, isNew]) => (
+              <div key={label} style={{
+                padding: "12px 14px", borderRadius: 8,
+                background: isNew ? LIGHT.terracottaBg : LIGHT.bgAlt,
+                border: `1px solid ${isNew ? LIGHT.terracottaSoft : LIGHT.border}`,
+                fontSize: 13, fontWeight: isNew ? 800 : 600,
+                color: isNew ? LIGHT.terracotta : LIGHT.inkSoft,
+                display: "flex", alignItems: "center", gap: 8,
+              }}>
+                {isNew && <span style={{ fontSize: 10, padding: "2px 6px",
+                  background: LIGHT.terracotta, color: "#fff", borderRadius: 3,
+                  letterSpacing: 0.5 }}>NUEVO</span>}
+                {label}
+              </div>
+            ))}
+          </div>
+          <div style={{
+            padding: 18, background: LIGHT.bgAlt, borderRadius: 8,
+            border: `1px solid ${LIGHT.border}`,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: LIGHT.ink, marginBottom: 10 }}>
+              El eje de calidad democrática mide compromiso con:
+            </div>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none",
+              display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 8 }}>
+              {[
+                "Separación de poderes",
+                "Independencia judicial",
+                "Libertad de prensa",
+                "Reglas de alternancia y reelección",
+                "Pluralismo en órganos de control",
+                "Respeto a resultados electorales",
+              ].map((item) => (
+                <li key={item} style={{ fontSize: 13, color: LIGHT.inkSoft,
+                  display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <span style={{ color: LIGHT.terracotta, fontWeight: 700, flexShrink: 0 }}>·</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p style={{ fontSize: 13.5, color: LIGHT.textMuted, lineHeight: 1.6,
+            margin: "16px 0 0", fontStyle: "italic" }}>
+            Cuando alguien deja de respetar las reglas del juego, las políticas
+            sectoriales se vuelven secundarias. Por eso este eje no se distribuye
+            entre los otros: tiene peso propio y el usuario lo pondera por separado.
+          </p>
+        </div>
+
+        {/* SUB-BLOQUE 3: Tres entidades */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 03</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Modelo de datos</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            Partido, candidato y lista son tres entidades distintas
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 20px" }}>
+            En sistemas con voto preferencial, voto cruzado o listas abiertas
+            (Brasil, Perú, parte de la región), el voto no va al "partido" sino
+            a un candidato individual o a una lista. Decir solo "agrupación
+            política" oscurece la decisión. Voto Informado separa las tres
+            entidades:
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 12,
+          }}>
+            <EntityCard
+              label="Partido"
+              defn="La organización formal. Plataforma oficial, marca histórica, identidad ideológica declarada."
+              ex="Frente Cívico Verde"
+            />
+            <EntityCard
+              label="Candidato"
+              defn="La persona en la boleta. Puede tener posiciones propias que difieren del partido. Antecedentes verificables."
+              ex="María López — Senado · LP"
+            />
+            <EntityCard
+              label="Lista"
+              defn="La combinación específica de candidatos que un partido o coalición presenta en este distrito y elección."
+              ex="Lista 158 — Cámara de Diputados"
+            />
+          </div>
+          <p style={{ fontSize: 13.5, color: LIGHT.textMuted, lineHeight: 1.6,
+            margin: "20px 0 0", fontStyle: "italic" }}>
+            En la pantalla de resultados del quiz, si una propuesta es sostenida
+            por el partido pero rechazada explícitamente por la candidata
+            cabeza de lista, ambas posiciones se muestran. El usuario decide
+            cuál pesa más.
+          </p>
+        </div>
+      </section>
+
       {/* APARTIDISMO */}
       <section style={{
         padding: "80px 7%", maxWidth: 1100, margin: "0 auto",
@@ -9965,6 +10214,32 @@ function FunctionRow({ n, title, desc }) {
       <div>
         <h4 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px", color: LIGHT.ink }}>{title}</h4>
         <p style={{ fontSize: 13, color: LIGHT.inkSoft, margin: 0, lineHeight: 1.5 }}>{desc}</p>
+      </div>
+    </div>
+  );
+}
+
+function EntityCard({ label, defn, ex }) {
+  return (
+    <div style={{
+      padding: 18, borderRadius: 10,
+      background: LIGHT.bgAlt, border: `1px solid ${LIGHT.border}`,
+      display: "flex", flexDirection: "column", gap: 10,
+    }}>
+      <div style={{
+        fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+        fontWeight: 700, textTransform: "uppercase",
+      }}>{label}</div>
+      <div style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.55, flex: 1 }}>
+        {defn}
+      </div>
+      <div style={{
+        fontSize: 12, color: LIGHT.ink, fontWeight: 600,
+        fontFamily: "DM Mono, ui-monospace, monospace",
+        padding: "8px 10px", background: LIGHT.surface,
+        border: `1px solid ${LIGHT.border}`, borderRadius: 6,
+      }}>
+        ej. {ex}
       </div>
     </div>
   );
