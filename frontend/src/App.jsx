@@ -436,6 +436,7 @@ const Navbar = ({ activeView, setActiveView, apiStatus, onRefresh, refreshing, g
         { id: "peru", label: "🇵🇪 Perú 2026" },
         { id: "observer", label: "Observación" },
         { id: "methodology", label: "Metodología" },
+        ...(getObserverKey() ? [{ id: "voto-admin", label: "🔒 Voto · Interno" }] : []),
       ].map(tab => (
         <button key={tab.id} onClick={() => setActiveView(tab.id)} style={{
           padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer",
@@ -8605,6 +8606,241 @@ const OBS_CONFIDENCE = [
   { id: "unverified", label: "Sin verificar" },
 ];
 
+// ═══════════════════════════════════════════════════════════════════════
+// VOTO ADMIN VIEW — observatorio interno de Voto Informado (Nivel A)
+// Solo accesible con observer key. Muestra agregados operativos +
+// públicos. No expone datos individuales ni cortes por debajo de k=500.
+// ═══════════════════════════════════════════════════════════════════════
+function VotoAdminView() {
+  // Mock data — el observatorio real se activa con el primer ciclo electoral.
+  const mock = {
+    election: {
+      id: "AR-2027-pres",
+      country: "Argentina",
+      type: "Presidencial",
+      date: "2027-10-24",
+      phase: "Pre-campaña",
+      freeze_at: "2027-10-10",
+    },
+    kpis: [
+      { label: "Quizzes completados", value: "—", hint: "Sin datos reales aún" },
+      { label: "Tasa de finalización", value: "—", hint: "% que llega a la pregunta 20" },
+      { label: "Países activos", value: 0, hint: "En ingesta de eventos" },
+      { label: "Días en operación", value: 0, hint: "Desde primer evento real" },
+    ],
+    modes: [
+      { label: "Estándar", pct: 68 },
+      { label: "Joven", pct: 22 },
+      { label: "Inclusivo", pct: 10 },
+    ],
+    languages: [
+      { label: "Español", pct: 84 },
+      { label: "Portugués", pct: 11 },
+      { label: "Quechua", pct: 3 },
+      { label: "Guaraní", pct: 2 },
+    ],
+    funnel: [
+      { step: "Bienvenida", retained: 100 },
+      { step: "Pregunta 1", retained: 92 },
+      { step: "Pregunta 5", retained: 81 },
+      { step: "Pregunta 10", retained: 74 },
+      { step: "Pregunta 15", retained: 69 },
+      { step: "Pregunta 20", retained: 65 },
+      { step: "Devolución vista", retained: 63 },
+    ],
+    ops: [
+      { label: "Crashes (últimas 24h)", value: "—" },
+      { label: "Duración promedio del quiz", value: "—" },
+      { label: "Anomalías detectadas (anti-spam)", value: "—" },
+      { label: "Versión activa", value: "v0.0 · placeholder" },
+    ],
+  };
+
+  return (
+    <div style={{ padding: "32px 28px", maxWidth: 1280, margin: "0 auto" }}>
+      {/* HEADER */}
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+        gap: 20, marginBottom: 24, flexWrap: "wrap",
+      }}>
+        <div>
+          <div style={{ fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2,
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>
+            Observatorio interno · Voto Informado
+          </div>
+          <h1 style={{ fontSize: 32, fontWeight: 800, margin: "0 0 4px",
+            fontFamily: "Fraunces, serif", color: LIGHT.ink, letterSpacing: -0.5 }}>
+            🔒 Acceso restringido · Nivel A
+          </h1>
+          <div style={{ fontSize: 13, color: LIGHT.textMuted, fontFamily: "DM Mono, monospace" }}>
+            Misma data que el observatorio público · sin cortes políticos granulares · audit log activo
+          </div>
+        </div>
+        <div style={{
+          padding: "10px 14px", borderRadius: 8,
+          background: LIGHT.bgAlt, border: `1px solid ${LIGHT.border}`,
+          fontSize: 12, color: LIGHT.inkSoft, fontFamily: "DM Mono, monospace",
+        }}>
+          <div>elección: <strong style={{ color: LIGHT.ink }}>{mock.election.id}</strong></div>
+          <div>fase: <strong style={{ color: LIGHT.terracotta }}>{mock.election.phase}</strong></div>
+          <div>freeze: {mock.election.freeze_at}</div>
+        </div>
+      </div>
+
+      {/* PLACEHOLDER BANNER */}
+      <div style={{
+        padding: 16, borderRadius: 10, marginBottom: 28,
+        background: LIGHT.terracottaBg, border: `1px solid ${LIGHT.terracottaSoft}`,
+        borderLeft: `4px solid ${LIGHT.terracotta}`,
+        fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.6,
+      }}>
+        <strong style={{ color: LIGHT.terracotta }}>Vista de previsualización ·
+        datos simulados.</strong> El observatorio se activa con el primer ciclo
+        electoral en producción. Esta vista existe ahora para validar el
+        layout, las métricas a exponer y los límites de granularidad. Nada de
+        lo que ves acá hoy es información real de usuarios.
+      </div>
+
+      {/* KPIS */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 16, marginBottom: 28,
+      }}>
+        {mock.kpis.map((k) => (
+          <div key={k.label} style={{
+            padding: 20, background: LIGHT.surface, borderRadius: 12,
+            border: `1px solid ${LIGHT.border}`,
+            boxShadow: "0 2px 8px rgba(28, 34, 48, 0.03)",
+          }}>
+            <div style={{ fontSize: 11, color: LIGHT.textMuted, letterSpacing: 1.5,
+              textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>{k.label}</div>
+            <div style={{
+              fontSize: 36, fontWeight: 900, color: LIGHT.ink, lineHeight: 1,
+              fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1, marginBottom: 6,
+            }}>{k.value}</div>
+            <div style={{ fontSize: 11, color: LIGHT.textDim }}>{k.hint}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* SECTION: ENGAGEMENT */}
+      <AdminSectionHeader title="Engagement" subtitle="Cómo se está usando la app" />
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+        gap: 16, marginBottom: 28,
+      }}>
+        <AdminCard title="Distribución por modo">
+          {mock.modes.map((m) => <BarRow key={m.label} {...m} />)}
+        </AdminCard>
+        <AdminCard title="Distribución por lengua">
+          {mock.languages.map((m) => <BarRow key={m.label} {...m} />)}
+        </AdminCard>
+        <AdminCard title="Embudo de finalización">
+          {mock.funnel.map((f) => (
+            <BarRow key={f.step} label={f.step} pct={f.retained} />
+          ))}
+        </AdminCard>
+      </div>
+
+      {/* SECTION: SALUD OPERATIVA */}
+      <AdminSectionHeader title="Salud operativa" subtitle="Detección de bugs, crashes y abuso del sistema" />
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 12, marginBottom: 28,
+      }}>
+        {mock.ops.map((o) => (
+          <div key={o.label} style={{
+            padding: 16, background: LIGHT.surface, borderRadius: 10,
+            border: `1px solid ${LIGHT.border}`,
+          }}>
+            <div style={{ fontSize: 11, color: LIGHT.textMuted, letterSpacing: 1.5,
+              fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>{o.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: LIGHT.ink,
+              fontFamily: "DM Mono, monospace" }}>{o.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* GUARDRAILS */}
+      <AdminSectionHeader title="Garantías de la asimetría declarada" subtitle="Lo que esta vista no puede mostrar" />
+      <div style={{
+        padding: 24, background: LIGHT.surfaceAlt, borderRadius: 12,
+        border: `1px solid ${LIGHT.border}`, borderLeft: `4px solid ${LIGHT.terracotta}`,
+      }}>
+        <ul style={{ margin: 0, padding: 0, listStyle: "none",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 12 }}>
+          {[
+            ["Sin respuestas individuales", "El admin no consulta la tabla de eventos crudos. Solo lee agregados ya materializados con k-anonymity ≥ 500."],
+            ["Sin cortes por distrito chico", "Si una región no llega al umbral, el dato se rolling-up automáticamente a la región superior."],
+            ["Sin afinidad por franja etaria", "No se captura edad en la ingesta — por lo tanto no existe ese corte ni siquiera para admin."],
+            ["Audit log inmutable", "Cada query queda registrada. La planilla está disponible para auditoría externa anual."],
+          ].map(([t, d]) => (
+            <li key={t} style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.6 }}>
+              <strong style={{ color: LIGHT.ink, display: "block", marginBottom: 2 }}>✓ {t}</strong>
+              {d}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* FOOTER NOTE */}
+      <div style={{
+        marginTop: 28, padding: "16px 20px", background: LIGHT.bg,
+        border: `1px dashed ${LIGHT.borderStrong}`, borderRadius: 10,
+        fontSize: 13, color: LIGHT.textMuted, lineHeight: 1.6, fontStyle: "italic",
+      }}>
+        Esta vista está documentada como <strong>Decisión 09 · Operación
+        interna (Nivel A)</strong> en la página pública de Voto Informado. La
+        existencia y el alcance de este dashboard es información pública —
+        ocultarlo sería contradictorio con la promesa de trazabilidad.
+      </div>
+    </div>
+  );
+}
+
+function AdminSectionHeader({ title, subtitle }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 800, color: LIGHT.ink,
+        margin: "0 0 4px", fontFamily: "Fraunces, serif" }}>{title}</h2>
+      {subtitle && <div style={{ fontSize: 13, color: LIGHT.textMuted }}>{subtitle}</div>}
+    </div>
+  );
+}
+
+function AdminCard({ title, children }) {
+  return (
+    <div style={{
+      padding: 20, background: LIGHT.surface, borderRadius: 12,
+      border: `1px solid ${LIGHT.border}`,
+    }}>
+      <div style={{ fontSize: 12, color: LIGHT.textMuted, letterSpacing: 1.5,
+        fontWeight: 700, textTransform: "uppercase", marginBottom: 14 }}>{title}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function BarRow({ label, pct }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between",
+        fontSize: 13, fontWeight: 600, color: LIGHT.ink, marginBottom: 4 }}>
+        <span>{label}</span>
+        <span style={{ color: LIGHT.textMuted, fontFamily: "DM Mono, monospace" }}>{pct}%</span>
+      </div>
+      <div style={{
+        height: 6, background: LIGHT.bgAlt, borderRadius: 3, overflow: "hidden",
+      }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: LIGHT.terracotta }} />
+      </div>
+    </div>
+  );
+}
+
 function ObserverView() {
   const [phase, setPhase] = useState("election_day");
   const [category, setCategory] = useState("other");
@@ -10328,6 +10564,140 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
             invisibilizadas y, paradójicamente, las más vinculantes.
           </p>
         </div>
+
+        {/* GROUP HEADER · OPERACIÓN INTERNA */}
+        <div style={{ margin: "48px 0 20px", display: "flex",
+          alignItems: "center", gap: 14 }}>
+          <div style={{ flex: 1, height: 1, background: LIGHT.border }} />
+          <div style={{
+            fontSize: 11, color: LIGHT.terracotta, letterSpacing: 2.5,
+            fontWeight: 700, textTransform: "uppercase",
+            padding: "4px 12px", background: LIGHT.bg,
+          }}>Operación interna</div>
+          <div style={{ flex: 1, height: 1, background: LIGHT.border }} />
+        </div>
+
+        {/* SUB-BLOQUE 9: Acceso interno operativo */}
+        <div style={{
+          padding: 32, borderRadius: 14,
+          background: LIGHT.surface, border: `1px solid ${LIGHT.border}`,
+        }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start",
+            marginBottom: 20, flexWrap: "wrap" }}>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.terracottaBg, color: LIGHT.terracotta,
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}>Decisión 09</div>
+            <div style={{
+              padding: "4px 10px", borderRadius: 6,
+              background: LIGHT.bgAlt, color: LIGHT.inkSoft,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            }}>Acceso interno · Nivel A</div>
+          </div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px",
+            color: LIGHT.ink, fontFamily: "Fraunces, serif", letterSpacing: -0.5 }}>
+            Lo que el equipo puede ver es lo mismo que cualquier auditor externo puede ver
+          </h3>
+          <p style={{ fontSize: 15, color: LIGHT.inkSoft, lineHeight: 1.7, margin: "0 0 16px" }}>
+            Toda app necesita un dashboard operativo interno para detectar
+            bugs, abusos del sistema y decisiones de producto. La pregunta
+            ética no es <em>si</em> existe, sino <em>qué ve</em>. Voto
+            Informado adopta la regla más estricta posible: el equipo accede
+            exclusivamente a métricas operativas y a los mismos agregados
+            públicos que cualquier ciudadano. Nada político-sensible que no
+            sea simultáneamente auditable por un tercero.
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12,
+            marginBottom: 16,
+          }} className="voto-twocol">
+            <div style={{
+              padding: 16, background: "#f0f7f0", borderRadius: 8,
+              border: `1px solid #bcd5bc`,
+            }}>
+              <div style={{ fontSize: 11, color: "#4a7c59", letterSpacing: 1.5,
+                fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>
+                ✓ Lo que el equipo ve
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none",
+                display: "grid", gap: 6 }}>
+                {[
+                  "Tasa de finalización del quiz",
+                  "Distribución por modo y lengua",
+                  "Crashes por versión / plataforma",
+                  "Embudo de abandono por pregunta",
+                  "Anomalías de tráfico (anti-spam)",
+                  "Agregados públicos antes del freeze pre-electoral",
+                ].map((it) => (
+                  <li key={it} style={{ fontSize: 13, color: LIGHT.ink,
+                    lineHeight: 1.5, display: "flex", gap: 8 }}>
+                    <span style={{ color: "#4a7c59" }}>·</span>
+                    <span>{it}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div style={{
+              padding: 16, background: "#fdecec", borderRadius: 8,
+              border: `1px solid #f5b8b8`,
+            }}>
+              <div style={{ fontSize: 11, color: "#a02828", letterSpacing: 1.5,
+                fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>
+                ✗ Lo que el equipo no ve
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none",
+                display: "grid", gap: 6 }}>
+                {[
+                  "Respuestas individuales de ningún usuario",
+                  "Datos personales identificables (no se capturan)",
+                  "Cortes geográficos por debajo de k-anonymity = 500",
+                  "Afinidad por distritos pequeños o franjas etarias",
+                  "Información política-sensible no auditable",
+                  "Datos en bruto de la tabla de eventos",
+                ].map((it) => (
+                  <li key={it} style={{ fontSize: 13, color: LIGHT.ink,
+                    lineHeight: 1.5, display: "flex", gap: 8 }}>
+                    <span style={{ color: "#a02828" }}>·</span>
+                    <span>{it}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div style={{
+            padding: 18, background: LIGHT.bgAlt, borderRadius: 8,
+            border: `1px solid ${LIGHT.border}`, marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: LIGHT.ink, marginBottom: 10 }}>
+              Garantías técnicas de la asimetría declarada:
+            </div>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none",
+              display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 10 }}>
+              {[
+                ["Separación física de bases", "El admin solo lee tablas materializadas con k-anon ya aplicado. La tabla de eventos crudos es inaccesible."],
+                ["Audit log inmutable", "Cada consulta del admin queda registrada con timestamp y query. Disponible para auditoría externa."],
+                ["MFA obligatorio + IP allowlist", "Acceso protegido con segundo factor. Sin sesiones persistentes."],
+                ["Scope declarado y publicado", "El catálogo de métricas operativas es público en el repositorio open-source."],
+              ].map(([t, d]) => (
+                <li key={t} style={{ fontSize: 13, color: LIGHT.inkSoft, lineHeight: 1.55 }}>
+                  <strong style={{ color: LIGHT.ink }}>{t}.</strong> {d}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.65, margin: 0,
+            padding: "12px 14px", background: LIGHT.terracottaBg,
+            border: `1px solid ${LIGHT.terracottaSoft}`, borderRadius: 8 }}>
+            <strong style={{ color: LIGHT.terracotta }}>El criterio simple:</strong>{" "}
+            si un periodista preguntara "¿qué datos pueden ver ustedes que un
+            auditor externo no?", la respuesta honesta es <em>"ninguno
+            político-sensible, solo operativos"</em>. Eso es lo que sostiene
+            el apartidismo a largo plazo.
+          </p>
+        </div>
       </section>
 
       {/* APARTIDISMO */}
@@ -11040,6 +11410,7 @@ function DemocracIADashboard() {
       {activeView === "peru" && <PeruSituationRoom />}
       {activeView === "observer" && <ObserverView />}
       {activeView === "methodology" && <MethodologyView />}
+      {activeView === "voto-admin" && getObserverKey() && <VotoAdminView />}
 
       <footer style={{
         padding: "16px 28px", borderTop: `1px solid ${LIGHT.border}`,
