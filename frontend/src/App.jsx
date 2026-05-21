@@ -198,7 +198,7 @@ function getObserverKey() {
   try {
     const fromLS = localStorage.getItem("peirs_observer_key");
     if (fromLS) return fromLS;
-  } catch (_) {}
+  } catch { /* localStorage unavailable */ }
   return import.meta.env.VITE_OBSERVER_KEY || "";
 }
 
@@ -218,7 +218,7 @@ function authHeaders(extra = {}) {
       u.searchParams.delete("key");
       window.history.replaceState({}, "", u.toString());
     }
-  } catch (_) {}
+  } catch { /* localStorage unavailable */ }
 })();
 
 const DIMENSION_LABELS = {
@@ -3790,7 +3790,7 @@ const RiskGaugeElite = ({ score, riskLevel, size = 200 }) => {
 };
 
 // ── Dimension Bar ────────────────────────────────────────────────────────────
-const DimensionBar = ({ dimKey, value, delay = 0 }) => {
+const DimensionBar = ({ dimKey, value }) => {
   const anim = value || 0;
   const meta = DIMENSION_META[dimKey] || { label: dimKey, icon: "📊", desc: "" };
 
@@ -4128,7 +4128,6 @@ const ReportViewer = ({ runId, country }) => {
   const dataConf = dictamen.data_confidence || "MEDIUM";
   const confColor = dataConf === "HIGH" ? "#c25a3a" : dataConf === "MEDIUM" ? "#f59e0b" : "#ef4444";
 
-  const md = reportData.final_report_markdown || "";
   const reportChapters = reportData.report_chapters || {};
   const execSummary = reportChapters["01_executive_summary"] || "";
 
@@ -5377,7 +5376,7 @@ function PeruSituationRoom() {
         const data = await r.json();
         setEliteHistory(data.items || []);
       }
-    } catch (_) {}
+    } catch { /* localStorage unavailable */ }
   }, []);
 
   const generateEliteReport = useCallback(async () => {
@@ -9167,13 +9166,12 @@ const LIGHT = {
 
 function LandingPage({ onEnterApp, onShowVoto }) {
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/public/stats`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => { setStats(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(data => { if (data) setStats(data); })
+      .catch(() => { /* stats opcionales; la landing renderiza con — si falla */ });
   }, []);
 
   const numFindings = stats?.monitoring?.total_findings ?? "—";
@@ -9638,7 +9636,7 @@ function PricingCard({ tier, isFeatured, onWaitlist, onEnterApp }) {
         )}
       </ul>
       <button onClick={ctaAction} style={{
-        padding: "12px 20px", borderRadius: 8, border: "none",
+        padding: "12px 20px", borderRadius: 8,
         background: isFeatured ? LIGHT.terracotta : "transparent",
         color: isFeatured ? "#fff" : LIGHT.terracotta,
         border: isFeatured ? "none" : `1px solid ${LIGHT.terracotta}`,
@@ -11460,7 +11458,7 @@ export default function App() {
         if (v) url.searchParams.set(k, v);
       });
       window.history.pushState({}, "", url.toString());
-    } catch {}
+    } catch { /* history API unavailable */ }
   };
 
   const enterApp = useCallback(() => {
@@ -11471,13 +11469,13 @@ export default function App() {
   const showVoto = useCallback(() => {
     updateUrl({ voto: "true" });
     setView("voto");
-    try { window.scrollTo(0, 0); } catch {}
+    try { window.scrollTo(0, 0); } catch { /* SSR safe-guard */ }
   }, []);
 
   const showLanding = useCallback(() => {
     updateUrl({});
     setView("landing");
-    try { window.scrollTo(0, 0); } catch {}
+    try { window.scrollTo(0, 0); } catch { /* SSR safe-guard */ }
   }, []);
 
   if (view === "dashboard") return <DemocracIADashboard />;
