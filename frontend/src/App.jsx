@@ -3977,6 +3977,49 @@ const SourceBadge = ({ label, value, confidence, year, color }) => (
 
 
 
+// ── ChapterContent ────────────────────────────────────────────────────────
+// Hoisted a top-level para evitar el bug de re-mount: cuando se definía
+// dentro de ReportViewer, cada re-render del padre creaba una "nueva"
+// función ChapterContent y React desmontaba/remontaba todos los hijos
+// (causa documentada del "números parpadeando" en el dashboard).
+const ChapterContent = ({ num, title, desc, sources, markdown, children }) => (
+  <div>
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+        <span style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 32, height: 32, borderRadius: 8,
+          background: COLORS.accent + "22", color: COLORS.accent,
+          fontFamily: "'DM Mono', monospace", fontWeight: 800, fontSize: 14,
+        }}>{num}</span>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.text }}>{title}</h3>
+      </div>
+      <p style={{ margin: 0, fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>{desc}</p>
+      {sources && sources.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+          {sources.map((s, i) => (
+            <span key={i} style={{
+              fontSize: 9, padding: "2px 8px", borderRadius: 4,
+              background: COLORS.surfaceLight, color: COLORS.textDim,
+              fontFamily: "'DM Mono', monospace", border: `1px solid ${COLORS.border}`,
+            }}>{s}</span>
+          ))}
+        </div>
+      )}
+    </div>
+    {children}
+    {markdown && (
+      <div style={{
+        padding: "20px 24px", borderRadius: 10,
+        background: COLORS.surfaceLight, border: `1px solid ${COLORS.border}`,
+        marginTop: children ? 20 : 0,
+      }}>
+        {renderMarkdownWithTooltips(markdown)}
+      </div>
+    )}
+  </div>
+);
+
 // ── ReportViewer Elite ────────────────────────────────────────────────────────
 const ReportViewer = ({ runId, country }) => {
   const [fetchState, setFetchState] = useState({ data: null, loading: true, error: null });
@@ -4102,44 +4145,6 @@ const ReportViewer = ({ runId, country }) => {
     { id: "recomendaciones", num: "9", label: "Recomendaciones", icon: "📋", desc: "Matriz de acción electoral" },
     { id: "ia", num: "10", label: "IA y Regulación", icon: "🤖", desc: "Inteligencia artificial en el proceso" },
   ];
-
-  const ChapterContent = ({ num, title, desc, sources, markdown, children }) => (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <span style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 32, height: 32, borderRadius: 8,
-            background: COLORS.accent + "22", color: COLORS.accent,
-            fontFamily: "'DM Mono', monospace", fontWeight: 800, fontSize: 14,
-          }}>{num}</span>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.text }}>{title}</h3>
-        </div>
-        <p style={{ margin: 0, fontSize: 13, color: COLORS.textMuted, lineHeight: 1.6 }}>{desc}</p>
-        {sources && sources.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-            {sources.map((s, i) => (
-              <span key={i} style={{
-                fontSize: 9, padding: "2px 8px", borderRadius: 4,
-                background: COLORS.surfaceLight, color: COLORS.textDim,
-                fontFamily: "'DM Mono', monospace", border: `1px solid ${COLORS.border}`,
-              }}>{s}</span>
-            ))}
-          </div>
-        )}
-      </div>
-      {children}
-      {markdown && (
-        <div style={{
-          padding: "20px 24px", borderRadius: 10,
-          background: COLORS.surfaceLight, border: `1px solid ${COLORS.border}`,
-          marginTop: children ? 20 : 0,
-        }}>
-          {renderMarkdownWithTooltips(markdown)}
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <div style={{ marginTop: 24 }}>
