@@ -1,0 +1,322 @@
+{
+  "version": "1.0",
+  "brand": "Democrac.IA",
+  "sub_brands": [
+    "Voto Informado"
+  ],
+  "palette": {
+    "ink": {
+      "hex": "#1c2230",
+      "rgb": [
+        28,
+        34,
+        48
+      ],
+      "role": "Navy institucional · headings, autoridad",
+      "cmyk": [
+        42,
+        29,
+        0,
+        81
+      ]
+    },
+    "terracotta": {
+      "hex": "#c25a3a",
+      "rgb": [
+        194,
+        90,
+        58
+      ],
+      "role": "Acento de marca · CTAs, énfasis",
+      "cmyk": [
+        0,
+        54,
+        70,
+        24
+      ]
+    },
+    "terracottaSoft": {
+      "hex": "#e8b8a6",
+      "rgb": [
+        232,
+        184,
+        166
+      ],
+      "role": "Terracota suavizada · bordes, hover",
+      "cmyk": [
+        0,
+        21,
+        28,
+        9
+      ]
+    },
+    "terracottaBg": {
+      "hex": "#fdf2ed",
+      "rgb": [
+        253,
+        242,
+        237
+      ],
+      "role": "Fondo de bloques destacados",
+      "cmyk": [
+        0,
+        4,
+        6,
+        1
+      ]
+    },
+    "bg": {
+      "hex": "#fbf9f6",
+      "rgb": [
+        251,
+        249,
+        246
+      ],
+      "role": "Fondo primario crema cálido",
+      "cmyk": [
+        0,
+        1,
+        2,
+        2
+      ]
+    },
+    "bgAlt": {
+      "hex": "#f4efe8",
+      "rgb": [
+        244,
+        239,
+        232
+      ],
+      "role": "Fondo secundario un tono más oscuro",
+      "cmyk": [
+        0,
+        2,
+        5,
+        4
+      ]
+    },
+    "surface": {
+      "hex": "#ffffff",
+      "rgb": [
+        255,
+        255,
+        255
+      ],
+      "role": "Cards y superficies elevadas",
+      "cmyk": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "surfaceAlt": {
+      "hex": "#f7f3ed",
+      "rgb": [
+        247,
+        243,
+        237
+      ],
+      "role": "Segundo nivel de superficie",
+      "cmyk": [
+        0,
+        2,
+        4,
+        3
+      ]
+    },
+    "border": {
+      "hex": "#e5dcd0",
+      "rgb": [
+        229,
+        220,
+        208
+      ],
+      "role": "Bordes sutiles beige",
+      "cmyk": [
+        0,
+        4,
+        9,
+        10
+      ]
+    },
+    "borderStrong": {
+      "hex": "#d0c4b0",
+      "rgb": [
+        208,
+        196,
+        176
+      ],
+      "role": "Bordes con presencia",
+      "cmyk": [
+        0,
+        6,
+        15,
+        18
+      ]
+    },
+    "inkSoft": {
+      "hex": "#3a4356",
+      "rgb": [
+        58,
+        67,
+        86
+      ],
+      "role": "Texto secundario, copy denso",
+      "cmyk": [
+        33,
+        22,
+        0,
+        66
+      ]
+    },
+    "textMuted": {
+      "hex": "#5d6878",
+      "rgb": [
+        93,
+        104,
+        120
+      ],
+      "role": "Texto auxiliar, metadatos",
+      "cmyk": [
+        22,
+        13,
+        0,
+        53
+      ]
+    },
+    "textDim": {
+      "hex": "#8b94a3",
+      "rgb": [
+        139,
+        148,
+        163
+      ],
+      "role": "Hints, captions",
+      "cmyk": [
+        15,
+        9,
+        0,
+        36
+      ]
+    },
+    "success": {
+      "hex": "#4a7c59",
+      "rgb": [
+        74,
+        124,
+        89
+      ],
+      "role": "Verde apagado · confirmaciones",
+      "cmyk": [
+        40,
+        0,
+        28,
+        51
+      ]
+    },
+    "warning": {
+      "hex": "#c8893a",
+      "rgb": [
+        200,
+        137,
+        58
+      ],
+      "role": "Ámbar dorado · advertencias",
+      "cmyk": [
+        0,
+        32,
+        71,
+        22
+      ]
+    }
+  },
+  "typography": {
+    "Inter": {
+      "role": "Tipografía de interfaz · UI, navegación, botones, copy denso",
+      "weights": [
+        400,
+        500,
+        600,
+        700,
+        800,
+        900
+      ],
+      "sample": "El derecho a saber antes de elegir.",
+      "source": "Google Fonts · fonts.google.com/specimen/Inter",
+      "licensing": "Open Font License"
+    },
+    "Fraunces": {
+      "role": "Serif editorial · headings principales, identidad institucional",
+      "weights": [
+        300,
+        500,
+        700,
+        900
+      ],
+      "sample": "voto.informado",
+      "source": "Google Fonts · fonts.google.com/specimen/Fraunces",
+      "licensing": "Open Font License"
+    },
+    "Source Serif Pro": {
+      "role": "Serif para citas itálicas, frases editoriales",
+      "weights": [
+        400,
+        600
+      ],
+      "italic": true,
+      "sample": "\"Saber antes de elegir.\"",
+      "source": "Google Fonts · fonts.google.com/specimen/Source+Serif+Pro",
+      "licensing": "Open Font License"
+    },
+    "DM Sans": {
+      "role": "Sans alternativa para display y branding secundario",
+      "weights": [
+        400,
+        500,
+        600,
+        700,
+        800
+      ],
+      "sample": "Democrac.IA",
+      "source": "Google Fonts · fonts.google.com/specimen/DM+Sans",
+      "licensing": "Open Font License"
+    },
+    "DM Mono": {
+      "role": "Monoespaciada · números, datos, status indicators",
+      "weights": [
+        400,
+        500,
+        600
+      ],
+      "sample": "AR-2027-pres · v0.6.0",
+      "source": "Google Fonts · fonts.google.com/specimen/DM+Mono",
+      "licensing": "Open Font License"
+    }
+  },
+  "logo": {
+    "construction": {
+      "viewbox": "80x80",
+      "padding": 4,
+      "outer_radius": 32,
+      "inner_radius": 18,
+      "core_radius": 5,
+      "stroke_width": 2.5
+    },
+    "files": [
+      "democracia-primary.svg",
+      "democracia-inverse.svg",
+      "democracia-mono-dark.svg",
+      "democracia-mono-light.svg",
+      "democracia-icon.svg",
+      "democracia-wordmark-h.svg",
+      "democracia-wordmark-v.svg",
+      "voto-informado-h.svg",
+      "favicon-16.svg",
+      "favicon-32.svg",
+      "favicon-64.svg",
+      "favicon-180.svg",
+      "favicon-512.svg"
+    ]
+  }
+}

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Brand Kit · Democrac.IA</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&family=Fraunces:wght@300;500;700;900&family=Inter:wght@400;500;600;700;800;900&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #fbf9f6; --bg-alt: #f4efe8; --surface: #fff; --ink: #1c2230;
+    --ink-soft: #3a4356; --terracotta: #c25a3a; --border: #e5dcd0; --muted: #5d6878;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+  header { padding: 40px 7%; border-bottom: 1px solid var(--border); }
+  h1 { font-family: Fraunces, serif; font-size: 42px; letter-spacing: -1.5px; margin: 0 0 8px; }
+  h2 { font-family: Fraunces, serif; font-size: 28px; margin: 48px 0 16px; letter-spacing: -0.5px; }
+  .tag { display: inline-block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--terracotta); font-weight: 700; padding: 4px 0; }
+  section { padding: 0 7% 40px; max-width: 1280px; margin: 0 auto; }
+  .grid { display: grid; gap: 16px; }
+  .grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+  .card .label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; }
+  .card img, .card object { max-width: 100%; height: auto; }
+  .card.dark { background: var(--ink); color: #fff; }
+  .card.dark .label { color: #e8b8a6; }
+  .swatch { display: flex; align-items: center; gap: 14px; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .swatch .chip { width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0; }
+  .swatch .meta { display: flex; flex-direction: column; gap: 2px; }
+  .swatch code { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+  .swatch strong { font-size: 13px; color: var(--ink); }
+  pre { background: var(--bg-alt); padding: 14px; border-radius: 8px; overflow: auto;
+    font-family: 'DM Mono', monospace; font-size: 12px; }
+  footer { padding: 40px 7%; border-top: 1px solid var(--border); background: var(--bg-alt);
+    font-size: 13px; color: var(--muted); margin-top: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="tag">Brand Kit · v1.0</span>
+  <h1>Democrac<span style="color:var(--terracotta)">.IA</span></h1>
+  <p style="font-size:18px;color:var(--ink-soft);max-width:680px;line-height:1.6;margin:8px 0 0">
+    Identidad visual completa: símbolo, wordmark, paleta y tipografía. Replica
+    fielmente el componente <code>BrandLogo</code> del frontend en
+    <code>App.jsx</code>. Todos los SVGs son editables y escalables sin pérdida.
+  </p>
+</header>
+
+<section>
+  <span class="tag">01 · Logo</span>
+  <h2>Variantes del logo</h2>
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="label">Primary · navy + terracota</div>
+      <object data="logo/democracia-primary.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/democracia-primary.svg</code>
+    </div>
+    <div class="card dark">
+      <div class="label">Inverse · cream sobre navy</div>
+      <object data="logo/democracia-inverse.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/democracia-inverse.svg</code>
+    </div>
+    <div class="card">
+      <div class="label">Mono dark</div>
+      <object data="logo/democracia-mono-dark.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/democracia-mono-dark.svg</code>
+    </div>
+    <div class="card dark">
+      <div class="label">Mono light</div>
+      <object data="logo/democracia-mono-light.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/democracia-mono-light.svg</code>
+    </div>
+    <div class="card">
+      <div class="label">Icon only</div>
+      <object data="logo/democracia-icon.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/democracia-icon.svg</code>
+    </div>
+    <div class="card">
+      <div class="label">Wordmark horizontal</div>
+      <object data="logo/democracia-wordmark-h.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/democracia-wordmark-h.svg</code>
+    </div>
+    <div class="card">
+      <div class="label">Wordmark vertical</div>
+      <object data="logo/democracia-wordmark-v.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/democracia-wordmark-v.svg</code>
+    </div>
+    <div class="card">
+      <div class="label">Voto Informado · sub-marca</div>
+      <object data="logo/voto-informado-h.svg" type="image/svg+xml" style="width:100%;max-width:320px"></object>
+      <code style="font-size:11px;opacity:0.7">logo/voto-informado-h.svg</code>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="tag">02 · Paleta</span>
+  <h2>Colores</h2>
+  <div class="grid cols-3">
+    <div class="swatch">
+      <div class="chip" style="background:#1c2230"></div>
+      <div class="meta">
+        <strong>ink</strong>
+        <code>#1c2230 · rgb(28, 34, 48)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#c25a3a"></div>
+      <div class="meta">
+        <strong>terracotta</strong>
+        <code>#c25a3a · rgb(194, 90, 58)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#e8b8a6"></div>
+      <div class="meta">
+        <strong>terracottaSoft</strong>
+        <code>#e8b8a6 · rgb(232, 184, 166)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#fdf2ed"></div>
+      <div class="meta">
+        <strong>terracottaBg</strong>
+        <code>#fdf2ed · rgb(253, 242, 237)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#fbf9f6"></div>
+      <div class="meta">
+        <strong>bg</strong>
+        <code>#fbf9f6 · rgb(251, 249, 246)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#f4efe8"></div>
+      <div class="meta">
+        <strong>bgAlt</strong>
+        <code>#f4efe8 · rgb(244, 239, 232)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#ffffff"></div>
+      <div class="meta">
+        <strong>surface</strong>
+        <code>#ffffff · rgb(255, 255, 255)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#f7f3ed"></div>
+      <div class="meta">
+        <strong>surfaceAlt</strong>
+        <code>#f7f3ed · rgb(247, 243, 237)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#e5dcd0"></div>
+      <div class="meta">
+        <strong>border</strong>
+        <code>#e5dcd0 · rgb(229, 220, 208)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#d0c4b0"></div>
+      <div class="meta">
+        <strong>borderStrong</strong>
+        <code>#d0c4b0 · rgb(208, 196, 176)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#3a4356"></div>
+      <div class="meta">
+        <strong>inkSoft</strong>
+        <code>#3a4356 · rgb(58, 67, 86)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#5d6878"></div>
+      <div class="meta">
+        <strong>textMuted</strong>
+        <code>#5d6878 · rgb(93, 104, 120)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#8b94a3"></div>
+      <div class="meta">
+        <strong>textDim</strong>
+        <code>#8b94a3 · rgb(139, 148, 163)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#4a7c59"></div>
+      <div class="meta">
+        <strong>success</strong>
+        <code>#4a7c59 · rgb(74, 124, 89)</code>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background:#c8893a"></div>
+      <div class="meta">
+        <strong>warning</strong>
+        <code>#c8893a · rgb(200, 137, 58)</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="tag">03 · Tipografía</span>
+  <h2>Familias</h2>
+  <object data="typography/typography.svg" type="image/svg+xml" style="width:100%;max-width:880px"></object>
+</section>
+
+<section>
+  <span class="tag">04 · Uso</span>
+  <h2>Reglas mínimas</h2>
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="label">Clearspace</div>
+      <p>Reservar un espacio libre alrededor del símbolo equivalente al radio
+      del anillo exterior (≈ 50% del lado del bounding box). No colocar texto,
+      imágenes ni elementos gráficos dentro de esa zona.</p>
+    </div>
+    <div class="card">
+      <div class="label">Tamaño mínimo</div>
+      <p>El símbolo solo: 24 px en pantalla, 8 mm en impresión.
+      Logo + wordmark: 120 px en pantalla, 30 mm en impresión. Por debajo,
+      usar solo el símbolo.</p>
+    </div>
+    <div class="card">
+      <div class="label">No hacer</div>
+      <p>· No cambiar las proporciones de los círculos.<br/>
+         · No modificar la posición relativa wordmark/símbolo.<br/>
+         · No usar gradientes ni sombras sobre el símbolo.<br/>
+         · No rotar ni invertir el símbolo.</p>
+    </div>
+    <div class="card">
+      <div class="label">Sí hacer</div>
+      <p>· Usar el monocromo cuando el contexto lo requiera (impresión a una
+      tinta, bordados).<br/>
+         · Variar el color del símbolo solo entre navy y blanco / negro.<br/>
+         · El núcleo siempre va en terracota o en el mismo color del trazo
+         si la versión es monocroma.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Brand Kit Democrac.IA · generado por <code>scripts/generate_brand_kit.py</code> ·
+  Replica el componente BrandLogo del frontend para mantener identidad consistente
+  entre la app y materiales externos.
+</footer>
+</body>
+</html>

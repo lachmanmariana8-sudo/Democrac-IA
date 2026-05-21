@@ -10691,11 +10691,9 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
           <p style={{ fontSize: 14, color: LIGHT.inkSoft, lineHeight: 1.65, margin: 0,
             padding: "12px 14px", background: LIGHT.terracottaBg,
             border: `1px solid ${LIGHT.terracottaSoft}`, borderRadius: 8 }}>
-            <strong style={{ color: LIGHT.terracotta }}>El criterio simple:</strong>{" "}
-            si un periodista preguntara "¿qué datos pueden ver ustedes que un
-            auditor externo no?", la respuesta honesta es <em>"ninguno
-            político-sensible, solo operativos"</em>. Eso es lo que sostiene
-            el apartidismo a largo plazo.
+            <strong style={{ color: LIGHT.terracotta }}>Asimetría declarada, no oculta.</strong>{" "}
+            Lo que el equipo ve es exactamente lo que cualquier auditor
+            externo podría revisar.
           </p>
         </div>
       </section>
@@ -10881,9 +10879,9 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
             fontSize: 15, color: "#e5dcd0", margin: 0, maxWidth: 640,
             marginLeft: "auto", marginRight: "auto", lineHeight: 1.7,
           }}>
-            Esa es toda la promesa. No la única promesa que la democracia
-            necesita, pero sí la más simple. Voto Informado quiere acompañar
-            ese proceso humilde y decisivo.
+            Una promesa modesta. Pero la democracia no se sostiene de
+            promesas grandes — se sostiene de instrumentos que funcionan.
+            Voto Informado es uno de esos instrumentos.
           </p>
         </div>
       </section>

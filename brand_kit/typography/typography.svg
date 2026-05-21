@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="750" viewBox="0 0 880 750">
+  <rect width="880" height="750" fill="#fbf9f6"/>
+  <text x="20" y="40" font-family="Fraunces, serif" font-size="22" font-weight="800" fill="#1c2230">Tipografía Democrac.IA</text>
+  
+  <g>
+    <text x="20" y="80" font-family="DM Mono, monospace" font-size="11" font-weight="700"
+          letter-spacing="2" fill="#c25a3a">INTER</text>
+    <text x="20" y="104" font-family="Inter, sans-serif" font-size="13" fill="#5d6878">Tipografía de interfaz · UI, navegación, botones, copy denso</text>
+    <text x="20" y="150" font-family="Inter, sans-serif" font-size="32" font-weight="700"
+          font-style="normal" fill="#1c2230">El derecho a saber antes de elegir.</text>
+    <text x="20" y="175" font-family="DM Mono, monospace" font-size="10" fill="#8b94a3">weights · 400 · 500 · 600 · 700 · 800 · 900</text>
+    <line x1="20" y1="190" x2="860" y2="190" stroke="#e5dcd0" stroke-width="1"/>
+  </g>
+  <g>
+    <text x="20" y="210" font-family="DM Mono, monospace" font-size="11" font-weight="700"
+          letter-spacing="2" fill="#c25a3a">FRAUNCES</text>
+    <text x="20" y="234" font-family="Inter, sans-serif" font-size="13" fill="#5d6878">Serif editorial · headings principales, identidad institucional</text>
+    <text x="20" y="280" font-family="Fraunces, serif" font-size="32" font-weight="700"
+          font-style="normal" fill="#1c2230">voto.informado</text>
+    <text x="20" y="305" font-family="DM Mono, monospace" font-size="10" fill="#8b94a3">weights · 300 · 500 · 700 · 900</text>
+    <line x1="20" y1="320" x2="860" y2="320" stroke="#e5dcd0" stroke-width="1"/>
+  </g>
+  <g>
+    <text x="20" y="340" font-family="DM Mono, monospace" font-size="11" font-weight="700"
+          letter-spacing="2" fill="#c25a3a">SOURCE SERIF PRO</text>
+    <text x="20" y="364" font-family="Inter, sans-serif" font-size="13" fill="#5d6878">Serif para citas itálicas, frases editoriales</text>
+    <text x="20" y="410" font-family="Source Serif Pro, serif" font-size="32" font-weight="700"
+          font-style="italic" fill="#1c2230">"Saber antes de elegir."</text>
+    <text x="20" y="435" font-family="DM Mono, monospace" font-size="10" fill="#8b94a3">weights · 400 · 600</text>
+    <line x1="20" y1="450" x2="860" y2="450" stroke="#e5dcd0" stroke-width="1"/>
+  </g>
+  <g>
+    <text x="20" y="470" font-family="DM Mono, monospace" font-size="11" font-weight="700"
+          letter-spacing="2" fill="#c25a3a">DM SANS</text>
+    <text x="20" y="494" font-family="Inter, sans-serif" font-size="13" fill="#5d6878">Sans alternativa para display y branding secundario</text>
+    <text x="20" y="540" font-family="DM Sans, sans-serif" font-size="32" font-weight="700"
+          font-style="normal" fill="#1c2230">Democrac.IA</text>
+    <text x="20" y="565" font-family="DM Mono, monospace" font-size="10" fill="#8b94a3">weights · 400 · 500 · 600 · 700 · 800</text>
+    <line x1="20" y1="580" x2="860" y2="580" stroke="#e5dcd0" stroke-width="1"/>
+  </g>
+  <g>
+    <text x="20" y="600" font-family="DM Mono, monospace" font-size="11" font-weight="700"
+          letter-spacing="2" fill="#c25a3a">DM MONO</text>
+    <text x="20" y="624" font-family="Inter, sans-serif" font-size="13" fill="#5d6878">Monoespaciada · números, datos, status indicators</text>
+    <text x="20" y="670" font-family="DM Mono, sans-serif" font-size="32" font-weight="700"
+          font-style="normal" fill="#1c2230">AR-2027-pres · v0.6.0</text>
+    <text x="20" y="695" font-family="DM Mono, monospace" font-size="10" fill="#8b94a3">weights · 400 · 500 · 600</text>
+    <line x1="20" y1="710" x2="860" y2="710" stroke="#e5dcd0" stroke-width="1"/>
+  </g>
+</svg>

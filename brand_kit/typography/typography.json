@@ -1,0 +1,63 @@
+{
+  "Inter": {
+    "role": "Tipografía de interfaz · UI, navegación, botones, copy denso",
+    "weights": [
+      400,
+      500,
+      600,
+      700,
+      800,
+      900
+    ],
+    "sample": "El derecho a saber antes de elegir.",
+    "source": "Google Fonts · fonts.google.com/specimen/Inter",
+    "licensing": "Open Font License"
+  },
+  "Fraunces": {
+    "role": "Serif editorial · headings principales, identidad institucional",
+    "weights": [
+      300,
+      500,
+      700,
+      900
+    ],
+    "sample": "voto.informado",
+    "source": "Google Fonts · fonts.google.com/specimen/Fraunces",
+    "licensing": "Open Font License"
+  },
+  "Source Serif Pro": {
+    "role": "Serif para citas itálicas, frases editoriales",
+    "weights": [
+      400,
+      600
+    ],
+    "italic": true,
+    "sample": "\"Saber antes de elegir.\"",
+    "source": "Google Fonts · fonts.google.com/specimen/Source+Serif+Pro",
+    "licensing": "Open Font License"
+  },
+  "DM Sans": {
+    "role": "Sans alternativa para display y branding secundario",
+    "weights": [
+      400,
+      500,
+      600,
+      700,
+      800
+    ],
+    "sample": "Democrac.IA",
+    "source": "Google Fonts · fonts.google.com/specimen/DM+Sans",
+    "licensing": "Open Font License"
+  },
+  "DM Mono": {
+    "role": "Monoespaciada · números, datos, status indicators",
+    "weights": [
+      400,
+      500,
+      600
+    ],
+    "sample": "AR-2027-pres · v0.6.0",
+    "source": "Google Fonts · fonts.google.com/specimen/DM+Mono",
+    "licensing": "Open Font License"
+  }
+}
