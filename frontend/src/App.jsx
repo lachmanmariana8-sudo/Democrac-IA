@@ -9191,7 +9191,7 @@ function LandingPage({ onEnterApp, onShowVoto }) {
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&family=Fraunces:wght@300;500;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
       {/* NAV */}
-      <nav style={{
+      <nav aria-label="Navegación principal" style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "20px 7%", borderBottom: `1px solid ${LIGHT.border}`,
         position: "sticky", top: 0, zIndex: 100, background: LIGHT.bg + "ee",
@@ -9201,13 +9201,13 @@ function LandingPage({ onEnterApp, onShowVoto }) {
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <a href="#producto" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Producto</a>
           <a href="#datos" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Datos</a>
-          <button onClick={onShowVoto} style={{
+          <button onClick={onShowVoto} aria-label="Ir a la solapa Voto Informado" style={{
             background: "transparent", border: "none", padding: 0,
             color: LIGHT.terracotta, fontSize: 14, fontWeight: 700, cursor: "pointer",
             letterSpacing: 0.2,
           }}>Voto Informado →</button>
           <a href="#metodologia" style={{ color: LIGHT.inkSoft, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Metodología</a>
-          <button onClick={onEnterApp} style={{
+          <button onClick={onEnterApp} aria-label="Abrir el dashboard técnico" style={{
             padding: "10px 20px", borderRadius: 8, border: `1px solid ${LIGHT.terracotta}`,
             background: LIGHT.terracotta, color: "#fff", fontSize: 14, fontWeight: 700,
             cursor: "pointer", letterSpacing: 0.3,
@@ -9215,6 +9215,7 @@ function LandingPage({ onEnterApp, onShowVoto }) {
         </div>
       </nav>
 
+      <main id="main-content">
       {/* HERO */}
       <section style={{ padding: "80px 7% 60px", maxWidth: 1400, margin: "0 auto" }}>
         <div style={{
@@ -9491,6 +9492,7 @@ function LandingPage({ onEnterApp, onShowVoto }) {
           </p>
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer style={{
@@ -9695,7 +9697,7 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:wght@300;500;700;900&family=Inter:wght@400;500;600;700;800;900&family=Source+Serif+Pro:ital,wght@1,400;1,600&display=swap" rel="stylesheet" />
 
       {/* NAV */}
-      <nav style={{
+      <nav aria-label="Navegación Voto Informado" style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "20px 7%", borderBottom: `1px solid ${LIGHT.border}`,
         position: "sticky", top: 0, zIndex: 100, background: LIGHT.bg + "ee",
@@ -9703,11 +9705,11 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
       }}>
         <BrandLogo size={42} withWordmark wordmarkSize={26} lightOnDark={false} />
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-          <button onClick={onBack} style={{
+          <button onClick={onBack} aria-label="Volver a la página principal de Democrac.IA" style={{
             background: "transparent", border: "none", padding: 0,
             color: LIGHT.inkSoft, fontSize: 14, fontWeight: 600, cursor: "pointer",
           }}>← Volver a Democrac.IA</button>
-          <button onClick={onEnterApp} style={{
+          <button onClick={onEnterApp} aria-label="Abrir el dashboard técnico" style={{
             padding: "10px 20px", borderRadius: 8, border: `1px solid ${LIGHT.borderStrong}`,
             background: LIGHT.surface, color: LIGHT.ink, fontSize: 14, fontWeight: 700,
             cursor: "pointer", letterSpacing: 0.3,
@@ -9715,6 +9717,7 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
         </div>
       </nav>
 
+      <main id="main-content">
       {/* HERO */}
       <section style={{
         padding: "100px 7% 60px", maxWidth: 1400, margin: "0 auto",
@@ -10888,6 +10891,7 @@ function VotoInformadoPage({ onBack, onEnterApp }) {
           </p>
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer style={{
