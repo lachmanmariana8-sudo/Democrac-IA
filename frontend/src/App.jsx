@@ -1935,13 +1935,15 @@ const renderMarkdownWithTooltips = (md) => {
       flushTable(i);
     }
 
-    // H1 — Título del informe
+    // # del markdown — renderiza como h2 porque el componente padre
+    // (ReportViewer / página del dashboard) ya tiene su propio h1.
+    // Tener múltiples h1 por página rompe la jerarquía semántica.
     if (line.startsWith("# ")) {
       elements.push(
-        <h1 key={i} style={{
+        <h2 key={i} style={{
           margin: "0 0 4px", fontSize: 22, fontWeight: 900,
           color: COLORS.text, fontFamily: "'Fraunces', serif", letterSpacing: -0.5,
-        }}>{line.replace("# ", "")}</h1>
+        }}>{line.replace("# ", "")}</h2>
       );
 
     // H2 — Títulos de capítulo con diseño premium
