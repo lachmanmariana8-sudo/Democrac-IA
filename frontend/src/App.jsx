@@ -110,6 +110,7 @@ const ChartMethodologyBtn = ({ chartKey }) => {
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area, ReferenceLine } from "recharts";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 
 // Paleta UNIFICADA con la landing: cremas cálidas + navy + terracota.
 // Antes el dashboard usaba dark theme separado; consolidamos para coherencia
@@ -11442,49 +11443,56 @@ function DemocracIADashboard() {
 // Landing en /     |     Dashboard en /?app=true
 // ═══════════════════════════════════════════════════════════════════════
 
-export default function App() {
-  const initialView = () => {
-    try {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("app") === "true") return "dashboard";
-      if (url.searchParams.get("voto") === "true") return "voto";
-      return "landing";
-    } catch {
-      return "landing";
+// Compat con URLs viejas compartidas en redes / mails: ?app=true → /app, ?voto=true → /voto.
+// La sitemap antes declaraba `?app=true` como canonical; ahora redirige a la ruta real.
+function LegacyQueryRedirect({ children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("app") === "true") {
+      navigate("/app", { replace: true });
+    } else if (params.get("voto") === "true") {
+      navigate("/voto", { replace: true });
     }
-  };
-  const [view, setView] = useState(initialView);
+  }, [location.search, navigate]);
+  return children;
+}
 
-  const updateUrl = (params) => {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("app");
-      url.searchParams.delete("voto");
-      Object.entries(params).forEach(([k, v]) => {
-        if (v) url.searchParams.set(k, v);
-      });
-      window.history.pushState({}, "", url.toString());
-    } catch { /* history API unavailable */ }
-  };
+function LandingRoute() {
+  const navigate = useNavigate();
+  const onEnterApp = useCallback(() => navigate("/app"), [navigate]);
+  const onShowVoto = useCallback(() => {
+    navigate("/voto");
+    try { window.scrollTo(0, 0); } catch { /* SSR */ }
+  }, [navigate]);
+  return (
+    <LegacyQueryRedirect>
+      <LandingPage onEnterApp={onEnterApp} onShowVoto={onShowVoto} />
+    </LegacyQueryRedirect>
+  );
+}
 
-  const enterApp = useCallback(() => {
-    updateUrl({ app: "true" });
-    setView("dashboard");
-  }, []);
+function VotoRoute() {
+  const navigate = useNavigate();
+  const onBack = useCallback(() => {
+    navigate("/");
+    try { window.scrollTo(0, 0); } catch { /* SSR */ }
+  }, [navigate]);
+  const onEnterApp = useCallback(() => navigate("/app"), [navigate]);
+  useEffect(() => { try { window.scrollTo(0, 0); } catch { /* SSR */ } }, []);
+  return <VotoInformadoPage onBack={onBack} onEnterApp={onEnterApp} />;
+}
 
-  const showVoto = useCallback(() => {
-    updateUrl({ voto: "true" });
-    setView("voto");
-    try { window.scrollTo(0, 0); } catch { /* SSR safe-guard */ }
-  }, []);
-
-  const showLanding = useCallback(() => {
-    updateUrl({});
-    setView("landing");
-    try { window.scrollTo(0, 0); } catch { /* SSR safe-guard */ }
-  }, []);
-
-  if (view === "dashboard") return <DemocracIADashboard />;
-  if (view === "voto") return <VotoInformadoPage onBack={showLanding} onEnterApp={enterApp} />;
-  return <LandingPage onEnterApp={enterApp} onShowVoto={showVoto} />;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingRoute />} />
+        <Route path="/app" element={<DemocracIADashboard />} />
+        <Route path="/voto" element={<VotoRoute />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
