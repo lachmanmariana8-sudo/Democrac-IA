@@ -1,5 +1,6 @@
-// Constantes y primitivas compartidas entre Landing, Voto y Dashboard.
+// Constantes y helpers compartidos entre Landing, Voto y Dashboard.
 // Antes vivían inline en App.jsx (11.5k líneas, ver Sprint 2 audit).
+// Solo constantes/funciones — el componente BrandLogo vive en BrandLogo.jsx.
 
 // Paleta UNIFICADA con la landing: cremas cálidas + navy + terracota.
 // Antes el dashboard usaba dark theme separado; consolidamos para coherencia
@@ -41,8 +42,7 @@ export const COLORS = {
   cardBg: "#ffffff",
 };
 
-// Brand identity — logo target: dos circulos concentricos + punto terracota.
-// Colores brand "puros" (light context, print, cover de informes).
+// Brand identity — colores brand "puros" (light context, print, cover de informes).
 // En dashboard (dark theme) los rings usan COLORS.text para visibilidad.
 export const BRAND = {
   ink: "#1c2230",        // navy oscuro (cover impreso, fondo claro)
@@ -106,25 +106,3 @@ export function authHeaders(extra = {}) {
     }
   } catch { /* localStorage unavailable */ }
 })();
-
-export function BrandLogo({ size = 36, withWordmark = false, wordmarkSize = 22, mono = false, lightOnDark = true }) {
-  const ink = mono ? "currentColor" : (lightOnDark ? COLORS.text : BRAND.ink);
-  const accent = mono ? "currentColor" : BRAND.terracotta;
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <svg width={size} height={size} viewBox="0 0 80 80" style={{ display: "block" }}>
-        <g transform="translate(4,4)">
-          <circle cx="36" cy="36" r="32" fill="none" stroke={ink} strokeWidth="2.5"/>
-          <circle cx="36" cy="36" r="18" fill="none" stroke={ink} strokeWidth="2.5"/>
-          <circle cx="36" cy="36" r="5" fill={accent}/>
-        </g>
-      </svg>
-      {withWordmark && (
-        <span style={{ fontSize: wordmarkSize, fontWeight: 800, color: ink,
-          letterSpacing: -1, fontFamily: "Inter, 'DM Sans', system-ui, sans-serif" }}>
-          Democrac<span style={{ color: accent }}>.IA</span>
-        </span>
-      )}
-    </div>
-  );
-}
