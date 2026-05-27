@@ -68,3 +68,8 @@ entries_dump.json
 
 # Claude Code runtime (ephemeral lockfile de scheduled_tasks)
 .claude/scheduled_tasks.lock
+
+# gstack instalado por error en la raíz (un installer interpretó ~ como
+# carpeta literal en vez del home). Es un clone con su propio .git; no va
+# al repo de DemocracIA. Reubicar a ~/.claude/skills cuando se pueda.
+/~/
