@@ -6517,7 +6517,12 @@ function PeruSituationRoom() {
                     </div>
                   </div>
 
-                  {/* ── Escenarios proyectados ── */}
+                  {/* ── Proyecciones / Balotaje ──
+                       Antes del 12-abr-2026: escenarios predictivos A/B/C.
+                       Tras la 1ª vuelta: bloque retirado por obsolescencia →
+                       se muestra el balotaje con countdown + cara a cara. */}
+                  {((scenarios.scenarios || []).length > 0) ? (
+                  <>
                   <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>
                     Proyecciones Parlamentarias 2026 — Tres Escenarios
                   </div>
@@ -6598,6 +6603,113 @@ function PeruSituationRoom() {
                       </div>
                     </div>
                   )}
+                  </>
+                  ) : scenarios.runoff ? (
+                  <>
+                    {/* ── BALOTAJE 2026 — entre vueltas (post 1ª vuelta) ──
+                         Reemplaza los escenarios A/B/C obsoletos. Renderiza
+                         countdown al 7-jun + cara a cara de los 2 finalistas.
+                         Mientras los finalistas no estén verificados desde ONPE,
+                         se muestra el placeholder "PENDIENTE_VERIFICACION". */}
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: COLORS.textDim, textTransform: "uppercase", marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>
+                      Balotaje 2026 — Fase entre vueltas
+                    </div>
+                    {(() => {
+                      const r = scenarios.runoff;
+                      const target = r.runoff_date_iso ? new Date(r.runoff_date_iso) : null;
+                      const now = new Date();
+                      const msLeft = target ? target.getTime() - now.getTime() : 0;
+                      const daysLeft = target ? Math.max(0, Math.ceil(msLeft / (1000*60*60*24))) : null;
+                      const f1 = r.finalists?.[0];
+                      const f2 = r.finalists?.[1];
+                      const isPending = (v) => !v || v === "PENDIENTE_VERIFICACION" || v === "PENDIENTE";
+                      const renderFinalist = (f, slotLabel) => {
+                        const partyKnown = f && !isPending(f.party_name);
+                        const candKnown = f && !isPending(f.candidate_name);
+                        const pct = f && f.first_round_pct != null ? f.first_round_pct : null;
+                        return (
+                          <Card key={slotLabel} className="peru-card" style={{ borderLeft: `3px solid ${COLORS.accent}` }}>
+                            <div style={{ fontSize: 9, color: COLORS.textDim, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>{slotLabel}</div>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: candKnown ? COLORS.text : COLORS.textDim, fontFamily: candKnown ? "inherit" : "'DM Mono', monospace", marginBottom: 4 }}>
+                              {candKnown ? f.candidate_name : "Pendiente verificación ONPE"}
+                            </div>
+                            <div style={{ fontSize: 11, color: partyKnown ? COLORS.textMuted : COLORS.textDim, marginBottom: 10 }}>
+                              {partyKnown ? f.party_name : "Partido por confirmar"}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                              <span style={{ fontSize: 28, fontWeight: 900, color: pct != null ? COLORS.accent : COLORS.textDim, fontFamily: "Fraunces, Georgia, serif", letterSpacing: -1 }}>
+                                {pct != null ? `${pct.toFixed(1)}%` : "—"}
+                              </span>
+                              <span style={{ fontSize: 9, color: COLORS.textDim, letterSpacing: 1 }}>1ª VUELTA · 12-ABR</span>
+                            </div>
+                            {f?.source_url && (
+                              <div style={{ marginTop: 8, fontSize: 9, color: COLORS.textDim }}>
+                                Fuente: <a href={f.source_url} target="_blank" rel="noopener noreferrer" style={{ color: COLORS.accent }}>{f.source || "ONPE"}</a>
+                              </div>
+                            )}
+                          </Card>
+                        );
+                      };
+                      return (
+                        <>
+                          {/* Countdown ── */}
+                          <div style={{ padding: "16px 20px", borderRadius: 10, background: COLORS.accentDim, border: `1px solid ${COLORS.accent}33`, borderLeft: `4px solid ${COLORS.accent}`, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+                            <div>
+                              <div style={{ fontSize: 10, color: COLORS.accent, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>Cuenta regresiva al balotaje</div>
+                              <div style={{ fontSize: 11, color: COLORS.text, lineHeight: 1.5 }}>
+                                {r.runoff_date_note || `Balotaje: ${r.runoff_date}`}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: 44, fontWeight: 900, color: COLORS.accent, fontFamily: "Fraunces, Georgia, serif", letterSpacing: -2, lineHeight: 1 }}>
+                                {daysLeft != null ? daysLeft : "—"}
+                              </div>
+                              <div style={{ fontSize: 10, color: COLORS.textMuted, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>
+                                {daysLeft === 1 ? "día" : "días"} al 7-jun-2026
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Cara a cara ── */}
+                          <div style={{ padding: "10px 14px", borderRadius: 9, background: COLORS.surfaceLight, marginBottom: 16, fontSize: 10, color: COLORS.textDim, lineHeight: 1.6 }}>
+                            Los datos de los finalistas y su cara a cara se cargan con cita primaria de ONPE/JNE y del programa de gobierno inscrito en el ROP. Mientras tanto se muestra "Pendiente verificación".
+                            {r.scenarios_removed_note || scenarios.scenarios_removed_note ? (
+                              <div style={{ marginTop: 6, fontSize: 9, color: COLORS.textMuted, fontStyle: "italic" }}>
+                                {scenarios.scenarios_removed_note}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 16 }}>
+                            {renderFinalist(f1, "Finalista 1")}
+                            {renderFinalist(f2, "Finalista 2")}
+                          </div>
+
+                          {/* Ejes del cara a cara — minimal listing */}
+                          {r.head_to_head?.key_issues && (
+                            <Card className="peru-card">
+                              <SectionTitle icon="⚖">Ejes del cara a cara</SectionTitle>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+                                {Object.entries(r.head_to_head.key_issues).map(([axis, vals]) => (
+                                  <div key={axis} style={{ padding: "8px 10px", borderRadius: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{axis.replace(/_/g, " ")}</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 11, color: isPending(vals?.finalist_1) ? COLORS.textDim : COLORS.text }}>
+                                      <div>F1: {isPending(vals?.finalist_1) ? "Pendiente" : vals.finalist_1}</div>
+                                      <div>F2: {isPending(vals?.finalist_2) ? "Pendiente" : vals.finalist_2}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{ marginTop: 10, fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                                audit_status: {r.head_to_head?.polls_between_rounds?.audit_status || "PENDIENTE_VERIFICACION"}
+                              </div>
+                            </Card>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </>
+                  ) : null}
 
                   {/* ── Riesgo regional ── */}
                   <div style={{ marginTop: 24 }}>
