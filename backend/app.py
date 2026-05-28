@@ -1355,7 +1355,7 @@ try:
         PERU_ELECTORAL_SYSTEM, PERU_POLITICAL_FORCES, PERU_PARL_DATA,
         PERU_REGIONS_DATA, PERU_HISTORICAL_EVENTS, PERU_DIGITAL_THREATS,
         PERU_GENDER_DATA, PERU_COUNTRY_PROFILE, PERU_OVERSEAS_VOTE,
-        PERU_ORGANIZED_CRIME, PERU_VDEM_STATIC,
+        PERU_ORGANIZED_CRIME, PERU_VDEM_STATIC, PERU_RUNOFF_2026,
     )
     print("[MODULES] peru_data cargado desde módulo.")
 except ImportError:
@@ -9299,53 +9299,69 @@ PERU_PARL_DATA = {
         "governing_coalition_seats": None,
         "opposition_seats": None,
     },
-    "scenarios": [
-        {
-            "id": "A", "probability_pct": 52,
-            "label": "A — Hiperfragmentación (más probable)",
-            "description": "Ningún partido supera 20 escaños. Se requieren 4+ bancadas para alcanzar mayoría simple (66 escaños). Alta dificultad de gobernabilidad. Patrón consistente con elecciones 2011-2021.",
-            "governance_risk": "Alto — riesgo de bloqueo legislativo y nuevos conflictos ejecutivo-legislativo",
-            "color": "#ef4444",
-            "seats": [
-                {"party": "APP",  "full_name": "Alianza para el Progreso", "seats": 22, "color": "#f97316"},
-                {"party": "FP",   "full_name": "Fuerza Popular",           "seats": 19, "color": "#ef4444"},
-                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 14, "color": "#0ea5e9"},
-                {"party": "BM",   "full_name": "Bloques de izquierda",     "seats": 18, "color": "#ec4899"},
-                {"party": "NP",   "full_name": "Nuevos partidos",          "seats": 28, "color": "#94a3b8"},
-                {"party": "IND",  "full_name": "Independientes",           "seats": 29, "color": "#64748b"},
-            ],
-        },
-        {
-            "id": "B", "probability_pct": 28,
-            "label": "B — Coalición centro-derecha",
-            "description": "APP + FP + RP alcanzan acuerdo post-electoral. Mayoría relativa estable de 60-70 escaños. Gobierno con capacidad legislativa. Riesgo de retrocesos en derechos civiles y autonomía del JNE.",
-            "governance_risk": "Moderado — mayoría funcional pero con tensiones sobre independencia institucional",
-            "color": "#f97316",
-            "seats": [
-                {"party": "APP",  "full_name": "Alianza para el Progreso", "seats": 28, "color": "#f97316"},
-                {"party": "FP",   "full_name": "Fuerza Popular",           "seats": 22, "color": "#ef4444"},
-                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 15, "color": "#0ea5e9"},
-                {"party": "BM",   "full_name": "Bloques de izquierda",     "seats": 20, "color": "#ec4899"},
-                {"party": "AP",   "full_name": "Otros centristas",         "seats": 16, "color": "#10b981"},
-                {"party": "IND",  "full_name": "Independientes",           "seats": 29, "color": "#64748b"},
-            ],
-        },
-        {
-            "id": "C", "probability_pct": 20,
-            "label": "C — Izquierda populista + centro",
-            "description": "Coalición izquierda-centro logra 55-65 escaños. Agenda redistributiva y posible convocatoria a Asamblea Constituyente. Alta incertidumbre para inversores. Potencial tensión con FP/RP.",
-            "governance_risk": "Alto para estabilidad institucional — reforma constitucional en agenda",
-            "color": "#a855f7",
-            "seats": [
-                {"party": "BM",   "full_name": "Bloques izquierda unida", "seats": 35, "color": "#ec4899"},
-                {"party": "PP",   "full_name": "Centro-populista",        "seats": 18, "color": "#8b5cf6"},
-                {"party": "APP",  "full_name": "APP (oposición)",          "seats": 20, "color": "#f97316"},
-                {"party": "FP",   "full_name": "Fuerza Popular (oposic.)", "seats": 18, "color": "#ef4444"},
-                {"party": "RP",   "full_name": "Renovación Popular",       "seats": 12, "color": "#0ea5e9"},
-                {"party": "IND",  "full_name": "Independientes",           "seats": 27, "color": "#64748b"},
-            ],
-        },
+    # 2026-05-27 — Escenarios predictivos A/B/C retirados (espejo de modules/peru_data.py).
+    # La 1ª vuelta del 12-abr-2026 hace obsoletas esas proyecciones. La composición
+    # real del Congreso 2026-2031 se carga cuando ONPE publique el cómputo oficial.
+    "next_2026_2031": {
+        "label": "Congreso entrante 2026-2031",
+        "seats": [],
+        "audit_status": "pending_official_results",
+        "audit_note": "Pendiente del cómputo oficial ONPE de la elección parlamentaria del 12-abr-2026.",
+        "source": "Pendiente — ONPE Resultados Oficiales Elecciones 2026",
+        "source_url_pending": "https://resultados.onpe.gob.pe",
+    },
+}
+
+# Espejo inline de modules/peru_data.PERU_RUNOFF_2026 — fallback cuando el
+# import del módulo falla. La fuente de verdad es modules/peru_data.py.
+PERU_RUNOFF_2026 = {
+    "phase": "entre_vueltas",
+    "first_round_date": "2026-04-12",
+    "runoff_date": "2026-06-07",
+    "runoff_date_iso": "2026-06-07T08:00:00-05:00",
+    "runoff_date_note": "ONPE — apertura de mesas 08:00 hora de Lima (UTC-5). Cierre 16:00.",
+    "finalists": [
+        {"slot": 1, "party_id": "PENDIENTE_VERIFICACION", "party_name": "PENDIENTE_VERIFICACION",
+         "candidate_name": "PENDIENTE_VERIFICACION", "first_round_pct": None, "first_round_votes": None,
+         "source": "Pendiente — ONPE Resultados Oficiales 1ª Vuelta 12-abr-2026",
+         "source_url": "https://resultados.onpe.gob.pe", "audit_status": "PENDIENTE_VERIFICACION"},
+        {"slot": 2, "party_id": "PENDIENTE_VERIFICACION", "party_name": "PENDIENTE_VERIFICACION",
+         "candidate_name": "PENDIENTE_VERIFICACION", "first_round_pct": None, "first_round_votes": None,
+         "source": "Pendiente — ONPE Resultados Oficiales 1ª Vuelta 12-abr-2026",
+         "source_url": "https://resultados.onpe.gob.pe", "audit_status": "PENDIENTE_VERIFICACION"},
     ],
+    "first_round_full_breakdown": {
+        "by_party": [], "abstention_pct": None, "abstention_abs": None,
+        "blank_pct": None, "null_pct": None,
+        "source": "Pendiente — ONPE Boletín Final 1ª Vuelta",
+        "source_url": "https://resultados.onpe.gob.pe",
+        "audit_status": "PENDIENTE_VERIFICACION",
+    },
+    "head_to_head": {
+        "key_issues": {
+            "economic_model": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
+            "asamblea_constituyente": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
+            "security_crime": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
+            "human_rights": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
+            "anti_corruption": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
+        },
+        "polls_between_rounds": {"items": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Reactivar solo con URL a la ficha técnica publicada por la encuestadora."},
+        "debates": {"scheduled": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "source": "Pendiente — JNE Cronograma Electoral 2026",
+            "source_url": "https://www.jne.gob.pe/transparencia/cronograma/"},
+        "endorsements": {"for_finalist_1": [], "for_finalist_2": [],
+            "audit_status": "PENDIENTE_VERIFICACION"},
+    },
+    "risk_factors_between_rounds": {
+        "incidents": [], "audit_status": "PENDIENTE_VERIFICACION",
+        "iccpr_ref": "Art. 25 ICCPR — la fase entre vueltas exige condiciones equitativas de campaña y libertad de información.",
+        "historical_baseline": "En 2021 (Castillo-Fujimori) la fase entre vueltas registró 47 días con denuncias de fraude y manipulación informativa documentadas por JNE/IPYS.",
+    },
+    "iccpr_ref": "Art. 25 ICCPR — derecho a elegir y ser elegido en condiciones de equidad, vigente durante la 2ª vuelta.",
+    "data_sources": "Pendiente — ONPE/JNE/RENIEC/Defensoría/IPYS/MOE OEA cuando publiquen información primaria.",
+    "audit_status": "scaffold_pending_first_round_data",
+    "audit_note": "Esqueleto creado 2026-05-27 (espejo de modules/peru_data.py). NO INVENTAR finalistas, % ni posiciones.",
 }
 
 PERU_REGIONS_DATA = [
@@ -9714,17 +9730,31 @@ async def get_peru_actors():
 
 @app.get("/api/peru/scenarios")
 async def get_peru_scenarios():
-    """Composición parlamentaria actual y escenarios proyectados para el Congreso 2026-2031."""
+    """Composición parlamentaria + balotaje 2026.
+
+    2026-05-27 — Tras la 1ª vuelta del 12-abr-2026 se retiraron los escenarios
+    predictivos A/B/C (proyecciones hechas con datos a ene-2026, ya obsoletas).
+    El endpoint mantiene su nombre por compatibilidad con el frontend pero
+    ahora devuelve:
+      - current: Congreso saliente 2021-2026 (aún en funciones hasta 28-jul-2026)
+      - next_2026_2031: composición del Congreso entrante (pendiente cómputo ONPE)
+      - runoff: datos del balotaje (los 2 finalistas, cara a cara, countdown)
+      - scenarios: [] — retenido como lista vacía para no romper consumers
+    """
     return {
         "country": "Peru",
-        "election_date": "2026-04-12",
+        "first_round_date": "2026-04-12",
+        "runoff_date": "2026-06-07",
         "total_seats": PERU_PARL_DATA["total_seats"],
         "electoral_system": PERU_PARL_DATA["system"],
         "current": PERU_PARL_DATA["current"],
-        "scenarios": PERU_PARL_DATA["scenarios"],
+        "next_2026_2031": PERU_PARL_DATA.get("next_2026_2031"),
+        "scenarios": [],
+        "scenarios_removed_note": "Escenarios predictivos A/B/C retirados el 2026-05-27 tras la 1ª vuelta. Se reemplazan por composición oficial cuando ONPE publique el cómputo final.",
+        "runoff": PERU_RUNOFF_2026,
         "historical_context": PERU_HISTORICAL_EVENTS,
         "regions": PERU_REGIONS_DATA,
-        "data_note": "Escenarios proyectados: modelos estructurales basados en tendencias electorales 2011-2021, datos V-Dem y encuestas disponibles a enero 2026. No constituyen predicción electoral.",
+        "data_note": "Fase entre vueltas. El bloque 'runoff' contiene scaffold PENDIENTE_VERIFICACION para finalistas y cara a cara; valores reales se cargan con cita primaria a ONPE/JNE.",
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
