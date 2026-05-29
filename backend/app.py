@@ -331,7 +331,16 @@ llm = ChatAnthropic(
 # 1b. CARGA DE DATOS REALES — V-Dem Dataset v15
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VDEM_CSV_PATH = os.getenv("VDEM_CSV_PATH", "../data/V-Dem-CY-Full+Others-v15.csv")
+# 2026-05-28 — Path default alineado con modules/config.py:26. Si el CSV v16
+# no existe en disk (caso típico: Railway sin volumen + dev sin descarga),
+# load_vdem_data() retorna None y get_vdem_country() cae a VDEM_STATIC del
+# modules/vdem_static.py (auto-generado de v16, 1985-2025, 38 países × 21
+# indicadores). Ambos entornos quedan citando v16 honestamente.
+#
+# El archivo viejo data/V-Dem-CY-Full+Others-v15.csv (402MB) queda como legado
+# para queries históricas locales; el dev que quiera usarlo debe setear el env
+# var VDEM_CSV_PATH explícitamente.
+VDEM_CSV_PATH = os.getenv("VDEM_CSV_PATH", "../data/vdem/vdem_v16.csv")
 
 VDEM_COLUMNS = [
     "country_text_id", "year",
@@ -364,6 +373,10 @@ VDEM_COLUMNS = [
     "v2jureview",     # revisión judicial independiente (0=ninguna, 4=fuerte)
 ]
 
+# 2026-05-28 — Cita alineada con el fallback estático (modules/vdem_static.py),
+# que es v16 con cobertura 1985-2025. Audit de hoy confirmó que ese static es la
+# fuente efectiva en producción Railway (el CSV grande no se deploya). El v15 CSV
+# en disk local quedó como legado; ver comentario sobre VDEM_CSV_PATH arriba.
 VDEM_CITATION = (
     "Coppedge et al. 2026. 'V-Dem Country-Year Dataset v16' "
     "Varieties of Democracy (V-Dem) Project. https://doi.org/10.23696/vdemds26"
