@@ -5113,8 +5113,14 @@ async def _auto_observe_bootstrap(auto_observe_raw: str) -> None:
 
 # ── Hunter Scheduler ─────────────────────────────────────────────────────────
 # Corre el Hunter automáticamente para todos los países con sesión activa.
-# Intervalo configurable via HUNTER_INTERVAL_MINUTES (default: 30).
-# Se desactiva si HUNTER_INTERVAL_MINUTES=0 o si el Hunter no está disponible.
+# Intervalo configurable via HUNTER_INTERVAL_MINUTES (default: 1440 = 24h).
+#
+# 2026-05-28 — Default subido de 0 (desactivado) a 1440 (24h) para que el
+# scheduler arranque solo si HUNTER_INTERVAL_MINUTES no está explícitamente
+# seteado. Cadencia 24h decidida en el roadmap (era 240 = 4h, reducida ~6×
+# para bajar costo LLM). La landing pública declara "Hunter scheduler 24h"
+# como hecho — esto hace que el default lo cumpla sin depender de env vars.
+# Para desactivarlo se debe setear explícitamente HUNTER_INTERVAL_MINUTES=0.
 
 _hunter_scheduler_task: Optional[asyncio.Task] = None
 
@@ -5312,12 +5318,14 @@ _HUNTER_HEALTH = {"consecutive_errors": 0, "last_alert_sent_at": None}
 
 async def _hunter_scheduler_loop() -> None:
     """Background loop que dispara el Hunter cada N minutos para sesiones activas."""
-    interval_min = int(os.getenv("HUNTER_INTERVAL_MINUTES", "0"))
+    interval_min = int(os.getenv("HUNTER_INTERVAL_MINUTES", "1440"))
     if interval_min <= 0:
-        print("[Hunter] Scheduler desactivado (HUNTER_INTERVAL_MINUTES=0 o no seteado).")
+        print("[Hunter] Scheduler desactivado (HUNTER_INTERVAL_MINUTES=0 explícito).")
         return
-
-    print(f"[Hunter] Scheduler activo — intervalo: {interval_min} min.")
+    if interval_min == 1440:
+        print("[Hunter] Scheduler activo — intervalo: 1440 min (24h, default).")
+    else:
+        print(f"[Hunter] Scheduler activo — intervalo: {interval_min} min (override de env).")
     await asyncio.sleep(60)  # warm-up: esperar 1 min antes del primer ciclo
 
     while True:
