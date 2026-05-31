@@ -867,17 +867,13 @@ PEI_DF = load_pei_data()
 # 1c. FRAMEWORK DE TRAZABILIDAD
 # ═══════════════════════════════════════════════════════════════════════════════
 
-CONFIDENCE_CONFIRMED = "confirmed"
-CONFIDENCE_PROBABLE = "probable"
-CONFIDENCE_UNVERIFIED = "unverified"
-CONFIDENCE_MOCK = "mock"
-
-SOURCE_API = "api"
-SOURCE_SCRAPING = "scraping"
-SOURCE_DOCUMENT = "document"
-SOURCE_SOCIAL = "social_media"
-SOURCE_MANUAL = "manual_entry"
-SOURCE_MOCK = "mock_data"
+# Constantes de trazabilidad — Fase 1 del refactor #2 (2026-05-30).
+# Movidas a modules/state_constants.py para que agents/nodes.py pueda
+# importarlas sin pasar por app.py (evita imports circulares futuros).
+from modules.state_constants import (
+    CONFIDENCE_CONFIRMED, CONFIDENCE_PROBABLE, CONFIDENCE_UNVERIFIED, CONFIDENCE_MOCK,
+    SOURCE_API, SOURCE_SCRAPING, SOURCE_DOCUMENT, SOURCE_SOCIAL, SOURCE_MANUAL, SOURCE_MOCK,
+)
 
 REGION_AMERICAS = "americas"
 REGION_EUROPE = "europe"
@@ -1062,6 +1058,15 @@ def create_initial_state(country: str, country_code: str, election_date: str) ->
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 3. DATOS MOCK
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# 2026-05-30 — Estas definiciones inline son FALLBACK del try/except en línea
+# ~1355 que importa de modules/mock_data.py. En operación normal, el import
+# sobrescribe estas variables. Verificadas idénticas a modules/mock_data.py
+# (4 países: GTM, NIC, URY, VEN). Para evitar drift entre las dos copias, si
+# se actualizan los datos, hacerlo SIEMPRE en modules/mock_data.py primero y
+# después espejar acá (o, en próximo refactor post-balotaje, eliminar esta
+# copia y depender solo del import).
 # ═══════════════════════════════════════════════════════════════════════════════
 
 MOCK_OSINT_DATA = {

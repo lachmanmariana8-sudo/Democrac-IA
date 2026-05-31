@@ -1,11 +1,41 @@
 """
 DEMOCRAC.IA / PEIRS — Data Loaders
-Carga y consulta de los datasets externos: V-Dem v15, Freedom House FIW 2025,
-RSF Press Freedom Index 2025, PEI v10.0.
+Carga y consulta de los datasets externos: V-Dem (v16 vía static fallback +
+v15 CSV legado), Freedom House FIW 2025, RSF Press Freedom Index 2025, PEI v10.0.
 
 Todos los loaders siguen el mismo patrón:
   - load_*_data()  → DataFrame o None (fallback gracioso si CSV no existe)
   - get_*_country() → Dict o None
+
+⚠️ STALE — 2026-05-30
+═══════════════════════════════════════════════════════════════════════════════
+Este módulo es un prototipo de la migración (audit #2) que NO está siendo
+importado por app.py. App.py tiene versiones DIVERGENTES de las mismas
+funciones (ver app.py:382-865) que se siguieron actualizando en paralelo.
+
+Diff verificado (29-may-2026, ast.unparse):
+  - load_vdem_data            DIFFER (app=612 mod=611 chars)
+  - get_vdem_country          DIFFER (app=3699 mod=3224 — app tiene +475)
+  - load_freedom_house_data   DIFFER (app=895 mod=894)
+  - get_freedom_house_country DIFFER (app=1385 mod=1355)
+  - load_rsf_data             DIFFER (app=1186 mod=1125)
+  - get_rsf_country           IDENTICAL ✓
+  - load_pei_data             DIFFER (app=975 mod=974)
+  - get_pei_country           DIFFER (app=2462 mod=2390)
+
+NO IMPORTAR de este módulo sin antes reconciliar contra app.py. La
+reconciliación está diferida a post-balotaje Perú (7-jun-2026) — refactor de
+alto riesgo durante cobertura electoral en vivo.
+
+Plan post-balotaje:
+  1. Diffear funciones app.py vs estas, identificar las features que app.py
+     acumuló (probablemente: VDEM_STATIC fallback, validación de columnas,
+     manejo de NaN, normalización de country codes).
+  2. Portar esas features a este módulo.
+  3. Validar con tests A1-A5 que app.py y este módulo den outputs iguales.
+  4. Reemplazar definiciones de app.py por imports de acá.
+  5. Borrar las definiciones de app.py.
+═══════════════════════════════════════════════════════════════════════════════
 """
 from __future__ import annotations
 
