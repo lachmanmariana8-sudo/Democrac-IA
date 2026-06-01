@@ -5321,16 +5321,57 @@ async def _startup_llm_selftest() -> None:
 _HUNTER_HEALTH = {"consecutive_errors": 0, "last_alert_sent_at": None}
 
 
+# Ventanas de cobertura intensiva por elección activa (cadencia 6h en lugar de 24h).
+# Cuando una jornada electoral entra en ventana, el scheduler aumenta frecuencia
+# automáticamente sin requerir cambio manual de env var en Railway.
+#
+# Schema: (country_code, start_iso_utc, end_iso_utc, interval_min, label)
+# Para Perú 2026: T-3 (4-jun 00 UTC) a T+72h+1 (11-jun 00 UTC) ≈ 7 días a 6h.
+# Decisión usuaria 1-jun-2026: mantener 24h hasta T-3, bajar a 6h durante balotaje.
+_HUNTER_INTENSIVE_WINDOWS = [
+    ("PER", "2026-06-04T00:00:00+00:00", "2026-06-11T00:00:00+00:00", 360,
+     "Perú balotaje 7-jun-2026 — cobertura intensiva T-3 a T+72h"),
+]
+
+
+def _resolve_hunter_interval_minutes() -> tuple[int, str]:
+    """Calcula el intervalo del Hunter para el ciclo actual.
+
+    Prioridad:
+      1. Env var HUNTER_INTERVAL_MINUTES (override explícito en Railway)
+      2. Ventana de cobertura intensiva (_HUNTER_INTENSIVE_WINDOWS) si hay elección activa
+      3. Default 1440 (24h)
+
+    Retorna (minutos, label) — label se usa para logging.
+    """
+    env_val = os.getenv("HUNTER_INTERVAL_MINUTES")
+    if env_val is not None:
+        n = int(env_val)
+        return (n, f"env override = {n} min")
+
+    now = datetime.now(timezone.utc)
+    for cc, start_iso, end_iso, mins, label in _HUNTER_INTENSIVE_WINDOWS:
+        try:
+            start = datetime.fromisoformat(start_iso)
+            end = datetime.fromisoformat(end_iso)
+            if start <= now < end:
+                return (mins, label)
+        except Exception:
+            continue
+    return (1440, "default 24h")
+
+
 async def _hunter_scheduler_loop() -> None:
-    """Background loop que dispara el Hunter cada N minutos para sesiones activas."""
-    interval_min = int(os.getenv("HUNTER_INTERVAL_MINUTES", "1440"))
+    """Background loop que dispara el Hunter cada N minutos para sesiones activas.
+
+    El intervalo se recalcula en cada iteración para que las ventanas de cobertura
+    intensiva (_HUNTER_INTENSIVE_WINDOWS) se activen/desactiven sin restart.
+    """
+    interval_min, label = _resolve_hunter_interval_minutes()
     if interval_min <= 0:
         print("[Hunter] Scheduler desactivado (HUNTER_INTERVAL_MINUTES=0 explícito).")
         return
-    if interval_min == 1440:
-        print("[Hunter] Scheduler activo — intervalo: 1440 min (24h, default).")
-    else:
-        print(f"[Hunter] Scheduler activo — intervalo: {interval_min} min (override de env).")
+    print(f"[Hunter] Scheduler activo — intervalo inicial: {interval_min} min ({label}).")
     await asyncio.sleep(60)  # warm-up: esperar 1 min antes del primer ciclo
 
     while True:
@@ -5383,6 +5424,15 @@ async def _hunter_scheduler_loop() -> None:
                 )
                 await _send_admin_discord("Hunter degradado — sin hallazgos en 2+ ciclos", msg, color=15105570)
 
+        # Recalcular en cada ciclo — permite que las ventanas de cobertura
+        # intensiva (_HUNTER_INTENSIVE_WINDOWS) se activen/desactiven sin restart.
+        next_interval, next_label = _resolve_hunter_interval_minutes()
+        if next_interval <= 0:
+            print("[Hunter] Cadencia desactivada en runtime (env override = 0). Saliendo del loop.")
+            return
+        if next_interval != interval_min:
+            print(f"[Hunter] Cadencia ajustada: {interval_min} → {next_interval} min ({next_label}).")
+            interval_min = next_interval
         await asyncio.sleep(interval_min * 60)
 
 
