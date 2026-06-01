@@ -9425,31 +9425,70 @@ PERU_RUNOFF_2026 = {
         "primary_source_url": "https://portal.jne.gob.pe/portal_documentos/files/637a2dda-73ba-4abc-95bf-294f14d454bb.pdf",
         "audit_status": "VERIFIED_SECONDARY_PRIMARY_PDF_NOT_PARSED",
     },
-    "head_to_head": {
-        "key_issues": {
-            "economic_model": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "asamblea_constituyente": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "security_crime": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "human_rights": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "anti_corruption": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
+    # Espejo inline del runoff_phase_observation de modules/peru_data.py.
+    # Re-diseñado 1-jun-2026 según metodología canónica PEIRS (memoria
+    # peirs-observation-methodology): 9 campos de observación procedimental,
+    # NO comparación de programas ni encuestas ni endosos.
+    "runoff_phase_observation": {
+        "campaign_conduct_finalist_a": {
+            "candidate_name": "Keiko Fujimori", "party": "Fuerza Popular",
+            "incidents": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Categorías: uso_recursos_estado | violacion_tope_gasto | propaganda_fuera_de_plazo | incumplimiento_franja_electoral",
         },
-        "polls_between_rounds": {"items": [], "audit_status": "PENDIENTE_VERIFICACION",
-            "audit_note": "Reactivar solo con URL a la ficha técnica publicada por la encuestadora."},
-        "debates": {"scheduled": [], "audit_status": "PENDIENTE_VERIFICACION",
-            "source": "Pendiente — JNE Cronograma Electoral 2026",
-            "source_url": "https://www.jne.gob.pe/transparencia/cronograma/"},
-        "endorsements": {"for_finalist_1": [], "for_finalist_2": [],
-            "audit_status": "PENDIENTE_VERIFICACION"},
-    },
-    "risk_factors_between_rounds": {
-        "incidents": [], "audit_status": "PENDIENTE_VERIFICACION",
-        "iccpr_ref": "Art. 25 ICCPR — la fase entre vueltas exige condiciones equitativas de campaña y libertad de información.",
-        "historical_baseline": "En 2021 (Castillo-Fujimori) la fase entre vueltas registró 47 días con denuncias de fraude y manipulación informativa documentadas por JNE/IPYS.",
+        "campaign_conduct_finalist_b": {
+            "candidate_name": "Roberto Sánchez Palomino", "party": "Juntos por el Perú",
+            "incidents": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Categorías: uso_recursos_estado | violacion_tope_gasto | propaganda_fuera_de_plazo | incumplimiento_franja_electoral",
+        },
+        "hate_speech_and_intimidation_incidents": {
+            "incidents": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Hunter alimenta automáticamente; cruzar contra Defensoría del Pueblo + IDEHPUCP. Estándar: ICCPR Art. 20.",
+        },
+        "media_access_monitoring": {
+            "measurement_window": "2026-04-13 / 2026-06-07",
+            "methodology": None, "finalist_a_minutes": None, "finalist_b_minutes": None,
+            "public_media_breakdown": None, "private_media_breakdown": None,
+            "source": "Pendiente — Veeduría Ciudadana / ConcorTV / observatorios PUCP-UPCH",
+            "source_url": None, "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Estándar: CADH Art. 13 + OSCE Copenhagen §7.7.",
+        },
+        "emb_independence_stress_signals": {
+            "signals": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Tipos: moción_interpelación | ataque_personal_magistrados | retiro_presupuesto. Estándar: OSCE Copenhagen §7 + CDI Art. 3.",
+        },
+        "election_day_logistics_readiness": {
+            "polling_stations_total": None, "abroad_stations": None,
+            "accessibility_compliance_pct": None, "miembros_mesa_sorteados": None,
+            "audit_observations_onpe": [],
+            "source": "Pendiente — ONPE Resolución Jefatural balotaje 2026",
+            "source_url": None, "audit_status": "PENDIENTE_VERIFICACION",
+        },
+        "vote_count_transparency_protocol": {
+            "acta_publication_url_pattern": "https://resultados.onpe.gob.pe/SEG2026/...",
+            "mesa_level_disaggregation_available": None, "first_results_window_hours": None,
+            "official_proclamation_deadline_days": None, "observers_accreditation_count": None,
+            "source": "Pendiente — ONPE Manual de Procedimientos balotaje 2026",
+            "source_url": None, "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Estándar: OSCE Copenhagen §7.4 + Código Venecia I.3.2.",
+        },
+        "dispute_resolution_tracker": {
+            "cases": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Tipos: nulidad_mesa | exclusión_lista | tacha | apelación_resolución_JEE. Estándar: ICCPR Art. 2(3) + CADH Art. 25.",
+            "source_url": "https://www.jne.gob.pe/expedientes/",
+        },
+        "osint_information_integrity_monitor": {
+            "narratives": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Hunter alimenta automáticamente. Para VERIFIED_SECONDARY cruzar con DFRLab o transparency report. Estándar: RELE-OEA 2020.",
+        },
+        "electoral_violence_incidents": {
+            "incidents": [], "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Tipos: amenaza_directa | ataque_físico | obstrucción_personero | destrucción_material_electoral. Estándar: CADH Art. 4 y 5.",
+        },
     },
     "iccpr_ref": "Art. 25 ICCPR — derecho a elegir y ser elegido en condiciones de equidad, vigente durante la 2ª vuelta.",
-    "data_sources": "JNE Acta de Proclamación PDF; ONPE Boletín Final 100%; Wikipedia ES; Infobae; El Comercio. Pendiente: head_to_head + risk_factors entre vueltas.",
-    "audit_status": "partial — finalists + breakdown cargados; head_to_head + risk_factors pendientes",
-    "audit_note": "Espejo inline de modules/peru_data.py. Actualizado 2026-05-31 con resultados 1ª vuelta cross-referenciados (3 fuentes secundarias coincidentes). PDF JNE primario referenciado pero no parseado programáticamente — pendiente validación humana.",
+    "data_sources": "JNE Acta de Proclamación PDF; ONPE Boletín Final 100%; Wikipedia ES; Infobae; El Comercio (1ª vuelta). Para entre vueltas: Hunter OSINT propio + Defensoría del Pueblo + ONPE-DFP + JEE/JNE expedientes + Veeduría Ciudadana + IDL-Reporteros + Ojo Público + MOE-OEA preliminar.",
+    "audit_status": "partial — finalists + breakdown cargados; runoff_phase_observation 9 campos PENDIENTE",
+    "audit_note": "Espejo inline de modules/peru_data.py. Re-estructurado 1-jun-2026 según metodología canónica (memoria peirs-observation-methodology) — bloque previo head_to_head con key_issues/polls/endorsements eliminado por violar el principio de imparcialidad y no ser observación electoral.",
 }
 
 PERU_REGIONS_DATA = [

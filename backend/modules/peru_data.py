@@ -435,39 +435,117 @@ PERU_RUNOFF_2026 = {
         "audit_status": "VERIFIED_SECONDARY_PRIMARY_PDF_NOT_PARSED",
         "audit_note": "Datos cargados el 2026-05-31 desde fuentes secundarias coincidentes (Wikipedia + Infobae + El Comercio). PDF JNE primario es texto-como-imagen CCITT, no parseable automáticamente; pendiente validación humana en navegador. Los porcentajes (17.19/12.04/11.91/10.98/10.15/7.93/7.30) suman 77.50% de votos válidos — el ~22.5% restante corresponde a los 6 candidatos no listados (cada uno <7%). Re-cargar el detalle completo cuando ONPE publique un endpoint JSON o una tabla HTML estática.",
     },
-    # Cara a cara entre los dos finalistas: posiciones, encuestas de intención
-    # de voto entre vueltas, endorsements, debates organizados por JNE.
-    # Todos los campos quedan PENDIENTES hasta tener cita primaria por ítem.
-    "head_to_head": {
-        "key_issues": {
-            # Estructura: cada eje guarda 2 posiciones (una por finalista).
-            # Cargar con cita a programa de gobierno publicado en ROP/JNE.
-            "economic_model": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "asamblea_constituyente": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "security_crime": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "human_rights": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-            "anti_corruption": {"finalist_1": "PENDIENTE", "finalist_2": "PENDIENTE", "source": "Pendiente"},
-        },
-        "polls_between_rounds": {
-            # Lista de encuestas intermedias publicadas (Ipsos, IEP, CPI, Datum).
-            # Cada item: pollster, date, sample_n, finalist_1_pct, finalist_2_pct,
-            # undecided_pct, margin_pct, source_url. Audit por encuesta.
-            "items": [],
+    # Observación de la fase entre vueltas, según metodología canónica PEIRS
+    # (ver memoria peirs-observation-methodology, 1-jun-2026). Estructura
+    # re-diseñada por agente experto en Observación Electoral: 9 campos
+    # operativos de observación procedimental, NO comparación de programas
+    # ni encuestas ni endosos. PEIRS observa el proceso, no la propuesta.
+    #
+    # Convención por campo:
+    #   - audit_status: PENDIENTE_VERIFICACION | VERIFIED_SECONDARY | CONFIRMED
+    #     (escala objetivamente por documento oficial o cruce de 2 fuentes
+    #     primarias independientes — NO por OK humano informal)
+    #   - source / source_url: cita primaria; secundarias en sources_secondary[]
+    "runoff_phase_observation": {
+        # Conducta de campaña de cada finalista: cumplimiento de reglas, financiamiento,
+        # uso de recursos del Estado, propaganda fuera de plazo, franja electoral.
+        # Fuentes: ONPE-DFP, JEE Lima Centro, Procuraduría Anticorrupción.
+        # Item schema: {date, category, description, source_url, severity, regulatory_response}
+        "campaign_conduct_finalist_a": {
+            "candidate_name": "Keiko Fujimori",
+            "party": "Fuerza Popular",
+            "incidents": [],
             "audit_status": "PENDIENTE_VERIFICACION",
-            "audit_note": "Reactivar solo con URL al ficha técnica publicada por la encuestadora + registro JNE si aplica.",
+            "audit_note": "Categorías: uso_recursos_estado | violacion_tope_gasto | propaganda_fuera_de_plazo | incumplimiento_franja_electoral",
         },
-        "debates": {
-            "scheduled": [],
+        "campaign_conduct_finalist_b": {
+            "candidate_name": "Roberto Sánchez Palomino",
+            "party": "Juntos por el Perú",
+            "incidents": [],
             "audit_status": "PENDIENTE_VERIFICACION",
-            "audit_note": "JNE — calendario oficial de debates presidenciales 2ª vuelta 2026 pendiente de cita.",
-            "source": "Pendiente — JNE Cronograma Electoral 2026",
-            "source_url": "https://www.jne.gob.pe/transparencia/cronograma/",
+            "audit_note": "Categorías: uso_recursos_estado | violacion_tope_gasto | propaganda_fuera_de_plazo | incumplimiento_franja_electoral",
         },
-        "endorsements": {
-            "for_finalist_1": [],
-            "for_finalist_2": [],
+        # Discurso de odio, intimidación, incitación a violencia electoral.
+        # Fuentes: Defensoría del Pueblo, IDEHPUCP, Hunter OSINT propio.
+        # Item: {date, actor_role, target_group, platform, content_summary, classification, source_url, verification_level}
+        "hate_speech_and_intimidation_incidents": {
+            "incidents": [],
             "audit_status": "PENDIENTE_VERIFICACION",
-            "audit_note": "Cada endoso requiere fuente primaria (declaración pública del endosante en medio verificable).",
+            "audit_note": "Hunter alimenta automáticamente; cruzar contra Defensoría del Pueblo + IDEHPUCP antes de elevar a VERIFIED_SECONDARY. Estándar: ICCPR Art. 20.",
+        },
+        # Acceso equitativo a medios: cobertura proporcional medida en minutos/menciones.
+        # NO comentario sobre contenido — solo medición cuantitativa de exposición.
+        # Fuentes: Veeduría Ciudadana, ConcorTV, informes universitarios PUCP-UPCH.
+        "media_access_monitoring": {
+            "measurement_window": "2026-04-13 / 2026-06-07",
+            "methodology": None,
+            "finalist_a_minutes": None,
+            "finalist_b_minutes": None,
+            "public_media_breakdown": None,
+            "private_media_breakdown": None,
+            "source": "Pendiente — Veeduría Ciudadana / ConcorTV / observatorios PUCP-UPCH",
+            "source_url": None,
+            "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Estándar: CADH Art. 13 + OSCE Copenhagen §7.7.",
+        },
+        # Señales de estrés sobre la independencia del EMB (JNE/ONPE/RENIEC).
+        # Fuentes: Diario de Debates del Congreso, comunicados JNE/ONPE, IDL-Reporteros.
+        # Item: {date, actor, target_institution, action_type, source_url, institutional_response}
+        "emb_independence_stress_signals": {
+            "signals": [],
+            "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Tipos: moción_interpelación | ataque_personal_magistrados | retiro_presupuesto | declaraciones_cuestionando_autoridad. Estándar: OSCE Copenhagen §7 + CDI Art. 3.",
+        },
+        # Preparación logística para la jornada electoral del 7-jun.
+        # Fuente: ONPE resoluciones jefaturales + MOE-OEA pre-election report.
+        "election_day_logistics_readiness": {
+            "polling_stations_total": None,
+            "abroad_stations": None,
+            "accessibility_compliance_pct": None,
+            "miembros_mesa_sorteados": None,
+            "audit_observations_onpe": [],
+            "source": "Pendiente — ONPE Resolución Jefatural balotaje 2026",
+            "source_url": None,
+            "audit_status": "PENDIENTE_VERIFICACION",
+        },
+        # Protocolo de conteo y transmisión de resultados: trazabilidad y plazos.
+        # Fuente: ONPE protocolos operativos balotaje.
+        "vote_count_transparency_protocol": {
+            "acta_publication_url_pattern": "https://resultados.onpe.gob.pe/SEG2026/...",
+            "mesa_level_disaggregation_available": None,
+            "first_results_window_hours": None,
+            "official_proclamation_deadline_days": None,
+            "observers_accreditation_count": None,
+            "source": "Pendiente — ONPE Manual de Procedimientos balotaje 2026",
+            "source_url": None,
+            "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Estándar: OSCE Copenhagen §7.4 + Código Venecia I.3.2.",
+        },
+        # Tracker de impugnaciones y disputas electorales (EDR).
+        # Fuente: portal expedientes JNE, JEE descentralizados.
+        # Item: {case_id, filing_date, petitioner, respondent, issue_type, jee_or_jne_level, status, resolution_date, source_url}
+        "dispute_resolution_tracker": {
+            "cases": [],
+            "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Tipos: nulidad_mesa | exclusión_lista | tacha | apelación_resolución_JEE. Estándar: ICCPR Art. 2(3) + CADH Art. 25.",
+            "source_url": "https://www.jne.gob.pe/expedientes/",
+        },
+        # Monitoreo OSINT de integridad informativa: deepfakes, redes de bots,
+        # campañas inauténticas coordinadas, narrativas de fraude.
+        # Fuentes: Hunter OSINT propio + DFRLab + Meta/X transparency reports + IDL-Reporteros + Ojo Público.
+        # Item: {date, narrative_id, narrative_summary, vectors, suspected_coordination_score, deepfake_flag, platform_action, source_url, verification_level}
+        "osint_information_integrity_monitor": {
+            "narratives": [],
+            "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Hunter alimenta automáticamente. Para elevar a VERIFIED_SECONDARY cruzar con DFRLab o transparency report de plataforma. Estándar: RELE-OEA 2020 Joint Declaration.",
+        },
+        # Incidentes de violencia política / seguridad electoral.
+        # Fuentes: Defensoría del Pueblo, PNP partes diarios, ACLED-Peru.
+        # Item: {date, location_district, victim_role, perpetrator_known, incident_type, source_url, verification_level}
+        "electoral_violence_incidents": {
+            "incidents": [],
+            "audit_status": "PENDIENTE_VERIFICACION",
+            "audit_note": "Tipos: amenaza_directa | ataque_físico | obstrucción_personero | destrucción_material_electoral. Estándar: CADH Art. 4 y 5 + principios IFES.",
         },
     },
     "risk_factors_between_rounds": {
@@ -480,9 +558,9 @@ PERU_RUNOFF_2026 = {
         "historical_baseline": "En 2021 (Castillo-Fujimori) la fase entre vueltas registró 47 días con denuncias de fraude y manipulación informativa documentadas por JNE/IPYS. Patrón a monitorear.",
     },
     "iccpr_ref": "Art. 25 ICCPR — derecho a elegir y ser elegido en condiciones de equidad, vigente durante la 2ª vuelta.",
-    "data_sources": "JNE Acta de Proclamación 12-abr-2026 (PDF); ONPE Boletín Final al 100%; Wikipedia ES (síntesis); Infobae; El Comercio. Pendiente: head_to_head (key_issues, polls, debates, endorsements) y risk_factors entre vueltas — esperan cita primaria por ítem.",
-    "audit_status": "partial — finalists + first_round_breakdown cargados; head_to_head + risk_factors pendientes",
-    "audit_note": "Actualizado 2026-05-31: finalistas (Fujimori 17.19% vs Sánchez 12.04%) y breakdown 1ª vuelta cargados desde 3 fuentes secundarias coincidentes (Wikipedia/Infobae/El Comercio); PDF JNE primario referenciado (URL en source_url) pero no parseado programáticamente — pendiente validación humana en navegador. NO INVENTAR posiciones del cara a cara ni encuestas entre vueltas; cada uno debe llenarse con cita primaria al programa ROP/JNE o ficha técnica encuestadora.",
+    "data_sources": "Para 1ª vuelta: JNE Acta de Proclamación 12-abr-2026 (PDF); ONPE Boletín Final al 100%; Wikipedia ES (síntesis); Infobae; El Comercio. Para fase entre vueltas: Hunter OSINT propio + Defensoría del Pueblo + ONPE-DFP + JEE/JNE expedientes + Veeduría Ciudadana + IDL-Reporteros + Ojo Público + MOE-OEA preliminar. Cada hallazgo requiere cita primaria documental para escalar a CONFIRMED.",
+    "audit_status": "partial — finalists + first_round_breakdown cargados; runoff_phase_observation con 9 campos PENDIENTE de monitoreo activo",
+    "audit_note": "Actualizado 1-jun-2026: bloque head_to_head previo (key_issues, polls, endorsements, debates con foco programático) ELIMINADO por violar el principio de imparcialidad de la DoP 2005 §6 y §8 — no era observación electoral sino voter education, dominio de Voto Informado. Reemplazado por runoff_phase_observation con 9 campos operativos según metodología canónica PEIRS (ver memoria peirs-observation-methodology). Los campos OSINT (hate_speech, osint_narratives, electoral_violence) se alimentan automáticamente por Hunter; los institucionales (ONPE-DFP, JNE expedientes, Veeduría) requieren ingesta puntual con URL primaria.",
 }
 
 PERU_REGIONS_DATA = [
