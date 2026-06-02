@@ -6685,26 +6685,72 @@ function PeruSituationRoom() {
                             {renderFinalist(f2, "Finalista 2")}
                           </div>
 
-                          {/* Ejes del cara a cara — minimal listing */}
-                          {r.head_to_head?.key_issues && (
-                            <Card className="peru-card">
-                              <SectionTitle icon="⚖">Ejes del cara a cara</SectionTitle>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
-                                {Object.entries(r.head_to_head.key_issues).map(([axis, vals]) => (
-                                  <div key={axis} style={{ padding: "8px 10px", borderRadius: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
-                                    <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>{axis.replace(/_/g, " ")}</div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 11, color: isPending(vals?.finalist_1) ? COLORS.textDim : COLORS.text }}>
-                                      <div>F1: {isPending(vals?.finalist_1) ? "Pendiente" : vals.finalist_1}</div>
-                                      <div>F2: {isPending(vals?.finalist_2) ? "Pendiente" : vals.finalist_2}</div>
-                                    </div>
+                          {/* Observación de la fase entre vueltas — 9 ejes canónicos
+                              según metodología PEIRS (OSCE/ODIHR + DoP 2005). NO compara
+                              programas ni reporta encuestas: solo monitorea integridad
+                              procedimental, discurso, acceso a medios, EMB, logística,
+                              cómputo, disputas, OSINT y violencia electoral. */}
+                          {r.runoff_phase_observation && (() => {
+                            const obs = r.runoff_phase_observation;
+                            const countOf = (block) => {
+                              if (!block) return 0;
+                              return (block.incidents || block.signals || block.cases || block.narratives || []).length;
+                            };
+                            const ejes = [
+                              { key: "campaign_conduct_finalist_a", icon: "🏛", label: `Conducta de campaña — ${obs.campaign_conduct_finalist_a?.candidate_name || "Finalista 1"}`, count: countOf(obs.campaign_conduct_finalist_a), status: obs.campaign_conduct_finalist_a?.audit_status },
+                              { key: "campaign_conduct_finalist_b", icon: "🏛", label: `Conducta de campaña — ${obs.campaign_conduct_finalist_b?.candidate_name || "Finalista 2"}`, count: countOf(obs.campaign_conduct_finalist_b), status: obs.campaign_conduct_finalist_b?.audit_status },
+                              { key: "hate_speech_and_intimidation_incidents", icon: "⚠", label: "Discurso de odio + intimidación", count: countOf(obs.hate_speech_and_intimidation_incidents), status: obs.hate_speech_and_intimidation_incidents?.audit_status },
+                              { key: "media_access_monitoring", icon: "📻", label: "Acceso equitativo a medios", count: obs.media_access_monitoring?.finalist_a_minutes != null ? 1 : 0, status: obs.media_access_monitoring?.audit_status },
+                              { key: "emb_independence_stress_signals", icon: "🛡", label: "Independencia EMB (JNE/ONPE)", count: countOf(obs.emb_independence_stress_signals), status: obs.emb_independence_stress_signals?.audit_status },
+                              { key: "election_day_logistics_readiness", icon: "📋", label: "Logística jornada electoral", count: obs.election_day_logistics_readiness?.polling_stations_total != null ? 1 : 0, status: obs.election_day_logistics_readiness?.audit_status },
+                              { key: "vote_count_transparency_protocol", icon: "🔢", label: "Transparencia del cómputo", count: obs.vote_count_transparency_protocol?.mesa_level_disaggregation_available != null ? 1 : 0, status: obs.vote_count_transparency_protocol?.audit_status },
+                              { key: "dispute_resolution_tracker", icon: "⚖", label: "Impugnaciones (JEE/JNE)", count: countOf(obs.dispute_resolution_tracker), status: obs.dispute_resolution_tracker?.audit_status },
+                              { key: "osint_information_integrity_monitor", icon: "🌐", label: "OSINT · integridad informativa", count: countOf(obs.osint_information_integrity_monitor), status: obs.osint_information_integrity_monitor?.audit_status },
+                              { key: "electoral_violence_incidents", icon: "🚨", label: "Violencia política y seguridad", count: countOf(obs.electoral_violence_incidents), status: obs.electoral_violence_incidents?.audit_status },
+                            ];
+                            const totalHallazgos = ejes.reduce((acc, e) => acc + e.count, 0);
+                            return (
+                              <Card className="peru-card">
+                                <SectionTitle icon="🔍">Observación entre vueltas — {ejes.length} ejes canónicos</SectionTitle>
+                                <div style={{ padding: "8px 12px", borderRadius: 7, background: COLORS.surfaceLight, marginBottom: 12, fontSize: 10, color: COLORS.textDim, lineHeight: 1.6 }}>
+                                  PEIRS observa <strong>integridad del proceso</strong> según OSCE/ODIHR + UN-OEA-EU DoP 2005, no contenido de propuestas ni encuestas. Hunter alimenta automáticamente los ejes OSINT (discurso, narrativas, violencia); los institucionales requieren ingesta con cita primaria.
+                                  <div style={{ marginTop: 6, fontFamily: "'DM Mono', monospace", color: COLORS.textMuted }}>
+                                    Hallazgos cargados: <strong>{totalHallazgos}</strong> · Audit status global: {r.audit_status || "—"}
                                   </div>
-                                ))}
-                              </div>
-                              <div style={{ marginTop: 10, fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
-                                audit_status: {r.head_to_head?.polls_between_rounds?.audit_status || "PENDIENTE_VERIFICACION"}
-                              </div>
-                            </Card>
-                          )}
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+                                  {ejes.map(e => (
+                                    <div key={e.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 6, background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                                        <span style={{ fontSize: 14, flexShrink: 0 }}>{e.icon}</span>
+                                        <span style={{ fontSize: 11, color: COLORS.text, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.label}</span>
+                                      </div>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: e.count > 0 ? COLORS.accent : COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                                          {e.count > 0 ? `${e.count} ${e.count === 1 ? "hallazgo" : "hallazgos"}` : "—"}
+                                        </span>
+                                        <span style={{
+                                          fontSize: 8, padding: "3px 7px", borderRadius: 3, letterSpacing: 0.5, fontFamily: "'DM Mono', monospace", fontWeight: 700,
+                                          background: e.status === "CONFIRMED" ? COLORS.accentDim
+                                            : e.status === "VERIFIED_SECONDARY" ? COLORS.warningDim
+                                            : COLORS.surfaceLight,
+                                          color: e.status === "CONFIRMED" ? COLORS.accent
+                                            : e.status === "VERIFIED_SECONDARY" ? COLORS.warning
+                                            : COLORS.textDim,
+                                          border: `1px solid ${e.status === "CONFIRMED" ? COLORS.accent + "55" : e.status === "VERIFIED_SECONDARY" ? COLORS.warning + "55" : COLORS.border}`,
+                                        }}>
+                                          {e.status || "PENDIENTE"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{ marginTop: 10, fontSize: 9, color: COLORS.textDim, fontFamily: "'DM Mono', monospace" }}>
+                                  Trazabilidad por hallazgo · PENDIENTE → VERIFIED_SECONDARY (2 fuentes indep.) → CONFIRMED (documento oficial o 2 misiones acreditadas)
+                                </div>
+                              </Card>
+                            );
+                          })()}
                         </>
                       );
                     })()}
