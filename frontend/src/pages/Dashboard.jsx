@@ -6739,7 +6739,7 @@ function PeruSituationRoom() {
                                             : COLORS.textDim,
                                           border: `1px solid ${e.status === "CONFIRMED" ? COLORS.accent + "55" : e.status === "VERIFIED_SECONDARY" ? COLORS.warning + "55" : COLORS.border}`,
                                         }}>
-                                          {e.status || "PENDIENTE"}
+                                          {(e.status === "PENDIENTE_VERIFICACION" ? "PENDIENTE" : e.status) || "PENDIENTE"}
                                         </span>
                                       </div>
                                     </div>

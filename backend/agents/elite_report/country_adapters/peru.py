@@ -318,6 +318,21 @@ class PeruAdapter:
             return None
         return PERU_REGIONS_DATA
 
+    def runoff_observation(self, entries: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Dict COMPLETO del balotaje (PERU_RUNOFF_2026) enriquecido con los
+        hallazgos del Hunter: finalistas, fechas, comparativa de 1ª vuelta y
+        runoff_phase_observation con audit_status recalculado.
+
+        Usa el MISMO helper que /api/peru/scenarios para que el reporte y el
+        dashboard coincidan por construcción. Devuelve None si no hay datos.
+        """
+        try:
+            from modules.peru_data import PERU_RUNOFF_2026
+            from modules.runoff_enrichment import enrich_runoff_observation
+        except ImportError:
+            return None
+        return enrich_runoff_observation(PERU_RUNOFF_2026, entries or [])
+
     # ── Modelo institucional (Sprint 3) ────────────────────────────────
 
     def institutional_model(self) -> InstitutionalModel:

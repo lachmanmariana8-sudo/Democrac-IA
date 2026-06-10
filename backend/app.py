@@ -1386,6 +1386,15 @@ try:
 except ImportError:
     VDEM_STATIC: dict = {}
 
+# Enriquecimiento del balotaje: fusiona hallazgos del Hunter en los 3 ejes OSINT
+# y recalcula audit_status objetivamente. Si falla el import, no-op (devuelve
+# el runoff sin enriquecer) para no romper el endpoint.
+try:
+    from modules.runoff_enrichment import enrich_runoff_observation
+except ImportError:
+    def enrich_runoff_observation(runoff, entries, *, now=None):
+        return runoff
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 4. AGENTES
@@ -9878,7 +9887,10 @@ async def get_peru_scenarios():
         "next_2026_2031": PERU_PARL_DATA.get("next_2026_2031"),
         "scenarios": [],
         "scenarios_removed_note": "Escenarios predictivos A/B/C retirados el 2026-05-27 tras la 1ª vuelta. Se reemplazan por composición oficial cuando ONPE publique el cómputo final.",
-        "runoff": PERU_RUNOFF_2026,
+        "runoff": enrich_runoff_observation(
+            PERU_RUNOFF_2026,
+            observation_store.get("PER", {}).get("entries", []),
+        ),
         "historical_context": PERU_HISTORICAL_EVENTS,
         "regions": PERU_REGIONS_DATA,
         "data_note": "Fase entre vueltas. El bloque 'runoff' contiene scaffold PENDIENTE_VERIFICACION para finalistas y cara a cara; valores reales se cargan con cita primaria a ONPE/JNE.",
