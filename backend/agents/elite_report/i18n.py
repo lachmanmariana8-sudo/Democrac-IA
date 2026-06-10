@@ -277,6 +277,151 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Artificial Intelligence in the electoral process",
         "pt": "Inteligência Artificial no processo eleitoral",
     },
+    "chapter.observacion_entre_vueltas": {
+        "es": "Observación de la fase entre vueltas — 9 ejes canónicos",
+        "en": "Runoff-phase observation — 9 canonical axes",
+        "pt": "Observação da fase de segundo turno — 9 eixos canônicos",
+    },
+
+    # ── Capítulo: observación entre vueltas (determinista, sin LLM) ───
+    "runoff_obs.intro": {
+        "es": "Estado de observación por eje al cierre del período. El nivel de auditoría escala objetivamente — por documento oficial o cruce de ≥2 fuentes primarias independientes (≥3 ⇒ confirmado), nunca por validación humana informal.",
+        "en": "Per-axis observation status at period close. Audit level escalates objectively — by official document or cross-check of ≥2 independent primary sources (≥3 ⇒ confirmed), never by informal human validation.",
+        "pt": "Estado de observação por eixo no fechamento do período. O nível de auditoria escala objetivamente — por documento oficial ou cruzamento de ≥2 fontes primárias independentes (≥3 ⇒ confirmado), nunca por validação humana informal.",
+    },
+    "runoff_obs.no_findings": {
+        "es": "Sin hallazgos corroborados durante la ventana de observación (eje monitoreado, 0 incidentes verificados).",
+        "en": "No corroborated findings during the observation window (axis monitored, 0 verified incidents).",
+        "pt": "Sem achados corroborados durante a janela de observação (eixo monitorado, 0 incidentes verificados).",
+    },
+    "runoff_obs.not_observed": {
+        "es": "Eje no observado — pendiente ingesta de fuente primaria.",
+        "en": "Axis not observed — pending primary-source ingestion.",
+        "pt": "Eixo não observado — pendente de ingestão de fonte primária.",
+    },
+    "runoff_obs.findings_count": {
+        "es": "Hallazgos registrados: {n}.",
+        "en": "Findings recorded: {n}.",
+        "pt": "Achados registrados: {n}.",
+    },
+    "runoff_obs.global_header": {
+        "es": "Estado de auditoría global: {status} · Hallazgos totales: {n}",
+        "en": "Global audit status: {status} · Total findings: {n}",
+        "pt": "Estado de auditoria global: {status} · Achados totais: {n}",
+    },
+    "runoff_obs.axis.campaign_conduct_finalist_a": {
+        "es": "Conducta de campaña — finalista A", "en": "Campaign conduct — finalist A", "pt": "Conduta de campanha — finalista A",
+    },
+    "runoff_obs.axis.campaign_conduct_finalist_b": {
+        "es": "Conducta de campaña — finalista B", "en": "Campaign conduct — finalist B", "pt": "Conduta de campanha — finalista B",
+    },
+    "runoff_obs.axis.hate_speech_and_intimidation_incidents": {
+        "es": "Discurso de odio e intimidación", "en": "Hate speech and intimidation", "pt": "Discurso de ódio e intimidação",
+    },
+    "runoff_obs.axis.media_access_monitoring": {
+        "es": "Acceso equitativo a medios", "en": "Equitable media access", "pt": "Acesso equitativo à mídia",
+    },
+    "runoff_obs.axis.emb_independence_stress_signals": {
+        "es": "Independencia del EMB (JNE/ONPE)", "en": "EMB independence (JNE/ONPE)", "pt": "Independência do EMB (JNE/ONPE)",
+    },
+    "runoff_obs.axis.election_day_logistics_readiness": {
+        "es": "Logística de la jornada electoral", "en": "Election-day logistics readiness", "pt": "Logística da jornada eleitoral",
+    },
+    "runoff_obs.axis.vote_count_transparency_protocol": {
+        "es": "Transparencia del cómputo", "en": "Vote-count transparency", "pt": "Transparência da apuração",
+    },
+    "runoff_obs.axis.dispute_resolution_tracker": {
+        "es": "Impugnaciones (JEE/JNE)", "en": "Dispute resolution (JEE/JNE)", "pt": "Impugnações (JEE/JNE)",
+    },
+    "runoff_obs.axis.osint_information_integrity_monitor": {
+        "es": "OSINT · integridad informativa", "en": "OSINT · information integrity", "pt": "OSINT · integridade informativa",
+    },
+    "runoff_obs.axis.electoral_violence_incidents": {
+        "es": "Violencia política y seguridad", "en": "Political violence and security", "pt": "Violência política e segurança",
+    },
+
+    # Contexto del proceso de cara a la segunda vuelta (capítulo determinista).
+    "runoff_obs.context_header": {
+        "es": "Contexto del balotaje", "en": "Runoff context", "pt": "Contexto do segundo turno",
+    },
+    "runoff_obs.context_intro": {
+        "es": "El {runoff_date} se celebra la segunda vuelta presidencial entre los dos finalistas surgidos de la primera vuelta del {first_round_date}:",
+        "en": "On {runoff_date} the presidential runoff is held between the two finalists from the first round of {first_round_date}:",
+        "pt": "Em {runoff_date} ocorre o segundo turno presidencial entre os dois finalistas do primeiro turno de {first_round_date}:",
+    },
+    "runoff_obs.finalist_line": {
+        "es": "- **{name}** ({party}) — {pct}% en primera vuelta ({votes} votos)",
+        "en": "- **{name}** ({party}) — {pct}% in the first round ({votes} votes)",
+        "pt": "- **{name}** ({party}) — {pct}% no primeiro turno ({votes} votos)",
+    },
+    "runoff_obs.margin_line": {
+        "es": "Margen entre ambos finalistas en primera vuelta: {margin} puntos porcentuales.",
+        "en": "Margin between the two finalists in the first round: {margin} percentage points.",
+        "pt": "Margem entre os dois finalistas no primeiro turno: {margin} pontos percentuais.",
+    },
+    "runoff_obs.turnout_line": {
+        "es": "Participación en primera vuelta: {turnout}% (abstención {abstention}%); votos en blanco {blank}%, nulos {null}%.",
+        "en": "First-round turnout: {turnout}% (abstention {abstention}%); blank votes {blank}%, null {null}%.",
+        "pt": "Comparecimento no primeiro turno: {turnout}% (abstenção {abstention}%); votos em branco {blank}%, nulos {null}%.",
+    },
+    "runoff_obs.legal_basis": {
+        "es": "El monitoreo PEIRS observa el **proceso**, no las propuestas programáticas. Base normativa: ICCPR Art. 25 — derecho a elegir y ser elegido en condiciones de equidad, vigente durante la segunda vuelta.",
+        "en": "PEIRS monitoring observes the **process**, not policy platforms. Normative basis: ICCPR Art. 25 — the right to vote and be elected under equitable conditions, in force during the runoff.",
+        "pt": "O monitoramento PEIRS observa o **processo**, não as propostas programáticas. Base normativa: ICCPR Art. 25 — direito de eleger e ser eleito em condições de equidade, vigente durante o segundo turno.",
+    },
+    "runoff_obs.observation_header": {
+        "es": "Estado de observación por eje", "en": "Per-axis observation status", "pt": "Estado de observação por eixo",
+    },
+    "runoff_obs.desc.campaign_conduct_finalist_a": {
+        "es": "Cumplimiento de reglas de campaña: uso de recursos del Estado, tope de gasto, propaganda fuera de plazo, franja electoral.",
+        "en": "Campaign-rule compliance: use of state resources, spending caps, out-of-period propaganda, allocated airtime.",
+        "pt": "Cumprimento das regras de campanha: uso de recursos do Estado, teto de gastos, propaganda fora do prazo, faixa eleitoral.",
+    },
+    "runoff_obs.desc.campaign_conduct_finalist_b": {
+        "es": "Cumplimiento de reglas de campaña: uso de recursos del Estado, tope de gasto, propaganda fuera de plazo, franja electoral.",
+        "en": "Campaign-rule compliance: use of state resources, spending caps, out-of-period propaganda, allocated airtime.",
+        "pt": "Cumprimento das regras de campanha: uso de recursos do Estado, teto de gastos, propaganda fora do prazo, faixa eleitoral.",
+    },
+    "runoff_obs.desc.hate_speech_and_intimidation_incidents": {
+        "es": "Discurso de odio, intimidación e incitación a la violencia electoral (estándar ICCPR Art. 20).",
+        "en": "Hate speech, intimidation and incitement to electoral violence (ICCPR Art. 20 standard).",
+        "pt": "Discurso de ódio, intimidação e incitação à violência eleitoral (padrão ICCPR Art. 20).",
+    },
+    "runoff_obs.desc.media_access_monitoring": {
+        "es": "Acceso equitativo a medios: cobertura proporcional medida en minutos/menciones (medición cuantitativa, no contenido).",
+        "en": "Equitable media access: proportional coverage measured in minutes/mentions (quantitative, not content).",
+        "pt": "Acesso equitativo à mídia: cobertura proporcional medida em minutos/menções (quantitativa, não conteúdo).",
+    },
+    "runoff_obs.desc.emb_independence_stress_signals": {
+        "es": "Señales de presión sobre la independencia del órgano electoral (JNE/ONPE/RENIEC).",
+        "en": "Pressure signals on the independence of the electoral body (JNE/ONPE/RENIEC).",
+        "pt": "Sinais de pressão sobre a independência do órgão eleitoral (JNE/ONPE/RENIEC).",
+    },
+    "runoff_obs.desc.election_day_logistics_readiness": {
+        "es": "Preparación logística de la jornada: mesas, locales, accesibilidad, sorteo de miembros de mesa.",
+        "en": "Election-day logistics readiness: polling stations, venues, accessibility, poll-worker selection.",
+        "pt": "Preparação logística da jornada: mesas, locais, acessibilidade, sorteio de mesários.",
+    },
+    "runoff_obs.desc.vote_count_transparency_protocol": {
+        "es": "Transparencia del cómputo: trazabilidad de actas, plazos y desagregación por mesa.",
+        "en": "Vote-count transparency: tally-sheet traceability, deadlines and mesa-level disaggregation.",
+        "pt": "Transparência da apuração: rastreabilidade de atas, prazos e desagregação por mesa.",
+    },
+    "runoff_obs.desc.dispute_resolution_tracker": {
+        "es": "Impugnaciones y disputas electorales ante JEE/JNE.",
+        "en": "Electoral challenges and disputes before JEE/JNE.",
+        "pt": "Impugnações e disputas eleitorais perante JEE/JNE.",
+    },
+    "runoff_obs.desc.osint_information_integrity_monitor": {
+        "es": "Integridad informativa: desinformación, deepfakes, redes inauténticas, narrativas de fraude.",
+        "en": "Information integrity: disinformation, deepfakes, inauthentic networks, fraud narratives.",
+        "pt": "Integridade informativa: desinformação, deepfakes, redes inautênticas, narrativas de fraude.",
+    },
+    "runoff_obs.desc.electoral_violence_incidents": {
+        "es": "Violencia política y seguridad electoral: amenazas, ataques físicos, obstrucción de personeros.",
+        "en": "Political violence and electoral security: threats, physical attacks, obstruction of poll watchers.",
+        "pt": "Violência política e segurança eleitoral: ameaças, ataques físicos, obstrução de fiscais.",
+    },
 
     # ── SVG: severidades ─────────────────────────────────────────────
     "sev.critical": {"es": "Crítico", "en": "Critical", "pt": "Crítico"},
@@ -479,15 +624,20 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Probability per scenario (compact view)",
         "pt": "Probabilidade por cenário (visão compacta)",
     },
+    "viz.scenario_probability.caption": {
+        "es": "Probabilidad estimada de cada escenario prospectivo; suman ~100%. Mayor barra = escenario más probable según el modelo.",
+        "en": "Estimated probability of each prospective scenario; they sum to ~100%. Longer bar = more likely scenario per the model.",
+        "pt": "Probabilidade estimada de cada cenário prospectivo; somam ~100%. Barra maior = cenário mais provável segundo o modelo.",
+    },
     "viz.early_warning_meter.title": {
         "es": "Medidor de alerta temprana",
         "en": "Early warning meter",
         "pt": "Medidor de alerta antecipada",
     },
     "viz.early_warning_meter.caption": {
-        "es": "Nivel actual de riesgo según severidad agregada y forecast.",
-        "en": "Current risk level based on aggregated severity and forecast.",
-        "pt": "Nível atual de risco conforme severidade agregada e forecast.",
+        "es": "Índice de crisis 0–1, ponderado por severidad de los hallazgos (crítico=1,0; alto=0,55; medio=0,20). Verde <0,20 · ámbar 0,20–0,40 · naranja 0,40–0,60 · rojo ≥0,60. Mayor = mayor riesgo.",
+        "en": "Crisis index 0–1, weighted by finding severity (critical=1.0; high=0.55; medium=0.20). Green <0.20 · amber 0.20–0.40 · orange 0.40–0.60 · red ≥0.60. Higher = greater risk.",
+        "pt": "Índice de crise 0–1, ponderado pela severidade dos registros (crítico=1,0; alto=0,55; médio=0,20). Verde <0,20 · âmbar 0,20–0,40 · laranja 0,40–0,60 · vermelho ≥0,60. Maior = maior risco.",
     },
     "viz.semaphore_institutional.title": {
         "es": "Evaluación institucional por órgano",
@@ -495,9 +645,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Avaliação institucional por órgão",
     },
     "viz.semaphore_institutional.caption": {
-        "es": "Semáforo de estado al cierre del período observado.",
-        "en": "Status signal at the close of the observed period.",
-        "pt": "Sinal de status ao final do período observado.",
+        "es": "Estado por órgano según la severidad máxima de hallazgos que lo mencionan. Verde = sin incidencias relevantes · ámbar = hallazgos moderados · rojo = hallazgos graves/críticos.",
+        "en": "Per-body status based on the maximum severity of findings mentioning it. Green = no relevant incidents · amber = moderate findings · red = serious/critical findings.",
+        "pt": "Estado por órgão conforme a severidade máxima dos registros que o mencionam. Verde = sem incidências relevantes · âmbar = registros moderados · vermelho = registros graves/críticos.",
     },
     "viz.dimensions_radar.title": {
         "es": "8 Dimensiones PEIRS",
@@ -505,9 +655,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "8 dimensões PEIRS",
     },
     "viz.dimensions_radar.caption": {
-        "es": "Evaluación cualitativa ajustada por hallazgos del ciclo.",
-        "en": "Qualitative assessment adjusted by cycle findings.",
-        "pt": "Avaliação qualitativa ajustada pelos registros do ciclo.",
+        "es": "Escala 0–100 de salud por dimensión: 100 = sin incidencias observadas en el ciclo; valores bajos = mayor concentración de hallazgos graves. Un valor cercano a 0 (p. ej. Org. electoral) señala dimensión bajo estrés, no ausencia de datos.",
+        "en": "0–100 health scale per dimension: 100 = no incidents observed in the cycle; low values = greater concentration of serious findings. A value near 0 (e.g. Electoral body) signals a dimension under stress, not missing data.",
+        "pt": "Escala 0–100 de saúde por dimensão: 100 = sem incidências observadas no ciclo; valores baixos = maior concentração de registros graves. Um valor próximo de 0 (ex.: Órgão eleitoral) sinaliza dimensão sob estresse, não ausência de dados.",
     },
     "viz.matrix_recommendations.title": {
         "es": "Matriz de recomendaciones priorizadas",

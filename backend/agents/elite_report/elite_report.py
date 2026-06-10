@@ -59,6 +59,7 @@ class PEIRSEliteReport:
             reports_store: dict {run_id: report} con datasets estructurales.
         """
         self.llm = llm
+        self.observation_store = observation_store
         self.loader = EliteLoader(
             observation_store=observation_store,
             alerts_loader=alerts_loader,
@@ -128,6 +129,43 @@ class PEIRSEliteReport:
             country_name=country_name,
             filter_chapters=req.include_chapters,
         )
+
+        # ── 6b. CAPÍTULO DETERMINISTA: observación entre vueltas ───────
+        # 9 ejes canónicos con audit_status objetivo. Sin LLM: se genera
+        # siempre, con lenguaje honesto de estado vacío (PER-específico).
+        try:
+            from agents.elite_report.country_adapters import get_adapter
+            from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+            _adapter = get_adapter(req.country_code)
+            runoff_obs = None
+            if hasattr(_adapter, "runoff_observation"):
+                entries = (self.observation_store or {}).get(
+                    req.country_code.upper(), {}
+                ).get("entries", [])
+                runoff_obs = _adapter.runoff_observation(entries)
+            runoff_chapter = build_runoff_observation_chapter(
+                runoff_obs, lang=req.language or "es"
+            )
+            if runoff_chapter is not None:
+                # Insertar justo después de "Jornada electoral" (cap. 5) y
+                # renumerar los capítulos positivos en orden de lista, para que
+                # la observación del balotaje quede en el flujo del proceso y no
+                # como anexo tras "IA y regulación".
+                insert_at = len(chapters)
+                for i, ch in enumerate(chapters):
+                    if ch.chapter_id == "jornada_electoral":
+                        insert_at = i + 1
+                        break
+                chapters.insert(insert_at, runoff_chapter)
+                n = 0
+                for ch in chapters:
+                    if ch.number > 0:
+                        n += 1
+                        ch.number = n
+        except Exception as e:
+            bundle.warnings.append(
+                f"Capítulo observación entre vueltas falló: {type(e).__name__}: {e}"
+            )
 
         # ── 7. ATTACH VISUALIZATIONS A CADA CAPÍTULO ───────────────────
         self._attach_visualizations(chapters, bundle, forecast, stats,
@@ -237,6 +275,9 @@ class PEIRSEliteReport:
             "medium": sev["medium"],
             "low": sev["low"],
             "info": sev["info"],
+            # Mapa por severidad — consumido por el medidor de alerta temprana
+            # (early_warning_data). Sin esto, crisis_index quedaba en 0.0 siempre.
+            "by_severity": dict(sev),
             "days_covered": len(days),
             "alerts_dispatched": bundle.alerts_dispatched,
         }
@@ -413,20 +454,37 @@ class PEIRSEliteReport:
         _DIM_CATS: Dict[str, List[str]] = {
             "suffrage":    ["voter_suppression"],
             "legal":       ["legal", "irregular_procedure"],
-            "emb":         ["logistics", "fraud_allegation", "counting"],
+            "emb":         ["logistics", "fraud_allegation", "counting", "irregular_procedure"],
             "media":       ["media", "hate_speech", "disinformation"],
             "finance":     ["campaign_violation"],
             "digital":     ["digital"],
             "justice":     ["judicial"],
             "inclusivity": ["voter_suppression", "security"],
         }
+        # La dimensión "Org. electoral" también recoge hallazgos que cuestionen
+        # directamente al EMB (JNE/ONPE/RENIEC) aunque estén clasificados como
+        # legal/other — así el radar es CONSISTENTE con el semáforo institucional,
+        # que detecta los órganos por keyword (ver _ORGAN_KW más abajo).
+        _EMB_ORGAN_KW = [
+            "jne", "jurado nacional", "jurado electoral", "onpe", "oficina nacional",
+            "reniec", "registro nacional", "organismo electoral", "autoridad electoral",
+        ]
         _SEV_WEIGHTS = {"critical": 12, "high": 6, "medium": 2, "low": 0.5, "info": 0}
+
+        def _dim_matches(f, dim_id: str, cats: List[str]) -> bool:
+            if (f.category or "").lower() in cats:
+                return True
+            if dim_id == "emb":
+                txt = ((f.finding or "") + " " + (f.source_name or "")).lower()
+                return any(k in txt for k in _EMB_ORGAN_KW)
+            return False
+
         _radar_dims = []
         for _dim_id, _cats in _DIM_CATS.items():
             _weighted = sum(
                 _SEV_WEIGHTS.get((f.severity or "info").lower(), 0)
                 for f in bundle.hunter_entries
-                if (f.category or "").lower() in _cats
+                if _dim_matches(f, _dim_id, _cats)
             )
             _value = max(0, min(100, round(100 - _weighted)))
             _radar_dims.append({
@@ -705,22 +763,21 @@ class PEIRSEliteReport:
         #   >= 0.20: amber
         #   <  0.20: green
         #
-        # Si forecast.early_warning_level esta seteado, lo respetamos como source
-        # of truth (LLM-refined) pero el score numerico sigue siendo el calculado.
+        # El NIVEL del medidor (banda resaltada) se deriva del MISMO crisis_index
+        # que posiciona la aguja, para que banda + aguja + número sean coherentes
+        # entre sí. (Antes el forecast.early_warning_level podía pisar el nivel y
+        # mostrar banda verde con aguja casi en rojo.) El nivel del forecast sigue
+        # disponible para el capítulo predictivo y su propio gráfico.
         _SEV_W = {"critical": 1.00, "high": 0.55, "medium": 0.20, "low": 0.05, "info": 0.0}
         _by_sev = stats.get("by_severity", {}) or {}
         _total_w = sum(_SEV_W.get(s, 0) * c for s, c in _by_sev.items())
         _total_n = max(sum(_by_sev.values()), 1)
         crisis_index = max(0.0, min(1.0, _total_w / _total_n))
 
-        if forecast and forecast.early_warning_level:
-            level = forecast.early_warning_level
-        else:
-            # Derivar level del crisis_index calculado (consistente con el score)
-            if crisis_index >= 0.60:   level = "red"
-            elif crisis_index >= 0.40: level = "orange"
-            elif crisis_index >= 0.20: level = "amber"
-            else:                      level = "green"
+        if crisis_index >= 0.60:   level = "red"
+        elif crisis_index >= 0.40: level = "orange"
+        elif crisis_index >= 0.20: level = "amber"
+        else:                      level = "green"
 
         # Drivers: top categorías
         top_drivers = [c for c, _ in all_cats.most_common(3)]

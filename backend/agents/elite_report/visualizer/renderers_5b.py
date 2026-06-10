@@ -199,9 +199,6 @@ def render_flow_chart_voting(data: Dict[str, Any]) -> str:
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
     # Header
-    svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.vote_chain")}</text>')
 
     # Boxes + arrows
     for i, st in enumerate(stages):
@@ -304,9 +301,6 @@ def render_network_institutions(data: Dict[str, Any]) -> str:
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
     # Header
-    svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.electoral_network")}</text>')
 
     # Edges (lineas primero, despues labels con background para legibilidad)
     edge_labels: List[tuple] = []
@@ -399,9 +393,6 @@ def render_hourly_timeline(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Timeline horario jornada electoral">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="22" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.electoral_day")}</text>')
 
     # Grid horizontal
     for i in range(5):
@@ -479,9 +470,6 @@ def render_map_regions_affected(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Regiones afectadas">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.regions_affected")}</text>')
 
     for idx, reg in enumerate(regions):
         r = idx // cols
@@ -558,10 +546,7 @@ def render_progress_chart(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Progreso de actas procesadas">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="22" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.tally_progress")}</text>')
-    svg.append(f'<text x="20" y="38" font-family="{FONT_MONO}" font-size="9" '
+    svg.append(f'<text x="20" y="24" font-family="{FONT_MONO}" font-size="9" '
                f'fill="{COLORS["text_muted"]}">% acumulado del padron escrutado vs tiempo</text>')
     # Y axis label rotado
     svg.append(f'<text x="18" y="{mt+ph/2:.1f}" text-anchor="middle" '
@@ -651,9 +636,6 @@ def render_integrity_incidents_grid(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Grilla de incidentes">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="26" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.integrity_grid")}</text>')
 
     # Headers (cols)
     header_y = 70
@@ -737,9 +719,6 @@ def render_actor_network(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Red de actores">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="28" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.actor_network")}</text>')
 
     # Edges
     for ed in edges[:18]:
@@ -805,9 +784,6 @@ def render_judicial_timeline(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Cronología judicial">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="30" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.judicial_chronology")}</text>')
 
     # Línea vertical
     line_x = 130
@@ -890,9 +866,6 @@ def render_compliance_matrix(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Matriz de cumplimiento">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="26" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.compliance_matrix")}</text>')
 
     # Header
     y_hdr = 50
@@ -971,10 +944,6 @@ def render_early_warning_meter(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Medidor de alerta temprana">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="{cx}" y="40" text-anchor="middle" '
-               f'font-family="{FONT_SANS}" font-size="11" font-weight="700" '
-               f'letter-spacing="1.5" fill="{COLORS["teal_dark"]}">'
-               f'{_t(_lang(data), "viz.header.early_warning")}</text>')
 
     # Bandas (semicírculo)
     def arc_path(a0: float, a1: float, ro: float, ri: float) -> str:
@@ -1063,9 +1032,6 @@ def render_matrix_recommendations(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Matriz de recomendaciones">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="26" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.recommendations_matrix")}</text>')
 
     # Header
     y_hdr = 56
@@ -1160,9 +1126,6 @@ def render_system_architecture(data: Dict[str, Any]) -> str:
            f'role="img" aria-label="Arquitectura del sistema electoral">']
     svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
 
-    svg.append(f'<text x="20" y="30" font-family="{FONT_SANS}" font-size="11" '
-               f'font-weight="700" letter-spacing="1.5" '
-               f'fill="{COLORS["teal_dark"]}">{_t(_lang(data), "viz.header.system_architecture")}</text>')
 
     positions = {}
     for i, c in enumerate(comps):

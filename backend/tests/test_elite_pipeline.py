@@ -422,3 +422,226 @@ def test_peru_adapter_institutional_model():
     assert any("Constitución" in inst for inst in constitutional_layer.instruments), (
         "Constitución Política del Perú debe estar en la layer constitutional"
     )
+
+
+def test_peru_adapter_runoff_observation_returns_full_dict_with_axes():
+    """El adapter expone runoff_observation() = dict completo del balotaje
+    (finalistas + fechas + runoff_phase_observation con los ejes canónicos)."""
+    from agents.elite_report.country_adapters import get_adapter
+    runoff = get_adapter("PER").runoff_observation([])
+    assert isinstance(runoff, dict)
+    assert runoff.get("finalists"), "debe incluir finalistas para el contexto"
+    obs = runoff["runoff_phase_observation"]
+    for axis in ("hate_speech_and_intimidation_incidents",
+                 "osint_information_integrity_monitor",
+                 "electoral_violence_incidents",
+                 "media_access_monitoring", "dispute_resolution_tracker"):
+        assert axis in obs
+
+
+def test_runoff_chapter_empty_state_generates_honestly():
+    """Sin entries, el capítulo se genera distinguiendo 'monitoreado 0 hallazgos'
+    (OSINT) de 'no observado' (institucional). Requisito del 10-jun."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+
+    obs = get_adapter("PER").runoff_observation([])
+    chapter = build_runoff_observation_chapter(obs, lang="es")
+    assert chapter is not None
+    assert chapter.chapter_id == "observacion_entre_vueltas"
+    # OSINT vacío → "sin hallazgos corroborados" (monitoreado)
+    assert "Sin hallazgos corroborados" in chapter.narrative
+    # Institucional vacío → "no observado"
+    assert "Eje no observado" in chapter.narrative
+    # No debe haber escalado nada: estado global pendiente
+    assert "PENDIENTE_VERIFICACION" in chapter.narrative
+
+
+def test_runoff_chapter_reflects_hunter_escalation():
+    """2 fuentes primarias independientes en violencia → VERIFIED_SECONDARY,
+    y el capítulo lo refleja con el conteo de hallazgos."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+
+    entries = [
+        {"entry_id": "v1", "category": "security", "severity": "high",
+         "credibility": "high", "verified": False, "finding": "Ataque a local",
+         "hunter_source": "acled", "evidence_ref": "https://acleddata.com/x",
+         "timestamp": "2026-06-05T10:00:00+00:00", "location": "Cusco"},
+        {"entry_id": "v2", "category": "security", "severity": "high",
+         "credibility": "high", "verified": False, "finding": "Amenaza a personero",
+         "hunter_source": "defensoria", "evidence_ref": "https://defensoria.gob.pe/y",
+         "timestamp": "2026-06-05T11:00:00+00:00", "location": "Puno"},
+    ]
+    runoff = get_adapter("PER").runoff_observation(entries)
+    obs = runoff["runoff_phase_observation"]
+    assert obs["electoral_violence_incidents"]["audit_status"] == "VERIFIED_SECONDARY"
+
+    chapter = build_runoff_observation_chapter(runoff, lang="es")
+    assert "VERIFIED_SECONDARY" in chapter.narrative
+    assert "Hallazgos registrados: 2" in chapter.narrative
+
+
+def test_runoff_chapter_none_observation_returns_none():
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+    assert build_runoff_observation_chapter(None, lang="es") is None
+    # Un dict sin runoff_phase_observation tampoco produce capítulo.
+    assert build_runoff_observation_chapter({"finalists": []}, lang="es") is None
+
+
+def test_runoff_chapter_explains_process_context():
+    """El capítulo debe explicar el proceso: finalistas, %, fecha del balotaje,
+    qué observa cada eje. (Antes era solo 10 líneas de PENDIENTE.)"""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+
+    runoff = get_adapter("PER").runoff_observation([])
+    narrative = build_runoff_observation_chapter(runoff, lang="es").narrative
+    assert "Keiko Fujimori" in narrative
+    assert "Roberto Sánchez" in narrative
+    assert "2026-06-07" in narrative          # fecha del balotaje
+    assert "17.19" in narrative               # % 1ª vuelta
+    assert "ICCPR Art. 25" in narrative       # base legal
+    # "qué observa" de al menos un eje OSINT
+    assert "Integridad informativa" in narrative
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Fixes de visualización (doble título, gauge sin datos, radar EMB, leyendas)
+# ───────────────────────────────────────────────────────────────────────
+
+def test_build_stats_populates_by_severity():
+    """_build_stats debe exponer by_severity para que el gauge calcule
+    crisis_index ≠ 0 (antes faltaba la clave y el gauge salía en 0)."""
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    bundle = _make_bundle()
+    stats = PEIRSEliteReport._build_stats(bundle)
+    assert "by_severity" in stats
+    bs = stats["by_severity"]
+    assert set(bs) >= {"critical", "high", "medium", "low", "info"}
+    assert bs["high"] == 9 and bs["critical"] == 1
+    # El índice ponderado sería > 0 con estos hallazgos.
+    sev_w = {"critical": 1.0, "high": 0.55, "medium": 0.2, "low": 0.05, "info": 0.0}
+    total_w = sum(sev_w[s] * c for s, c in bs.items())
+    assert total_w > 0
+
+
+def test_5b_renderers_have_no_embedded_title():
+    """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
+    lo pone el <figcaption> del HTML). Evita el doble título reportado."""
+    from agents.elite_report.visualizer.renderer import render_svg
+    cases = {
+        "early_warning_meter": {"level": "amber", "score": 0.3, "label": "x", "drivers": []},
+        "flow_chart_voting": {"stages": []},
+        "system_architecture": {"_language": "es"},
+    }
+    headers = ["ALERTA TEMPRANA", "CADENA DEL VOTO", "ARQUITECTURA DEL SISTEMA"]
+    for kind, data in cases.items():
+        svg = render_svg(kind, data)
+        for h in headers:
+            assert h not in svg, f"{kind} aún dibuja título embebido {h!r}"
+
+
+def test_radar_emb_reflects_organ_questioning():
+    """Un hallazgo que cuestiona al EMB (menciona ONPE) aunque esté clasificado
+    como 'legal' debe bajar la dimensión 'Org. electoral' del radar — antes
+    quedaba en 100 porque solo miraba logistics/fraud/counting."""
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.composer.chapter_composer import CHAPTER_CATALOG
+    from agents.elite_report.models import EliteChapter
+
+    bundle = _make_bundle()
+    bundle.hunter_entries.append(_make_finding_ref(
+        "emb1", "Cuestionamiento a la imparcialidad de la ONPE", "legal", "critical"))
+    chapters = [EliteChapter(number=m["number"], chapter_id=m["chapter_id"],
+                             title=m["title"], narrative="x")
+                for m in CHAPTER_CATALOG]
+    stats = {"total": 36, "critical": 2, "high": 9, "medium": 14,
+             "by_severity": {"critical": 2, "high": 9, "medium": 14, "low": 0, "info": 0},
+             "days_covered": 30}
+    PEIRSEliteReport._attach_visualizations(chapters, bundle, _make_forecast(), stats)
+
+    radar = None
+    for ch in chapters:
+        for viz in ch.visualizations:
+            if viz.kind == "dimensions_radar":
+                radar = viz
+    assert radar is not None
+    emb_dim = next(d for d in radar.data["dimensions"]
+                   if "electoral" in d["label"].lower())
+    assert emb_dim["value"] < 100, "el cuestionamiento al EMB debe reflejarse"
+
+
+def test_gauge_level_coherent_with_score():
+    """La banda (level) del medidor debe ser coherente con el score que posiciona
+    la aguja — antes el forecast podía mostrar 'green' con score 0.78 (rojo)."""
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.composer.chapter_composer import CHAPTER_CATALOG
+    from agents.elite_report.models import EliteChapter
+
+    bundle = _make_bundle()  # 1 critical + varios high
+    chapters = [EliteChapter(number=m["number"], chapter_id=m["chapter_id"],
+                             title=m["title"], narrative="x")
+                for m in CHAPTER_CATALOG]
+    stats = PEIRSEliteReport._build_stats(bundle)
+    # forecast dice green, pero el gauge debe ignorarlo y usar el score.
+    forecast = _make_forecast()
+    forecast.early_warning_level = "green"
+    PEIRSEliteReport._attach_visualizations(chapters, bundle, forecast, stats)
+
+    gauge = None
+    for ch in chapters:
+        for v in ch.visualizations:
+            if v.kind == "early_warning_meter":
+                gauge = v
+    assert gauge is not None
+    score, level = gauge.data["score"], gauge.data["level"]
+    bands = [(0.60, "red"), (0.40, "orange"), (0.20, "amber"), (0.0, "green")]
+    expected = next(lvl for thr, lvl in bands if score >= thr)
+    assert level == expected, f"score={score} ⇒ {expected}, pero level={level}"
+
+
+def test_viz_captions_resolve_with_scale_direction():
+    """Las leyendas clave existen y explican la dirección de la escala."""
+    from agents.elite_report.i18n import t
+    radar = t("es", "viz.dimensions_radar.caption", "")
+    assert "100" in radar and "0" in radar  # explica los extremos
+    assert t("es", "viz.scenario_probability.caption", "") != ""
+    gauge = t("es", "viz.early_warning_meter.caption", "")
+    assert "rojo" in gauge.lower() or "riesgo" in gauge.lower()
+
+
+def test_compose_includes_runoff_chapter_without_llm():
+    """E2E sin LLM ni red: compose() debe generar el informe e incluir el
+    capítulo determinista de observación entre vueltas en chapters + render."""
+    import asyncio
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.models import EliteReportRequest, MissionMetadata
+
+    report = PEIRSEliteReport(llm=None, observation_store={"PER": {"entries": []}})
+    req = EliteReportRequest(
+        country_code="PER",
+        language="es",
+        include_predictive=False,
+        output_formats=["md", "html"],
+        mission_metadata=MissionMetadata(
+            report_number="TEST-RUNOFF-001",
+            period_start="2026-06-04",
+            period_end="2026-06-10",
+            jornada_date="2026-06-07",
+        ),
+    )
+    output = asyncio.run(report.compose(req))
+
+    assert output.status == "done"
+    ids = [c.chapter_id for c in output.chapters]
+    assert "observacion_entre_vueltas" in ids, ids
+    # Reposicionado: va inmediatamente después de "Jornada electoral".
+    assert ids.index("observacion_entre_vueltas") == ids.index("jornada_electoral") + 1
+    # Renumeración contigua de capítulos positivos (sin saltos ni duplicados).
+    nums = [c.number for c in output.chapters if c.number > 0]
+    assert nums == list(range(1, len(nums) + 1)), nums
+    # El estado vacío honesto llega al render final.
+    assert "Sin hallazgos corroborados" in (output.html or "")
+    # El contexto del proceso (finalistas) también.
+    assert "Keiko Fujimori" in (output.html or "")
