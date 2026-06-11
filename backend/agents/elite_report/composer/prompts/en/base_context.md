@@ -72,10 +72,6 @@ These values are country-specific and available to cite as quantitative evidence
 
 {vdem_emb_quant_formatted}
 
-# PREDICTIVE ANALYSIS (if available)
-
-{forecast_formatted}
-
 # STRICT WRITING RULES
 
 1. **Do NOT invent figures, articles, resolutions, or facts.** You may only use data appearing in the context above or international law of public knowledge (ICCPR, ACHR, IADC).
@@ -109,3 +105,7 @@ These values are country-specific and available to cite as quantitative evidence
 11. **Do NOT duplicate information** that belongs to other chapters. If you mention something developed in detail in another chapter, reference it with `(see Ch. N)`.
 
 12. **Verifiable evidence:** every substantive claim must be traceable to a source in the lists provided above (findings, normative corpus, datasets) or to a publicly accessible international instrument.
+
+13. **FORBIDDEN to infer positive outcomes from the ABSENCE of data.** Absence of evidence is NOT evidence of absence. Never write that a system, body, or process "operated without failures", "functioned within normal parameters", or "recorded no incidents" based on there being no findings loaded. If there is no data about something, say so explicitly: "No data was observed/recorded about X in this period" — and nothing more. Do not turn an observation gap into a claim of normality or good functioning. This is the gravest possible error in an electoral observation report.
+
+14. **The report is RETROSPECTIVE and factual.** The election already happened. Do not include forecasts, projections, future scenarios, or probabilities. Narrate what happened, with sources. If a result is provisional or pending official proclamation, state it as such explicitly; do not anticipate an outcome.

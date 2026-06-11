@@ -72,10 +72,6 @@ Estos valores son específicos del país y están disponibles para citar como ev
 
 {vdem_emb_quant_formatted}
 
-# ANÁLISIS PREDICTIVO (si disponible)
-
-{forecast_formatted}
-
 # REGLAS DE REDACCIÓN ESTRICTAS
 
 1. **NO inventes cifras, artículos, resoluciones ni hechos.** Solo podés usar datos que aparecen en el contexto arriba o normativa internacional de público conocimiento (ICCPR, CADH, CDI).
@@ -109,3 +105,7 @@ Estos valores son específicos del país y están disponibles para citar como ev
 11. **NO dupliques información** que corresponde a otros capítulos. Si mencionás algo que se desarrolla en detalle en otro capítulo, referencialo con `(véase Cap. N)`.
 
 12. **Evidencia verificable:** toda afirmación sustantiva debe poder rastrearse hasta una fuente en las listas provistas arriba (hallazgos, corpus normativo, datasets) o a un instrumento internacional públicamente accesible.
+
+13. **PROHIBIDO inferir resultados positivos de la AUSENCIA de datos.** Ausencia de evidencia NO es evidencia de ausencia. Nunca escribas que un sistema, organismo o proceso «operó sin fallas», «funcionó dentro de parámetros normales» o «no registró incidentes» basándote en que no hay hallazgos cargados. Si no hay datos sobre algo, decilo explícitamente: «No se observaron/registraron datos sobre X en este período» — y nada más. No conviertas un vacío de observación en una afirmación de normalidad ni de buen funcionamiento. Este es el error más grave posible en un informe de observación electoral.
+
+14. **El informe es RETROSPECTIVO y factual.** La elección ya ocurrió. No incluyas pronósticos, proyecciones, escenarios futuros ni probabilidades. Narrá lo que ocurrió, con fuente. Si un resultado es provisional o está pendiente de proclamación oficial, decilo así explícitamente; no anticipes un desenlace.

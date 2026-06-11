@@ -94,16 +94,15 @@ class PEIRSEliteReport:
         theme_ranking = self._build_theme_ranking(bundle)
         bundle.theme_ranking = theme_ranking
 
-        # ── 5. PREDICTIVE ENGINE ───────────────────────────────────────
+        # ── 5. PREDICTIVE ENGINE — DESACTIVADO ─────────────────────────
+        # El informe es RETROSPECTIVO/factual (la elección ya ocurrió). Se
+        # eliminó el análisis probabilístico (proyecciones + escenarios) a
+        # pedido institucional. El medidor de alerta temprana se conserva como
+        # ÍNDICE DE SEVERIDAD del período observado (no es pronóstico) y se
+        # renderiza en Conclusiones. forecast queda None: no hay capítulo
+        # predictivo en el catálogo y _attach_visualizations no emite
+        # forecast_chart ni scenario_probability.
         forecast = None
-        if req.include_predictive and req.report_type in ("preliminary", "final", "ad_hoc"):
-            engine = PredictiveEngine(llm=self.llm, country_code=req.country_code)
-            try:
-                forecast = await engine.forecast(bundle, horizon_days=req.forecast_horizon_days)
-            except Exception as e:
-                bundle.warnings.append(
-                    f"PredictiveEngine falló: {type(e).__name__}: {e}"
-                )
 
         # ── 6. CHAPTER COMPOSER ────────────────────────────────────────
         stats = self._build_stats(bundle)
@@ -193,6 +192,7 @@ class PEIRSEliteReport:
             country_name=country_name,
             report_id=report_id,
             generated_at=generated_at,
+            findings=bundle.hunter_entries if req.include_appendix_c else None,
         )
 
         # Markdown: intentamos con microsoft/markitdown (mejor fidelidad),
@@ -233,7 +233,7 @@ class PEIRSEliteReport:
             chapters=chapters,
             forecast=forecast,
             citations=citations,
-            all_findings=bundle.hunter_entries[:500] if req.include_appendix_c else [],
+            all_findings=bundle.hunter_entries[:2500] if req.include_appendix_c else [],
             markdown=markdown,
             html=html,
             pdf_path=pdf_path,
@@ -852,19 +852,13 @@ class PEIRSEliteReport:
                 ch.visualizations.append(_vs("heatmap_rights", heatmap_data))
                 if compliance_data["rows"]:
                     ch.visualizations.append(_vs("compliance_matrix", compliance_data))
-            elif ch.chapter_id == "analisis_predictivo":
-                if forecast_data:
-                    ch.visualizations.append(_vs("forecast_chart", forecast_data))
-                    ch.visualizations.append(_vs(
-                        "scenario_probability",
-                        {"scenarios": forecast_data["scenarios"]},
-                    ))
-                ch.visualizations.append(_vs("early_warning_meter", early_warning_data))
-                # Cableado de parliament_scenarios retirado 2026-04-29 a pedido
-                # de Mariana.
             elif ch.chapter_id == "conclusiones":
                 ch.visualizations.append(_vs("semaphore_institutional", semaphore_data))
                 ch.visualizations.append(_vs("dimensions_radar", radar_data))
+                # Medidor de alerta temprana reubicado aquí (antes vivía en el
+                # capítulo predictivo, ya eliminado). Es un ÍNDICE DE SEVERIDAD
+                # del período observado, NO un pronóstico.
+                ch.visualizations.append(_vs("early_warning_meter", early_warning_data))
             elif ch.chapter_id == "recomendaciones":
                 ch.visualizations.append(_vs("matrix_recommendations", recommendations_data))
             elif ch.chapter_id == "ia_regulacion":

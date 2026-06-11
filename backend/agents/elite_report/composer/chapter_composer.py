@@ -65,16 +65,17 @@ CHAPTER_CATALOG: List[Dict[str, Any]] = [
     {"number": 8, "chapter_id": "derechos_vulnerados",
      "title": "Derechos vulnerados",
      "prompt_file": "cap_08_derechos_vulnerados.md", "max_words": 900},
-    {"number": 9, "chapter_id": "analisis_predictivo",
-     "title": "Análisis predictivo",
-     "prompt_file": "cap_09_analisis_predictivo.md", "max_words": 1000},
-    {"number": 10, "chapter_id": "conclusiones",
+    # Capítulo "analisis_predictivo" (nº 9) ELIMINADO 2026-06-10: el informe es
+    # retrospectivo/factual, no prospectivo. Se quitó el análisis probabilístico
+    # (proyecciones + escenarios). El medidor de alerta temprana se reubicó en
+    # Conclusiones como índice de severidad del período observado.
+    {"number": 9, "chapter_id": "conclusiones",
      "title": "Conclusiones",
      "prompt_file": "cap_10_conclusiones.md", "max_words": 900},
-    {"number": 11, "chapter_id": "recomendaciones",
+    {"number": 10, "chapter_id": "recomendaciones",
      "title": "Recomendaciones",
      "prompt_file": "cap_11_recomendaciones.md", "max_words": 900},
-    {"number": 12, "chapter_id": "ia_regulacion",
+    {"number": 11, "chapter_id": "ia_regulacion",
      "title": "Inteligencia Artificial en el proceso electoral",
      "prompt_file": "cap_12_ia_regulacion.md", "max_words": 1000},
 ]
