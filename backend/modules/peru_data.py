@@ -435,6 +435,54 @@ PERU_RUNOFF_2026 = {
         "audit_status": "VERIFIED_SECONDARY_PRIMARY_PDF_NOT_PARSED",
         "audit_note": "Datos cargados el 2026-05-31 desde fuentes secundarias coincidentes (Wikipedia + Infobae + El Comercio). PDF JNE primario es texto-como-imagen CCITT, no parseable automáticamente; pendiente validación humana en navegador. Los porcentajes (17.19/12.04/11.91/10.98/10.15/7.93/7.30) suman 77.50% de votos válidos — el ~22.5% restante corresponde a los 6 candidatos no listados (cada uno <7%). Re-cargar el detalle completo cuando ONPE publique un endpoint JSON o una tabla HTML estática.",
     },
+    # ── RESULTADOS DE LA 2ª VUELTA (balotaje 7-jun-2026) ──────────────────
+    # PROVISIONAL — conteo ONPE en curso, SIN proclamación del JNE. NO declarar
+    # presidente electo: el resultado está dentro del margen (~0.05 pp) y quedan
+    # actas en revisión en JEE. Cifras al corte del 10-jun-2026 (~97.9% actas),
+    # cross-referenciadas (varían levemente según el corte horario del conteo
+    # en vivo). Fuente primaria: ONPE; secundarias: Infobae / Gestión / El Comercio.
+    "second_round_results": {
+        "election_date": "2026-06-07",
+        "status": "EN_ESCRUTINIO_SIN_PROCLAMACION",
+        "as_of": "2026-06-10",
+        "provisional": True,
+        "actas_processed_pct": 97.9,
+        "candidates": [
+            {"candidate_name": "Roberto Sánchez Palomino", "party": "Juntos por el Perú",
+             "party_id": "jpp", "pct_valid": 50.02, "votes": 9_020_928},
+            {"candidate_name": "Keiko Fujimori", "party": "Fuerza Popular",
+             "party_id": "fp", "pct_valid": 49.98, "votes": 9_014_171},
+        ],
+        "margin_votes_approx": 6_757,
+        "margin_pct_approx": 0.05,
+        "blank_pct": 0.6,
+        "null_pct": 5.93,
+        "proclamation": {
+            "proclaimed": False,
+            "winner": None,
+            "note": "El JNE no ha proclamado ganador. ~1.600 actas en revisión en JEE; el presidente del JNE, Roberto Burneo, estimó que el resultado se conocería «casi un mes después» del 7-jun por impugnaciones y actas observadas.",
+        },
+        "source": "ONPE — Presentación de Resultados, Segunda Vuelta EG 2026",
+        "source_url": "https://resultadosegundavuelta.onpe.gob.pe/",
+        "sources_secondary": [
+            "https://www.infobae.com/peru/2026/06/07/resultados-onpe-en-vivo-conteo-oficial-de-votos-de-keiko-fujimori-y-roberto-sanchez-en-la-segunda-vuelta-de-elecciones-2026/",
+            "https://gestion.pe/mix/respuestas/quien-gano-las-elecciones-generales-2026-en-peru-en-vivo-keiko-fujimori-o-roberto-sanchez-resultados-de-la-onpe-en-directo-segunda-vuelta-nnda-nnrt-noticia/",
+            "https://elcomercio.pe/politica/elecciones/resultados-onpe-segunda-vuelta-elecciones-peru-2026-en-vivo-asi-va-el-conteo-oficial-entre-keiko-fujimori-y-roberto-sanchez-ultimas-noticia/",
+        ],
+        "audit_status": "PROVISIONAL_VERIFIED_SECONDARY",
+        "audit_note": "Conteo en curso al 10-jun-2026 (~97.9% actas). Cifras cross-referenciadas Infobae/Gestión/El Comercio; varían levemente por el corte horario del conteo en vivo. Resultado dentro del margen (~0.05 pp, ~6.700 votos), técnicamente en empate. SIN ganador proclamado — el informe NO debe declarar presidente electo hasta la proclamación oficial del JNE.",
+    },
+    # ── Sistema tecnológico STAE — corrección factual ────────────────────
+    # El STAE (Sistema/Solución Tecnológica de Apoyo al Escrutinio, con IA) NO
+    # operó "sin fallas": el informe de 1ª vuelta documentó fallas durante el
+    # escrutinio. Solo se empleó en la 1ª vuelta; en la 2ª vuelta no se utilizó.
+    "electoral_technology_note": {
+        "stae_first_round": "El STAE se desplegó en la 1ª vuelta y durante el escrutinio presentó fallas documentadas (ruptura de cédulas en Callao por fallas técnicas) y operó sin auditoría independiente pública certificada — punto central de la observación post-electoral.",
+        "stae_second_round": "Según la observación PEIRS, el STAE no se empleó en la 2ª vuelta.",
+        "source_first_round": "Informe PEIRS 1ª vuelta (INFORME_PERU_2026) — Sección 7.5/11; Resolución JNE N° 0891-2025-JNE (rechazo de voto electrónico no presencial por ausencia de auditoría independiente).",
+        "audit_status": "VERIFIED_SECONDARY",
+        "audit_note": "La afirmación sobre 1ª vuelta tiene respaldo documental en el informe previo. El no-uso en 2ª vuelta es observación PEIRS pendiente de confirmación documental ONPE. PROHIBIDO afirmar que el STAE 'operó sin fallas' o inferir buen funcionamiento por ausencia de hallazgos.",
+    },
     # Observación de la fase entre vueltas, según metodología canónica PEIRS
     # (ver memoria peirs-observation-methodology, 1-jun-2026). Estructura
     # re-diseñada por agente experto en Observación Electoral: 9 campos
@@ -492,9 +540,64 @@ PERU_RUNOFF_2026 = {
         # Fuentes: Diario de Debates del Congreso, comunicados JNE/ONPE, IDL-Reporteros.
         # Item: {date, actor, target_institution, action_type, source_url, institutional_response}
         "emb_independence_stress_signals": {
-            "signals": [],
-            "audit_status": "PENDIENTE_VERIFICACION",
-            "audit_note": "Tipos: moción_interpelación | ataque_personal_magistrados | retiro_presupuesto | declaraciones_cuestionando_autoridad. Estándar: OSCE Copenhagen §7 + CDI Art. 3.",
+            "signals": [
+                {
+                    "date": "2026-04-14",
+                    "actor": "Jurado Nacional de Elecciones (JNE)",
+                    "target_institution": "ONPE",
+                    "action_type": "denuncia_penal",
+                    "summary": "El JNE denuncia penalmente al jefe de ONPE, Piero Corvetto, y a 3 funcionarios por presuntos delitos contra el derecho al sufragio y omisión de actos funcionales tras la crisis logística de la 1ª vuelta.",
+                    "source_url": "https://elcomercio.pe/politica/elecciones/piero-corvetto-no-asume-responsabilidad-directa-por-fallas-y-culpa-a-subgerencia-de-onpe-asi-fue-su-presentacion-en-el-congreso-elecciones",
+                    "verification_level": "VERIFIED_SECONDARY",
+                },
+                {
+                    "date": "2026-04-15",
+                    "actor": "Fiscal de la Nación (Tomás Gálvez)",
+                    "target_institution": "ONPE / JNJ",
+                    "action_type": "pedido_separación_cautelar",
+                    "summary": "El Fiscal de la Nación solicita públicamente que la JNJ separe al jefe de ONPE mediante medida cautelar durante el escrutinio — precedente inusual: primera vez que se pide separar al titular del organismo electoral en plena tabulación.",
+                    "source_url": "https://elcomercio.pe/politica/actualidad/tomas-galvez-sobre-piero-corvetto-la-jnj-tiene-que-separarlo-en-un-proceso-administrativo-con-una-medida-cautelar-ultimas-noticia/",
+                    "verification_level": "VERIFIED_SECONDARY",
+                },
+                {
+                    "date": "2026-04-15",
+                    "actor": "Procurador del JNE (Ronald Angulo)",
+                    "target_institution": "ONPE",
+                    "action_type": "denuncia_penal",
+                    "summary": "El procurador del JNE denuncia penalmente a Corvetto por no implementar medidas de contingencia cuando el material electoral no llegó a 13 centros de sufragio.",
+                    "source_url": "https://elcomercio.pe/politica/ronald-angulo-procurador-del-jne-corvetto-pudo-dar-medidas-de-contingencia-pero-se-quedo-callado-y-no-hizo-nada-noticia/",
+                    "verification_level": "VERIFIED_SECONDARY",
+                },
+                {
+                    "date": "2026-04-16",
+                    "actor": "Contraloría General de la República",
+                    "target_institution": "ONPE",
+                    "action_type": "control_observaciones",
+                    "summary": "La Contraloría documenta más de 270 informes con 600 observaciones sobre fallas en la distribución de material electoral por parte de ONPE previas a la jornada — evidencia de conocimiento institucional del riesgo.",
+                    "source_url": "https://elcomercio.pe/politica/piero-corvetto-y-el-escandalo-del-reparto-de-material-electoral-mas-de-270-informes-con-600-observaciones-de-la-contraloria-noticia/",
+                    "verification_level": "VERIFIED_SECONDARY",
+                },
+                {
+                    "date": "2026-04-16",
+                    "actor": "Constitucionalista Aníbal Quiroga (vía RPP)",
+                    "target_institution": "ONPE",
+                    "action_type": "declaraciones_cuestionando_autoridad",
+                    "summary": "Quiroga sostiene que «es impensable ir a una segunda vuelta con Piero Corvetto como jefe de la ONPE» y sugiere medida cautelar de suspensión por el JNE.",
+                    "source_url": "https://rpp.pe/politica/elecciones/anibal-quiroga-dice-que-es-impensable-ir-a-una-segunda-vuelta-con-piero-corvetto-como-jefe-de-la-onpe-noticia-1684600",
+                    "verification_level": "VERIFIED_SECONDARY",
+                },
+                {
+                    "date": "2026-04-16",
+                    "actor": "Gremios empresariales (Confiep, Comex, Adex, CCL)",
+                    "target_institution": "ONPE",
+                    "action_type": "presión_destitución",
+                    "summary": "Los gremios empresariales unifican posición y exigen la destitución inmediata del jefe de ONPE tras las fallas de la jornada.",
+                    "source_url": "https://elcomercio.pe/elecciones/elecciones-2026-union-de-gremios-pide-destitucion-inmediata-de-piero-corvetto-jefe-de-la-onpe-tras-fallas-en-comicios-ultimas-noticia/",
+                    "verification_level": "VERIFIED_SECONDARY",
+                },
+            ],
+            "audit_status": "VERIFIED_SECONDARY",
+            "audit_note": "Señales recuperadas del informe PEIRS de 1ª vuelta (12-16 abr 2026), cada una con fuente periodística primaria (El Comercio / RPP). Documentan estrés institucional convergente sobre ONPE: penal, administrativo, político y gremial. Tipos: moción_interpelación | ataque_personal_magistrados | retiro_presupuesto | declaraciones_cuestionando_autoridad | denuncia_penal | control_observaciones | pedido_separación_cautelar. Estándar: OSCE Copenhagen §7 + CDI Art. 3.",
         },
         # Preparación logística para la jornada electoral del 7-jun.
         # Fuente: ONPE resoluciones jefaturales + MOE-OEA pre-election report.
