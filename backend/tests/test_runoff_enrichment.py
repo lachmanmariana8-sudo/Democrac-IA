@@ -183,11 +183,17 @@ def test_institutional_axes_untouched_with_entries_present():
     entries = [_entry("e1", "hate_speech", credibility="high"),
                _entry("e2", "disinformation", credibility="high")]
     obs = enrich_runoff_observation(PERU_RUNOFF_2026, entries)["runoff_phase_observation"]
-    for axis in ("media_access_monitoring", "emb_independence_stress_signals",
+    # Hunter (OSINT) NO escala ejes institucionales aún vacíos.
+    for axis in ("media_access_monitoring",
                  "election_day_logistics_readiness", "vote_count_transparency_protocol",
                  "dispute_resolution_tracker", "campaign_conduct_finalist_a",
                  "campaign_conduct_finalist_b"):
         assert obs[axis]["audit_status"] == AUDIT_PENDING
+    # emb_independence_stress_signals está pre-cargado con señales documentadas
+    # (crisis ONPE/JNE de 1ª vuelta, con fuentes). El Hunter no lo altera:
+    # conserva su baseline VERIFIED_SECONDARY.
+    assert obs["emb_independence_stress_signals"]["audit_status"] == AUDIT_SECONDARY
+    assert len(obs["emb_independence_stress_signals"]["signals"]) >= 1
 
 
 # ── Constantes nombradas (anti magic-number drift) ────────────────────────────

@@ -439,22 +439,25 @@ def test_peru_adapter_runoff_observation_returns_full_dict_with_axes():
         assert axis in obs
 
 
-def test_runoff_chapter_empty_state_generates_honestly():
-    """Sin entries, el capítulo se genera distinguiendo 'monitoreado 0 hallazgos'
-    (OSINT) de 'no observado' (institucional). Requisito del 10-jun."""
+def test_runoff_chapter_no_pending_language():
+    """Requisito: cuando no hay datos NO debe decir 'pendiente de verificar' ni
+    mostrar el estado crudo. Los ejes vacíos se resumen en una nota de cobertura
+    honesta (monitoreado-sin-incidentes vs sin-evidencia-primaria)."""
     from agents.elite_report.country_adapters import get_adapter
     from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
 
     obs = get_adapter("PER").runoff_observation([])
     chapter = build_runoff_observation_chapter(obs, lang="es")
     assert chapter is not None
-    assert chapter.chapter_id == "observacion_entre_vueltas"
-    # OSINT vacío → "sin hallazgos corroborados" (monitoreado)
-    assert "Sin hallazgos corroborados" in chapter.narrative
-    # Institucional vacío → "no observado"
-    assert "Eje no observado" in chapter.narrative
-    # No debe haber escalado nada: estado global pendiente
-    assert "PENDIENTE_VERIFICACION" in chapter.narrative
+    n = chapter.narrative
+    # Lenguaje prospectivo ERRADICADO.
+    assert "PENDIENTE_VERIFICACION" not in n
+    assert "pendiente de verificar" not in n.lower()
+    assert "Eje no observado" not in n
+    # Nota de cobertura presente, con la distinción honesta de los vacíos.
+    assert "Cobertura de observación" in n
+    assert "monitoreados sin incidentes documentados" in n
+    assert "sin evidencia primaria procesada" in n
 
 
 def test_runoff_chapter_reflects_hunter_escalation():
@@ -478,7 +481,9 @@ def test_runoff_chapter_reflects_hunter_escalation():
     assert obs["electoral_violence_incidents"]["audit_status"] == "VERIFIED_SECONDARY"
 
     chapter = build_runoff_observation_chapter(runoff, lang="es")
-    assert "VERIFIED_SECONDARY" in chapter.narrative
+    # Estado mostrado en texto LEGIBLE (no el código crudo).
+    assert "hallazgos verificados" in chapter.narrative
+    assert "VERIFIED_SECONDARY" not in chapter.narrative
     assert "Hallazgos registrados: 2" in chapter.narrative
 
 
@@ -489,21 +494,34 @@ def test_runoff_chapter_none_observation_returns_none():
     assert build_runoff_observation_chapter({"finalists": []}, lang="es") is None
 
 
-def test_runoff_chapter_explains_process_context():
-    """El capítulo debe explicar el proceso: finalistas, %, fecha del balotaje,
-    qué observa cada eje. (Antes era solo 10 líneas de PENDIENTE.)"""
+def test_runoff_chapter_is_factual_record_both_rounds():
+    """El capítulo es el registro factual de AMBAS vueltas: 1ª (resultados),
+    fase entre vueltas (observación) y 2ª (provisional, sin ganador) + STAE."""
     from agents.elite_report.country_adapters import get_adapter
     from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
 
     runoff = get_adapter("PER").runoff_observation([])
     narrative = build_runoff_observation_chapter(runoff, lang="es").narrative
-    assert "Keiko Fujimori" in narrative
-    assert "Roberto Sánchez" in narrative
-    assert "2026-06-07" in narrative          # fecha del balotaje
-    assert "17.19" in narrative               # % 1ª vuelta
-    assert "ICCPR Art. 25" in narrative       # base legal
-    # "qué observa" de al menos un eje OSINT
-    assert "Integridad informativa" in narrative
+
+    # 1ª vuelta — resultados
+    assert "Primera vuelta" in narrative
+    assert "Keiko Fujimori" in narrative and "Roberto Sánchez" in narrative
+    assert "17.19" in narrative
+    # 2ª vuelta — provisional, SIN ganador proclamado
+    assert "Segunda vuelta" in narrative
+    assert "provisional" in narrative.lower()
+    assert "Sin ganador proclamado" in narrative
+    assert "50.02" in narrative                       # % provisional 2ª vuelta
+    # STAE — corrección factual (no se afirma buen funcionamiento)
+    assert "STAE" in narrative
+    assert "sin fallas" not in narrative.lower()
+    # Crisis EMB cargada con fuente
+    assert "Corvetto" in narrative
+    # base legal + nota de cobertura de los ejes vacíos
+    assert "ICCPR Art. 25" in narrative
+    assert "Cobertura de observación" in narrative
+    # Macro-secciones claras
+    assert "Resultados electorales" in narrative
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -641,7 +659,49 @@ def test_compose_includes_runoff_chapter_without_llm():
     # Renumeración contigua de capítulos positivos (sin saltos ni duplicados).
     nums = [c.number for c in output.chapters if c.number > 0]
     assert nums == list(range(1, len(nums) + 1)), nums
-    # El estado vacío honesto llega al render final.
-    assert "Sin hallazgos corroborados" in (output.html or "")
-    # El contexto del proceso (finalistas) también.
-    assert "Keiko Fujimori" in (output.html or "")
+    # Análisis probabilístico ELIMINADO: no hay capítulo predictivo ni forecast.
+    assert "analisis_predictivo" not in ids
+    assert output.forecast is None
+    # Ninguna viz de proyección/escenarios se emite.
+    kinds = [v.kind for c in output.chapters for v in c.visualizations]
+    assert "forecast_chart" not in kinds and "scenario_probability" not in kinds
+    # El medidor de alerta temprana se conserva, reubicado en Conclusiones.
+    concl = next(c for c in output.chapters if c.chapter_id == "conclusiones")
+    assert "early_warning_meter" in [v.kind for v in concl.visualizations]
+    # Sin lenguaje "pendiente"; en su lugar, nota de cobertura honesta.
+    html = output.html or ""
+    assert "PENDIENTE_VERIFICACION" not in html
+    assert "Cobertura de observación" in html
+    # Resultados de ambas vueltas (fuente factual única) + crisis EMB.
+    assert "Keiko Fujimori" in html and "Sin ganador proclamado" in html
+    assert "Corvetto" in html
+    # Apéndice C con trazabilidad (tabla de hallazgos) presente en estructura.
+    assert 'id="appendix-c"' in html
+
+
+def test_appendix_c_renders_traceable_findings_table():
+    """El Apéndice C debe renderizar una TABLA real de hallazgos con
+    trazabilidad (fecha, severidad, categoría, hallazgo, fuente con URL),
+    no un placeholder. Atrapa el bug del placeholder vacío."""
+    from agents.elite_report.renderer.html_renderer import _render_appendix_c
+    from agents.elite_report.models import FindingRef
+
+    findings = [
+        FindingRef(entry_id="f1", finding="Ataque a local de votación en Cusco",
+                   category="security", severity="critical",
+                   source_name="ACLED", source_url="https://acleddata.com/x",
+                   recorded_at="2026-06-07T10:00:00+00:00"),
+        FindingRef(entry_id="f2", finding="Narrativa de fraude en redes",
+                   category="disinformation", severity="high",
+                   source_name="DFRLab", source_url="https://dfrlab.org/y",
+                   recorded_at="2026-06-08T09:00:00+00:00"),
+    ]
+    html = _render_appendix_c(findings, language="es")
+    assert "findings-table" in html               # tabla real, no placeholder
+    assert "Ataque a local de votación" in html   # el hallazgo
+    assert "https://acleddata.com/x" in html       # trazabilidad: URL primaria
+    assert "2026-06-07" in html                    # fecha
+    assert "2 hallazgos" in html                   # volumen del corpus
+    # Estado vacío honesto (sin findings) NO usa lenguaje de placeholder viejo.
+    empty = _render_appendix_c([], language="es")
+    assert "descargable" not in empty.lower() or "No se registraron" in empty

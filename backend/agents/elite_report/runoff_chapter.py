@@ -76,23 +76,38 @@ def _axis_items(block: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
-def _render_items(items: List[Dict[str, Any]], limit: int = 5) -> List[str]:
+def _render_items(items: List[Dict[str, Any]], limit: int = 8) -> List[str]:
+    """Renderiza items de cualquiera de los ejes (incidents/signals/cases/...).
+
+    Tolerante a esquemas distintos: hallazgos OSINT ({content_summary}),
+    narrativas ({narrative_summary}) y señales del EMB ({actor, action_type,
+    summary}). Cada item cierra con su fuente primaria (source_url)."""
+    _KNOWN_SEV = {"critical", "high", "medium", "low", "info", "moderate"}
     lines = []
     for it in items[:limit]:
         date = it.get("date") or "—"
-        sev = it.get("severity") or "info"
-        summary = (it.get("content_summary") or it.get("narrative_summary") or "").strip()
-        classification = it.get("classification") or ""
+        # Solo mostramos severidad real; NUNCA códigos de auditoría crudos
+        # (verification_level tipo VERIFIED_SECONDARY no se expone al lector).
+        sev_raw = str(it.get("severity") or "").lower()
+        sev = sev_raw if sev_raw in _KNOWN_SEV else ""
+        summary = (it.get("content_summary") or it.get("narrative_summary")
+                   or it.get("summary") or "").strip()
+        actor = it.get("actor") or ""
+        classification = it.get("classification") or it.get("action_type") or ""
         sources = it.get("sources") or []
         src = sources[0] if sources else ""
         url = it.get("source_url")
         if url:
-            tail = " — [" + (src or url) + "](" + url + ")"
+            tail = " — [" + (src or "fuente") + "](" + url + ")"
         elif src:
             tail = " — " + src
         else:
             tail = ""
-        bullet = "- **" + str(date) + "** · " + str(sev)
+        bullet = "- **" + str(date) + "**"
+        if sev:
+            bullet += " · " + sev
+        if actor:
+            bullet += " · " + str(actor)
         if summary:
             bullet += " · " + summary
         if classification:
@@ -102,32 +117,26 @@ def _render_items(items: List[Dict[str, Any]], limit: int = 5) -> List[str]:
     return lines
 
 
-def _build_context_section(runoff: Dict[str, Any], lang: str) -> List[str]:
-    """Párrafo introductorio: finalistas, fechas, comparativa 1ª vuelta, base legal."""
-    parts: List[str] = ["### " + t(lang, "runoff_obs.context_header")]
+def _build_first_round_section(runoff: Dict[str, Any], lang: str) -> List[str]:
+    """Sección 1 — resultados consumados de la PRIMERA vuelta (12-abr).
 
-    runoff_date = runoff.get("runoff_date") or "—"
-    first_round_date = runoff.get("first_round_date") or "—"
-    parts.append(t(lang, "runoff_obs.context_intro").format(
-        runoff_date=runoff_date, first_round_date=first_round_date))
-
-    finalists = runoff.get("finalists") or []
-    pcts = []
-    for f in finalists:
-        pct = f.get("first_round_pct")
-        if pct is not None:
-            pcts.append(pct)
-        parts.append(t(lang, "runoff_obs.finalist_line").format(
-            name=f.get("candidate_name", "—"),
-            party=f.get("party_name", "—"),
-            pct=pct if pct is not None else "—",
-            votes=_fmt_int(f.get("first_round_votes"), lang),
-        ))
-    if len(pcts) == 2:
-        parts.append(t(lang, "runoff_obs.margin_line").format(
-            margin=round(abs(pcts[0] - pcts[1]), 2)))
+    Fuente factual ÚNICA de los resultados de 1ª vuelta: el breakdown completo.
+    Los dos primeros se marcan como finalistas que pasan al balotaje."""
+    parts: List[str] = ["#### " + t(lang, "runoff_obs.first_round_header")]
+    parts.append(t(lang, "runoff_obs.first_round_intro"))
 
     br = runoff.get("first_round_full_breakdown") or {}
+    by_party = br.get("by_party") or []
+    flag = t(lang, "runoff_obs.advances_flag")
+    for i, c in enumerate(by_party):
+        parts.append(t(lang, "runoff_obs.candidate_line").format(
+            name=c.get("candidate", "—"),
+            party=c.get("party_name", "—"),
+            pct=c.get("pct", "—"),
+            votes=_fmt_int(c.get("votes"), lang),
+            flag=(flag if i < 2 else ""),
+        ))
+
     abstention = br.get("abstention_pct")
     if abstention is not None:
         parts.append(t(lang, "runoff_obs.turnout_line").format(
@@ -136,50 +145,123 @@ def _build_context_section(runoff: Dict[str, Any], lang: str) -> List[str]:
             blank=br.get("blank_pct", "—"),
             null=br.get("null_pct", "—"),
         ))
-
-    parts.append(t(lang, "runoff_obs.legal_basis"))
     return parts
 
 
-def build_runoff_observation_narrative(runoff: Dict[str, Any], lang: str) -> str:
-    """Construye el markdown del capítulo desde el dict completo del balotaje."""
-    observation = runoff.get("runoff_phase_observation") or {}
-    parts: List[str] = _build_context_section(runoff, lang)
+# Estado → texto legible (NUNCA mostramos "PENDIENTE_VERIFICACION" al lector).
+_STATUS_TEXT = {
+    "CONFIRMED": "runoff_obs.status_confirmed",
+    "VERIFIED_SECONDARY": "runoff_obs.status_verified",
+    "PENDIENTE_VERIFICACION": "runoff_obs.status_registered",
+}
 
-    parts.append("### " + t(lang, "runoff_obs.observation_header"))
-    parts.append(t(lang, "runoff_obs.intro"))
 
-    total_findings = 0
-    any_escalated = False
-    body: List[str] = []
+def _build_observation_section(observation: Dict[str, Any], lang: str) -> List[str]:
+    """Observación del proceso entre vueltas — registro RETROSPECTIVO.
+
+    Solo desarrolla los ejes con hechos documentados. Los ejes sin datos NO se
+    listan uno a uno con "pendiente"; se resumen en una nota de cobertura
+    honesta (monitoreado-sin-incidentes vs sin-evidencia-primaria), preservando
+    la trazabilidad del vacío sin sonar prospectivo."""
+    parts: List[str] = [t(lang, "runoff_obs.observation_intro")]
+
+    monitored_empty: List[str] = []   # OSINT vacíos
+    no_source_empty: List[str] = []   # institucionales vacíos
     for axis_key in AXIS_ORDER:
         block = observation.get(axis_key)
         if not isinstance(block, dict):
             continue
-        status = block.get("audit_status", "PENDIENTE_VERIFICACION")
-        if status in _ESCALATED:
-            any_escalated = True
-        count = _axis_count(axis_key, block)
-        total_findings += count
-
         label = t(lang, "runoff_obs.axis." + axis_key, axis_key)
-        body.append("#### " + label + " — `" + str(status) + "`")
-        # Qué observa el eje (siempre, aunque esté vacío).
-        body.append("*" + t(lang, "runoff_obs.desc." + axis_key, "") + "*")
+        count = _axis_count(axis_key, block)
 
         if count == 0:
-            key = "runoff_obs.no_findings" if axis_key in OSINT_AXES else "runoff_obs.not_observed"
-            body.append(t(lang, key))
-        else:
-            body.append(t(lang, "runoff_obs.findings_count").format(n=count))
-            items = _axis_items(block)
-            if items:
-                body.extend(_render_items(items))
+            (monitored_empty if axis_key in OSINT_AXES else no_source_empty).append(label)
+            continue
 
-    global_status = "PARCIAL" if any_escalated else "PENDIENTE_VERIFICACION"
-    parts.append("**" + t(lang, "runoff_obs.global_header").format(
-        status=global_status, n=total_findings) + "**")
-    parts.extend(body)
+        # Eje con hechos documentados: se desarrolla con estado LEGIBLE.
+        status = block.get("audit_status", "PENDIENTE_VERIFICACION")
+        status_txt = t(lang, _STATUS_TEXT.get(status, "runoff_obs.status_registered"), "")
+        parts.append("#### " + label)
+        parts.append("*" + t(lang, "runoff_obs.desc." + axis_key, "") + "*")
+        parts.append("**" + status_txt + "** · " +
+                     t(lang, "runoff_obs.findings_count").format(n=count))
+        items = _axis_items(block)
+        if items:
+            parts.extend(_render_items(items))
+
+    # Nota de cobertura para los ejes sin hechos documentados.
+    if monitored_empty or no_source_empty:
+        parts.append("#### " + t(lang, "runoff_obs.coverage_header"))
+        if monitored_empty:
+            parts.append(t(lang, "runoff_obs.coverage_monitored").format(
+                axes=", ".join(monitored_empty)))
+        if no_source_empty:
+            parts.append(t(lang, "runoff_obs.coverage_no_source").format(
+                axes=", ".join(no_source_empty)))
+    return parts
+
+
+def _build_second_round_section(runoff: Dict[str, Any], lang: str) -> List[str]:
+    """Sección 3 — resultado PROVISIONAL de la 2ª vuelta (7-jun). SIN ganador
+    proclamado: refleja el escrutinio en curso, no anticipa desenlace."""
+    sr = runoff.get("second_round_results")
+    if not isinstance(sr, dict):
+        return []
+    parts: List[str] = ["#### " + t(lang, "runoff_obs.second_round_header")]
+    parts.append(t(lang, "runoff_obs.second_round_status").format(
+        as_of=sr.get("as_of", "—"),
+        actas=sr.get("actas_processed_pct", "—"),
+    ))
+    for c in sr.get("candidates") or []:
+        parts.append(t(lang, "runoff_obs.candidate_line_prov").format(
+            name=c.get("candidate_name", "—"),
+            party=c.get("party", "—"),
+            pct=c.get("pct_valid", "—"),
+            votes=_fmt_int(c.get("votes"), lang),
+        ))
+    procl = sr.get("proclamation") or {}
+    if not procl.get("proclaimed"):
+        parts.append(t(lang, "runoff_obs.second_round_pending").format(
+            note=procl.get("note", "")))
+    src_url = sr.get("source_url")
+    if src_url:
+        parts.append("> Fuente: [" + sr.get("source", "ONPE") + "](" + src_url + ")")
+    return parts
+
+
+def _build_stae_note(runoff: Dict[str, Any], lang: str) -> List[str]:
+    """Nota factual sobre el STAE — corrige la falsa afirmación de buen
+    funcionamiento. Solo se emite si hay dato cargado."""
+    note = runoff.get("electoral_technology_note")
+    if not isinstance(note, dict):
+        return []
+    parts: List[str] = ["#### " + t(lang, "runoff_obs.stae_header")]
+    if note.get("stae_first_round"):
+        parts.append(note["stae_first_round"])
+    if note.get("stae_second_round"):
+        parts.append(note["stae_second_round"])
+    src = note.get("source_first_round")
+    if src:
+        parts.append("> " + src)
+    return parts
+
+
+def build_runoff_observation_narrative(runoff: Dict[str, Any], lang: str) -> str:
+    """Markdown del capítulo factual: 1ª vuelta · entre vueltas · 2ª vuelta · STAE.
+
+    Es la FUENTE ÚNICA de los resultados electorales en el informe (los demás
+    capítulos no los repiten). Determinista: sin LLM, sin pronósticos."""
+    observation = runoff.get("runoff_phase_observation") or {}
+    parts: List[str] = []
+    # Macro-sección A — Resultados electorales (hechos consumados).
+    parts.append("### " + t(lang, "runoff_obs.results_macro"))
+    parts += _build_first_round_section(runoff, lang)
+    parts += _build_second_round_section(runoff, lang)
+    parts += _build_stae_note(runoff, lang)
+    # Macro-sección B — Observación del proceso entre vueltas.
+    parts.append("### " + t(lang, "runoff_obs.between_header"))
+    parts += _build_observation_section(observation, lang)
+    parts.append(t(lang, "runoff_obs.legal_basis"))
     return "\n\n".join(parts)
 
 
@@ -197,6 +279,6 @@ def build_runoff_observation_chapter(
     return EliteChapter(
         number=RUNOFF_CHAPTER_NUMBER,
         chapter_id=RUNOFF_CHAPTER_ID,
-        title="Observación de la fase entre vueltas — 9 ejes canónicos",
+        title=t(lang, "runoff_obs.report_title"),
         narrative=narrative,
     )

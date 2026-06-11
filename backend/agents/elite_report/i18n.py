@@ -210,6 +210,27 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Complete list of Hunter findings available in downloadable Markdown format. Includes entry_id, date, severity, category, finding, source, URL, and priority_score.",
         "pt": "Lista completa de registros do Hunter disponível em formato Markdown para download. Inclui entry_id, data, severidade, categoria, registro, mídia, URL e priority_score.",
     },
+    "appendix.c.intro": {
+        "es": "{n} hallazgos del corpus del Hunter en el período observado. Cada fila es rastreable hasta su fuente primaria (enlace en la columna Fuente). Es el respaldo auditable del informe.",
+        "en": "{n} findings from the Hunter corpus in the observed period. Each row is traceable to its primary source (link in the Source column). This is the report's auditable backing.",
+        "pt": "{n} registros do corpus do Hunter no período observado. Cada linha é rastreável até sua fonte primária (link na coluna Fonte). É o respaldo auditável do relatório.",
+    },
+    "appendix.c.empty": {
+        "es": "No se registraron hallazgos del Hunter en el período observado.",
+        "en": "No Hunter findings were recorded in the observed period.",
+        "pt": "Não foram registrados achados do Hunter no período observado.",
+    },
+    "appendix.c.truncated": {
+        "es": "Se muestran los primeros {shown} de {total} hallazgos. El listado completo está en el Markdown descargable.",
+        "en": "Showing the first {shown} of {total} findings. The complete list is in the downloadable Markdown.",
+        "pt": "Exibindo os primeiros {shown} de {total} registros. A lista completa está no Markdown para download.",
+    },
+    "appendix.c.col.n": {"es": "#", "en": "#", "pt": "#"},
+    "appendix.c.col.date": {"es": "Fecha", "en": "Date", "pt": "Data"},
+    "appendix.c.col.severity": {"es": "Sev.", "en": "Sev.", "pt": "Sev."},
+    "appendix.c.col.category": {"es": "Categoría", "en": "Category", "pt": "Categoria"},
+    "appendix.c.col.finding": {"es": "Hallazgo", "en": "Finding", "pt": "Achado"},
+    "appendix.c.col.source": {"es": "Fuente", "en": "Source", "pt": "Fonte"},
 
     # ── Chapter titles (deben coincidir con CHAPTER_CATALOG) ─────────
     "chapter.declaracion_preliminar": {
@@ -278,9 +299,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Inteligência Artificial no processo eleitoral",
     },
     "chapter.observacion_entre_vueltas": {
-        "es": "Observación de la fase entre vueltas — 9 ejes canónicos",
-        "en": "Runoff-phase observation — 9 canonical axes",
-        "pt": "Observação da fase de segundo turno — 9 eixos canônicos",
+        "es": "Resultados electorales y observación del proceso — 1ª y 2ª vuelta",
+        "en": "Electoral results and process observation — first and second round",
+        "pt": "Resultados eleitorais e observação do processo — 1º e 2º turno",
     },
 
     # ── Capítulo: observación entre vueltas (determinista, sin LLM) ───
@@ -341,6 +362,59 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     },
 
     # Contexto del proceso de cara a la segunda vuelta (capítulo determinista).
+    "runoff_obs.report_title": {
+        "es": "Resultados electorales y observación del proceso — 1ª y 2ª vuelta",
+        "en": "Electoral results and process observation — first and second round",
+        "pt": "Resultados eleitorais e observação do processo — 1º e 2º turno",
+    },
+    "runoff_obs.first_round_header": {
+        "es": "Primera vuelta — resultados oficiales (12 de abril de 2026)",
+        "en": "First round — official results (12 April 2026)",
+        "pt": "Primeiro turno — resultados oficiais (12 de abril de 2026)",
+    },
+    "runoff_obs.first_round_intro": {
+        "es": "Resultados oficiales de la primera vuelta presidencial. Los dos candidatos más votados pasaron al balotaje:",
+        "en": "Official results of the first presidential round. The two most-voted candidates advanced to the runoff:",
+        "pt": "Resultados oficiais do primeiro turno presidencial. Os dois candidatos mais votados avançaram ao segundo turno:",
+    },
+    "runoff_obs.candidate_line": {
+        "es": "- **{name}** ({party}) — {pct}% ({votes} votos){flag}",
+        "en": "- **{name}** ({party}) — {pct}% ({votes} votes){flag}",
+        "pt": "- **{name}** ({party}) — {pct}% ({votes} votos){flag}",
+    },
+    "runoff_obs.advances_flag": {
+        "es": " — pasa al balotaje", "en": " — advances to runoff", "pt": " — avança ao segundo turno",
+    },
+    "runoff_obs.between_header": {
+        "es": "Fase entre vueltas — observación del proceso (13 abr – 7 jun 2026)",
+        "en": "Between rounds — process observation (13 Apr – 7 Jun 2026)",
+        "pt": "Entre turnos — observação do processo (13 abr – 7 jun 2026)",
+    },
+    "runoff_obs.second_round_header": {
+        "es": "Segunda vuelta — resultado provisional (7 de junio de 2026)",
+        "en": "Second round — provisional result (7 June 2026)",
+        "pt": "Segundo turno — resultado provisório (7 de junho de 2026)",
+    },
+    "runoff_obs.second_round_status": {
+        "es": "Escrutinio oficial de ONPE en curso al {as_of} ({actas}% de actas procesadas). Resultado **provisional**, sujeto a cambios:",
+        "en": "Official ONPE count in progress as of {as_of} ({actas}% of tally sheets processed). **Provisional** result, subject to change:",
+        "pt": "Apuração oficial da ONPE em curso em {as_of} ({actas}% das atas processadas). Resultado **provisório**, sujeito a alterações:",
+    },
+    "runoff_obs.candidate_line_prov": {
+        "es": "- **{name}** ({party}) — {pct}% ({votes} votos) · provisional",
+        "en": "- **{name}** ({party}) — {pct}% ({votes} votes) · provisional",
+        "pt": "- **{name}** ({party}) — {pct}% ({votes} votos) · provisório",
+    },
+    "runoff_obs.second_round_pending": {
+        "es": "**Sin ganador proclamado.** {note}",
+        "en": "**No winner proclaimed.** {note}",
+        "pt": "**Sem vencedor proclamado.** {note}",
+    },
+    "runoff_obs.stae_header": {
+        "es": "Sistema tecnológico de escrutinio (STAE)",
+        "en": "Vote-count technology system (STAE)",
+        "pt": "Sistema tecnológico de apuração (STAE)",
+    },
     "runoff_obs.context_header": {
         "es": "Contexto del balotaje", "en": "Runoff context", "pt": "Contexto do segundo turno",
     },
@@ -371,6 +445,42 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     },
     "runoff_obs.observation_header": {
         "es": "Estado de observación por eje", "en": "Per-axis observation status", "pt": "Estado de observação por eixo",
+    },
+    "runoff_obs.results_macro": {
+        "es": "Resultados electorales", "en": "Electoral results", "pt": "Resultados eleitorais",
+    },
+    "runoff_obs.observation_intro": {
+        "es": "Durante la fase entre vueltas (13 abr – 7 jun 2026) la observación se organizó en 9 ejes del proceso. A continuación, los ejes con hechos documentados; al cierre, la cobertura del resto.",
+        "en": "During the inter-round phase (13 Apr – 7 Jun 2026) observation was organised across 9 process axes. Below, the axes with documented facts; at the end, the coverage of the rest.",
+        "pt": "Durante a fase entre turnos (13 abr – 7 jun 2026) a observação foi organizada em 9 eixos do processo. A seguir, os eixos com fatos documentados; ao final, a cobertura dos demais.",
+    },
+    "runoff_obs.status_confirmed": {
+        "es": "hallazgos confirmados (documento oficial o ≥3 fuentes independientes)",
+        "en": "confirmed findings (official document or ≥3 independent sources)",
+        "pt": "achados confirmados (documento oficial ou ≥3 fontes independentes)",
+    },
+    "runoff_obs.status_verified": {
+        "es": "hallazgos verificados (≥2 fuentes independientes)",
+        "en": "verified findings (≥2 independent sources)",
+        "pt": "achados verificados (≥2 fontes independentes)",
+    },
+    "runoff_obs.status_registered": {
+        "es": "hallazgos registrados, no corroborados de forma independiente",
+        "en": "findings recorded, not independently corroborated",
+        "pt": "achados registrados, não corroborados de forma independente",
+    },
+    "runoff_obs.coverage_header": {
+        "es": "Cobertura de observación", "en": "Observation coverage", "pt": "Cobertura de observação",
+    },
+    "runoff_obs.coverage_monitored": {
+        "es": "**Ejes monitoreados sin incidentes documentados** en el período: {axes}. La ausencia de incidentes refleja que el monitoreo (OSINT propio, redes, OONI) no registró eventos verificables — no es una afirmación de normalidad institucional.",
+        "en": "**Axes monitored with no documented incidents** in the period: {axes}. The absence of incidents reflects that monitoring (own OSINT, social media, OONI) recorded no verifiable events — it is not an assertion of institutional normality.",
+        "pt": "**Eixos monitorados sem incidentes documentados** no período: {axes}. A ausência de incidentes reflete que o monitoramento (OSINT próprio, redes, OONI) não registrou eventos verificáveis — não é uma afirmação de normalidade institucional.",
+    },
+    "runoff_obs.coverage_no_source": {
+        "es": "**Ejes sin evidencia primaria procesada** en el período: {axes}. Requerían acceso a fuentes administrativas o documentales (ONPE-DFP, expedientes JEE/JNE, veeduría) que no se ingirieron — vacío de cobertura, no de cumplimiento.",
+        "en": "**Axes with no primary evidence processed** in the period: {axes}. They required access to administrative or documentary sources (ONPE-DFP, JEE/JNE records, monitoring) that were not ingested — a coverage gap, not a compliance one.",
+        "pt": "**Eixos sem evidência primária processada** no período: {axes}. Exigiam acesso a fontes administrativas ou documentais (ONPE-DFP, processos JEE/JNE, fiscalização) que não foram ingeridas — lacuna de cobertura, não de cumprimento.",
     },
     "runoff_obs.desc.campaign_conduct_finalist_a": {
         "es": "Cumplimiento de reglas de campaña: uso de recursos del Estado, tope de gasto, propaganda fuera de plazo, franja electoral.",

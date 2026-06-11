@@ -302,6 +302,24 @@ section.chapter h3 {
   margin: 28px 0 10px;
 }
 
+section.chapter h4 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 18px 0 6px;
+}
+
+section.chapter code {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.88em;
+  background: var(--bg-soft);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
 section.chapter p {
   margin: 12px 0;
   text-align: justify;
@@ -558,6 +576,7 @@ def _markdown_to_html(md: str) -> str:
         s = _html.escape(s)
         s = re.sub(r'\[([^\]]+)\]\(([^)]+)\)',
                    r'<a href="\2" target="_blank" rel="noopener">\1</a>', s)
+        s = re.sub(r'`([^`]+)`', r'<code>\1</code>', s)
         s = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', s)
         s = re.sub(r'(?<!\w)\*([^*]+)\*(?!\w)', r'<em>\1</em>', s)
         s = re.sub(r'(?<!\w)_([^_]+)_(?!\w)', r'<em>\1</em>', s)
@@ -580,7 +599,10 @@ def _markdown_to_html(md: str) -> str:
         if not s.strip():
             close_list(); close_bq()
             continue
-        if s.startswith("### "):
+        if s.startswith("#### "):
+            close_list(); close_bq()
+            out.append(f"<h4>{inline(s[5:])}</h4>")
+        elif s.startswith("### "):
             close_list(); close_bq()
             out.append(f"<h3>{inline(s[4:])}</h3>")
         elif s.startswith("## "):
@@ -623,6 +645,7 @@ def render_html(
     country_name: str,
     report_id: str,
     generated_at: str,
+    findings: Optional[List[Any]] = None,
 ) -> str:
     """Genera el HTML completo del Elite Report."""
 
@@ -644,11 +667,10 @@ def render_html(
     # Anexo B — Bibliografía APA
     appendix_b = _render_appendix_b(citations, language=req.language or "es")
 
-    # Anexo C — Listado de hallazgos (si incluido)
+    # Anexo C — Listado completo de hallazgos con trazabilidad (si incluido)
     appendix_c = ""
     if req.include_appendix_c:
-        # Los findings vienen de chapters o del output; en orquestador pasamos bundle
-        appendix_c = _render_appendix_c_placeholder(language=req.language or "es")
+        appendix_c = _render_appendix_c(findings or [], language=req.language or "es")
 
     # Footer
     footer_html = _render_footer(report_id, generated_at, req.language or "es")
@@ -872,10 +894,75 @@ def _render_appendix_b(citations: List[CitationEntry], language: str = "es") -> 
 </aside>"""
 
 
-def _render_appendix_c_placeholder(language: str = "es") -> str:
+_APPENDIX_C_MAX_ROWS = 2500  # tope de seguridad para HTML/PDF; se nota si trunca
+
+
+def _finding_attr(f: Any, attr: str, default: str = "") -> Any:
+    """Lee un atributo tanto de FindingRef (pydantic) como de dict."""
+    if isinstance(f, dict):
+        return f.get(attr, default)
+    return getattr(f, attr, default)
+
+
+def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
+    """Anexo C — listado completo de hallazgos del Hunter con TRAZABILIDAD.
+
+    Una fila por hallazgo: fecha · severidad · categoría · hallazgo · fuente
+    (enlazada a su URL primaria). Es el respaldo auditable del informe: cada
+    afirmación del corpus es rastreable hasta su fuente."""
+    total = len(findings or [])
+    if total == 0:
+        # Estado retrospectivo honesto, sin lenguaje de "pendiente".
+        return f"""<aside class="appendix" id="appendix-c">
+<h2>{t(language, "appendix.c.title")}</h2>
+<p style="color:var(--text-muted); font-size:11px;">{t(language, "appendix.c.empty")}</p>
+</aside>"""
+
+    rows = findings[:_APPENDIX_C_MAX_ROWS]
+    cols = (
+        t(language, "appendix.c.col.n"), t(language, "appendix.c.col.date"),
+        t(language, "appendix.c.col.severity"), t(language, "appendix.c.col.category"),
+        t(language, "appendix.c.col.finding"), t(language, "appendix.c.col.source"),
+    )
+    head = "".join(f"<th>{_esc(c)}</th>" for c in cols)
+
+    body_rows = []
+    for i, f in enumerate(rows, 1):
+        date = str(_finding_attr(f, "recorded_at", "") or "")[:10] or "—"
+        sev = str(_finding_attr(f, "severity", "info") or "info").lower()
+        cat = _finding_attr(f, "category", "") or "—"
+        text = str(_finding_attr(f, "finding", "") or "").strip()
+        if len(text) > 240:
+            text = text[:237] + "…"
+        url = _finding_attr(f, "source_url", "") or ""
+        label = (_finding_attr(f, "source_title", "")
+                 or _finding_attr(f, "source_name", "") or "—")
+        if url:
+            source = (f'<a href="{_esc(str(url))}" target="_blank" '
+                      f'rel="noopener">{_esc(str(label))}</a>')
+        else:
+            source = _esc(str(label))
+        body_rows.append(
+            f"<tr><td>{i}</td><td>{_esc(date)}</td>"
+            f'<td><span class="sev {_sev_class(sev)}">{_esc(sev)}</span></td>'
+            f"<td>{_esc(str(cat))}</td><td>{_esc(text)}</td><td>{source}</td></tr>"
+        )
+
+    truncated = ""
+    if total > _APPENDIX_C_MAX_ROWS:
+        truncated = (f'<p style="color:var(--text-muted); font-size:10px;">'
+                     f'{t(language, "appendix.c.truncated").format(shown=_APPENDIX_C_MAX_ROWS, total=total)}</p>')
+
     return f"""<aside class="appendix" id="appendix-c">
 <h2>{t(language, "appendix.c.title")}</h2>
-<p style="color:var(--text-muted); font-size:11px;">{t(language, "appendix.c.placeholder")}</p>
+<p style="font-size:11px;">{t(language, "appendix.c.intro").format(n=total)}</p>
+<table class="findings-table">
+<thead><tr>{head}</tr></thead>
+<tbody>
+{chr(10).join(body_rows)}
+</tbody>
+</table>
+{truncated}
 </aside>"""
 
 
