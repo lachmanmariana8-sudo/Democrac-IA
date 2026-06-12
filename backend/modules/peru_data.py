@@ -658,7 +658,21 @@ PERU_RUNOFF_2026 = {
         "incidents": [],
         "audit_status": "PENDIENTE_VERIFICACION",
         "iccpr_ref": "Art. 25 ICCPR — la fase entre vueltas exige condiciones equitativas de campaña y libertad de información.",
-        "historical_baseline": "En 2021 (Castillo-Fujimori) la fase entre vueltas registró 47 días con denuncias de fraude y manipulación informativa documentadas por JNE/IPYS. Patrón a monitorear.",
+        "historical_baseline": "En 2021 (Castillo-Fujimori) la fase entre vueltas registró denuncias de fraude y manipulación informativa documentadas por JNE/IPYS hasta la proclamación. Patrón a monitorear.",
+    },
+    # Antecedente directo: balotaje 2021, también definido por un margen mínimo y
+    # judicializado con alegaciones de fraude. Espejo del riesgo 2026.
+    "historical_2021_runoff": {
+        "vote_date": "2021-06-06",
+        "winner": "Pedro Castillo", "winner_party": "Perú Libre", "winner_pct": 50.13,
+        "runner_up": "Keiko Fujimori", "runner_up_party": "Fuerza Popular", "runner_up_pct": 49.88,
+        "margin_votes_approx": 44_263, "margin_pct_approx": 0.25,
+        "proclamation_date": "2021-07-19",
+        "note": "Fujimori presentó pedidos de nulidad alegando fraude; el JNE los desestimó y proclamó a Castillo alrededor de seis semanas después de la votación. Precedente directo de contestación de un resultado al filo.",
+        "source": "JNE Resolución de proclamación EG 2021 (19-jul-2021); síntesis Wikipedia ES",
+        "source_url": "https://es.wikipedia.org/wiki/Elecciones_generales_de_Per%C3%BA_de_2021",
+        "audit_status": "VERIFIED_SECONDARY",
+        "audit_note": "Cifras de fuente secundaria (Wikipedia ES, coincidente con prensa). Margen Castillo/Fujimori ≈44.263 votos (0,25 pp). Para CONFIRMED, validar contra la resolución JNE primaria.",
     },
     "iccpr_ref": "Art. 25 ICCPR — derecho a elegir y ser elegido en condiciones de equidad, vigente durante la 2ª vuelta.",
     "data_sources": "Para 1ª vuelta: JNE Acta de Proclamación 12-abr-2026 (PDF); ONPE Boletín Final al 100%; Wikipedia ES (síntesis); Infobae; El Comercio. Para fase entre vueltas: Hunter OSINT propio + Defensoría del Pueblo + ONPE-DFP + JEE/JNE expedientes + Veeduría Ciudadana + IDL-Reporteros + Ojo Público + MOE-OEA preliminar. Cada hallazgo requiere cita primaria documental para escalar a CONFIRMED.",
