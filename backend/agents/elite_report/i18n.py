@@ -226,6 +226,12 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Exibindo os primeiros {shown} de {total} registros. A lista completa está no Markdown para download.",
     },
     "appendix.c.col.n": {"es": "#", "en": "#", "pt": "#"},
+    "appendix.c.col.phase": {"es": "Fase", "en": "Phase", "pt": "Fase"},
+    "phase.pre_electoral": {"es": "Pre-electoral", "en": "Pre-election", "pt": "Pré-eleitoral"},
+    "phase.election_day": {"es": "Jornada", "en": "Election day", "pt": "Dia da eleição"},
+    "phase.count": {"es": "Escrutinio", "en": "Vote count", "pt": "Apuração"},
+    "phase.post_electoral": {"es": "Post-electoral", "en": "Post-election", "pt": "Pós-eleitoral"},
+    "phase.other": {"es": "General", "en": "General", "pt": "Geral"},
     "appendix.c.col.date": {"es": "Fecha", "en": "Date", "pt": "Data"},
     "appendix.c.col.severity": {"es": "Sev.", "en": "Sev.", "pt": "Sev."},
     "appendix.c.col.category": {"es": "Categoría", "en": "Category", "pt": "Categoria"},
@@ -385,6 +391,14 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "runoff_obs.advances_flag": {
         "es": " — pasa al balotaje", "en": " — advances to runoff", "pt": " — avança ao segundo turno",
     },
+    "runoff_obs.tbl.candidate": {"es": "Candidato", "en": "Candidate", "pt": "Candidato"},
+    "runoff_obs.tbl.party": {"es": "Partido", "en": "Party", "pt": "Partido"},
+    "runoff_obs.tbl.pct": {"es": "% válidos", "en": "% valid", "pt": "% válidos"},
+    "runoff_obs.tbl.votes": {"es": "Votos", "en": "Votes", "pt": "Votos"},
+    "runoff_obs.tbl.result": {"es": "Resultado", "en": "Result", "pt": "Resultado"},
+    "runoff_obs.tbl.advances": {"es": "Pasa al balotaje", "en": "Advances", "pt": "Avança ao 2º turno"},
+    "runoff_obs.tbl.pct_prov": {"es": "% válidos (prov.)", "en": "% valid (prov.)", "pt": "% válidos (prov.)"},
+    "runoff_obs.tbl.votes_prov": {"es": "Votos (prov.)", "en": "Votes (prov.)", "pt": "Votos (prov.)"},
     "runoff_obs.between_header": {
         "es": "Fase entre vueltas — observación del proceso (13 abr – 7 jun 2026)",
         "en": "Between rounds — process observation (13 Apr – 7 Jun 2026)",
@@ -481,6 +495,47 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "es": "**Ejes sin evidencia primaria procesada** en el período: {axes}. Requerían acceso a fuentes administrativas o documentales (ONPE-DFP, expedientes JEE/JNE, veeduría) que no se ingirieron — vacío de cobertura, no de cumplimiento.",
         "en": "**Axes with no primary evidence processed** in the period: {axes}. They required access to administrative or documentary sources (ONPE-DFP, JEE/JNE records, monitoring) that were not ingested — a coverage gap, not a compliance one.",
         "pt": "**Eixos sem evidência primária processada** no período: {axes}. Exigiam acesso a fontes administrativas ou documentais (ONPE-DFP, processos JEE/JNE, fiscalização) que não foram ingeridas — lacuna de cobertura, não de cumprimento.",
+    },
+    # ── Lectura de riesgo de legitimidad (síntesis del EMB + 2021) ──────────
+    "runoff_obs.risk_header": {
+        "es": "Riesgo de legitimidad del resultado",
+        "en": "Result legitimacy risk",
+        "pt": "Risco de legitimidade do resultado",
+    },
+    "runoff_obs.risk_intro": {
+        "es": "Más allá de quién resulte proclamado, la observación PEIRS identifica una convergencia de factores que tensiona la legitimidad del resultado de la 2ª vuelta:",
+        "en": "Beyond who is ultimately proclaimed, PEIRS observation identifies a convergence of factors straining the legitimacy of the runoff result:",
+        "pt": "Para além de quem seja proclamado, a observação PEIRS identifica uma convergência de fatores que tensiona a legitimidade do resultado do 2º turno:",
+    },
+    "runoff_obs.risk_margin": {
+        "es": "**Margen mínimo.** El resultado provisional se define por ~{mp} puntos porcentuales (~{mv} votos), dentro del universo de actas aún en revisión.",
+        "en": "**Razor-thin margin.** The provisional result is decided by ~{mp} percentage points (~{mv} votes), within the universe of tally sheets still under review.",
+        "pt": "**Margem mínima.** O resultado provisório é definido por ~{mp} pontos percentuais (~{mv} votos), dentro do universo de atas ainda em revisão.",
+    },
+    "runoff_obs.risk_unproclaimed": {
+        "es": "**Resultado no proclamado.** El JNE no ha proclamado ganador; persisten actas observadas en revisión en JEE.",
+        "en": "**Result not proclaimed.** The JNE has not proclaimed a winner; observed tally sheets remain under JEE review.",
+        "pt": "**Resultado não proclamado.** O JNE não proclamou vencedor; persistem atas observadas em revisão no JEE.",
+    },
+    "runoff_obs.risk_emb": {
+        "es": "**Órgano electoral cuestionado.** La ONPE atravesó la 1ª vuelta con su titular denunciado penalmente y pedidos de separación cautelar ({n} señales documentadas más arriba).",
+        "en": "**Electoral body under question.** ONPE went through the first round with its head criminally charged and requests for precautionary removal ({n} signals documented above).",
+        "pt": "**Órgão eleitoral questionado.** A ONPE atravessou o 1º turno com seu titular denunciado penalmente e pedidos de afastamento cautelar ({n} sinais documentados acima).",
+    },
+    "runoff_obs.risk_stae": {
+        "es": "**Cómputo sin auditoría pública.** El STAE presentó fallas en 1ª vuelta y operó sin auditoría independiente certificada.",
+        "en": "**Count without public audit.** STAE failed in the first round and operated without certified independent audit.",
+        "pt": "**Apuração sem auditoria pública.** O STAE apresentou falhas no 1º turno e operou sem auditoria independente certificada.",
+    },
+    "runoff_obs.risk_reading": {
+        "es": "La concurrencia de un margen ínfimo, un resultado aún no proclamado y un organismo electoral bajo cuestionamiento penal configura un escenario de **alta contestabilidad**. En estas condiciones, la credibilidad del desenlace no depende solo de la exactitud del cómputo, sino de la **independencia percibida del EMB** al resolver las impugnaciones — una obligación de transparencia del escrutinio y de recurso efectivo (ICCPR Art. 25; CADH Arts. 23 y 25).",
+        "en": "The concurrence of a minimal margin, an unproclaimed result and an electoral body under criminal scrutiny configures a scenario of **high contestability**. Under these conditions, the credibility of the outcome depends not only on the accuracy of the count but on the **perceived independence of the EMB** in resolving challenges — an obligation of scrutiny transparency and effective remedy (ICCPR Art. 25; ACHR Arts. 23 and 25).",
+        "pt": "A concorrência de uma margem ínfima, um resultado não proclamado e um órgão eleitoral sob escrutínio penal configura um cenário de **alta contestabilidade**. Nessas condições, a credibilidade do desfecho depende não só da exatidão da apuração, mas da **independência percebida do EMB** ao resolver as impugnações — uma obrigação de transparência da apuração e de recurso efetivo (ICCPR Art. 25; CADH Arts. 23 e 25).",
+    },
+    "runoff_obs.risk_2021": {
+        "es": "**Antecedente — balotaje 2021.** {winner} ({wp}) se impuso a {ru} ({rp}) por ≈{mv} votos ({mp} pp). {ru} presentó pedidos de nulidad alegando fraude que el JNE desestimó, y la proclamación tomó alrededor de seis semanas (19-jul-2021). El paralelo —margen estrecho, alegaciones de fraude y judicialización del resultado— es el patrón a monitorear en 2026.",
+        "en": "**Precedent — 2021 runoff.** {winner} ({wp}) defeated {ru} ({rp}) by ≈{mv} votes ({mp} pp). {ru} filed nullity requests alleging fraud, which the JNE dismissed, and proclamation took about six weeks (19 Jul 2021). The parallel — narrow margin, fraud allegations and judicialisation of the result — is the pattern to monitor in 2026.",
+        "pt": "**Precedente — 2º turno 2021.** {winner} ({wp}) venceu {ru} ({rp}) por ≈{mv} votos ({mp} pp). {ru} apresentou pedidos de nulidade alegando fraude, que o JNE rejeitou, e a proclamação levou cerca de seis semanas (19-jul-2021). O paralelo — margem estreita, alegações de fraude e judicialização do resultado — é o padrão a monitorar em 2026.",
     },
     "runoff_obs.desc.campaign_conduct_finalist_a": {
         "es": "Cumplimiento de reglas de campaña: uso de recursos del Estado, tope de gasto, propaganda fuera de plazo, franja electoral.",

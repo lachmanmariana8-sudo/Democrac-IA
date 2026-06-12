@@ -487,6 +487,27 @@ def test_runoff_chapter_reflects_hunter_escalation():
     assert "Hallazgos registrados: 2" in chapter.narrative
 
 
+def test_runoff_chapter_has_legitimacy_risk_section():
+    """Eje central de riesgo: convergencia (margen + no proclamado + EMB +
+    STAE) + espejo 2021, anclado en datos cargados, sin especular el desenlace."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+
+    runoff = get_adapter("PER").runoff_observation([])
+    n = build_runoff_observation_chapter(runoff, lang="es").narrative
+    assert "Riesgo de legitimidad del resultado" in n
+    assert "alta contestabilidad" in n
+    # Factores de convergencia
+    assert "Margen mínimo" in n and "no proclamado" in n.lower()
+    assert "Órgano electoral cuestionado" in n
+    # Espejo 2021 con datos + fuente
+    assert "2021" in n and "Pedro Castillo" in n
+    assert "44.263" in n or "44263" in n
+    assert "es.wikipedia.org" in n
+    # Marco normativo
+    assert "ICCPR Art. 25" in n and "CADH" in n
+
+
 def test_runoff_chapter_none_observation_returns_none():
     from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
     assert build_runoff_observation_chapter(None, lang="es") is None

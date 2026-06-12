@@ -343,6 +343,29 @@ section.chapter ul, section.chapter ol {
 
 section.chapter li { margin: 4px 0; }
 
+section.chapter table.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 12px;
+}
+section.chapter table.md-table th {
+  background: var(--teal);
+  color: #fff;
+  text-align: left;
+  padding: 8px 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+section.chapter table.md-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border-dim);
+  vertical-align: top;
+}
+section.chapter table.md-table tr:nth-child(even) td { background: var(--bg-soft); }
+
 section.chapter blockquote {
   margin: 20px 0;
   padding: 14px 20px;
@@ -521,6 +544,21 @@ table.findings-table td {
 
 table.findings-table tr:nth-child(even) { background: var(--bg-soft); }
 
+/* Chips de FASE — diferencian cada temática por fase electoral con color. */
+.phase-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.phase-pre   { background: #e3f2fd; color: #1565c0; }   /* pre-electoral — azul */
+.phase-day   { background: #e0f2f1; color: #00796b; }   /* jornada — teal */
+.phase-count { background: #fff3e0; color: #e65100; }   /* escrutinio — naranja */
+.phase-post  { background: #f3e5f5; color: #6a1b9a; }   /* post-electoral — violeta */
+.phase-other { background: #eceff1; color: #455a64; }   /* otros — gris */
+
 /* ── Footer ────────────────────────────────────────────────────────── */
 footer.elite-footer {
   margin-top: 80px;
@@ -561,10 +599,28 @@ def _esc(s) -> str:
     return _html.escape(str(s))
 
 
+_TABLE_SEP_RE = re.compile(r'^\s*\|?[\s:\-|]+\|[\s:\-|]*$')
+
+
+def _is_table_sep(s: str) -> bool:
+    """¿La línea es el separador de cabecera de una tabla? (|---|:--:|)"""
+    s = s.strip()
+    return bool(s) and "|" in s and _TABLE_SEP_RE.match(s) is not None and "-" in s
+
+
+def _split_row(s: str) -> List[str]:
+    s = s.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    if s.endswith("|"):
+        s = s[:-1]
+    return [c.strip() for c in s.split("|")]
+
+
 def _markdown_to_html(md: str) -> str:
     """Conversor markdown → HTML liviano, sin libs externas.
-    Soporta: ## H2 y ### H3, **bold**, *em*, _em_, [text](url), listas -/*,
-    blockquotes >, párrafos separados por líneas en blanco."""
+    Soporta: #### H4, ### / ## / # (h3/h4), **bold**, *em*, _em_, `code`,
+    [text](url), listas -/*, blockquotes >, TABLAS pipe (| a | b |) y párrafos."""
     if not md:
         return ""
     lines = md.split("\n")
@@ -594,10 +650,31 @@ def _markdown_to_html(md: str) -> str:
             out.append("</blockquote>")
             in_blockquote = False
 
-    for line in lines:
-        s = line.rstrip()
+    i = 0
+    n = len(lines)
+    while i < n:
+        s = lines[i].rstrip()
+        # ── Tabla pipe: fila con | seguida de separador |---|---| ──────────
+        if ("|" in s and i + 1 < n and _is_table_sep(lines[i + 1])):
+            close_list(); close_bq()
+            header = _split_row(s)
+            rows = []
+            j = i + 2
+            while j < n and "|" in lines[j] and lines[j].strip():
+                rows.append(_split_row(lines[j]))
+                j += 1
+            thead = "".join(f"<th>{inline(c)}</th>" for c in header)
+            tbody = "".join(
+                "<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>"
+                for r in rows
+            )
+            out.append(f'<table class="md-table"><thead><tr>{thead}</tr></thead>'
+                       f"<tbody>{tbody}</tbody></table>")
+            i = j
+            continue
         if not s.strip():
             close_list(); close_bq()
+            i += 1
             continue
         if s.startswith("#### "):
             close_list(); close_bq()
@@ -624,6 +701,7 @@ def _markdown_to_html(md: str) -> str:
         else:
             close_list(); close_bq()
             out.append(f"<p>{inline(s)}</p>")
+        i += 1
 
     close_list(); close_bq()
     return "\n".join(out)
@@ -904,6 +982,30 @@ def _finding_attr(f: Any, attr: str, default: str = "") -> Any:
     return getattr(f, attr, default)
 
 
+# Fase electoral → (clase de color, clave i18n). Diferencia cada temática por
+# fase con color en el Anexo C. Se matchea por substring del campo `phase`.
+_PHASE_RULES = [
+    ("campaign", "pre", "phase.pre_electoral"),
+    ("pre", "pre", "phase.pre_electoral"),
+    ("election_day", "day", "phase.election_day"),
+    ("jornada", "day", "phase.election_day"),
+    ("count", "count", "phase.count"),
+    ("escrutinio", "count", "phase.count"),
+    ("computo", "count", "phase.count"),
+    ("post", "post", "phase.post_electoral"),
+]
+
+
+def _phase_chip(phase: Any, language: str = "es") -> str:
+    p = str(phase or "").lower()
+    cls, key = "other", "phase.other"
+    for needle, c, k in _PHASE_RULES:
+        if needle in p:
+            cls, key = c, k
+            break
+    return f'<span class="phase-chip phase-{cls}">{_esc(t(language, key, "—"))}</span>'
+
+
 def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
     """Anexo C — listado completo de hallazgos del Hunter con TRAZABILIDAD.
 
@@ -921,8 +1023,9 @@ def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
     rows = findings[:_APPENDIX_C_MAX_ROWS]
     cols = (
         t(language, "appendix.c.col.n"), t(language, "appendix.c.col.date"),
-        t(language, "appendix.c.col.severity"), t(language, "appendix.c.col.category"),
-        t(language, "appendix.c.col.finding"), t(language, "appendix.c.col.source"),
+        t(language, "appendix.c.col.phase"), t(language, "appendix.c.col.severity"),
+        t(language, "appendix.c.col.category"), t(language, "appendix.c.col.finding"),
+        t(language, "appendix.c.col.source"),
     )
     head = "".join(f"<th>{_esc(c)}</th>" for c in cols)
 
@@ -931,6 +1034,7 @@ def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
         date = str(_finding_attr(f, "recorded_at", "") or "")[:10] or "—"
         sev = str(_finding_attr(f, "severity", "info") or "info").lower()
         cat = _finding_attr(f, "category", "") or "—"
+        phase_chip = _phase_chip(_finding_attr(f, "phase", ""), language)
         text = str(_finding_attr(f, "finding", "") or "").strip()
         if len(text) > 240:
             text = text[:237] + "…"
@@ -943,7 +1047,7 @@ def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
         else:
             source = _esc(str(label))
         body_rows.append(
-            f"<tr><td>{i}</td><td>{_esc(date)}</td>"
+            f"<tr><td>{i}</td><td>{_esc(date)}</td><td>{phase_chip}</td>"
             f'<td><span class="sev {_sev_class(sev)}">{_esc(sev)}</span></td>'
             f"<td>{_esc(str(cat))}</td><td>{_esc(text)}</td><td>{source}</td></tr>"
         )

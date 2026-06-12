@@ -127,15 +127,21 @@ def _build_first_round_section(runoff: Dict[str, Any], lang: str) -> List[str]:
 
     br = runoff.get("first_round_full_breakdown") or {}
     by_party = br.get("by_party") or []
-    flag = t(lang, "runoff_obs.advances_flag")
-    for i, c in enumerate(by_party):
-        parts.append(t(lang, "runoff_obs.candidate_line").format(
-            name=c.get("candidate", "—"),
-            party=c.get("party_name", "—"),
-            pct=c.get("pct", "—"),
-            votes=_fmt_int(c.get("votes"), lang),
-            flag=(flag if i < 2 else ""),
-        ))
+    if by_party:
+        advances = t(lang, "runoff_obs.tbl.advances")
+        rows = [
+            "| {c} | {p} | {pc} | {v} | {r} |".format(
+                c=t(lang, "runoff_obs.tbl.candidate"), p=t(lang, "runoff_obs.tbl.party"),
+                pc=t(lang, "runoff_obs.tbl.pct"), v=t(lang, "runoff_obs.tbl.votes"),
+                r=t(lang, "runoff_obs.tbl.result")),
+            "|---|---|---|---|---|",
+        ]
+        for i, c in enumerate(by_party):
+            rows.append("| {name} | {party} | {pct}% | {votes} | {note} |".format(
+                name=c.get("candidate", "—"), party=c.get("party_name", "—"),
+                pct=c.get("pct", "—"), votes=_fmt_int(c.get("votes"), lang),
+                note=(advances if i < 2 else "")))
+        parts.append("\n".join(rows))
 
     abstention = br.get("abstention_pct")
     if abstention is not None:
@@ -187,7 +193,9 @@ def _build_observation_section(observation: Dict[str, Any], lang: str) -> List[s
                      t(lang, "runoff_obs.findings_count").format(n=count))
         items = _axis_items(block)
         if items:
-            parts.extend(_render_items(items))
+            # Una sola lista <ul> (las viñetas van juntas, sin línea en blanco
+            # entre ellas que rompería el grupo en <ul> separados).
+            parts.append("\n".join(_render_items(items)))
 
     # Nota de cobertura para los ejes sin hechos documentados.
     if monitored_empty or no_source_empty:
@@ -212,13 +220,19 @@ def _build_second_round_section(runoff: Dict[str, Any], lang: str) -> List[str]:
         as_of=sr.get("as_of", "—"),
         actas=sr.get("actas_processed_pct", "—"),
     ))
-    for c in sr.get("candidates") or []:
-        parts.append(t(lang, "runoff_obs.candidate_line_prov").format(
-            name=c.get("candidate_name", "—"),
-            party=c.get("party", "—"),
-            pct=c.get("pct_valid", "—"),
-            votes=_fmt_int(c.get("votes"), lang),
-        ))
+    cands = sr.get("candidates") or []
+    if cands:
+        rows = [
+            "| {c} | {p} | {pc} | {v} |".format(
+                c=t(lang, "runoff_obs.tbl.candidate"), p=t(lang, "runoff_obs.tbl.party"),
+                pc=t(lang, "runoff_obs.tbl.pct_prov"), v=t(lang, "runoff_obs.tbl.votes_prov")),
+            "|---|---|---|---|",
+        ]
+        for c in cands:
+            rows.append("| {name} | {party} | {pct}% | {votes} |".format(
+                name=c.get("candidate_name", "—"), party=c.get("party", "—"),
+                pct=c.get("pct_valid", "—"), votes=_fmt_int(c.get("votes"), lang)))
+        parts.append("\n".join(rows))
     procl = sr.get("proclamation") or {}
     if not procl.get("proclaimed"):
         parts.append(t(lang, "runoff_obs.second_round_pending").format(
@@ -246,6 +260,52 @@ def _build_stae_note(runoff: Dict[str, Any], lang: str) -> List[str]:
     return parts
 
 
+def _build_legitimacy_risk_section(runoff: Dict[str, Any], lang: str) -> List[str]:
+    """Síntesis del EJE CENTRAL de riesgo: convergencia de margen mínimo +
+    resultado no proclamado + EMB bajo crisis penal + STAE sin auditoría, con
+    el espejo del balotaje 2021. Análisis determinista, anclado en datos
+    cargados (cada factor referencia un campo del dataset) — no especula sobre
+    el desenlace ni afirma fraude."""
+    sr = runoff.get("second_round_results")
+    if not isinstance(sr, dict):
+        return []  # sin 2ª vuelta no hay lectura de riesgo del resultado
+
+    parts: List[str] = ["### " + t(lang, "runoff_obs.risk_header")]
+    parts.append(t(lang, "runoff_obs.risk_intro"))
+
+    factors: List[str] = []
+    factors.append(t(lang, "runoff_obs.risk_margin").format(
+        mp=sr.get("margin_pct_approx", "—"),
+        mv=_fmt_int(sr.get("margin_votes_approx"), lang)))
+    procl = sr.get("proclamation") or {}
+    if not procl.get("proclaimed"):
+        factors.append(t(lang, "runoff_obs.risk_unproclaimed"))
+
+    obs = runoff.get("runoff_phase_observation") or {}
+    emb = obs.get("emb_independence_stress_signals") or {}
+    n_emb = len(emb.get("signals") or [])
+    if n_emb:
+        factors.append(t(lang, "runoff_obs.risk_emb").format(n=n_emb))
+    if isinstance(runoff.get("electoral_technology_note"), dict):
+        factors.append(t(lang, "runoff_obs.risk_stae"))
+    parts.append("\n".join("- " + f for f in factors))
+
+    parts.append(t(lang, "runoff_obs.risk_reading"))
+
+    h = runoff.get("historical_2021_runoff")
+    if isinstance(h, dict):
+        line = t(lang, "runoff_obs.risk_2021").format(
+            winner=h.get("winner", "—"), wp=h.get("winner_party", "—"),
+            ru=h.get("runner_up", "—"), rp=h.get("runner_up_party", "—"),
+            mv=_fmt_int(h.get("margin_votes_approx"), lang),
+            mp=h.get("margin_pct_approx", "—"))
+        url = h.get("source_url")
+        if url:
+            line += " [(fuente)](" + url + ")"
+        parts.append(line)
+    return parts
+
+
 def build_runoff_observation_narrative(runoff: Dict[str, Any], lang: str) -> str:
     """Markdown del capítulo factual: 1ª vuelta · entre vueltas · 2ª vuelta · STAE.
 
@@ -261,6 +321,8 @@ def build_runoff_observation_narrative(runoff: Dict[str, Any], lang: str) -> str
     # Macro-sección B — Observación del proceso entre vueltas.
     parts.append("### " + t(lang, "runoff_obs.between_header"))
     parts += _build_observation_section(observation, lang)
+    # Macro-sección C — Lectura de riesgo de legitimidad (eje central).
+    parts += _build_legitimacy_risk_section(runoff, lang)
     parts.append(t(lang, "runoff_obs.legal_basis"))
     return "\n\n".join(parts)
 
