@@ -211,9 +211,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Lista completa de registros do Hunter disponível em formato Markdown para download. Inclui entry_id, data, severidade, categoria, registro, mídia, URL e priority_score.",
     },
     "appendix.c.intro": {
-        "es": "{n} hallazgos del corpus del Hunter en el período observado. Cada fila es rastreable hasta su fuente primaria (enlace en la columna Fuente). Es el respaldo auditable del informe.",
-        "en": "{n} findings from the Hunter corpus in the observed period. Each row is traceable to its primary source (link in the Source column). This is the report's auditable backing.",
-        "pt": "{n} registros do corpus do Hunter no período observado. Cada linha é rastreável até sua fonte primária (link na coluna Fonte). É o respaldo auditável do relatório.",
+        "es": "{n} eventos del período observado (hallazgos del Hunter consolidados por evento: un hecho = una fila con todas sus fuentes). Cada fila es rastreable hasta sus fuentes primarias (enlaces en la columna Fuente). Es el respaldo auditable del informe.",
+        "en": "{n} events in the observed period (Hunter findings consolidated per event: one fact = one row with all its sources). Each row is traceable to its primary sources (links in the Source column). This is the report's auditable backing.",
+        "pt": "{n} eventos do período observado (achados do Hunter consolidados por evento: um fato = uma linha com todas as suas fontes). Cada linha é rastreável até suas fontes primárias (links na coluna Fonte). É o respaldo auditável do relatório.",
     },
     "appendix.c.empty": {
         "es": "No se registraron hallazgos del Hunter en el período observado.",

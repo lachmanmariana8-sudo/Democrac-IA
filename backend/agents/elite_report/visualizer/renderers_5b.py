@@ -797,6 +797,12 @@ def render_judicial_timeline(data: Dict[str, Any]) -> str:
         # Marker
         svg.append(f'<circle cx="{line_x}" cy="{y+row_h/2:.1f}" r="7" '
                    f'fill="{color}" stroke="{COLORS["bg"]}" stroke-width="2"/>')
+        # Etiqueta de vuelta (cronología 1ª → 2ª vuelta)
+        rnd = _esc(act.get("round", ""))
+        if rnd:
+            svg.append(f'<text x="{line_x-16}" y="{y+row_h/2-17:.1f}" text-anchor="end" '
+                       f'font-family="{FONT_SANS}" font-size="7" font-weight="700" '
+                       f'letter-spacing="0.5" fill="{COLORS["teal_dark"]}">{rnd.upper()}</text>')
         # Date a la izquierda
         date = _esc(act.get("date", ""))
         svg.append(f'<text x="{line_x-16}" y="{y+row_h/2-4:.1f}" text-anchor="end" '

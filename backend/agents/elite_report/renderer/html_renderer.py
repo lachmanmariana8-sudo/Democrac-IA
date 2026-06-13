@@ -1038,10 +1038,21 @@ def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
         text = str(_finding_attr(f, "finding", "") or "").strip()
         if len(text) > 240:
             text = text[:237] + "…"
+        # Fuentes consolidadas: un evento = todas sus fuentes en la misma celda.
+        srcs = _finding_attr(f, "sources", []) or []
         url = _finding_attr(f, "source_url", "") or ""
         label = (_finding_attr(f, "source_title", "")
                  or _finding_attr(f, "source_name", "") or "—")
-        if url:
+        links = []
+        for s in srcs:
+            su = (s.get("url") if isinstance(s, dict) else "") or ""
+            sn = (s.get("name") if isinstance(s, dict) else "") or "fuente"
+            if su:
+                links.append(f'<a href="{_esc(str(su))}" target="_blank" '
+                             f'rel="noopener">{_esc(str(sn))}</a>')
+        if links:
+            source = " · ".join(links)
+        elif url:
             source = (f'<a href="{_esc(str(url))}" target="_blank" '
                       f'rel="noopener">{_esc(str(label))}</a>')
         else:

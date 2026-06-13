@@ -157,6 +157,13 @@ def enrich_runoff_observation(runoff, entries, *, now=None):
             continue
         items_by_axis[axis].append(_merge_item(entry))
 
+    # Consolidador opcional: un hecho = un item con todas sus fuentes (dedup de
+    # capturas/medios repetidos del mismo evento en el eje).
+    try:
+        from agents.elite_report.consolidators import consolidate_items
+    except Exception:  # pragma: no cover - fallback si el módulo no está
+        consolidate_items = None
+
     # Poblar solo los 3 ejes OSINT; recalcular su audit_status.
     for axis, item_key in _AXIS_ITEM_KEY.items():
         block = observation.get(axis)
@@ -164,7 +171,10 @@ def enrich_runoff_observation(runoff, entries, *, now=None):
             continue
         merged = items_by_axis[axis]
         existing = block.get(item_key) or []
-        block[item_key] = list(existing) + merged
+        combined = list(existing) + merged
+        if consolidate_items is not None and combined:
+            combined = consolidate_items(combined)
+        block[item_key] = combined
         block["audit_status"] = compute_axis_audit_status(block[item_key])
 
     return enriched

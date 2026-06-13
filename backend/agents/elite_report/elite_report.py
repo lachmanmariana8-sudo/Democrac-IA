@@ -29,6 +29,7 @@ from agents.elite_report.models import (
 from agents.elite_report.loaders import EliteLoader
 from agents.elite_report.organizers import PhaseOrganizer, CrossReferenceBuilder
 from agents.elite_report.predictive import PredictiveEngine
+from agents.elite_report.consolidators import consolidate_findingrefs
 from agents.elite_report.composer import ChapterComposer, CitationBuilder
 
 
@@ -192,7 +193,9 @@ class PEIRSEliteReport:
             country_name=country_name,
             report_id=report_id,
             generated_at=generated_at,
-            findings=bundle.hunter_entries if req.include_appendix_c else None,
+            # Anexo C consolidado: un hecho = una fila con todas sus fuentes.
+            findings=(consolidate_findingrefs(bundle.hunter_entries)
+                      if req.include_appendix_c else None),
         )
 
         # Markdown: intentamos con microsoft/markitdown (mejor fidelidad),
@@ -553,21 +556,36 @@ class PEIRSEliteReport:
 
         # ── Sprint 5b — Datos derivados del bundle ──────────────────────────
 
-        # events_timeline: top-N hallazgos por (severity desc, date asc) (cap 1)
+        # Consolidación: un hecho = un hallazgo con todas sus fuentes (dedup de
+        # capturas/medios repetidos del mismo evento). Se usa para timelines y
+        # Anexo C; stats.total se mantiene sobre el corpus crudo (volumen real).
+        consolidated_findings = consolidate_findingrefs(bundle.hunter_entries)
+
+        # Etiqueta de vuelta por fecha (cronología 1ª → 2ª vuelta).
+        def _round_of(date_str: str) -> str:
+            d = (date_str or "")[:10]
+            return "1ª vuelta" if d and d < "2026-05-01" else "2ª vuelta"
+
         sev_rank = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
         ranked_findings = sorted(
-            bundle.hunter_entries,
+            consolidated_findings,
             key=lambda f: (-sev_rank.get((f.severity or "info").lower(), 0),
                            f.recorded_at or ""),
         )
+        # events_timeline (cap 1): eventos críticos/altos, deduplicados y en
+        # ORDEN CRONOLÓGICO (1ª → 2ª vuelta), no por severidad.
+        _crit = [f for f in consolidated_findings
+                 if (f.severity or "").lower() in ("critical", "high")]
+        _crit_chrono = sorted(_crit, key=lambda f: f.recorded_at or "")[:12]
         events_timeline_data = {
             "events": [
                 {
                     "date": (f.recorded_at or "")[:10],
                     "label": (f.finding or "")[:46],
                     "severity": (f.severity or "info").lower(),
+                    "round": _round_of(f.recorded_at),
                 }
-                for f in ranked_findings[:10]
+                for f in _crit_chrono
             ],
         }
 
@@ -696,12 +714,14 @@ class PEIRSEliteReport:
         # Sprint 2: data y labels traducidos provistos por country adapter.
         actor_network_data = _adapter.actor_network(language)
 
-        # judicial_timeline: cronología (cap 7) — derivada de findings legal/judicial
-        judicial_findings = [
-            f for f in ranked_findings
-            if (f.category or "").lower() in
-            ("legal", "fraud_allegation", "irregular_procedure", "judicial")
-        ][:8]
+        # judicial_timeline: cronología (cap 7) — findings legal/judicial,
+        # deduplicados y en ORDEN CRONOLÓGICO 1ª → 2ª vuelta (no por severidad).
+        judicial_findings = sorted(
+            [f for f in consolidated_findings
+             if (f.category or "").lower() in
+             ("legal", "fraud_allegation", "irregular_procedure", "judicial")],
+            key=lambda f: f.recorded_at or "",
+        )[:10]
         judicial_data = {
             "actions": [
                 {
@@ -709,6 +729,7 @@ class PEIRSEliteReport:
                     "actor": (f.source_name or "—")[:24],
                     "action": (f.finding or "")[:80],
                     "severity": (f.severity or "info").lower(),
+                    "round": _round_of(f.recorded_at),
                 }
                 for f in judicial_findings
             ],

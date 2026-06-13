@@ -94,13 +94,18 @@ def _render_items(items: List[Dict[str, Any]], limit: int = 8) -> List[str]:
                    or it.get("summary") or "").strip()
         actor = it.get("actor") or ""
         classification = it.get("classification") or it.get("action_type") or ""
-        sources = it.get("sources") or []
-        src = sources[0] if sources else ""
+        # Fuentes consolidadas: TODAS en el mismo hallazgo (no una por viñeta).
+        # source_links = [{url, name}] (consolidador); fallback a source_url.
+        source_links = it.get("source_links") or []
+        links = []
+        for s in source_links:
+            if isinstance(s, dict) and s.get("url"):
+                links.append("[" + (s.get("name") or "fuente") + "](" + s["url"] + ")")
         url = it.get("source_url")
-        if url:
-            tail = " — [" + (src or "fuente") + "](" + url + ")"
-        elif src:
-            tail = " — " + src
+        if links:
+            tail = " — " + " · ".join(links)
+        elif url:
+            tail = " — [fuente](" + url + ")"
         else:
             tail = ""
         bullet = "- **" + str(date) + "**"

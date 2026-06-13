@@ -532,7 +532,7 @@ def test_runoff_chapter_is_factual_record_both_rounds():
     assert "Segunda vuelta" in narrative
     assert "provisional" in narrative.lower()
     assert "Sin ganador proclamado" in narrative
-    assert "50.02" in narrative                       # % provisional 2ª vuelta
+    assert "50.004" in narrative                      # % provisional 2ª vuelta (corte 98.3%)
     # STAE — corrección factual (no se afirma buen funcionamiento)
     assert "STAE" in narrative
     assert "sin fallas" not in narrative.lower()
@@ -700,6 +700,83 @@ def test_compose_includes_runoff_chapter_without_llm():
     assert 'id="appendix-c"' in html
 
 
+def test_consolidate_merges_same_event_sources():
+    """Bloque 1: dos capturas del mismo evento (misma fecha, texto similar) se
+    funden en UN hallazgo con AMBAS fuentes; eventos distintos no se mezclan."""
+    from agents.elite_report.consolidators import consolidate_findingrefs, consolidate_items
+    from agents.elite_report.models import FindingRef
+
+    refs = [
+        FindingRef(finding="La Fiscalía pidió diez años de prisión para el subgerente de ONPE",
+                   category="legal", severity="high", source_name="ElComercio",
+                   source_url="https://ec.pe/1", recorded_at="2026-04-15"),
+        FindingRef(finding="Fiscalía solicitó diez años de prisión contra subgerente de la ONPE",
+                   category="legal", severity="high", source_name="Gestion",
+                   source_url="https://gestion.pe/2", recorded_at="2026-04-15"),
+        FindingRef(finding="Ataque a local de votación en Cusco con heridos",
+                   category="security", severity="critical", source_name="ACLED",
+                   source_url="https://acled.com/3", recorded_at="2026-06-07"),
+    ]
+    out = consolidate_findingrefs(refs)
+    assert len(out) == 2, "los 2 hallazgos del mismo evento deben fundirse en 1"
+    fiscalia = next(f for f in out if "Fiscal" in f.finding)
+    urls = {s["url"] for s in fiscalia.sources}
+    assert urls == {"https://ec.pe/1", "https://gestion.pe/2"}
+
+    # consolidate_items preserva `sources` (audit) y agrega `source_links`.
+    items = [
+        {"content_summary": "Amenaza a personero electoral en Puno", "date": "2026-06-05",
+         "severity": "high", "sources": ["acled"], "source_url": "https://a/1"},
+        {"content_summary": "Amenaza contra personero electoral en Puno", "date": "2026-06-05",
+         "severity": "high", "sources": ["defensoria"], "source_url": "https://b/2"},
+    ]
+    ci = consolidate_items(items)
+    assert len(ci) == 1
+    assert set(ci[0]["sources"]) == {"acled", "defensoria"}        # audit intacto
+    assert len(ci[0]["source_links"]) == 2                          # render: 2 enlaces
+
+
+def test_timelines_chronological_with_round_and_dedup():
+    """Bloque 2: las cronologías quedan deduplicadas y ordenadas por fecha
+    (1ª → 2ª vuelta), con etiqueta de vuelta."""
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.composer.chapter_composer import CHAPTER_CATALOG
+    from agents.elite_report.models import EliteChapter, FindingRef
+
+    bundle = _make_bundle()
+    # Inyectar findings judiciales: 1ª vuelta (abr) y 2ª vuelta (jun), con dup.
+    bundle.hunter_entries.extend([
+        FindingRef(finding="JNE denuncia penalmente al jefe de ONPE", category="legal",
+                   severity="high", source_name="EC", source_url="https://e/jun",
+                   recorded_at="2026-06-08"),
+        FindingRef(finding="JNE denunció penalmente al jefe de la ONPE", category="legal",
+                   severity="high", source_name="RPP", source_url="https://r/jun",
+                   recorded_at="2026-06-08"),
+        FindingRef(finding="Allanamiento a oficinas de ONPE por fallas logísticas",
+                   category="judicial", severity="critical", source_name="EC",
+                   source_url="https://e/abr", recorded_at="2026-04-14"),
+    ])
+    chapters = [EliteChapter(number=m["number"], chapter_id=m["chapter_id"],
+                             title=m["title"], narrative="x") for m in CHAPTER_CATALOG]
+    stats = PEIRSEliteReport._build_stats(bundle)
+    PEIRSEliteReport._attach_visualizations(chapters, bundle, None, stats)
+    jud = None
+    for ch in chapters:
+        for v in ch.visualizations:
+            if v.kind == "judicial_timeline":
+                jud = v
+    assert jud is not None
+    actions = jud.data["actions"]
+    dates = [a["date"] for a in actions]
+    assert dates == sorted(dates), "la cronología debe ir en orden ascendente"
+    # Dedup: el evento JNE/ONPE de jun aparece una sola vez.
+    jne = [a for a in actions if "ONPE" in a["action"] and a["date"] == "2026-06-08"]
+    assert len(jne) == 1
+    # Etiqueta de vuelta presente y correcta.
+    assert any(a["round"] == "1ª vuelta" for a in actions)
+    assert any(a["round"] == "2ª vuelta" for a in actions)
+
+
 def test_appendix_c_renders_traceable_findings_table():
     """El Apéndice C debe renderizar una TABLA real de hallazgos con
     trazabilidad (fecha, severidad, categoría, hallazgo, fuente con URL),
@@ -717,12 +794,19 @@ def test_appendix_c_renders_traceable_findings_table():
                    source_name="DFRLab", source_url="https://dfrlab.org/y",
                    recorded_at="2026-06-08T09:00:00+00:00"),
     ]
+    # Un finding con MÚLTIPLES fuentes consolidadas (un hecho = N fuentes).
+    findings[0].sources = [
+        {"url": "https://acleddata.com/x", "name": "ACLED"},
+        {"url": "https://rpp.pe/z", "name": "RPP"},
+    ]
     html = _render_appendix_c(findings, language="es")
     assert "findings-table" in html               # tabla real, no placeholder
     assert "Ataque a local de votación" in html   # el hallazgo
     assert "https://acleddata.com/x" in html       # trazabilidad: URL primaria
+    assert "https://rpp.pe/z" in html              # 2ª fuente del MISMO evento
+    assert "https://dfrlab.org/y" in html          # fallback a source_url (1 fuente)
     assert "2026-06-07" in html                    # fecha
-    assert "2 hallazgos" in html                   # volumen del corpus
+    assert "2 eventos" in html                     # eventos consolidados
     # Estado vacío honesto (sin findings) NO usa lenguaje de placeholder viejo.
     empty = _render_appendix_c([], language="es")
     assert "descargable" not in empty.lower() or "No se registraron" in empty
