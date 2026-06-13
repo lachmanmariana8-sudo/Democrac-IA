@@ -21,9 +21,9 @@ from typing import Dict
 _STRINGS: Dict[str, Dict[str, str]] = {
     # ── Cover ────────────────────────────────────────────────────────
     "cover.pretitle": {
-        "es": "Misión de Observación Electoral · PEIRS",
-        "en": "Electoral Observation Mission · PEIRS",
-        "pt": "Missão de Observação Eleitoral · PEIRS",
+        "es": "Monitoreo Electoral · PEIRS",
+        "en": "Electoral Monitoring · PEIRS",
+        "pt": "Monitoramento Eleitoral · PEIRS",
     },
     "cover.elections_year": {
         "es": "Elecciones",
@@ -61,9 +61,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Missão:",
     },
     "cover.lead_observer": {
-        "es": "Observadora responsable:",
-        "en": "Lead observer:",
-        "pt": "Observadora responsável:",
+        "es": "Responsable del monitoreo:",
+        "en": "Monitoring lead:",
+        "pt": "Responsável pelo monitoramento:",
     },
     "cover.organization": {
         "es": "Organización emisora:",
@@ -211,14 +211,14 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Lista completa de registros do Hunter disponível em formato Markdown para download. Inclui entry_id, data, severidade, categoria, registro, mídia, URL e priority_score.",
     },
     "appendix.c.intro": {
-        "es": "{n} eventos del período observado (hallazgos del Hunter consolidados por evento: un hecho = una fila con todas sus fuentes). Cada fila es rastreable hasta sus fuentes primarias (enlaces en la columna Fuente). Es el respaldo auditable del informe.",
-        "en": "{n} events in the observed period (Hunter findings consolidated per event: one fact = one row with all its sources). Each row is traceable to its primary sources (links in the Source column). This is the report's auditable backing.",
-        "pt": "{n} eventos do período observado (achados do Hunter consolidados por evento: um fato = uma linha com todas as suas fontes). Cada linha é rastreável até suas fontes primárias (links na coluna Fonte). É o respaldo auditável do relatório.",
+        "es": "{n} eventos del período monitoreado (hallazgos del Hunter consolidados por evento: un hecho = una fila con todas sus fuentes). Cada fila es rastreable hasta sus fuentes primarias (enlaces en la columna Fuente). Es el respaldo auditable del informe.",
+        "en": "{n} events in the monitored period (Hunter findings consolidated per event: one fact = one row with all its sources). Each row is traceable to its primary sources (links in the Source column). This is the report's auditable backing.",
+        "pt": "{n} eventos do período monitorado (achados do Hunter consolidados por evento: um fato = uma linha com todas as suas fontes). Cada linha é rastreável até suas fontes primárias (links na coluna Fonte). É o respaldo auditável do relatório.",
     },
     "appendix.c.empty": {
-        "es": "No se registraron hallazgos del Hunter en el período observado.",
-        "en": "No Hunter findings were recorded in the observed period.",
-        "pt": "Não foram registrados achados do Hunter no período observado.",
+        "es": "No se registraron hallazgos del Hunter en el período monitoreado.",
+        "en": "No Hunter findings were recorded in the monitored period.",
+        "pt": "Não foram registrados achados do Hunter no período monitorado.",
     },
     "appendix.c.truncated": {
         "es": "Se muestran los primeros {shown} de {total} hallazgos. El listado completo está en el Markdown descargable.",
@@ -305,16 +305,16 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Inteligência Artificial no processo eleitoral",
     },
     "chapter.observacion_entre_vueltas": {
-        "es": "Resultados electorales y observación del proceso — 1ª y 2ª vuelta",
-        "en": "Electoral results and process observation — first and second round",
-        "pt": "Resultados eleitorais e observação do processo — 1º e 2º turno",
+        "es": "Resultados electorales y monitoreo del proceso — 1ª y 2ª vuelta",
+        "en": "Electoral results and process monitoring — first and second round",
+        "pt": "Resultados eleitorais e monitoramento do processo — 1º e 2º turno",
     },
 
     # ── Capítulo: observación entre vueltas (determinista, sin LLM) ───
     "runoff_obs.intro": {
-        "es": "Estado de observación por eje al cierre del período. El nivel de auditoría escala objetivamente — por documento oficial o cruce de ≥2 fuentes primarias independientes (≥3 ⇒ confirmado), nunca por validación humana informal.",
-        "en": "Per-axis observation status at period close. Audit level escalates objectively — by official document or cross-check of ≥2 independent primary sources (≥3 ⇒ confirmed), never by informal human validation.",
-        "pt": "Estado de observação por eixo no fechamento do período. O nível de auditoria escala objetivamente — por documento oficial ou cruzamento de ≥2 fontes primárias independentes (≥3 ⇒ confirmado), nunca por validação humana informal.",
+        "es": "Estado de monitoreo por eje al cierre del período. El nivel de auditoría escala objetivamente — por documento oficial o cruce de ≥2 fuentes primarias independientes (≥3 ⇒ confirmado), nunca por validación humana informal.",
+        "en": "Per-axis monitoring status at period close. Audit level escalates objectively — by official document or cross-check of ≥2 independent primary sources (≥3 ⇒ confirmed), never by informal human validation.",
+        "pt": "Estado de monitoramento por eixo no fechamento do período. O nível de auditoria escala objetivamente — por documento oficial ou cruzamento de ≥2 fontes primárias independentes (≥3 ⇒ confirmado), nunca por validação humana informal.",
     },
     "runoff_obs.no_findings": {
         "es": "Sin hallazgos corroborados durante la ventana de observación (eje monitoreado, 0 incidentes verificados).",
@@ -369,9 +369,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
 
     # Contexto del proceso de cara a la segunda vuelta (capítulo determinista).
     "runoff_obs.report_title": {
-        "es": "Resultados electorales y observación del proceso — 1ª y 2ª vuelta",
-        "en": "Electoral results and process observation — first and second round",
-        "pt": "Resultados eleitorais e observação do processo — 1º e 2º turno",
+        "es": "Resultados electorales y monitoreo del proceso — 1ª y 2ª vuelta",
+        "en": "Electoral results and process monitoring — first and second round",
+        "pt": "Resultados eleitorais e monitoramento do processo — 1º e 2º turno",
     },
     "runoff_obs.first_round_header": {
         "es": "Primera vuelta — resultados oficiales (12 de abril de 2026)",
@@ -400,9 +400,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "runoff_obs.tbl.pct_prov": {"es": "% válidos (prov.)", "en": "% valid (prov.)", "pt": "% válidos (prov.)"},
     "runoff_obs.tbl.votes_prov": {"es": "Votos (prov.)", "en": "Votes (prov.)", "pt": "Votos (prov.)"},
     "runoff_obs.between_header": {
-        "es": "Fase entre vueltas — observación del proceso (13 abr – 7 jun 2026)",
-        "en": "Between rounds — process observation (13 Apr – 7 Jun 2026)",
-        "pt": "Entre turnos — observação do processo (13 abr – 7 jun 2026)",
+        "es": "Fase entre vueltas — monitoreo del proceso (13 abr – 7 jun 2026)",
+        "en": "Between rounds — process monitoring (13 Apr – 7 Jun 2026)",
+        "pt": "Entre turnos — monitoramento do processo (13 abr – 7 jun 2026)",
     },
     "runoff_obs.second_round_header": {
         "es": "Segunda vuelta — resultado provisional (7 de junio de 2026)",
@@ -453,20 +453,20 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Comparecimento no primeiro turno: {turnout}% (abstenção {abstention}%); votos em branco {blank}%, nulos {null}%.",
     },
     "runoff_obs.legal_basis": {
-        "es": "El monitoreo PEIRS observa el **proceso**, no las propuestas programáticas. Base normativa: ICCPR Art. 25 — derecho a elegir y ser elegido en condiciones de equidad, vigente durante la segunda vuelta.",
-        "en": "PEIRS monitoring observes the **process**, not policy platforms. Normative basis: ICCPR Art. 25 — the right to vote and be elected under equitable conditions, in force during the runoff.",
-        "pt": "O monitoramento PEIRS observa o **processo**, não as propostas programáticas. Base normativa: ICCPR Art. 25 — direito de eleger e ser eleito em condições de equidade, vigente durante o segundo turno.",
+        "es": "El monitoreo PEIRS se centra en el **proceso**, no en las propuestas programáticas. Base normativa: ICCPR Art. 25 — derecho a elegir y ser elegido en condiciones de equidad, vigente durante la segunda vuelta.",
+        "en": "PEIRS monitoring focuses on the **process**, not policy platforms. Normative basis: ICCPR Art. 25 — the right to vote and be elected under equitable conditions, in force during the runoff.",
+        "pt": "O monitoramento PEIRS concentra-se no **processo**, não nas propostas programáticas. Base normativa: ICCPR Art. 25 — direito de eleger e ser eleito em condições de equidade, vigente durante o segundo turno.",
     },
     "runoff_obs.observation_header": {
-        "es": "Estado de observación por eje", "en": "Per-axis observation status", "pt": "Estado de observação por eixo",
+        "es": "Estado de monitoreo por eje", "en": "Per-axis monitoring status", "pt": "Estado de monitoramento por eixo",
     },
     "runoff_obs.results_macro": {
         "es": "Resultados electorales", "en": "Electoral results", "pt": "Resultados eleitorais",
     },
     "runoff_obs.observation_intro": {
-        "es": "Durante la fase entre vueltas (13 abr – 7 jun 2026) la observación se organizó en 9 ejes del proceso. A continuación, los ejes con hechos documentados; al cierre, la cobertura del resto.",
-        "en": "During the inter-round phase (13 Apr – 7 Jun 2026) observation was organised across 9 process axes. Below, the axes with documented facts; at the end, the coverage of the rest.",
-        "pt": "Durante a fase entre turnos (13 abr – 7 jun 2026) a observação foi organizada em 9 eixos do processo. A seguir, os eixos com fatos documentados; ao final, a cobertura dos demais.",
+        "es": "Durante la fase entre vueltas (13 abr – 7 jun 2026) el monitoreo se organizó en 9 ejes del proceso. A continuación, los ejes con hechos documentados; al cierre, la cobertura del resto.",
+        "en": "During the inter-round phase (13 Apr – 7 Jun 2026) monitoring was organised across 9 process axes. Below, the axes with documented facts; at the end, the coverage of the rest.",
+        "pt": "Durante a fase entre turnos (13 abr – 7 jun 2026) o monitoramento foi organizado em 9 eixos do processo. A seguir, os eixos com fatos documentados; ao final, a cobertura dos demais.",
     },
     "runoff_obs.status_confirmed": {
         "es": "hallazgos confirmados (documento oficial o ≥3 fuentes independientes)",
@@ -484,7 +484,7 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "achados registrados, não corroborados de forma independente",
     },
     "runoff_obs.coverage_header": {
-        "es": "Cobertura de observación", "en": "Observation coverage", "pt": "Cobertura de observação",
+        "es": "Cobertura de monitoreo", "en": "Monitoring coverage", "pt": "Cobertura de monitoramento",
     },
     "runoff_obs.coverage_monitored": {
         "es": "**Ejes monitoreados sin incidentes documentados** en el período: {axes}. La ausencia de incidentes refleja que el monitoreo (OSINT propio, redes, OONI) no registró eventos verificables — no es una afirmación de normalidad institucional.",
@@ -503,9 +503,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Risco de legitimidade do resultado",
     },
     "runoff_obs.risk_intro": {
-        "es": "Más allá de quién resulte proclamado, la observación PEIRS identifica una convergencia de factores que tensiona la legitimidad del resultado de la 2ª vuelta:",
-        "en": "Beyond who is ultimately proclaimed, PEIRS observation identifies a convergence of factors straining the legitimacy of the runoff result:",
-        "pt": "Para além de quem seja proclamado, a observação PEIRS identifica uma convergência de fatores que tensiona a legitimidade do resultado do 2º turno:",
+        "es": "Más allá de quién resulte proclamado, el monitoreo PEIRS identifica una convergencia de factores que tensiona la legitimidad del resultado de la 2ª vuelta:",
+        "en": "Beyond who is ultimately proclaimed, PEIRS monitoring identifies a convergence of factors straining the legitimacy of the runoff result:",
+        "pt": "Para além de quem seja proclamado, o monitoramento PEIRS identifica uma convergência de fatores que tensiona a legitimidade do resultado do 2º turno:",
     },
     "runoff_obs.risk_margin": {
         "es": "**Margen mínimo.** El resultado provisional se define por ~{mp} puntos porcentuales (~{mv} votos), dentro del universo de actas aún en revisión.",
@@ -645,9 +645,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Séries V-Dem, Freedom House, PEI e RSF dos últimos 10 anos.",
     },
     "viz.events_timeline.title": {
-        "es": "Eventos críticos del período observado",
-        "en": "Critical events of the observed period",
-        "pt": "Eventos críticos do período observado",
+        "es": "Eventos críticos del período monitoreado",
+        "en": "Critical events of the monitored period",
+        "pt": "Eventos críticos do período monitorado",
     },
     "viz.events_timeline.caption": {
         "es": "Top hallazgos ordenados por severidad y fecha.",
@@ -740,9 +740,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Rede de atores institucionais",
     },
     "viz.actor_network.caption": {
-        "es": "Acciones e intervenciones cruzadas observadas.",
-        "en": "Observed cross-cutting actions and interventions.",
-        "pt": "Ações e intervenções cruzadas observadas.",
+        "es": "Acciones e intervenciones cruzadas registradas.",
+        "en": "Recorded cross-cutting actions and interventions.",
+        "pt": "Ações e intervenções cruzadas registradas.",
     },
     "viz.judicial_timeline.title": {
         "es": "Cronología judicial",
@@ -820,9 +820,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "8 dimensões PEIRS",
     },
     "viz.dimensions_radar.caption": {
-        "es": "Escala 0–100 de salud por dimensión: 100 = sin incidencias observadas en el ciclo; valores bajos = mayor concentración de hallazgos graves. Un valor cercano a 0 (p. ej. Org. electoral) señala dimensión bajo estrés, no ausencia de datos.",
-        "en": "0–100 health scale per dimension: 100 = no incidents observed in the cycle; low values = greater concentration of serious findings. A value near 0 (e.g. Electoral body) signals a dimension under stress, not missing data.",
-        "pt": "Escala 0–100 de saúde por dimensão: 100 = sem incidências observadas no ciclo; valores baixos = maior concentração de registros graves. Um valor próximo de 0 (ex.: Órgão eleitoral) sinaliza dimensão sob estresse, não ausência de dados.",
+        "es": "Escala 0–100 de salud por dimensión: 100 = sin incidencias registradas en el ciclo; valores bajos = mayor concentración de hallazgos graves. Un valor cercano a 0 (p. ej. Org. electoral) señala dimensión bajo estrés, no ausencia de datos.",
+        "en": "0–100 health scale per dimension: 100 = no incidents recorded in the cycle; low values = greater concentration of serious findings. A value near 0 (e.g. Electoral body) signals a dimension under stress, not missing data.",
+        "pt": "Escala 0–100 de saúde por dimensão: 100 = sem incidências registradas no ciclo; valores baixos = maior concentração de registros graves. Um valor próximo de 0 (ex.: Órgão eleitoral) sinaliza dimensão sob estresse, não ausência de dados.",
     },
     "viz.matrix_recommendations.title": {
         "es": "Matriz de recomendaciones priorizadas",

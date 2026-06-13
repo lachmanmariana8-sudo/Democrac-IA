@@ -10,7 +10,7 @@
 - Specific competencies of each body according to the Constitution
 - Appointment regime and term length of officeholders
 - Constitutional principle of autonomy and coordination (Art. 177 for PER)
-- **Quantified EMB independence and capacity**: cite current V-Dem v16 values available in the context under "V-DEM QUANTITATIVE INDICATORS" — specifically `v2elembaut` (EMB autonomy) and `v2elembcap` (EMB capacity). Compare to the 5-year trend to identify whether institutional independence improved, was maintained, or deteriorated during the cycle. Example citation: "The V-Dem index for electoral body autonomy (v2elembaut) records 1.31 in 2025, maintaining the medium-high range of the series (V-Dem Institute, 2026)."
+- **Quantified EMB independence and capacity**: cite the V-Dem v16 values available in the context under "V-DEM QUANTITATIVE INDICATORS", for the **autonomy** and **capacity** of the electoral body. Compare to the trend of recent years to indicate whether institutional independence improved, was maintained, or deteriorated. Use CLEAR language, without technical variable codes: e.g. "according to V-Dem v16, the autonomy of the electoral body fell from 2.40 (2021) to 0.96 (2024)". FORBIDDEN to include the raw codes (v2elembaut/v2elembcap) in the text or to INVENT years or values not in the context (there is no 2025 data point).
 
 ## 3.2 Electoral procedures
 

@@ -10,7 +10,7 @@
 - Competencias específicas de cada organismo según la Constitución
 - Régimen de designación y duración de mandatos de los titulares
 - Principio constitucional de autonomía y coordinación (Art. 177 para PER)
-- **Independencia y capacidad cuantificada del EMB**: citar los valores actuales de V-Dem v16 disponibles en el contexto bajo "INDICADORES V-DEM CUANTITATIVOS" — específicamente `v2elembaut` (autonomía EMB) y `v2elembcap` (capacidad EMB). Comparar con la tendencia 5 años para identificar si la independencia institucional mejoró, se mantuvo o se deterioró durante el ciclo. Ejemplo de cita: "El índice V-Dem de autonomía del órgano electoral (v2elembaut) registra 1.31 en 2025, manteniendo el rango medio-alto de la serie (V-Dem Institute, 2026)."
+- **Independencia y capacidad cuantificada del EMB**: citar los valores de V-Dem v16 disponibles en el contexto bajo "INDICADORES V-DEM CUANTITATIVOS", para la **autonomía** y la **capacidad** del organismo electoral. Comparar con la tendencia de los últimos años para indicar si la independencia institucional mejoró, se mantuvo o se deterioró. Usá lenguaje CLARO, sin códigos técnicos de variable: p. ej. "según V-Dem v16, la autonomía del organismo electoral cayó de 2,40 (2021) a 0,96 (2024)". PROHIBIDO incluir los códigos crudos (v2elembaut/v2elembcap) en el texto e INVENTAR años o valores que no estén en el contexto (no existe dato 2025).
 
 ## 3.2 Procedimientos electorales
 

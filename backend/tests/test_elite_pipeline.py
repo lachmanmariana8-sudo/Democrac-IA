@@ -455,7 +455,7 @@ def test_runoff_chapter_no_pending_language():
     assert "pendiente de verificar" not in n.lower()
     assert "Eje no observado" not in n
     # Nota de cobertura presente, con la distinción honesta de los vacíos.
-    assert "Cobertura de observación" in n
+    assert "Cobertura de monitoreo" in n
     assert "monitoreados sin incidentes documentados" in n
     assert "sin evidencia primaria procesada" in n
 
@@ -540,7 +540,7 @@ def test_runoff_chapter_is_factual_record_both_rounds():
     assert "Corvetto" in narrative
     # base legal + nota de cobertura de los ejes vacíos
     assert "ICCPR Art. 25" in narrative
-    assert "Cobertura de observación" in narrative
+    assert "Cobertura de monitoreo" in narrative
     # Macro-secciones claras
     assert "Resultados electorales" in narrative
 
@@ -692,7 +692,7 @@ def test_compose_includes_runoff_chapter_without_llm():
     # Sin lenguaje "pendiente"; en su lugar, nota de cobertura honesta.
     html = output.html or ""
     assert "PENDIENTE_VERIFICACION" not in html
-    assert "Cobertura de observación" in html
+    assert "Cobertura de monitoreo" in html
     # Resultados de ambas vueltas (fuente factual única) + crisis EMB.
     assert "Keiko Fujimori" in html and "Sin ganador proclamado" in html
     assert "Corvetto" in html

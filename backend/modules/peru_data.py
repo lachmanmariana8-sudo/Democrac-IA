@@ -487,8 +487,8 @@ PERU_RUNOFF_2026 = {
     # operó "sin fallas": el informe de 1ª vuelta documentó fallas durante el
     # escrutinio. Solo se empleó en la 1ª vuelta; en la 2ª vuelta no se utilizó.
     "electoral_technology_note": {
-        "stae_first_round": "El STAE se desplegó en la 1ª vuelta y durante el escrutinio presentó fallas documentadas (ruptura de cédulas en Callao por fallas técnicas) y operó sin auditoría independiente pública certificada — punto central de la observación post-electoral.",
-        "stae_second_round": "Según la observación PEIRS, el STAE no se empleó en la 2ª vuelta.",
+        "stae_first_round": "El STAE se desplegó en la 1ª vuelta y durante el escrutinio presentó fallas documentadas (ruptura de cédulas en Callao por fallas técnicas) y operó sin auditoría independiente pública certificada — punto central del monitoreo post-electoral.",
+        "stae_second_round": "Según el monitoreo PEIRS, el STAE no se empleó en la 2ª vuelta.",
         "source_first_round": "Informe PEIRS 1ª vuelta (INFORME_PERU_2026) — Sección 7.5/11; Resolución JNE N° 0891-2025-JNE (rechazo de voto electrónico no presencial por ausencia de auditoría independiente).",
         "audit_status": "VERIFIED_SECONDARY",
         "audit_note": "La afirmación sobre 1ª vuelta tiene respaldo documental en el informe previo. El no-uso en 2ª vuelta es observación PEIRS pendiente de confirmación documental ONPE. PROHIBIDO afirmar que el STAE 'operó sin fallas' o inferir buen funcionamiento por ausencia de hallazgos.",
