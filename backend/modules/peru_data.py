@@ -444,33 +444,43 @@ PERU_RUNOFF_2026 = {
     "second_round_results": {
         "election_date": "2026-06-07",
         "status": "EN_ESCRUTINIO_SIN_PROCLAMACION",
-        "as_of": "2026-06-10",
+        "as_of": "2026-06-12",
         "provisional": True,
-        "actas_processed_pct": 97.9,
+        "actas_processed_pct": 98.3,
+        # Orden = liderazgo marginal en el corte 98.3% (21:58). NO implica
+        # ganador: la diferencia (~1.303 votos) está dentro del ruido del conteo
+        # y el liderazgo se invirtió respecto de cortes previos (Sánchez lideraba
+        # al 97.9%). Empate técnico sin proclamación.
         "candidates": [
-            {"candidate_name": "Roberto Sánchez Palomino", "party": "Juntos por el Perú",
-             "party_id": "jpp", "pct_valid": 50.02, "votes": 9_020_928},
             {"candidate_name": "Keiko Fujimori", "party": "Fuerza Popular",
-             "party_id": "fp", "pct_valid": 49.98, "votes": 9_014_171},
+             "party_id": "fp", "pct_valid": 50.004, "votes": 9_036_046},
+            {"candidate_name": "Roberto Sánchez Palomino", "party": "Juntos por el Perú",
+             "party_id": "jpp", "pct_valid": 49.996, "votes": 9_034_743},
         ],
-        "margin_votes_approx": 6_757,
-        "margin_pct_approx": 0.05,
+        "margin_votes_approx": 1_303,
+        "margin_pct_approx": 0.008,
+        "valid_votes": 18_070_789,
+        "blank_null_abs": 1_263_538,
+        "turnout_pct": 70.8,
+        "non_voters": 7_991_105,
+        "registered_voters_mm": 27.3,
         "blank_pct": 0.6,
         "null_pct": 5.93,
+        "lead_flipped": True,
         "proclamation": {
             "proclaimed": False,
             "winner": None,
-            "note": "El JNE no ha proclamado ganador. ~1.600 actas en revisión en JEE; el presidente del JNE, Roberto Burneo, estimó que el resultado se conocería «casi un mes después» del 7-jun por impugnaciones y actas observadas.",
+            "note": "El JNE no ha proclamado ganador. El liderazgo marginal se invirtió entre cómputos sucesivos (Sánchez al 97.9%, Fujimori al 98.3%), con una diferencia de ~1.303 votos. Persisten actas observadas en revisión en JEE; el presidente del JNE, Roberto Burneo, estimó que el resultado se conocería «casi un mes después» del 7-jun.",
         },
         "source": "ONPE — Presentación de Resultados, Segunda Vuelta EG 2026",
         "source_url": "https://resultadosegundavuelta.onpe.gob.pe/",
         "sources_secondary": [
+            "https://elcomercio.pe/politica/elecciones/resultados-segunda-vuelta-elecciones-peru-2026-en-vivo-conteo-onpe-flash-electoral-y-quien-gana-entre-keiko-fujimori-y-roberto-sanchez-hoy-7-de-junio-noticia/",
             "https://www.infobae.com/peru/2026/06/07/resultados-onpe-en-vivo-conteo-oficial-de-votos-de-keiko-fujimori-y-roberto-sanchez-en-la-segunda-vuelta-de-elecciones-2026/",
             "https://gestion.pe/mix/respuestas/quien-gano-las-elecciones-generales-2026-en-peru-en-vivo-keiko-fujimori-o-roberto-sanchez-resultados-de-la-onpe-en-directo-segunda-vuelta-nnda-nnrt-noticia/",
-            "https://elcomercio.pe/politica/elecciones/resultados-onpe-segunda-vuelta-elecciones-peru-2026-en-vivo-asi-va-el-conteo-oficial-entre-keiko-fujimori-y-roberto-sanchez-ultimas-noticia/",
         ],
         "audit_status": "PROVISIONAL_VERIFIED_SECONDARY",
-        "audit_note": "Conteo en curso al 10-jun-2026 (~97.9% actas). Cifras cross-referenciadas Infobae/Gestión/El Comercio; varían levemente por el corte horario del conteo en vivo. Resultado dentro del margen (~0.05 pp, ~6.700 votos), técnicamente en empate. SIN ganador proclamado — el informe NO debe declarar presidente electo hasta la proclamación oficial del JNE.",
+        "audit_note": "Conteo en curso al corte 98.3% de actas (21:58), fuente El Comercio/ONPE. Diferencia ~1.303 votos (~0.008 pp); el liderazgo marginal se invirtió entre cortes (Sánchez 50.02% al 97.9% → Fujimori 50.004% al 98.3%), lo que confirma un empate técnico dentro del ruido del escrutinio. Participación 2ª vuelta 70.8%; válidos 18.070.789; blancos+nulos 1.263.538. SIN ganador proclamado — el informe NO debe declarar presidente electo hasta la proclamación oficial del JNE.",
     },
     # ── Sistema tecnológico STAE — corrección factual ────────────────────
     # El STAE (Sistema/Solución Tecnológica de Apoyo al Escrutinio, con IA) NO
