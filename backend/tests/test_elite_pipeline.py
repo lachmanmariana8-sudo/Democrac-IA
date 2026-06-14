@@ -487,6 +487,26 @@ def test_runoff_chapter_reflects_hunter_escalation():
     assert "Hallazgos registrados: 2" in chapter.narrative
 
 
+def test_milestones_and_emb_event_grouping():
+    """Bloque 4: hitos del ciclo (1ª→2ª→escrutinio). Bloque 3: las 6 señales
+    del EMB se agrupan bajo el evento 'Crisis institucional de la ONPE'."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+
+    runoff = get_adapter("PER").runoff_observation([])
+    n = build_runoff_observation_chapter(runoff, lang="es").narrative
+    # Bloque 4 — hitos cronológicos
+    assert "Hitos del ciclo electoral 2026" in n
+    assert "Primera vuelta" in n and "Keiko Fujimori" in n
+    assert "Segunda vuelta" in n
+    assert "Escrutinio en curso" in n and "1.303" in n
+    # Bloque 3 — evento EMB agrupador + sus señales debajo
+    assert "Crisis institucional de la ONPE" in n
+    assert "Corvetto" in n          # las 6 señales siguen presentes, agrupadas
+    # El evento aparece antes que las viñetas de señales
+    assert n.index("Crisis institucional de la ONPE") < n.index("Corvetto")
+
+
 def test_runoff_chapter_has_legitimacy_risk_section():
     """Eje central de riesgo: convergencia (margen + no proclamado + EMB +
     STAE) + espejo 2021, anclado en datos cargados, sin especular el desenlace."""

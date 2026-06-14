@@ -196,6 +196,13 @@ def _build_observation_section(observation: Dict[str, Any], lang: str) -> List[s
         parts.append("*" + t(lang, "runoff_obs.desc." + axis_key, "") + "*")
         parts.append("**" + status_txt + "** · " +
                      t(lang, "runoff_obs.findings_count").format(n=count))
+        # Bloque 3: si las señales son ángulos de UN evento, agruparlas bajo su
+        # encabezado y síntesis (en vez de N viñetas sueltas).
+        event_summary = block.get("event_summary")
+        if event_summary:
+            event_title = block.get("event_title", "")
+            lead = ("**" + event_title + ":** " + event_summary) if event_title else event_summary
+            parts.append(lead)
         items = _axis_items(block)
         if items:
             # Una sola lista <ul> (las viñetas van juntas, sin línea en blanco
@@ -311,6 +318,35 @@ def _build_legitimacy_risk_section(runoff: Dict[str, Any], lang: str) -> List[st
     return parts
 
 
+def _build_milestones_section(runoff: Dict[str, Any], lang: str) -> List[str]:
+    """Bloque 4 — Hitos del ciclo electoral, en orden cronológico (1ª → 2ª
+    vuelta → escrutinio). Determinista, desde fechas y datos cargados."""
+    parts: List[str] = ["### " + t(lang, "runoff_obs.milestones_header")]
+    fin = runoff.get("finalists") or []
+    a = fin[0] if len(fin) > 0 else {}
+    b = fin[1] if len(fin) > 1 else {}
+    lines: List[str] = []
+    lines.append(t(lang, "runoff_obs.milestone_r1").format(
+        date=runoff.get("first_round_date", "—"),
+        a=a.get("candidate_name", "—"), ap=a.get("party_name", "—"),
+        b=b.get("candidate_name", "—"), bp=b.get("party_name", "—")))
+    obs = runoff.get("runoff_phase_observation") or {}
+    emb = obs.get("emb_independence_stress_signals") or {}
+    if emb.get("signals"):
+        lines.append(t(lang, "runoff_obs.milestone_emb"))
+    lines.append(t(lang, "runoff_obs.milestone_between"))
+    lines.append(t(lang, "runoff_obs.milestone_r2").format(
+        date=runoff.get("runoff_date", "—")))
+    sr = runoff.get("second_round_results")
+    if isinstance(sr, dict):
+        lines.append(t(lang, "runoff_obs.milestone_count").format(
+            as_of=sr.get("as_of", "—"),
+            actas=sr.get("actas_processed_pct", "—"),
+            margin=_fmt_int(sr.get("margin_votes_approx"), lang)))
+    parts.append("\n".join(lines))
+    return parts
+
+
 def build_runoff_observation_narrative(runoff: Dict[str, Any], lang: str) -> str:
     """Markdown del capítulo factual: 1ª vuelta · entre vueltas · 2ª vuelta · STAE.
 
@@ -318,6 +354,8 @@ def build_runoff_observation_narrative(runoff: Dict[str, Any], lang: str) -> str
     capítulos no los repiten). Determinista: sin LLM, sin pronósticos."""
     observation = runoff.get("runoff_phase_observation") or {}
     parts: List[str] = []
+    # Hitos del ciclo (bloque 4) — panorama cronológico al inicio.
+    parts += _build_milestones_section(runoff, lang)
     # Macro-sección A — Resultados electorales (hechos consumados).
     parts.append("### " + t(lang, "runoff_obs.results_macro"))
     parts += _build_first_round_section(runoff, lang)

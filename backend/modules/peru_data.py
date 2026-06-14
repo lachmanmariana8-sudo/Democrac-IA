@@ -607,6 +607,10 @@ PERU_RUNOFF_2026 = {
                 },
             ],
             "audit_status": "VERIFIED_SECONDARY",
+            # Las 6 señales son ángulos de UN mismo evento: se presentan agrupadas
+            # bajo este encabezado, no como 6 hallazgos sueltos (bloque 3).
+            "event_title": "Crisis institucional de la ONPE (post 1ª vuelta)",
+            "event_summary": "La crisis logística de la 1ª vuelta derivó en una crisis institucional del órgano electoral: su titular fue denunciado penalmente y enfrentó pedidos de separación cautelar, en un cuadro de presión penal, administrativa, política y gremial convergente. Hechos documentados:",
             "audit_note": "Señales recuperadas del informe PEIRS de 1ª vuelta (12-16 abr 2026), cada una con fuente periodística primaria (El Comercio / RPP). Documentan estrés institucional convergente sobre ONPE: penal, administrativo, político y gremial. Tipos: moción_interpelación | ataque_personal_magistrados | retiro_presupuesto | declaraciones_cuestionando_autoridad | denuncia_penal | control_observaciones | pedido_separación_cautelar. Estándar: OSCE Copenhagen §7 + CDI Art. 3.",
         },
         # Preparación logística para la jornada electoral del 7-jun.

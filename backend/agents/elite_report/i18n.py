@@ -531,6 +531,35 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "runoff_obs.results_macro": {
         "es": "Resultados electorales", "en": "Electoral results", "pt": "Resultados eleitorais",
     },
+    # ── Hitos del ciclo (bloque 4) ───────────────────────────────────────
+    "runoff_obs.milestones_header": {
+        "es": "Hitos del ciclo electoral 2026", "en": "2026 electoral cycle milestones", "pt": "Marcos do ciclo eleitoral 2026",
+    },
+    "runoff_obs.milestone_r1": {
+        "es": "- **{date}** — Primera vuelta. Pasan al balotaje {a} ({ap}) y {b} ({bp}).",
+        "en": "- **{date}** — First round. {a} ({ap}) and {b} ({bp}) advance to the runoff.",
+        "pt": "- **{date}** — Primeiro turno. {a} ({ap}) e {b} ({bp}) avançam ao segundo turno.",
+    },
+    "runoff_obs.milestone_emb": {
+        "es": "- **14–16 abr** — Crisis institucional de la ONPE: su titular denunciado penalmente y pedidos de separación cautelar (véase eje EMB y Anexo C).",
+        "en": "- **14–16 Apr** — ONPE institutional crisis: its head criminally charged and requests for precautionary removal (see EMB axis and Appendix C).",
+        "pt": "- **14–16 abr** — Crise institucional da ONPE: seu titular denunciado penalmente e pedidos de afastamento cautelar (ver eixo EMB e Anexo C).",
+    },
+    "runoff_obs.milestone_between": {
+        "es": "- **13 abr – 7 jun** — Fase entre vueltas: monitoreo del proceso.",
+        "en": "- **13 Apr – 7 Jun** — Inter-round phase: process monitoring.",
+        "pt": "- **13 abr – 7 jun** — Fase entre turnos: monitoramento do processo.",
+    },
+    "runoff_obs.milestone_r2": {
+        "es": "- **{date}** — Segunda vuelta (balotaje).",
+        "en": "- **{date}** — Second round (runoff).",
+        "pt": "- **{date}** — Segundo turno.",
+    },
+    "runoff_obs.milestone_count": {
+        "es": "- **{as_of}** — Escrutinio en curso ({actas} % de actas): empate técnico (~{margin} votos), sin proclamación del JNE.",
+        "en": "- **{as_of}** — Count in progress ({actas} % of tally sheets): technical tie (~{margin} votes), no JNE proclamation.",
+        "pt": "- **{as_of}** — Apuração em curso ({actas} % das atas): empate técnico (~{margin} votos), sem proclamação do JNE.",
+    },
     "runoff_obs.observation_intro": {
         "es": "Durante la fase entre vueltas (13 abr – 7 jun 2026) el monitoreo se organizó en 9 ejes del proceso. A continuación, los ejes con hechos documentados; al cierre, la cobertura del resto.",
         "en": "During the inter-round phase (13 Apr – 7 Jun 2026) monitoring was organised across 9 process axes. Below, the axes with documented facts; at the end, the coverage of the rest.",
