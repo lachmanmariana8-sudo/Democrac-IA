@@ -167,6 +167,27 @@ class PEIRSEliteReport:
                 f"Capítulo observación entre vueltas falló: {type(e).__name__}: {e}"
             )
 
+        # ── 6c. APERTURA DETERMINISTA: Prólogo + Síntesis ejecutiva ────
+        # Reemplaza la 'Declaración preliminar' del LLM (que inventaba cifras)
+        # por texto institucional fijo + síntesis armada desde datos reales.
+        try:
+            if (req.country_code or "").upper() == "PER" and isinstance(runoff_obs, dict) \
+                    and "second_round_results" in runoff_obs:
+                from agents.elite_report.declaration_chapter import build_declaration_narrative
+                from modules.peru_data import PERU_VDEM_STATIC
+                decl_md = build_declaration_narrative(
+                    runoff_obs, stats, PERU_VDEM_STATIC.get("emb_series"),
+                    lang=req.language or "es")
+                if decl_md:
+                    for ch in chapters:
+                        if ch.chapter_id == "declaracion_preliminar":
+                            ch.narrative = decl_md
+                            break
+        except Exception as e:
+            bundle.warnings.append(
+                f"Apertura determinista (prólogo+síntesis) falló: {type(e).__name__}: {e}"
+            )
+
         # ── 7. ATTACH VISUALIZATIONS A CADA CAPÍTULO ───────────────────
         self._attach_visualizations(chapters, bundle, forecast, stats,
                                      language=req.language or "es")

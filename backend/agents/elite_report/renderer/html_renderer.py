@@ -251,7 +251,7 @@ nav.toc li a {
 
 nav.toc li a:hover { color: var(--teal); }
 
-/* ── Declaración preliminar (destacada) ──────────────────────────── */
+/* ── Apertura: prólogo + síntesis ejecutiva (destacada) ──────────── */
 section.declaration {
   padding: 40px 48px;
   background: linear-gradient(135deg, #e0f2f1 0%, #fafafa 100%);

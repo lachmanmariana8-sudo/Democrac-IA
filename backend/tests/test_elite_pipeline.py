@@ -700,6 +700,31 @@ def test_compose_includes_runoff_chapter_without_llm():
     assert 'id="appendix-c"' in html
 
 
+def test_deterministic_declaration_prologue_and_synthesis():
+    """La apertura determinista trae Prólogo (quiénes somos) + Síntesis con
+    datos reales (sin invención): terminología 'monitoreo', V-Dem reales
+    (2,40→0,96), sin códigos crudos, sin el valor alucinado '1.31'."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.declaration_chapter import build_declaration_narrative
+    from modules.peru_data import PERU_VDEM_STATIC
+
+    runoff = get_adapter("PER").runoff_observation([])
+    stats = {"total": 1922, "critical": 30, "high": 91}
+    md = build_declaration_narrative(runoff, stats, PERU_VDEM_STATIC.get("emb_series"), lang="es")
+    assert md is not None
+    assert "Quiénes somos" in md and "Síntesis ejecutiva" in md
+    assert "monitoreó" in md and "monitoreo" in md.lower()
+    assert "1.922" in md or "1922" in md            # corpus (volumen)
+    assert "Sin proclamación".lower() in md.lower() or "no ha proclamado" in md
+    assert "~1.303 votos" in md                      # margen real
+    # V-Dem real, NO el inventado 1.31/2025
+    assert "2,40" in md and "0,96" in md
+    assert "1.31" not in md and "2025" not in md
+    assert "v2elemb" not in md                        # sin códigos crudos
+    # No legitima / disclosure
+    assert "no legitima ni valida" in md
+
+
 def test_consolidate_merges_same_event_sources():
     """Bloque 1: dos capturas del mismo evento (misma fecha, texto similar) se
     funden en UN hallazgo con AMBAS fuentes; eventos distintos no se mezclan."""

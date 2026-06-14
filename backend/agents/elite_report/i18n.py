@@ -159,9 +159,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Cap. ",
     },
     "toc.declaration_label": {
-        "es": "Declaración",
-        "en": "Declaration",
-        "pt": "Declaração",
+        "es": "Apertura",
+        "en": "Opening",
+        "pt": "Abertura",
     },
 
     # ── Anexos ───────────────────────────────────────────────────────
@@ -240,9 +240,77 @@ _STRINGS: Dict[str, Dict[str, str]] = {
 
     # ── Chapter titles (deben coincidir con CHAPTER_CATALOG) ─────────
     "chapter.declaracion_preliminar": {
-        "es": "Declaración preliminar",
-        "en": "Preliminary declaration",
-        "pt": "Declaração preliminar",
+        "es": "Prólogo y síntesis ejecutiva",
+        "en": "Prologue and executive summary",
+        "pt": "Prólogo e síntese executiva",
+    },
+    # ── Prólogo (Quiénes somos) — texto institucional fijo ───────────────
+    "prologo.title": {"es": "Quiénes somos", "en": "Who we are", "pt": "Quem somos"},
+    "prologo.p1": {
+        "es": "**Democrac.IA PEIRS** es una plataforma de **monitoreo electoral** con fines **analíticos y de estudio**, **apartidaria e independiente**, construida sobre una **arquitectura de agentes de inteligencia artificial**. Su propósito es **servir, informar y fortalecer a la ciudadanía** en los procesos electorales y sus dinámicas en la era de la IA, aportando inteligencia electoral verificable y trazable que amplíe la capacidad de la sociedad civil, la academia, los organismos de observación y la prensa para comprender la **integridad** de una elección más allá del resultado.",
+        "en": "**Democrac.IA PEIRS** is an **electoral monitoring** platform for **analytical and study** purposes, **non-partisan and independent**, built on an **artificial-intelligence agent architecture**. Its purpose is to **serve, inform and strengthen citizens** in electoral processes and their dynamics in the AI era, providing verifiable and traceable electoral intelligence that broadens the capacity of civil society, academia, observation bodies and the press to understand the **integrity** of an election beyond its result.",
+        "pt": "**Democrac.IA PEIRS** é uma plataforma de **monitoramento eleitoral** com fins **analíticos e de estudo**, **apartidária e independente**, construída sobre uma **arquitetura de agentes de inteligência artificial**. Seu propósito é **servir, informar e fortalecer a cidadania** nos processos eleitorais e suas dinâmicas na era da IA, oferecendo inteligência eleitoral verificável e rastreável que amplie a capacidade da sociedade civil, da academia, dos organismos de observação e da imprensa para compreender a **integridade** de uma eleição para além do resultado.",
+    },
+    "prologo.p2": {
+        "es": "**Lo que no somos.** No somos una autoridad electoral ni la sustituimos: no organizamos, administramos ni certificamos comicios, y **no legitimamos, validamos ni impugnamos resultados**. No tomamos posición político-partidaria. Monitoreamos el **proceso** —no las propuestas ni las candidaturas— bajo estándares internacionales de observación electoral (Art. 25 del ICCPR, Art. 23 de la CADH, la Declaración de Principios para la Observación Internacional de Elecciones de 2005 y los marcos de OEA/UE), complementados con indicadores académicos como V-Dem.",
+        "en": "**What we are not.** We are not an electoral authority, nor do we replace one: we do not organise, administer or certify elections, and we **do not legitimise, validate or challenge results**. We take no partisan political position. We monitor the **process** —not the platforms or the candidacies— under international electoral observation standards (ICCPR Art. 25, ACHR Art. 23, the 2005 Declaration of Principles for International Election Observation and the OAS/EU frameworks), complemented by academic indicators such as V-Dem.",
+        "pt": "**O que não somos.** Não somos uma autoridade eleitoral nem a substituímos: não organizamos, administramos nem certificamos eleições, e **não legitimamos, validamos nem impugnamos resultados**. Não tomamos posição político-partidária. Monitoramos o **processo** —não as propostas nem as candidaturas— sob padrões internacionais de observação eleitoral (Art. 25 do ICCPR, Art. 23 da CADH, a Declaração de Princípios para a Observação Internacional de Eleições de 2005 e os marcos da OEA/UE), complementados por indicadores acadêmicos como o V-Dem.",
+    },
+    "prologo.p3": {
+        "es": "**Qué hacemos.** PEIRS opera un pipeline de agentes de IA especializados que, de forma continua: (1) monitorea fuentes abiertas —RSS de medios, monitoreo OSINT y mediciones técnicas de conectividad (OONI)—; (2) clasifica automáticamente cada hallazgo por categoría, fase electoral y severidad; (3) cruza la evidencia contra el marco normativo internacional; y (4) consolida y documenta cada hecho con **trazabilidad a su fuente primaria**. El resultado es **inteligencia electoral auditable**: cada afirmación de este informe puede rastrearse hasta su origen (véase Anexo C) y ningún dato se afirma sin respaldo. La consolidación asegura que un hecho se reporte una sola vez, con todas sus fuentes; y el monitoreo distingue siempre lo documentado de los vacíos de cobertura, sin inferir normalidad a partir de la ausencia de datos.",
+        "en": "**What we do.** PEIRS runs a pipeline of specialised AI agents that continuously: (1) monitor open sources —media RSS, OSINT monitoring and technical connectivity measurements (OONI)—; (2) automatically classify each finding by category, electoral phase and severity; (3) cross-check evidence against the international normative framework; and (4) consolidate and document each fact with **traceability to its primary source**. The result is **auditable electoral intelligence**: every statement in this report can be traced to its origin (see Appendix C) and no datum is asserted without backing. Consolidation ensures a fact is reported once, with all its sources; and monitoring always distinguishes the documented from coverage gaps, without inferring normality from the absence of data.",
+        "pt": "**O que fazemos.** O PEIRS opera um pipeline de agentes de IA especializados que, de forma contínua: (1) monitora fontes abertas —RSS de mídia, monitoramento OSINT e medições técnicas de conectividade (OONI)—; (2) classifica automaticamente cada achado por categoria, fase eleitoral e severidade; (3) cruza a evidência com o marco normativo internacional; e (4) consolida e documenta cada fato com **rastreabilidade até sua fonte primária**. O resultado é **inteligência eleitoral auditável**: cada afirmação deste relatório pode ser rastreada até sua origem (ver Anexo C) e nenhum dado é afirmado sem respaldo. A consolidação garante que um fato seja relatado uma só vez, com todas as suas fontes; e o monitoramento distingue sempre o documentado das lacunas de cobertura, sem inferir normalidade a partir da ausência de dados.",
+    },
+    "prologo.p4": {
+        "es": "**Por qué, ahora.** En una era donde la desinformación, los *deepfakes* y la opacidad algorítmica de los sistemas de cómputo redefinen los riesgos de integridad, Democrac.IA PEIRS pone capacidades de análisis antes reservadas a grandes instituciones **al servicio del interés público y del fortalecimiento democrático**.",
+        "en": "**Why now.** In an era where disinformation, *deepfakes* and the algorithmic opacity of vote-counting systems redefine integrity risks, Democrac.IA PEIRS puts analytical capabilities once reserved for large institutions **at the service of the public interest and democratic strengthening**.",
+        "pt": "**Por que agora.** Numa era em que a desinformação, os *deepfakes* e a opacidade algorítmica dos sistemas de apuração redefinem os riscos de integridade, a Democrac.IA PEIRS coloca capacidades de análise antes reservadas a grandes instituições **a serviço do interesse público e do fortalecimento democrático**.",
+    },
+    # ── Síntesis ejecutiva (armada desde datos) ──────────────────────────
+    "declaration.synthesis_title": {
+        "es": "Síntesis ejecutiva — monitoreo e integridad del ciclo electoral 2026",
+        "en": "Executive summary — monitoring and integrity of the 2026 electoral cycle",
+        "pt": "Síntese executiva — monitoramento e integridade do ciclo eleitoral 2026",
+    },
+    "declaration.period_corpus": {
+        "es": "Democrac.IA PEIRS monitoreó el ciclo electoral peruano de 2026 a lo largo de sus dos vueltas: desde la primera vuelta del 12 de abril hasta el escrutinio de la segunda vuelta del 7 de junio. En ese período se clasificaron automáticamente **{n} hallazgos** de fuentes abiertas (RSS, OSINT propio y mediciones OONI), de los cuales **{n_alta}** se clasificaron de severidad alta o crítica, concentrados en las fases de escrutinio y de resolución de disputas (detalle trazable en el Anexo C).",
+        "en": "Democrac.IA PEIRS monitored Peru's 2026 electoral cycle across its two rounds: from the first round on 12 April to the count of the second round on 7 June. In that period **{n} findings** were automatically classified from open sources (RSS, own OSINT and OONI measurements), of which **{n_alta}** were classified as high or critical severity, concentrated in the count and dispute-resolution phases (traceable detail in Appendix C).",
+        "pt": "A Democrac.IA PEIRS monitorou o ciclo eleitoral peruano de 2026 ao longo de seus dois turnos: do primeiro turno de 12 de abril até a apuração do segundo turno de 7 de junho. Nesse período foram classificados automaticamente **{n} achados** de fontes abertas (RSS, OSINT próprio e medições OONI), dos quais **{n_alta}** foram classificados de severidade alta ou crítica, concentrados nas fases de apuração e de resolução de disputas (detalhe rastreável no Anexo C).",
+    },
+    "declaration.patterns_intro": {
+        "es": "El monitoreo de ambas vueltas identifica una convergencia de factores que tensiona la legitimidad del resultado:",
+        "en": "Monitoring of both rounds identifies a convergence of factors straining the legitimacy of the result:",
+        "pt": "O monitoramento de ambos os turnos identifica uma convergência de fatores que tensiona a legitimidade do resultado:",
+    },
+    "declaration.pattern_result": {
+        "es": "- **Resultado al filo, sin proclamación.** En la segunda vuelta, el escrutinio oficial de la ONPE arrojó un empate técnico: al corte del {actas} % de actas, {a} ({ap}) y {b} ({bp}) se separaban por **~{margin} votos (≈{mp} pp)**, con el liderazgo marginal alternando entre cómputos. El JNE no ha proclamado ganador (ONPE; El Comercio, 2026).",
+        "en": "- **Razor-thin result, not proclaimed.** In the second round, ONPE's official count produced a technical tie: at the {actas} % tally-sheet cut, {a} ({ap}) and {b} ({bp}) were separated by **~{margin} votes (≈{mp} pp)**, with the marginal lead alternating between counts. The JNE has not proclaimed a winner (ONPE; El Comercio, 2026).",
+        "pt": "- **Resultado no limite, sem proclamação.** No segundo turno, a apuração oficial da ONPE produziu um empate técnico: no corte de {actas} % das atas, {a} ({ap}) e {b} ({bp}) separavam-se por **~{margin} votos (≈{mp} pp)**, com a liderança marginal alternando entre apurações. O JNE não proclamou vencedor (ONPE; El Comercio, 2026).",
+    },
+    "declaration.pattern_count": {
+        "es": "- **Escrutinio prolongado.** El presidente del JNE estimó que el resultado se conocería alrededor de un mes después de la votación, por las actas observadas en revisión en los JEE (JNE, 2026).",
+        "en": "- **Protracted count.** The JNE president estimated the result would be known about a month after the vote, owing to observed tally sheets under JEE review (JNE, 2026).",
+        "pt": "- **Apuração prolongada.** O presidente do JNE estimou que o resultado seria conhecido cerca de um mês após a votação, devido às atas observadas em revisão nos JEE (JNE, 2026).",
+    },
+    "declaration.pattern_emb": {
+        "es": "- **Órgano electoral bajo cuestionamiento.** La primera vuelta dejó a la ONPE en crisis institucional —su titular denunciado penalmente, pedido de separación cautelar del Fiscal de la Nación y observaciones de la Contraloría—, documentada con fuentes primarias (véase Cap. 6 y Anexo C).",
+        "en": "- **Electoral body under question.** The first round left ONPE in institutional crisis —its head criminally charged, a request for precautionary removal by the Attorney General and observations by the Comptroller—, documented with primary sources (see Ch. 6 and Appendix C).",
+        "pt": "- **Órgão eleitoral sob questionamento.** O primeiro turno deixou a ONPE em crise institucional —seu titular denunciado penalmente, pedido de afastamento cautelar do Procurador-Geral e observações da Controladoria—, documentada com fontes primárias (ver Cap. 6 e Anexo C).",
+    },
+    "declaration.reading": {
+        "es": "Esta convergencia —margen ínfimo, escrutinio demorado y un organismo electoral en crisis— configura un escenario de **alta contestabilidad** del resultado, que interpela el estándar del **Art. 25 del ICCPR** sobre elecciones auténticas, en su dimensión de transparencia del escrutinio y aceptación del resultado. El contexto es consistente con el deterioro de los indicadores de V-Dem sobre el órgano electoral: la autonomía cayó de {aut0} ({y0}) a {aut1} ({y1}) y la capacidad de {cap0} a {cap1} (V-Dem v16). PEIRS no afirma fraude ni anticipa el desenlace: la credibilidad del resultado dependerá de la independencia con que el EMB resuelva las impugnaciones pendientes.",
+        "en": "This convergence —minimal margin, delayed count and an electoral body in crisis— configures a scenario of **high contestability** of the result, which interpellates the **ICCPR Art. 25** standard on genuine elections, in its dimension of count transparency and acceptance of the result. The context is consistent with the deterioration of V-Dem's indicators on the electoral body: autonomy fell from {aut0} ({y0}) to {aut1} ({y1}) and capacity from {cap0} to {cap1} (V-Dem v16). PEIRS asserts no fraud and anticipates no outcome: the credibility of the result will depend on the independence with which the EMB resolves the pending challenges.",
+        "pt": "Esta convergência —margem ínfima, apuração atrasada e um órgão eleitoral em crise— configura um cenário de **alta contestabilidade** do resultado, que interpela o padrão do **Art. 25 do ICCPR** sobre eleições genuínas, em sua dimensão de transparência da apuração e aceitação do resultado. O contexto é consistente com a deterioração dos indicadores do V-Dem sobre o órgão eleitoral: a autonomia caiu de {aut0} ({y0}) para {aut1} ({y1}) e a capacidade de {cap0} para {cap1} (V-Dem v16). O PEIRS não afirma fraude nem antecipa o desfecho: a credibilidade do resultado dependerá da independência com que o EMB resolva as impugnações pendentes.",
+    },
+    "declaration.reading_no_vdem": {
+        "es": "Esta convergencia —margen ínfimo, escrutinio demorado y un organismo electoral en crisis— configura un escenario de **alta contestabilidad** del resultado, que interpela el estándar del **Art. 25 del ICCPR** sobre elecciones auténticas. PEIRS no afirma fraude ni anticipa el desenlace: la credibilidad del resultado dependerá de la independencia con que el EMB resuelva las impugnaciones pendientes.",
+        "en": "This convergence —minimal margin, delayed count and an electoral body in crisis— configures a scenario of **high contestability** of the result, interpellating the **ICCPR Art. 25** standard on genuine elections. PEIRS asserts no fraud and anticipates no outcome: the credibility of the result will depend on the independence with which the EMB resolves the pending challenges.",
+        "pt": "Esta convergência —margem ínfima, apuração atrasada e um órgão eleitoral em crise— configura um cenário de **alta contestabilidade** do resultado, interpelando o padrão do **Art. 25 do ICCPR** sobre eleições genuínas. O PEIRS não afirma fraude nem antecipa o desfecho: a credibilidade do resultado dependerá da independência com que o EMB resolva as impugnações pendentes.",
+    },
+    "declaration.disclosure": {
+        "es": "Democrac.IA PEIRS no legitima ni valida resultados electorales; emite inteligencia electoral con trazabilidad verificable, sin sesgo político-partidario.",
+        "en": "Democrac.IA PEIRS does not legitimise or validate electoral results; it issues electoral intelligence with verifiable traceability, without political-partisan bias.",
+        "pt": "A Democrac.IA PEIRS não legitima nem valida resultados eleitorais; emite inteligência eleitoral com rastreabilidade verificável, sem viés político-partidário.",
     },
     "chapter.contexto_historico": {
         "es": "Contexto histórico",
