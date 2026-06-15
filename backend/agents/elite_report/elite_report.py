@@ -232,6 +232,16 @@ class PEIRSEliteReport:
         # Sello de auditoría: versión de pipeline + hash de config + clasificador.
         _audit_fp = config_fingerprint()
 
+        # Dashboard ejecutivo: reutiliza las viz ya computadas (semáforo, radar,
+        # medidor) que viven en el capítulo de conclusiones.
+        _dashboard: Dict[str, Any] = {}
+        for ch in chapters:
+            if ch.chapter_id == "conclusiones":
+                for v in ch.visualizations:
+                    if v.kind in ("semaphore_institutional", "dimensions_radar",
+                                  "early_warning_meter"):
+                        _dashboard[v.kind] = v.data
+
         html = render_html(
             chapters=chapters,
             citations=citations,
@@ -245,6 +255,7 @@ class PEIRSEliteReport:
             findings=(consolidate_findingrefs(bundle.hunter_entries)
                       if req.include_appendix_c else None),
             audit=_audit_fp,
+            dashboard=_dashboard,
         )
 
         # Markdown: intentamos con microsoft/markitdown (mejor fidelidad),

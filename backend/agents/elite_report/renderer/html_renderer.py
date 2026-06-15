@@ -67,6 +67,7 @@ article.elite-report {
   padding: 48px 56px;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  counter-reset: figure-counter;  /* numeración continua de figuras */
 }
 
 article.elite-report * {
@@ -387,6 +388,13 @@ figure.viz {
   overflow: hidden;  /* contiene SVG que puedan exceder el ancho */
   max-width: 100%;
   box-sizing: border-box;
+  counter-increment: figure-counter;  /* numeración automática de figuras */
+}
+
+figure.viz figcaption.viz-title::before {
+  content: "Figura " counter(figure-counter) ". ";
+  font-weight: 700;
+  color: var(--teal);
 }
 
 figure.viz figcaption.viz-title {
@@ -463,11 +471,13 @@ figure.viz figcaption.viz-caption {
   margin-right: 6px;
 }
 
-.sev-critical { background: #fef2f2; color: var(--critical); }
-.sev-high     { background: #fff7ed; color: var(--high); }
-.sev-medium   { background: #fefce8; color: #b45309; }
-.sev-low      { background: #f0fdf4; color: var(--low); }
-.sev-info     { background: #eff6ff; color: var(--info); }
+/* Badges con contraste WCAG AA: texto oscurecido + borde para no depender
+   solo del color (accesibilidad). */
+.sev-critical { background: #fef2f2; color: #991b1b; border: 1px solid #d32f2f; }
+.sev-high     { background: #fff7ed; color: #9a3412; border: 1px solid #f97316; }
+.sev-medium   { background: #fefce8; color: #854d0e; border: 1px solid #ca8a04; }
+.sev-low      { background: #f0fdf4; color: #166534; border: 1px solid #16a34a; }
+.sev-info     { background: #eff6ff; color: #1e40af; border: 1px solid #2563eb; }
 
 /* ── Anexos ────────────────────────────────────────────────────────── */
 aside.appendix {
@@ -553,11 +563,43 @@ table.findings-table tr:nth-child(even) { background: var(--bg-soft); }
   font-weight: 700;
   white-space: nowrap;
 }
-.phase-pre   { background: #e3f2fd; color: #1565c0; }   /* pre-electoral — azul */
-.phase-day   { background: #e0f2f1; color: #00796b; }   /* jornada — teal */
-.phase-count { background: #fff3e0; color: #e65100; }   /* escrutinio — naranja */
-.phase-post  { background: #f3e5f5; color: #6a1b9a; }   /* post-electoral — violeta */
+.phase-pre   { background: #e3f2fd; color: #0d47a1; border: 1px solid #1565c0; }  /* pre-electoral — azul */
+.phase-day   { background: #e0f2f1; color: #004d40; border: 1px solid #00796b; }  /* jornada — teal */
+.phase-count { background: #fff3e0; color: #bf360c; border: 1px solid #e65100; }  /* escrutinio — naranja */
+.phase-post  { background: #f3e5f5; color: #4a148c; border: 1px solid #6a1b9a; }  /* post-electoral — violeta */
 .phase-other { background: #eceff1; color: #455a64; }   /* otros — gris */
+
+/* ── Dashboard ejecutivo (1 página) ────────────────────────────────── */
+section.executive-dashboard {
+  margin: 8px 0 48px;
+  padding: 28px 0 32px;
+  border-top: 3px solid var(--teal);
+  border-bottom: 1px solid var(--border-dim);
+}
+section.executive-dashboard h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  color: var(--teal-dark);
+  margin: 0 0 18px;
+}
+.kpi-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 26px; }
+.kpi {
+  flex: 1; min-width: 120px;
+  background: var(--bg-soft);
+  border-left: 3px solid var(--teal);
+  padding: 12px 16px; border-radius: 4px;
+}
+.kpi-num {
+  font-family: 'Fraunces', serif; font-size: 26px; font-weight: 800;
+  color: var(--teal-dark); line-height: 1.1;
+}
+.kpi-label {
+  font-family: 'DM Sans', sans-serif; font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);
+  margin-top: 4px;
+}
+.exec-viz-grid { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.exec-viz { flex: 1; min-width: 280px; }
 
 /* ── Footer ────────────────────────────────────────────────────────── */
 footer.elite-footer {
@@ -576,16 +618,31 @@ footer.elite-footer {
 @page {
   size: A4;
   margin: 2.2cm 2cm 2.5cm 2cm;
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font-family: 'DM Mono', monospace;
+    font-size: 8pt;
+    color: #64748b;
+  }
 }
 
 @media print {
-  html, body { font-size: 10pt; }
+  html, body {
+    font-size: 10pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;   /* preserva fondos/badges en PDF */
+  }
   article.elite-report { max-width: none; padding: 0; }
   section.chapter { page-break-before: always; }
+  section.executive-dashboard { page-break-after: always; }
   section.cover { min-height: auto; page-break-after: always; }
   nav.toc { page-break-after: always; }
   aside.appendix { page-break-before: always; }
   figure.viz { page-break-inside: avoid; }
+  /* Evitar huérfanas/viudas y títulos al pie de página */
+  p, li, blockquote { orphans: 2; widows: 2; }
+  h1, h2, h3, h4 { orphans: 3; widows: 3; page-break-after: avoid; }
+  table { page-break-inside: avoid; }
   a { color: var(--teal); text-decoration: none; }
 }
 """
@@ -725,11 +782,15 @@ def render_html(
     generated_at: str,
     findings: Optional[List[Any]] = None,
     audit: Optional[Dict[str, Any]] = None,
+    dashboard: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Genera el HTML completo del Elite Report."""
 
     # Portada
     cover_html = _render_cover(req, stats, country_name, generated_at, report_id)
+
+    # Dashboard ejecutivo (1 página): KPIs + semáforo + radar + medidor
+    dashboard_html = _render_executive_dashboard(dashboard or {}, stats, req)
 
     # TOC
     toc_html = _render_toc(chapters, req)
@@ -765,6 +826,7 @@ def render_html(
 <body>
 <article class="elite-report">
 {cover_html}
+{dashboard_html}
 {toc_html}
 {chapters_html}
 {appendix_a}
@@ -774,6 +836,40 @@ def render_html(
 </article>
 </body>
 </html>"""
+
+
+def _render_executive_dashboard(dashboard: Dict[str, Any], stats: Dict[str, Any],
+                                req: EliteReportRequest) -> str:
+    """Resumen ejecutivo de 1 página: KPIs + semáforo + radar + medidor.
+    Reutiliza las viz ya computadas (no recalcula)."""
+    lang = req.language or "es"
+    if not stats and not dashboard:
+        return ""
+    gauge = (dashboard.get("early_warning_meter") or {})
+    level = gauge.get("level", "—")
+    score = gauge.get("score")
+    risk_val = f'{_esc(level)}' + (f' · {_esc(score)}' if score is not None else "")
+    kpis = [
+        (str(stats.get("total", 0)), t(lang, "exec.kpi.findings")),
+        (str(stats.get("critical", 0)), t(lang, "exec.kpi.critical")),
+        (str(stats.get("high", 0)), t(lang, "exec.kpi.high")),
+        (str(stats.get("days_covered", "—")), t(lang, "exec.kpi.days")),
+        (risk_val, t(lang, "exec.kpi.risk")),
+    ]
+    kpi_html = "".join(
+        f'<div class="kpi"><div class="kpi-num">{v}</div>'
+        f'<div class="kpi-label">{_esc(lbl)}</div></div>' for v, lbl in kpis)
+    svgs = []
+    for kind in ("semaphore_institutional", "dimensions_radar", "early_warning_meter"):
+        data = dashboard.get(kind)
+        if data:
+            svgs.append(f'<div class="exec-viz">{render_svg(kind, data)}</div>')
+    viz_html = (f'<div class="exec-viz-grid">{"".join(svgs)}</div>') if svgs else ""
+    return f"""<section class="executive-dashboard" id="executive-dashboard">
+<h2>{t(lang, "exec.title")}</h2>
+<div class="kpi-grid">{kpi_html}</div>
+{viz_html}
+</section>"""
 
 
 def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
@@ -1037,7 +1133,8 @@ def _phase_chip(phase: Any, language: str = "es") -> str:
         if needle in p:
             cls, key = c, k
             break
-    return f'<span class="phase-chip phase-{cls}">{_esc(t(language, key, "—"))}</span>'
+    _lbl = _esc(t(language, key, "—"))
+    return f'<span class="phase-chip phase-{cls}" aria-label="Fase: {_lbl}">{_lbl}</span>'
 
 
 def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
@@ -1093,7 +1190,7 @@ def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
             source = _esc(str(label))
         body_rows.append(
             f"<tr><td>{i}</td><td>{_esc(date)}</td><td>{phase_chip}</td>"
-            f'<td><span class="sev {_sev_class(sev)}">{_esc(sev)}</span></td>'
+            f'<td><span class="sev {_sev_class(sev)}" aria-label="Severidad: {_esc(sev)}">{_esc(sev)}</span></td>'
             f"<td>{_esc(str(cat))}</td><td>{_esc(text)}</td><td>{source}</td></tr>"
         )
 

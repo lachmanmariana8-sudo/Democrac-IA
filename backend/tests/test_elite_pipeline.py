@@ -720,6 +720,35 @@ def test_compose_includes_runoff_chapter_without_llm():
     assert 'id="appendix-c"' in html
 
 
+def test_p1_executive_dashboard_and_pro_layout():
+    """P1: dashboard ejecutivo (KPIs + viz), numeración de figuras, reglas de
+    impresión y badges accesibles con aria-label."""
+    import asyncio
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.models import EliteReportRequest, MissionMetadata
+    entries = [{"entry_id": "x1", "category": "security", "severity": "critical",
+                "finding": "Incidente en mesa", "credibility": "high", "verified": False,
+                "hunter_source": "acled", "evidence_ref": "https://a/1",
+                "recorded_at": "2026-06-07", "timestamp": "2026-06-07", "phase": "election_day"}]
+    rep = PEIRSEliteReport(llm=None, observation_store={"PER": {"entries": entries}})
+    req = EliteReportRequest(country_code="PER", language="es", include_predictive=False,
+        include_appendix_c=True, output_formats=["html"],
+        mission_metadata=MissionMetadata(report_number="P1", period_start="2026-04-12",
+            period_end="2026-06-13", jornada_date="2026-06-07"))
+    html = asyncio.run(rep.compose(req)).html or ""
+    # Dashboard ejecutivo
+    assert 'id="executive-dashboard"' in html and "Resumen ejecutivo" in html
+    assert html.count("kpi-num") >= 4
+    assert "exec-viz" in html                       # semáforo/radar/medidor
+    # Layout profesional
+    assert "counter-increment: figure-counter" in html
+    assert "orphans" in html and "print-color-adjust" in html
+    assert "counter(page)" in html                  # numeración de páginas
+    # Accesibilidad de badges
+    assert 'aria-label="Severidad' in html
+    assert "border: 1px solid #d32f2f" in html      # contraste con borde
+
+
 def test_audit_config_fingerprint_stable_and_complete():
     """P0.3: el sello de auditoría tiene versión + hash estable + clasificador."""
     from modules.audit_config import config_fingerprint, config_hash

@@ -1236,6 +1236,13 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "appendix.a.ver.classifier": {"es": "Clasificador (Hunter)", "en": "Classifier (Hunter)", "pt": "Classificador (Hunter)"},
     "appendix.a.ver.llm": {"es": "Modelo de redacción", "en": "Drafting model", "pt": "Modelo de redação"},
     "appendix.a.ver.thresholds": {"es": "Umbrales", "en": "Thresholds", "pt": "Limiares"},
+    # ── Dashboard ejecutivo ──────────────────────────────────────────────
+    "exec.title": {"es": "Resumen ejecutivo", "en": "Executive summary", "pt": "Resumo executivo"},
+    "exec.kpi.findings": {"es": "Hallazgos", "en": "Findings", "pt": "Achados"},
+    "exec.kpi.critical": {"es": "Críticos", "en": "Critical", "pt": "Críticos"},
+    "exec.kpi.high": {"es": "Severidad alta", "en": "High severity", "pt": "Severidade alta"},
+    "exec.kpi.days": {"es": "Días monitoreados", "en": "Days monitored", "pt": "Dias monitorados"},
+    "exec.kpi.risk": {"es": "Nivel de riesgo", "en": "Risk level", "pt": "Nível de risco"},
 
     # ── Radar 8 dimensiones PEIRS — labels (Cap 10) ────────────────────────
     "viz.dim.suffrage":    {"es": "Sufragio",          "en": "Suffrage",            "pt": "Sufrágio"},
