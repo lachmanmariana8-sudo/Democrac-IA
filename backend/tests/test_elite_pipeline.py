@@ -720,6 +720,60 @@ def test_compose_includes_runoff_chapter_without_llm():
     assert 'id="appendix-c"' in html
 
 
+def test_audit_config_fingerprint_stable_and_complete():
+    """P0.3: el sello de auditoría tiene versión + hash estable + clasificador."""
+    from modules.audit_config import config_fingerprint, config_hash
+    fp = config_fingerprint()
+    assert fp["pipeline_version"] and fp["config_version"]
+    assert fp["config_hash"] == config_hash()          # estable/determinista
+    assert len(fp["config_hash"]) == 16
+    assert fp["classifier"]["model"]                    # modelo del clasificador
+    assert "escalation" in fp["config"] and "consolidation" in fp["config"]
+
+
+def test_llm_guard_flags_unsupported_numbers():
+    """P0.4: marca cifras ausentes del contexto; no marca las respaldadas
+    ni números de artículo chicos."""
+    from agents.elite_report.llm_guard import find_unsupported_numbers
+    ctx = "La autonomía cayó de 2,40 (2021) a 0,96 (2024). Margen 1.303 votos."
+    text = ("El índice fue 1.31 en 2025 (Art. 178). Cayó a 0,96 en 2024 "
+            "con margen de 1303 votos.")
+    flagged = find_unsupported_numbers(text, ctx)
+    assert "1.31" in flagged and "2025" in flagged      # inventados
+    assert "0,96" not in flagged and "2024" not in flagged  # respaldados
+    assert "1303" not in flagged                          # 1.303 ≈ 1303 (normalizado)
+    assert "178" not in flagged                           # número de artículo, no estadístico
+
+
+def test_uncertainty_rendered_in_synthesis_and_risk():
+    """P0.1: el resultado provisional se marca estadísticamente indeterminado."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+    from agents.elite_report.declaration_chapter import build_declaration_narrative
+    from modules.peru_data import PERU_VDEM_STATIC
+    runoff = get_adapter("PER").runoff_observation([])
+    n = build_runoff_observation_chapter(runoff, lang="es").narrative
+    assert "estadísticamente indeterminado" in n.lower()
+    syn = build_declaration_narrative(runoff, {"total": 10, "critical": 1, "high": 2},
+                                      PERU_VDEM_STATIC.get("emb_series"), lang="es")
+    assert "indeterminado" in syn.lower()
+
+
+def test_appendix_a_has_version_and_limits():
+    """P0.2/P0.3: el Anexo A muestra marco muestral, límites y versión auditable."""
+    from agents.elite_report.renderer.html_renderer import _render_appendix_a
+    from agents.elite_report.models import EliteReportRequest, MissionMetadata
+    from modules.audit_config import config_fingerprint
+    req = EliteReportRequest(country_code="PER", language="es",
+        mission_metadata=MissionMetadata(report_number="A", period_start="2026-04-12",
+            period_end="2026-06-13", jornada_date="2026-06-07"))
+    html = _render_appendix_a(req, {"total": 100}, language="es", audit=config_fingerprint())
+    assert "muestral" in html.lower()                    # marco muestral
+    assert "Versión y trazabilidad" in html              # bloque de versión
+    assert "claude-sonnet" in html                       # clasificador/modelo
+    assert "no son deterministas" in html.lower()        # límite LLM
+
+
 def test_deterministic_declaration_prologue_and_synthesis():
     """La apertura determinista trae Prólogo (quiénes somos) + Síntesis con
     datos reales (sin invención): terminología 'monitoreo', V-Dem reales

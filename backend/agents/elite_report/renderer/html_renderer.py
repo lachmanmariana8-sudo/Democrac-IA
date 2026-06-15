@@ -724,6 +724,7 @@ def render_html(
     report_id: str,
     generated_at: str,
     findings: Optional[List[Any]] = None,
+    audit: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Genera el HTML completo del Elite Report."""
 
@@ -739,8 +740,8 @@ def render_html(
         chapters_html_parts.append(_render_chapter(ch, req))
     chapters_html = "\n".join(chapters_html_parts)
 
-    # Anexo A — Metodología (breve fijo)
-    appendix_a = _render_appendix_a(req, stats, language=req.language or "es")
+    # Anexo A — Metodología, limitaciones y versión del pipeline
+    appendix_a = _render_appendix_a(req, stats, language=req.language or "es", audit=audit)
 
     # Anexo B — Bibliografía APA
     appendix_b = _render_appendix_b(citations, language=req.language or "es")
@@ -926,8 +927,37 @@ def _render_chapter(ch: EliteChapter, req: EliteReportRequest) -> str:
 </section>"""
 
 
+def _render_version_block(audit: Optional[Dict[str, Any]], language: str = "es") -> str:
+    """Bloque de versión/trazabilidad del pipeline — pilar de auditabilidad.
+    Permite verificar con qué parámetros exactos se produjo el informe."""
+    if not audit:
+        return ""
+    clf = audit.get("classifier") or {}
+    cfg = audit.get("config") or {}
+    llm = (cfg.get("llm") or {})
+    esc = audit.get("config", {}).get("escalation", {}) or {}
+    cons = audit.get("config", {}).get("consolidation", {}) or {}
+    rows = [
+        (t(language, "appendix.a.ver.pipeline"), _esc(audit.get("pipeline_version", "—"))),
+        (t(language, "appendix.a.ver.config"),
+         f'{_esc(audit.get("config_version", "—"))} · <code>{_esc(audit.get("config_hash", "—"))}</code>'),
+        (t(language, "appendix.a.ver.classifier"),
+         f'{_esc(clf.get("model", "—"))} · prompt <code>{_esc(clf.get("prompt_sha256_16") or "—")}</code>'),
+        (t(language, "appendix.a.ver.llm"),
+         f'{_esc(llm.get("model", "—"))} · T={_esc(llm.get("temperature", "—"))}'),
+        (t(language, "appendix.a.ver.thresholds"),
+         f'Jaccard {_esc(cons.get("jaccard_threshold", "—"))} · '
+         f'escalación ≥{_esc(esc.get("min_independent_primary", "—"))}/'
+         f'≥{_esc(esc.get("confirm_independent_primary", "—"))} fuentes primarias'),
+    ]
+    trs = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in rows)
+    return (f'<h3>{t(language, "appendix.a.h_version")}</h3>'
+            f'<p>{t(language, "appendix.a.p_version")}</p>'
+            f'<table class="md-table"><tbody>{trs}</tbody></table>')
+
+
 def _render_appendix_a(req: EliteReportRequest, stats: Dict[str, Any],
-                       language: str = "es") -> str:
+                       language: str = "es", audit: Optional[Dict[str, Any]] = None) -> str:
     n_findings = stats.get("total", 0)
     li_phase = t(language, "appendix.a.li_phaseorganizer").format(n=n_findings)
     return f"""<aside class="appendix" id="appendix-a">
@@ -938,18 +968,22 @@ def _render_appendix_a(req: EliteReportRequest, stats: Dict[str, Any],
 <li>{t(language, "appendix.a.li_eliteloader")}</li>
 <li>{li_phase}</li>
 <li>{t(language, "appendix.a.li_crossref")}</li>
-<li>{t(language, "appendix.a.li_predictive")}</li>
 <li>{t(language, "appendix.a.li_composer")}</li>
 <li>{t(language, "appendix.a.li_visualizer")}</li>
 </ol>
 <h3>{t(language, "appendix.a.h_sources")}</h3>
 <p>{t(language, "appendix.a.p_sources")}</p>
+<h3>{t(language, "appendix.a.h_sampling")}</h3>
+<p>{t(language, "appendix.a.p_sampling")}</p>
 <h3>{t(language, "appendix.a.h_limits")}</h3>
 <ul>
 <li>{t(language, "appendix.a.li_lim_bias")}</li>
+<li>{t(language, "appendix.a.li_lim_classifier")}</li>
+<li>{t(language, "appendix.a.li_lim_llm")}</li>
 <li>{t(language, "appendix.a.li_lim_horizon")}</li>
 <li>{t(language, "appendix.a.li_lim_no_replace")}</li>
 </ul>
+{_render_version_block(audit, language)}
 </aside>"""
 
 

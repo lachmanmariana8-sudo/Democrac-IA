@@ -23,10 +23,17 @@ _STOPWORDS = frozenset({
 
 _SEV_RANK = {"critical": 5, "high": 4, "medium": 3, "moderate": 3, "low": 2, "info": 1}
 
-# Umbral de similitud (Jaccard de tokens significativos) para considerar dos
-# hallazgos del mismo evento, dentro del mismo día. 0.5 tolera redacciones
-# distintas del mismo hecho (medios diferentes) sin mezclar eventos distintos.
-DEFAULT_THRESHOLD = 0.5
+# Umbral de similitud (Jaccard de tokens significativos) y largo de stem: vienen
+# del registro central versionado (modules/audit_config.py). 0.5 tolera
+# redacciones distintas del mismo hecho sin mezclar eventos distintos.
+try:
+    from modules.audit_config import (
+        CONSOLIDATION_JACCARD_THRESHOLD as DEFAULT_THRESHOLD,
+        CONSOLIDATION_STEM_LEN as _STEM_LEN,
+    )
+except Exception:  # pragma: no cover — fallback si el registro no está disponible
+    DEFAULT_THRESHOLD = 0.5
+    _STEM_LEN = 6
 
 
 def _deaccent(s: str) -> str:
@@ -47,7 +54,7 @@ def _sig_tokens(text: str) -> frozenset:
         if w.isdigit() and len(w) >= 2:
             out.add(w)
         elif len(w) >= 5:
-            out.add(w[:6])
+            out.add(w[:_STEM_LEN])
     return frozenset(out)
 
 

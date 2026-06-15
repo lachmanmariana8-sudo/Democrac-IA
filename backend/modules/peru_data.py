@@ -459,6 +459,15 @@ PERU_RUNOFF_2026 = {
         ],
         "margin_votes_approx": 1_303,
         "margin_pct_approx": 0.008,
+        # Capa de incertidumbre estadística: el margen es MENOR que el volumen de
+        # votos aún en juego (actas pendientes + observadas en revisión). El
+        # resultado es estadísticamente indeterminado hasta el cómputo final.
+        "uncertainty": {
+            "actas_pending_pct": 1.7,
+            "actas_in_jee_review_approx": 1_615,
+            "indeterminate": True,
+            "note": "Las actas pendientes (~1,7%) y las ~1.615 en revisión en JEE involucran un volumen de votos muy superior al margen (~1.303). El resultado es estadísticamente INDETERMINADO hasta el cómputo final y la resolución de impugnaciones.",
+        },
         "valid_votes": 18_070_789,
         "blank_null_abs": 1_263_538,
         "turnout_pct": 70.8,

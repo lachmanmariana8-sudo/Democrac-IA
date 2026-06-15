@@ -300,6 +300,15 @@ class EliteReportOutput(BaseModel):
     estimated_cost_usd: float = 0.0
     generation_time_seconds: float = 0.0
 
+    # Auditabilidad (Marco de Calidad PEIRS): versión de pipeline + hash de la
+    # configuración usada + huella del clasificador (modelo + hash del prompt).
+    # Permite a un tercero verificar con qué parámetros exactos se produjo.
+    pipeline_version: Optional[str] = None
+    config_version: Optional[str] = None
+    config_hash: Optional[str] = None
+    classifier: Dict[str, Any] = Field(default_factory=dict)
+    audit_config: Dict[str, Any] = Field(default_factory=dict)
+
 
 # ── Bundle de evidencia cargada ──────────────────────────────────────────
 class EvidenceBundle(BaseModel):

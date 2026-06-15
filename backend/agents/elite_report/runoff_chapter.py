@@ -292,6 +292,13 @@ def _build_legitimacy_risk_section(runoff: Dict[str, Any], lang: str) -> List[st
     procl = sr.get("proclamation") or {}
     if not procl.get("proclaimed"):
         factors.append(t(lang, "runoff_obs.risk_unproclaimed"))
+    unc = sr.get("uncertainty")
+    if isinstance(unc, dict) and unc.get("indeterminate"):
+        _pending = str(unc.get("actas_pending_pct", "—")).replace(".", ",")
+        factors.append(t(lang, "runoff_obs.risk_uncertainty").format(
+            pending=_pending,
+            jee=_fmt_int(unc.get("actas_in_jee_review_approx"), lang),
+            margin=_fmt_int(sr.get("margin_votes_approx"), lang)))
 
     obs = runoff.get("runoff_phase_observation") or {}
     emb = obs.get("emb_independence_stress_signals") or {}

@@ -27,17 +27,19 @@ independientes"). Toda constante está nombrada y documentada — sin magic numb
 import copy
 
 # ── Constantes auditables (la "fórmula"; sin magic numbers) ───────────────────
-
-# ≥2 fuentes primarias independientes elevan el eje a VERIFIED_SECONDARY.
-# Literal de peru_data.py:446 ("cruce de 2 fuentes primarias independientes").
-MIN_INDEPENDENT_PRIMARY = 2
-
-# ≥3 fuentes primarias independientes elevan a CONFIRMED: un escalón por encima
-# del umbral secundario, decisión del owner (doc oficial ó ≥3 primarias).
-CONFIRM_INDEPENDENT_PRIMARY = 3
-
-# Tier de credibility que cuenta como "fuente primaria" a efectos de escalación.
-PRIMARY_CREDIBILITY = frozenset({"high"})
+# Vienen del registro central versionado (modules/audit_config.py) para que el
+# informe pueda estampar su hash. Se re-exportan con el mismo nombre/valor.
+try:
+    from modules.audit_config import (
+        MIN_INDEPENDENT_PRIMARY,
+        CONFIRM_INDEPENDENT_PRIMARY,
+        PRIMARY_CREDIBILITY as _PRIMARY_CREDIBILITY,
+    )
+    PRIMARY_CREDIBILITY = frozenset(_PRIMARY_CREDIBILITY)
+except Exception:  # pragma: no cover — fallback si el registro no está disponible
+    MIN_INDEPENDENT_PRIMARY = 2       # ≥2 primarias indep ⇒ VERIFIED_SECONDARY
+    CONFIRM_INDEPENDENT_PRIMARY = 3   # ≥3 (o doc oficial/OONI) ⇒ CONFIRMED
+    PRIMARY_CREDIBILITY = frozenset({"high"})
 
 # Valores posibles de audit_status, en orden de menor a mayor corroboración.
 AUDIT_PENDING = "PENDIENTE_VERIFICACION"

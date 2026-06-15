@@ -85,6 +85,12 @@ def build_declaration_narrative(
             b=cands[1].get("candidate_name", "—"), bp=cands[1].get("party", "—"),
             margin=_fmt_int(sr.get("margin_votes_approx"), lang),
             mp=_fmt_dec(sr.get("margin_pct_approx"), lang, 3)))
+    unc = sr.get("uncertainty")
+    if isinstance(unc, dict) and unc.get("indeterminate"):
+        factors.append(t(lang, "declaration.uncertainty").format(
+            margin=_fmt_int(sr.get("margin_votes_approx"), lang),
+            pending=_fmt_dec(unc.get("actas_pending_pct"), lang, 1),
+            jee=_fmt_int(unc.get("actas_in_jee_review_approx"), lang)))
     factors.append(t(lang, "declaration.pattern_count"))
     factors.append(t(lang, "declaration.pattern_emb"))
     parts.append("\n".join(factors))

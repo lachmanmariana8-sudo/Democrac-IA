@@ -287,6 +287,11 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "- **Razor-thin result, not proclaimed.** In the second round, ONPE's official count produced a technical tie: at the {actas} % tally-sheet cut, {a} ({ap}) and {b} ({bp}) were separated by **~{margin} votes (≈{mp} pp)**, with the marginal lead alternating between counts. The JNE has not proclaimed a winner (ONPE; El Comercio, 2026).",
         "pt": "- **Resultado no limite, sem proclamação.** No segundo turno, a apuração oficial da ONPE produziu um empate técnico: no corte de {actas} % das atas, {a} ({ap}) e {b} ({bp}) separavam-se por **~{margin} votos (≈{mp} pp)**, com a liderança marginal alternando entre apurações. O JNE não proclamou vencedor (ONPE; El Comercio, 2026).",
     },
+    "declaration.uncertainty": {
+        "es": "- **Resultado estadísticamente indeterminado.** El margen (~{margin} votos) es menor que el volumen de votos en actas pendientes (~{pending}% del total) y ~{jee} actas en revisión en JEE: el desenlace no está definido por el cómputo actual.",
+        "en": "- **Statistically undetermined result.** The margin (~{margin} votes) is smaller than the volume of votes in pending tally sheets (~{pending}% of total) and ~{jee} sheets under JEE review: the outcome is not determined by the current count.",
+        "pt": "- **Resultado estatisticamente indeterminado.** A margem (~{margin} votos) é menor que o volume de votos em atas pendentes (~{pending}% do total) e ~{jee} atas em revisão no JEE: o desfecho não está definido pela apuração atual.",
+    },
     "declaration.pattern_count": {
         "es": "- **Escrutinio prolongado.** El presidente del JNE estimó que el resultado se conocería alrededor de un mes después de la votación, por las actas observadas en revisión en los JEE (JNE, 2026).",
         "en": "- **Protracted count.** The JNE president estimated the result would be known about a month after the vote, owing to observed tally sheets under JEE review (JNE, 2026).",
@@ -618,6 +623,11 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "es": "**Órgano electoral cuestionado.** La ONPE atravesó la 1ª vuelta con su titular denunciado penalmente y pedidos de separación cautelar ({n} señales documentadas más arriba).",
         "en": "**Electoral body under question.** ONPE went through the first round with its head criminally charged and requests for precautionary removal ({n} signals documented above).",
         "pt": "**Órgão eleitoral questionado.** A ONPE atravessou o 1º turno com seu titular denunciado penalmente e pedidos de afastamento cautelar ({n} sinais documentados acima).",
+    },
+    "runoff_obs.risk_uncertainty": {
+        "es": "**Resultado estadísticamente indeterminado.** El volumen de votos en actas pendientes y observadas (~{pending}% + ~{jee} actas en JEE) supera el margen (~{margin} votos): el desenlace no queda definido por el cómputo actual.",
+        "en": "**Statistically undetermined result.** The volume of votes in pending and observed tally sheets (~{pending}% + ~{jee} sheets at JEE) exceeds the margin (~{margin} votes): the outcome is not settled by the current count.",
+        "pt": "**Resultado estatisticamente indeterminado.** O volume de votos em atas pendentes e observadas (~{pending}% + ~{jee} atas no JEE) supera a margem (~{margin} votos): o desfecho não fica definido pela apuração atual.",
     },
     "runoff_obs.risk_stae": {
         "es": "**Cómputo sin auditoría pública.** El STAE presentó fallas en 1ª vuelta y operó sin auditoría independiente certificada.",
@@ -1195,6 +1205,37 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Does not replace on-site observation: this report complements, but does not substitute, official observation missions.",
         "pt": "Não substitui observação presencial: este relatório complementa, mas não substitui, as missões oficiais de observação.",
     },
+    "appendix.a.li_lim_classifier": {
+        "es": "Clasificación automática por IA sin validación humana sistemática: categoría y severidad pueden contener error de clasificación. Ver versión del clasificador abajo.",
+        "en": "Automatic AI classification without systematic human validation: category and severity may contain classification error. See classifier version below.",
+        "pt": "Classificação automática por IA sem validação humana sistemática: categoria e severidade podem conter erro. Ver versão do classificador abaixo.",
+    },
+    "appendix.a.li_lim_llm": {
+        "es": "Los capítulos narrativos se redactan con un modelo de lenguaje y NO son deterministas entre corridas; las secciones de datos (apertura, resultados, hitos, anexos) son deterministas y reproducibles.",
+        "en": "Narrative chapters are written with a language model and are NOT deterministic across runs; data sections (opening, results, milestones, appendices) are deterministic and reproducible.",
+        "pt": "Os capítulos narrativos são redigidos com um modelo de linguagem e NÃO são determinísticos entre execuções; as seções de dados (abertura, resultados, marcos, anexos) são determinísticas e reproduzíveis.",
+    },
+    "appendix.a.h_sampling": {
+        "es": "Marco muestral y cobertura", "en": "Sampling frame and coverage", "pt": "Marco amostral e cobertura",
+    },
+    "appendix.a.p_sampling": {
+        "es": "El corpus proviene de fuentes abiertas (RSS de medios, monitoreo OSINT propio y mediciones OONI). Sobre-representa eventos de alta saliencia mediática, urbanos y en castellano; sub-representa lo rural, lo no digital y lenguas originarias. Los conteos son volúmenes del corpus, no estimaciones poblacionales.",
+        "en": "The corpus comes from open sources (media RSS, own OSINT monitoring and OONI measurements). It over-represents high media-salience, urban and Spanish-language events; it under-represents rural, non-digital and Indigenous-language events. Counts are corpus volumes, not population estimates.",
+        "pt": "O corpus provém de fontes abertas (RSS de mídia, monitoramento OSINT próprio e medições OONI). Sobre-representa eventos de alta saliência midiática, urbanos e em espanhol; sub-representa o rural, o não digital e línguas originárias. As contagens são volumes do corpus, não estimativas populacionais.",
+    },
+    "appendix.a.h_version": {
+        "es": "Versión y trazabilidad del pipeline", "en": "Pipeline version and traceability", "pt": "Versão e rastreabilidade do pipeline",
+    },
+    "appendix.a.p_version": {
+        "es": "Parámetros exactos con los que se produjo este informe (auditables por terceros):",
+        "en": "Exact parameters with which this report was produced (third-party auditable):",
+        "pt": "Parâmetros exatos com que este relatório foi produzido (auditáveis por terceiros):",
+    },
+    "appendix.a.ver.pipeline": {"es": "Versión de pipeline", "en": "Pipeline version", "pt": "Versão do pipeline"},
+    "appendix.a.ver.config": {"es": "Versión de configuración", "en": "Config version", "pt": "Versão da configuração"},
+    "appendix.a.ver.classifier": {"es": "Clasificador (Hunter)", "en": "Classifier (Hunter)", "pt": "Classificador (Hunter)"},
+    "appendix.a.ver.llm": {"es": "Modelo de redacción", "en": "Drafting model", "pt": "Modelo de redação"},
+    "appendix.a.ver.thresholds": {"es": "Umbrales", "en": "Thresholds", "pt": "Limiares"},
 
     # ── Radar 8 dimensiones PEIRS — labels (Cap 10) ────────────────────────
     "viz.dim.suffrage":    {"es": "Sufragio",          "en": "Suffrage",            "pt": "Sufrágio"},
