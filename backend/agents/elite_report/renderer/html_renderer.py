@@ -423,12 +423,13 @@ figure.viz .viz-svg svg {
 }
 
 figure.viz figcaption.viz-caption {
-  font-size: 10px;
-  color: var(--text-muted);
-  font-style: italic;
-  margin-top: 8px;
-  text-align: center;
-  line-height: 1.5;
+  font-size: 11px;
+  color: var(--text);
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-dim);
+  text-align: left;
+  line-height: 1.55;
   overflow-wrap: break-word;
 }
 
@@ -776,6 +777,23 @@ def _sev_class(s: str) -> str:
     return f"sev-{s}" if s else "sev-info"
 
 
+def _monitoring_days(mm, stats: Dict[str, Any]) -> int:
+    """Duración del monitoreo = span CALENDARIO del período (period_start →
+    period_end), no los días con hallazgos. El monitoreo es continuo; reportar
+    'días con hallazgos' subestimaba (el ciclo de 1ª vuelta se monitorea desde
+    antes de la elección). Fallback a days_covered si las fechas no parsean."""
+    try:
+        from datetime import date
+        d0 = date.fromisoformat((mm.period_start or "")[:10])
+        d1 = date.fromisoformat((mm.period_end or "")[:10])
+        n = (d1 - d0).days + 1
+        if n > 0:
+            return n
+    except Exception:
+        pass
+    return int(stats.get("days_covered", 0) or 0)
+
+
 # ── RENDER HTML ────────────────────────────────────────────────────────
 def render_html(
     chapters: List[EliteChapter],
@@ -912,7 +930,7 @@ def _render_executive_dashboard(stats: Dict[str, Any], req: EliteReportRequest,
         (str(stats.get("total", 0)), t(lang, "exec.kpi.findings")),
         (str(stats.get("critical", 0)), t(lang, "exec.kpi.critical")),
         (str(stats.get("high", 0)), t(lang, "exec.kpi.high")),
-        (str(stats.get("days_covered", "—")), t(lang, "exec.kpi.days")),
+        (str(_monitoring_days(req.mission_metadata, stats)), t(lang, "exec.kpi.days")),
         (risk_val, t(lang, "exec.kpi.risk")),
     ]
     kpi_html = "".join(
@@ -955,7 +973,7 @@ def _render_cover(req, stats, country_name, generated_at, report_id) -> str:
 <strong>{_esc(stats.get("total", 0))}</strong> {t(lang, "cover.findings_monitored")} ·
 <strong style="color:var(--critical);">{stats.get("critical", 0)} {t(lang, "cover.critical")}</strong> ·
 <strong style="color:var(--high);">{stats.get("high", 0)} {t(lang, "cover.high")}</strong> ·
-<strong>{stats.get("days_covered", 0)}</strong> {t(lang, "cover.days_monitoring")}
+<strong>{_monitoring_days(mm, stats)}</strong> {t(lang, "cover.days_monitoring")}
 </p>
 <div class="metadata">
 <strong>{t(lang, "cover.mission")}</strong> {_esc(mm.mission_name)}<br>
@@ -1307,7 +1325,7 @@ def render_markdown(
         f"**{stats.get('total', 0)}** {t(lang, 'cover.findings_monitored')} · "
         f"**{stats.get('critical', 0)}** {t(lang, 'cover.critical')} · "
         f"**{stats.get('high', 0)}** {t(lang, 'cover.high')} · "
-        f"**{stats.get('days_covered', 0)}** {t(lang, 'cover.days_monitoring')}.",
+        f"**{_monitoring_days(mm, stats)}** {t(lang, 'cover.days_monitoring')}.",
         "",
         "---",
         "",
