@@ -4758,7 +4758,7 @@ _DEFAULT_ORIGINS = (
 # secundario sin secrets que generaba dual-deploy con cada push. Si en el
 # futuro se quiere agregar otro origin (ej. dashboard de un partner), pasarlo
 # via env var ALLOWED_ORIGINS, no hardcodear aquí.
-_RAW_ORIGINS = os.getenv("ALLOWED_ORIGINS", _DEFAULT_ORIGINS)
+_RAW_ORIGINS = os.getenv("ALLOWED_ORIGINS", "")
 
 _ALLOWED_ORIGINS: list[str]
 _ORIGIN_REGEX: str | None
@@ -4766,7 +4766,13 @@ if _RAW_ORIGINS.strip() == "*":
     _ALLOWED_ORIGINS = []
     _ORIGIN_REGEX = ".*"
 else:
-    _ALLOWED_ORIGINS = [o.strip() for o in _RAW_ORIGINS.split(",") if o.strip()]
+    # Los orígenes canónicos (frontend democracia.ar) se incluyen SIEMPRE y se
+    # FUSIONAN con los del env var ALLOWED_ORIGINS (en vez de ser reemplazados).
+    # Evita el bug de CORS donde un env var con la lista vieja bloqueaba el
+    # dominio nuevo del frontend.
+    _env = [o.strip() for o in _RAW_ORIGINS.split(",") if o.strip()]
+    _base = [o.strip() for o in _DEFAULT_ORIGINS.split(",") if o.strip()]
+    _ALLOWED_ORIGINS = list(dict.fromkeys(_base + _env))  # únicos, orden estable
     _ORIGIN_REGEX = None
 
 app.add_middleware(
