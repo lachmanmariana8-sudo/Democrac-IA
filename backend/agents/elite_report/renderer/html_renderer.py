@@ -601,6 +601,12 @@ section.executive-dashboard h2 {
 .exec-viz-grid { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
 .exec-viz { flex: 1; min-width: 280px; }
 
+/* ── Cuadro de indicadores de datasets (post-TOC) ──────────────────── */
+section.datasets-overview { margin: 8px 0 40px; }
+section.datasets-overview h2 {
+  font-family: 'Fraunces', serif; font-size: 20px; color: var(--teal-dark); margin: 0 0 6px;
+}
+
 /* ── Footer ────────────────────────────────────────────────────────── */
 footer.elite-footer {
   margin-top: 80px;
@@ -790,12 +796,15 @@ def render_html(
     # Portada
     cover_html = _render_cover(req, stats, country_name, generated_at, report_id)
 
-    # Dashboard ejecutivo (1 página): KPIs + semáforo + radar + medidor + panel internacional
-    dashboard_html = _render_executive_dashboard(dashboard or {}, stats, req,
-                                                 intl_series=intl_series)
+    # Dashboard ejecutivo (banda de KPIs, sin gráficos — esos van en Conclusiones)
+    dashboard_html = _render_executive_dashboard(
+        stats, req, gauge=(dashboard or {}).get("early_warning_meter"))
 
     # TOC
     toc_html = _render_toc(chapters, req)
+
+    # Cuadro de indicadores de datasets (trayectoria) — después del TOC
+    datasets_html = _render_datasets_overview(intl_series, req.language or "es")
 
     # Capítulos
     chapters_html_parts = []
@@ -830,6 +839,7 @@ def render_html(
 {cover_html}
 {dashboard_html}
 {toc_html}
+{datasets_html}
 {chapters_html}
 {appendix_a}
 {appendix_b}
@@ -845,45 +855,51 @@ _TREND_GLYPH = {
 }
 
 
-def _render_international_panel(series_list: Optional[List[Any]], language: str = "es") -> str:
-    """Panel consolidado de indicadores internacionales (V-Dem/FH/PEI/RSF):
-    último valor por indicador, año, tendencia y fuente. Determinista."""
+def _render_datasets_overview(series_list: Optional[List[Any]], language: str = "es") -> str:
+    """Cuadro de indicadores de datasets (V-Dem/FH/PEI/RSF) con TRAYECTORIA:
+    valor inicial → valor actual + tendencia. Va después del TOC para mostrar
+    'cómo venía' el proceso electoral. Determinista."""
     if not series_list:
         return ""
     rows = []
     for s in series_list:
-        dps = getattr(s, "datapoints", None) or []
+        dps = sorted((getattr(s, "datapoints", None) or []), key=lambda d: getattr(d, "year", 0))
         if not dps:
             continue
-        last = max(dps, key=lambda d: getattr(d, "year", 0))
+        first, last = dps[0], dps[-1]
         glyph = _TREND_GLYPH.get(getattr(s, "trend_direction", "stable"), "→")
         rows.append(
             f"<tr><td>{_esc(getattr(s, 'indicator_label', ''))}</td>"
+            f"<td><span style='color:var(--text-muted)'>{_esc(getattr(first, 'value', '—'))} "
+            f"({_esc(getattr(first, 'year', '—'))})</span></td>"
             f"<td><strong>{_esc(getattr(last, 'value', '—'))}</strong> "
-            f"<span style='color:var(--text-muted)'>({_esc(getattr(last, 'year', '—'))}, "
-            f"{_esc(getattr(s, 'unit', ''))})</span></td>"
-            f"<td>{glyph}</td><td style='color:var(--text-muted);font-size:10px'>"
+            f"({_esc(getattr(last, 'year', '—'))})</td>"
+            f"<td>{glyph}</td>"
+            f"<td style='color:var(--text-muted);font-size:10px'>{_esc(getattr(s, 'unit', ''))} · "
             f"{_esc(getattr(s, 'source', ''))}</td></tr>")
     if not rows:
         return ""
     head = (f"<th>{t(language, 'intl.col.indicator')}</th>"
-            f"<th>{t(language, 'intl.col.value')}</th>"
+            f"<th>{t(language, 'intl.col.initial')}</th>"
+            f"<th>{t(language, 'intl.col.current')}</th>"
             f"<th>{t(language, 'intl.col.trend')}</th>"
             f"<th>{t(language, 'intl.col.source')}</th>")
-    return (f'<h3 style="margin-top:8px">{t(language, "intl.title")}</h3>'
+    return (f'<section class="datasets-overview" id="datasets-overview">'
+            f'<h2>{t(language, "intl.title")}</h2>'
+            f'<p style="color:var(--text-muted);font-size:11px;margin-bottom:14px">'
+            f'{t(language, "intl.intro")}</p>'
             f'<table class="md-table"><thead><tr>{head}</tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table>')
+            f'<tbody>{"".join(rows)}</tbody></table></section>')
 
 
-def _render_executive_dashboard(dashboard: Dict[str, Any], stats: Dict[str, Any],
-                                req: EliteReportRequest,
-                                intl_series: Optional[List[Any]] = None) -> str:
-    """Resumen ejecutivo de 1 página: KPIs + semáforo + radar + medidor.
-    Reutiliza las viz ya computadas (no recalcula)."""
+def _render_executive_dashboard(stats: Dict[str, Any], req: EliteReportRequest,
+                                gauge: Optional[Dict[str, Any]] = None) -> str:
+    """Resumen ejecutivo compacto: banda de KPIs (sin gráficos — esos viven en
+    Conclusiones, para no duplicarlos)."""
     lang = req.language or "es"
-    if not stats and not dashboard:
+    if not stats:
         return ""
-    gauge = (dashboard.get("early_warning_meter") or {})
+    gauge = gauge or {}
     level = gauge.get("level", "—")
     score = gauge.get("score")
     risk_val = f'{_esc(level)}' + (f' · {_esc(score)}' if score is not None else "")
@@ -897,18 +913,9 @@ def _render_executive_dashboard(dashboard: Dict[str, Any], stats: Dict[str, Any]
     kpi_html = "".join(
         f'<div class="kpi"><div class="kpi-num">{v}</div>'
         f'<div class="kpi-label">{_esc(lbl)}</div></div>' for v, lbl in kpis)
-    svgs = []
-    for kind in ("semaphore_institutional", "dimensions_radar", "early_warning_meter"):
-        data = dashboard.get(kind)
-        if data:
-            svgs.append(f'<div class="exec-viz">{render_svg(kind, data)}</div>')
-    viz_html = (f'<div class="exec-viz-grid">{"".join(svgs)}</div>') if svgs else ""
-    intl_html = _render_international_panel(intl_series, lang)
     return f"""<section class="executive-dashboard" id="executive-dashboard">
 <h2>{t(lang, "exec.title")}</h2>
 <div class="kpi-grid">{kpi_html}</div>
-{viz_html}
-{intl_html}
 </section>"""
 
 

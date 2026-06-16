@@ -723,18 +723,20 @@ def test_compose_includes_runoff_chapter_without_llm():
 def test_p1_international_panel_and_suffrage_rights():
     """P1 #7: panel internacional consolidado desde HistoricalSeries.
     P1 #10: afectación al sufragio activo (derecho) en la sección de riesgo."""
-    from agents.elite_report.renderer.html_renderer import _render_international_panel
+    from agents.elite_report.renderer.html_renderer import _render_datasets_overview
     from agents.elite_report.models import HistoricalSeries, HistoricalDatapoint
     s = HistoricalSeries(
         indicator="vdem_libdem", indicator_label="V-Dem — Democracia liberal",
         source="V-Dem v16", source_citation="Coppedge et al.", unit="0-1",
-        datapoints=[HistoricalDatapoint(year=2023, value=0.45, source="V-Dem"),
+        datapoints=[HistoricalDatapoint(year=2015, value=0.62, source="V-Dem"),
                     HistoricalDatapoint(year=2024, value=0.40, source="V-Dem")],
         trend_direction="down")
-    html = _render_international_panel([s], language="es")
-    assert "Indicadores internacionales" in html
+    html = _render_datasets_overview([s], language="es")
+    assert "datasets-overview" in html
     assert "V-Dem — Democracia liberal" in html
-    assert "0.4" in html and "2024" in html and "↓" in html   # último valor + tendencia
+    # Trayectoria: valor inicial (2015) → actual (2024) + tendencia
+    assert "0.62" in html and "2015" in html        # inicial
+    assert "0.4" in html and "2024" in html and "↓" in html   # actual + tendencia
 
     # Sufragio activo en la sección de riesgo
     from agents.elite_report.country_adapters import get_adapter
@@ -761,10 +763,14 @@ def test_p1_executive_dashboard_and_pro_layout():
         mission_metadata=MissionMetadata(report_number="P1", period_start="2026-04-12",
             period_end="2026-06-13", jornada_date="2026-06-07"))
     html = asyncio.run(rep.compose(req)).html or ""
-    # Dashboard ejecutivo
+    # Dashboard ejecutivo: banda de KPIs (sin gráficos — no se duplican)
     assert 'id="executive-dashboard"' in html and "Resumen ejecutivo" in html
     assert html.count("kpi-num") >= 4
-    assert "exec-viz" in html                       # semáforo/radar/medidor
+    # Los gráficos viven en Conclusiones, NO en el dashboard: el semáforo
+    # aparece UNA sola vez (sin duplicación dashboard/capítulo).
+    assert html.count('aria-label="Sem') <= 1
+    # Cuadro de indicadores de datasets después del TOC
+    assert 'id="datasets-overview"' in html
     # Layout profesional
     assert "counter-increment: figure-counter" in html
     assert "orphans" in html and "print-color-adjust" in html

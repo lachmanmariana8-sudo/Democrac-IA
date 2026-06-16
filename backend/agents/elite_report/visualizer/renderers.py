@@ -618,10 +618,11 @@ def render_dimensions_radar(data: Dict[str, Any]) -> str:
         return _render_empty_state("Radar 8 dimensiones no disponible", "Se requieren ≥3 dimensiones evaluadas.")
 
     scale_max = data.get("scale_max", 100)
-    # W más amplio para acomodar labels de 14 chars en los lados sin overflow
-    W, H = 500, 420
+    # Canvas amplio y r_max chico → margen generoso para que los labels NO se
+    # superpongan con el polígono (corrección reportada en "Figura 11").
+    W, H = 580, 480
     cx, cy = W / 2, H / 2
-    r_max = 140
+    r_max = 120
     n = len(dims)
     angles = [-math.pi/2 + 2 * math.pi * i / n for i in range(n)]
 
@@ -662,22 +663,25 @@ def render_dimensions_radar(data: Dict[str, Any]) -> str:
         y = cy + r * math.sin(angles[i])
         svg.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{COLORS["teal_dark"]}"/>')
 
-    # Labels de dimensión
+    # Labels de dimensión — fuera del polígono, con nudge vertical en los ejes
+    # casi verticales (arriba/abajo) para despegar el texto del círculo exterior.
     for i, d in enumerate(dims):
-        label = _esc(d.get("label", ""))[:14]
+        label = _esc(d.get("label", ""))[:16]
         val = d.get("value", 0)
-        lr = r_max + 26
-        lx = cx + lr * math.cos(angles[i])
-        ly = cy + lr * math.sin(angles[i])
+        lr = r_max + 30
+        ca, sa = math.cos(angles[i]), math.sin(angles[i])
+        lx = cx + lr * ca
+        ly = cy + lr * sa
         anchor = "middle"
-        if lx < cx - 10: anchor = "end"
-        elif lx > cx + 10: anchor = "start"
-        svg.append(f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="{anchor}" '
-                   f'font-family="{FONT_SANS}" font-size="9" '
-                   f'fill="{COLORS["text"]}">{label}</text>')
-        svg.append(f'<text x="{lx:.1f}" y="{ly+11:.1f}" text-anchor="{anchor}" '
-                   f'font-family="{FONT_MONO}" font-size="9" font-weight="700" '
-                   f'fill="{COLORS["teal_dark"]}">{int(val)}</text>')
+        if lx < cx - 12: anchor = "end"
+        elif lx > cx + 12: anchor = "start"
+        # Nudge vertical: arriba sube, abajo baja (evita pisar el círculo).
+        vnudge = -6 if sa < -0.5 else (12 if sa > 0.5 else 3)
+        svg.append(f'<text x="{lx:.1f}" y="{ly + vnudge:.1f}" text-anchor="{anchor}" '
+                   f'font-family="{FONT_SANS}" font-size="10" font-weight="600" '
+                   f'fill="{COLORS["text"]}">{label} '
+                   f'<tspan font-family="{FONT_MONO}" font-weight="700" '
+                   f'fill="{COLORS["teal_dark"]}">{int(val)}</tspan></text>')
 
     svg.append('</svg>')
     return "".join(svg)

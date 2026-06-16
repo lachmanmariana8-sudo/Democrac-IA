@@ -1254,8 +1254,15 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     },
     "intl.col.indicator": {"es": "Indicador", "en": "Indicator", "pt": "Indicador"},
     "intl.col.value": {"es": "Último valor", "en": "Latest value", "pt": "Último valor"},
+    "intl.col.initial": {"es": "Inicial", "en": "Initial", "pt": "Inicial"},
+    "intl.col.current": {"es": "Actual", "en": "Current", "pt": "Atual"},
     "intl.col.trend": {"es": "Tendencia", "en": "Trend", "pt": "Tendência"},
     "intl.col.source": {"es": "Fuente", "en": "Source", "pt": "Fonte"},
+    "intl.intro": {
+        "es": "Cómo venía el proceso electoral según los principales índices internacionales: valor al inicio de la serie disponible y valor más reciente, con su tendencia.",
+        "en": "How the electoral process was trending per the main international indices: value at the start of the available series and the most recent value, with its trend.",
+        "pt": "Como vinha o processo eleitoral segundo os principais índices internacionais: valor no início da série disponível e valor mais recente, com sua tendência.",
+    },
 
     # ── Radar 8 dimensiones PEIRS — labels (Cap 10) ────────────────────────
     "viz.dim.suffrage":    {"es": "Sufragio",          "en": "Suffrage",            "pt": "Sufrágio"},
