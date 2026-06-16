@@ -783,14 +783,16 @@ def render_html(
     findings: Optional[List[Any]] = None,
     audit: Optional[Dict[str, Any]] = None,
     dashboard: Optional[Dict[str, Any]] = None,
+    intl_series: Optional[List[Any]] = None,
 ) -> str:
     """Genera el HTML completo del Elite Report."""
 
     # Portada
     cover_html = _render_cover(req, stats, country_name, generated_at, report_id)
 
-    # Dashboard ejecutivo (1 página): KPIs + semáforo + radar + medidor
-    dashboard_html = _render_executive_dashboard(dashboard or {}, stats, req)
+    # Dashboard ejecutivo (1 página): KPIs + semáforo + radar + medidor + panel internacional
+    dashboard_html = _render_executive_dashboard(dashboard or {}, stats, req,
+                                                 intl_series=intl_series)
 
     # TOC
     toc_html = _render_toc(chapters, req)
@@ -838,8 +840,44 @@ def render_html(
 </html>"""
 
 
+_TREND_GLYPH = {
+    "up": "↑", "down": "↓", "stable": "→", "volatile": "↕",
+}
+
+
+def _render_international_panel(series_list: Optional[List[Any]], language: str = "es") -> str:
+    """Panel consolidado de indicadores internacionales (V-Dem/FH/PEI/RSF):
+    último valor por indicador, año, tendencia y fuente. Determinista."""
+    if not series_list:
+        return ""
+    rows = []
+    for s in series_list:
+        dps = getattr(s, "datapoints", None) or []
+        if not dps:
+            continue
+        last = max(dps, key=lambda d: getattr(d, "year", 0))
+        glyph = _TREND_GLYPH.get(getattr(s, "trend_direction", "stable"), "→")
+        rows.append(
+            f"<tr><td>{_esc(getattr(s, 'indicator_label', ''))}</td>"
+            f"<td><strong>{_esc(getattr(last, 'value', '—'))}</strong> "
+            f"<span style='color:var(--text-muted)'>({_esc(getattr(last, 'year', '—'))}, "
+            f"{_esc(getattr(s, 'unit', ''))})</span></td>"
+            f"<td>{glyph}</td><td style='color:var(--text-muted);font-size:10px'>"
+            f"{_esc(getattr(s, 'source', ''))}</td></tr>")
+    if not rows:
+        return ""
+    head = (f"<th>{t(language, 'intl.col.indicator')}</th>"
+            f"<th>{t(language, 'intl.col.value')}</th>"
+            f"<th>{t(language, 'intl.col.trend')}</th>"
+            f"<th>{t(language, 'intl.col.source')}</th>")
+    return (f'<h3 style="margin-top:8px">{t(language, "intl.title")}</h3>'
+            f'<table class="md-table"><thead><tr>{head}</tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table>')
+
+
 def _render_executive_dashboard(dashboard: Dict[str, Any], stats: Dict[str, Any],
-                                req: EliteReportRequest) -> str:
+                                req: EliteReportRequest,
+                                intl_series: Optional[List[Any]] = None) -> str:
     """Resumen ejecutivo de 1 página: KPIs + semáforo + radar + medidor.
     Reutiliza las viz ya computadas (no recalcula)."""
     lang = req.language or "es"
@@ -865,10 +903,12 @@ def _render_executive_dashboard(dashboard: Dict[str, Any], stats: Dict[str, Any]
         if data:
             svgs.append(f'<div class="exec-viz">{render_svg(kind, data)}</div>')
     viz_html = (f'<div class="exec-viz-grid">{"".join(svgs)}</div>') if svgs else ""
+    intl_html = _render_international_panel(intl_series, lang)
     return f"""<section class="executive-dashboard" id="executive-dashboard">
 <h2>{t(lang, "exec.title")}</h2>
 <div class="kpi-grid">{kpi_html}</div>
 {viz_html}
+{intl_html}
 </section>"""
 
 

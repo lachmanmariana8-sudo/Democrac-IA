@@ -720,6 +720,31 @@ def test_compose_includes_runoff_chapter_without_llm():
     assert 'id="appendix-c"' in html
 
 
+def test_p1_international_panel_and_suffrage_rights():
+    """P1 #7: panel internacional consolidado desde HistoricalSeries.
+    P1 #10: afectación al sufragio activo (derecho) en la sección de riesgo."""
+    from agents.elite_report.renderer.html_renderer import _render_international_panel
+    from agents.elite_report.models import HistoricalSeries, HistoricalDatapoint
+    s = HistoricalSeries(
+        indicator="vdem_libdem", indicator_label="V-Dem — Democracia liberal",
+        source="V-Dem v16", source_citation="Coppedge et al.", unit="0-1",
+        datapoints=[HistoricalDatapoint(year=2023, value=0.45, source="V-Dem"),
+                    HistoricalDatapoint(year=2024, value=0.40, source="V-Dem")],
+        trend_direction="down")
+    html = _render_international_panel([s], language="es")
+    assert "Indicadores internacionales" in html
+    assert "V-Dem — Democracia liberal" in html
+    assert "0.4" in html and "2024" in html and "↓" in html   # último valor + tendencia
+
+    # Sufragio activo en la sección de riesgo
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
+    n = build_runoff_observation_chapter(get_adapter("PER").runoff_observation([]), lang="es").narrative
+    assert "sufragio activo" in n.lower()
+    assert "ICCPR Art. 25.b" in n
+    assert "elcomercio.pe" in n                                # fuente
+
+
 def test_p1_executive_dashboard_and_pro_layout():
     """P1: dashboard ejecutivo (KPIs + viz), numeración de figuras, reglas de
     impresión y badges accesibles con aria-label."""

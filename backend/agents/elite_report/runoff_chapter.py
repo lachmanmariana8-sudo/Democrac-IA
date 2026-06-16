@@ -307,6 +307,13 @@ def _build_legitimacy_risk_section(runoff: Dict[str, Any], lang: str) -> List[st
         factors.append(t(lang, "runoff_obs.risk_emb").format(n=n_emb))
     if isinstance(runoff.get("electoral_technology_note"), dict):
         factors.append(t(lang, "runoff_obs.risk_stae"))
+    dis = runoff.get("first_round_disenfranchisement")
+    if isinstance(dis, dict) and dis.get("note"):
+        _line = ("**" + t(lang, "runoff_obs.risk_suffrage_prefix") + ".** "
+                 + dis["note"] + " (" + dis.get("iccpr_ref", "") + ")")
+        if dis.get("source_url"):
+            _line += " [(fuente)](" + dis["source_url"] + ")"
+        factors.append(_line)
     parts.append("\n".join("- " + f for f in factors))
 
     parts.append(t(lang, "runoff_obs.risk_reading"))

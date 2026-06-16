@@ -502,6 +502,15 @@ PERU_RUNOFF_2026 = {
         "audit_status": "VERIFIED_SECONDARY",
         "audit_note": "La afirmación sobre 1ª vuelta tiene respaldo documental en el informe previo. El no-uso en 2ª vuelta es observación PEIRS pendiente de confirmación documental ONPE. PROHIBIDO afirmar que el STAE 'operó sin fallas' o inferir buen funcionamiento por ausencia de hallazgos.",
     },
+    # Afectación al sufragio activo (derecho) por la crisis logística de 1ª vuelta.
+    # Anclado en la señal EMB documentada (material electoral no llegó a centros de
+    # sufragio). No se afirma una cifra precisa sin fuente.
+    "first_round_disenfranchisement": {
+        "note": "Las fallas en la distribución de material electoral dejaron centros de sufragio sin material en la 1ª vuelta (según el procurador del JNE, el material no llegó a 13 centros de sufragio), impidiendo el ejercicio del voto a parte del electorado.",
+        "iccpr_ref": "ICCPR Art. 25.b (sufragio universal e igual) y CADH Art. 23",
+        "source_url": "https://elcomercio.pe/politica/ronald-angulo-procurador-del-jne-corvetto-pudo-dar-medidas-de-contingencia-pero-se-quedo-callado-y-no-hizo-nada-noticia/",
+        "audit_status": "VERIFIED_SECONDARY",
+    },
     # Observación de la fase entre vueltas, según metodología canónica PEIRS
     # (ver memoria peirs-observation-methodology, 1-jun-2026). Estructura
     # re-diseñada por agente experto en Observación Electoral: 9 campos

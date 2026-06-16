@@ -256,6 +256,7 @@ class PEIRSEliteReport:
                       if req.include_appendix_c else None),
             audit=_audit_fp,
             dashboard=_dashboard,
+            intl_series=bundle.historical_series,
         )
 
         # Markdown: intentamos con microsoft/markitdown (mejor fidelidad),

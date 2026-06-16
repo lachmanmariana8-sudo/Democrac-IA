@@ -59,13 +59,17 @@ informe Perú 2026 (junio 2026). Implementación de referencia: `backend/agents/
   (Yatama, Castañeda) cuando aplica.
 - Panel consolidado V-Dem / Freedom House / RSF / PEI; triangulación con MOEs
   (OEA / UE / Carter / IDEA).
-- *Pendiente (P1):* panel internacional + ingesta de declaraciones de MOEs.
+- *Implementación:* `_render_international_panel` (desde `bundle.historical_series`)
+  en el resumen ejecutivo; jurisprudencia interamericana (Yatama, Castañeda) +
+  sufragio activo (ICCPR 25.b). *Pendiente:* ingesta automática de declaraciones de MOEs.
 
 ### 6. Calidad visual/editorial
 - Dashboard ejecutivo de 1 página (semáforo + KPIs + radar).
 - Numeración de figuras; impresión profesional (orphans/widows, page-breaks,
   numeración de páginas); accesibilidad WCAG AA (contraste + aria-label).
-- *Pendiente (P1):* `_render_executive_dashboard`, contadores CSS, reglas print.
+- *Implementación (P1):* `_render_executive_dashboard` (KPIs + semáforo + radar +
+  medidor + panel internacional), contador CSS de figuras, reglas `@media print`,
+  badges con borde + aria-label.
 
 ---
 

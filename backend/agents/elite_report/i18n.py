@@ -629,6 +629,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "**Statistically undetermined result.** The volume of votes in pending and observed tally sheets (~{pending}% + ~{jee} sheets at JEE) exceeds the margin (~{margin} votes): the outcome is not settled by the current count.",
         "pt": "**Resultado estatisticamente indeterminado.** O volume de votos em atas pendentes e observadas (~{pending}% + ~{jee} atas no JEE) supera a margem (~{margin} votos): o desfecho não fica definido pela apuração atual.",
     },
+    "runoff_obs.risk_suffrage_prefix": {
+        "es": "Afectación al sufragio activo", "en": "Impact on the active right to vote", "pt": "Afetação ao sufrágio ativo",
+    },
     "runoff_obs.risk_stae": {
         "es": "**Cómputo sin auditoría pública.** El STAE presentó fallas en 1ª vuelta y operó sin auditoría independiente certificada.",
         "en": "**Count without public audit.** STAE failed in the first round and operated without certified independent audit.",
@@ -1243,6 +1246,16 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "exec.kpi.high": {"es": "Severidad alta", "en": "High severity", "pt": "Severidade alta"},
     "exec.kpi.days": {"es": "Días monitoreados", "en": "Days monitored", "pt": "Dias monitorados"},
     "exec.kpi.risk": {"es": "Nivel de riesgo", "en": "Risk level", "pt": "Nível de risco"},
+    # ── Panel internacional ──────────────────────────────────────────────
+    "intl.title": {
+        "es": "Indicadores internacionales de democracia",
+        "en": "International democracy indicators",
+        "pt": "Indicadores internacionais de democracia",
+    },
+    "intl.col.indicator": {"es": "Indicador", "en": "Indicator", "pt": "Indicador"},
+    "intl.col.value": {"es": "Último valor", "en": "Latest value", "pt": "Último valor"},
+    "intl.col.trend": {"es": "Tendencia", "en": "Trend", "pt": "Tendência"},
+    "intl.col.source": {"es": "Fuente", "en": "Source", "pt": "Fonte"},
 
     # ── Radar 8 dimensiones PEIRS — labels (Cap 10) ────────────────────────
     "viz.dim.suffrage":    {"es": "Sufragio",          "en": "Suffrage",            "pt": "Sufrágio"},

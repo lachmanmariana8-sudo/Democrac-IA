@@ -25,6 +25,7 @@
 - Tratados ratificados por el país: ICCPR Art. 25, CADH Art. 23, otros aplicables
 - Instrumentos regionales: Carta Democrática Interamericana (Arts. 3, 4, 20)
 - Estándares aplicables: OSCE/ODIHR, OEA/DECO, ONU (Declaración de Principios 2005)
+- **Jurisprudencia interamericana** cuando sea pertinente a la justicia electoral y al recurso efectivo: Corte IDH, *Yatama vs. Nicaragua* (2005) y *Castañeda Gutman vs. México* (2008) — derecho a ser elegido en condiciones de igualdad y a un recurso efectivo (CADH Arts. 23 y 25). Citar solo si aplica al ciclo; no forzar.
 
 **Requisitos:**
 

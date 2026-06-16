@@ -25,6 +25,7 @@
 - Treaties ratified by the country: ICCPR Art. 25, ACHR Art. 23, other applicable
 - Regional instruments: Inter-American Democratic Charter (Arts. 3, 4, 20)
 - Applicable standards: OSCE/ODIHR, OAS/DECO, UN (2005 Declaration of Principles)
+- **Inter-American jurisprudence** where relevant to electoral justice and effective remedy: IACtHR, *Yatama v. Nicaragua* (2005) and *Castañeda Gutman v. Mexico* (2008) — right to be elected under equal conditions and to an effective remedy (ACHR Arts. 23 and 25). Cite only if applicable; do not force.
 
 **Requirements:**
 
