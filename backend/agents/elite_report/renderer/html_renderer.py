@@ -803,13 +803,18 @@ def render_html(
     # TOC
     toc_html = _render_toc(chapters, req)
 
-    # Cuadro de indicadores de datasets (trayectoria) — después del TOC
+    # Cuadro de indicadores de datasets (trayectoria): va DEBAJO del capítulo de
+    # contexto histórico (su lugar natural — "cómo venía" el proceso).
     datasets_html = _render_datasets_overview(intl_series, req.language or "es")
 
-    # Capítulos
+    # Capítulos (el cuadro de datasets se inserta tras "contexto_historico")
     chapters_html_parts = []
     for ch in chapters:
         chapters_html_parts.append(_render_chapter(ch, req))
+        if ch.chapter_id == "contexto_historico" and datasets_html:
+            chapters_html_parts.append(datasets_html)
+            datasets_html = ""  # ya insertado
+    # Fallback: si no hubo capítulo de contexto, ubicarlo tras el TOC.
     chapters_html = "\n".join(chapters_html_parts)
 
     # Anexo A — Metodología, limitaciones y versión del pipeline

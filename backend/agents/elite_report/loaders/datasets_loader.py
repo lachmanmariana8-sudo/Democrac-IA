@@ -243,10 +243,16 @@ class DatasetsLoader:
             if not summary:
                 return None
 
-            # PEI devuelve ultimo valor. Intentamos extraer todas las elecciones del país.
-            rows = df[df.get("VenezuelaCountry", df.get("country", "")) == cc] if "VenezuelaCountry" in df.columns else df[df.get("country", "") == cc]
-            if rows.empty and "Country" in df.columns:
-                rows = df[df["Country"] == cc]
+            # Extraer TODAS las elecciones del país. El match correcto es por la
+            # columna ISO (= 'PER'); la columna 'country' tiene el nombre ('Peru')
+            # y por eso antes el filtro quedaba vacío → caía a 1 solo punto.
+            rows = df.iloc[0:0]
+            if "ISO" in df.columns:
+                rows = df[df["ISO"].astype(str).str.upper() == cc.upper()]
+            if rows.empty and "country" in df.columns:
+                # Fallback por nombre de país (ej. 'Peru')
+                from modules.data_loaders import get_pei_country as _gpc  # noqa: F401
+                rows = df[df["country"].astype(str).str.contains(cc, case=False, na=False)]
             if rows.empty:
                 # Usar solo el summary como 1 datapoint
                 datapoints = []
@@ -273,15 +279,20 @@ class DatasetsLoader:
             datapoints: List[HistoricalDatapoint] = []
             import pandas as pd
             for _, r in rows.iterrows():
-                year_col = r.get("year") or r.get("Year")
-                val = r.get("PEIIndexi") or r.get("overall_integrity")
+                year_col = r.get("year") if r.get("year") is not None else r.get("Year")
+                # Integridad global PEI: OVERALLINTEGRITY suele venir nan para
+                # varios países; el valor efectivo está en PEI_add_original
+                # (mismo fallback que usa get_pei_country).
+                val = r.get("OVERALLINTEGRITY")
+                if val is None or pd.isna(val):
+                    val = r.get("PEI_add_original")
                 if year_col is None or val is None or pd.isna(year_col) or pd.isna(val):
                     continue
                 datapoints.append(HistoricalDatapoint(
                     year=int(year_col),
-                    value=float(val),
-                    source="PEI v10.0",
-                    note=str(r.get("PEIID") or r.get("election_id") or ""),
+                    value=round(float(val), 1),
+                    source="PEI-10.0",
+                    note=str(r.get("election") or r.get("PEIID") or r.get("election_id") or ""),
                 ))
 
             datapoints.sort(key=lambda d: d.year)
