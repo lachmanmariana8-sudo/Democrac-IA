@@ -14,11 +14,13 @@ from __future__ import annotations
 import re
 from typing import Iterable, List, Optional
 
-# Decimales (1.31 / 0,96), miles (1.303 / 9.036.046) y años 19xx-20xx.
+# Solo cifras "estadísticas": miles con separador (1.303 / 9.036.046) y
+# decimales con ≥2 dígitos fraccionarios (0,96 / 47,76 / 1,31).
+# NO matchea años (1966) ni números de subsección de 1 decimal (10.2, 11.3),
+# que son estructurales/legítimos y solo generaban ruido.
 _NUM_RE = re.compile(
     r"\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?\b"   # con separador de miles
-    r"|\b\d+[.,]\d+\b"                          # decimal simple
-    r"|\b(?:19|20)\d{2}\b"                      # año
+    r"|\b\d+[.,]\d{2,}\b"                       # decimal con ≥2 fraccionarios
 )
 
 

@@ -308,6 +308,10 @@ class EliteReportOutput(BaseModel):
     config_hash: Optional[str] = None
     classifier: Dict[str, Any] = Field(default_factory=dict)
     audit_config: Dict[str, Any] = Field(default_factory=dict)
+    # Señales del validador anti-alucinación (llm_guard): cifras de capítulos LLM
+    # no halladas en el contexto. Es trazabilidad INTERNA (queda en el JSON
+    # persistido), NO un warning de usuario — puede tener falsos positivos.
+    audit_flags: List[str] = Field(default_factory=list)
 
 
 # ── Bundle de evidencia cargada ──────────────────────────────────────────

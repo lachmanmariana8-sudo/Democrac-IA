@@ -499,6 +499,10 @@ class ChapterComposer:
             alerts_dispatched=alerts_dispatched,
             country_name=country_name,
         )
+        # Exponer el contexto real para el validador anti-alucinación (llm_guard):
+        # contiene los valores que efectivamente vio el LLM (V-Dem, findings,
+        # series, RAG). Evita falsos positivos de validar contra una aproximación.
+        self._last_shared_context = shared_context
 
         # Generar con concurrency limit
         sem = asyncio.Semaphore(self.concurrency_limit)

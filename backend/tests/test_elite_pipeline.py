@@ -790,13 +790,15 @@ def test_llm_guard_flags_unsupported_numbers():
     ni números de artículo chicos."""
     from agents.elite_report.llm_guard import find_unsupported_numbers
     ctx = "La autonomía cayó de 2,40 (2021) a 0,96 (2024). Margen 1.303 votos."
-    text = ("El índice fue 1.31 en 2025 (Art. 178). Cayó a 0,96 en 2024 "
-            "con margen de 1303 votos.")
+    text = ("El índice fue 1.31 (Art. 178). Cayó a 0,96 con margen de 1303 votos. "
+            "Ver subsección 10.2 y el año 1969.")
     flagged = find_unsupported_numbers(text, ctx)
-    assert "1.31" in flagged and "2025" in flagged      # inventados
-    assert "0,96" not in flagged and "2024" not in flagged  # respaldados
-    assert "1303" not in flagged                          # 1.303 ≈ 1303 (normalizado)
-    assert "178" not in flagged                           # número de artículo, no estadístico
+    assert "1.31" in flagged                               # decimal inventado
+    assert "0,96" not in flagged                           # respaldado
+    assert "1303" not in flagged                           # 1.303 ≈ 1303 (normalizado)
+    assert "178" not in flagged                            # número de artículo
+    assert "10.2" not in flagged                           # subsección (1 decimal) — excluida
+    assert "1969" not in flagged                           # año — no se marca
 
 
 def test_uncertainty_rendered_in_synthesis_and_risk():

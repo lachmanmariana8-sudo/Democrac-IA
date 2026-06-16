@@ -206,28 +206,25 @@ class PEIRSEliteReport:
         from agents.elite_report.renderer.pdf_renderer import render_pdf
         from agents.elite_report.renderer.markitdown_bridge import html_to_markdown
 
-        # ── 6d. VALIDADOR ANTI-ALUCINACIÓN (no bloqueante) ─────────────
-        # Marca en warnings las cifras de los capítulos LLM que no aparecen en
-        # el corpus/contexto. Salta los capítulos deterministas (apertura y
-        # observación entre vueltas) que ya son auditables por construcción.
+        # ── 6d. VALIDADOR ANTI-ALUCINACIÓN (auditoría interna) ─────────
+        # Marca las cifras de los capítulos LLM que no aparecen en el CONTEXTO
+        # REAL que vio el modelo (shared_context del composer: V-Dem, findings,
+        # series, RAG). Va a output.audit_flags (trazabilidad interna), NO a
+        # warnings de usuario — puede tener falsos positivos. Salta los capítulos
+        # deterministas (apertura y observación entre vueltas).
+        _audit_flags: List[str] = []
         try:
             from agents.elite_report.llm_guard import guard_chapter
             _det = {"declaracion_preliminar", "observacion_entre_vueltas"}
-            _ctx_parts = [(f.finding or "") for f in bundle.hunter_entries]
-            try:
-                from modules.peru_data import PERU_VDEM_STATIC, PERU_RUNOFF_2026
-                _ctx_parts.append(str(PERU_VDEM_STATIC))
-                _ctx_parts.append(str(PERU_RUNOFF_2026))
-            except Exception:
-                pass
-            _ctx = " ".join(_ctx_parts)
+            _ctx = getattr(composer, "_last_shared_context", "") or ""
+            if not _ctx:  # fallback si el composer no expuso el contexto
+                _ctx = " ".join((f.finding or "") for f in bundle.hunter_entries)
             for ch in chapters:
                 if ch.chapter_id in _det or not ch.narrative:
                     continue
-                bundle.warnings.extend(
-                    guard_chapter(ch.chapter_id, ch.narrative, _ctx))
+                _audit_flags.extend(guard_chapter(ch.chapter_id, ch.narrative, _ctx))
         except Exception as e:
-            bundle.warnings.append(f"llm_guard falló: {type(e).__name__}: {e}")
+            _audit_flags.append(f"llm_guard falló: {type(e).__name__}: {e}")
 
         # Sello de auditoría: versión de pipeline + hash de config + clasificador.
         _audit_fp = config_fingerprint()
@@ -311,6 +308,7 @@ class PEIRSEliteReport:
             config_hash=_audit_fp.get("config_hash"),
             classifier=_audit_fp.get("classifier", {}),
             audit_config=_audit_fp.get("config", {}),
+            audit_flags=_audit_flags,
         )
 
         # ── 11. PERSISTENCIA ──────────────────────────────────────────
