@@ -7,8 +7,10 @@ from fastapi.security import APIKeyHeader
 
 # ── LLM ─────────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-LLM_MODEL: str = "claude-sonnet-4-20250514"
-LLM_TEMPERATURE: float = 0.2
+# ID de modelo vigente (el anterior 'claude-sonnet-4-20250514' fue retirado → 404).
+# Overridable por env var para no requerir cambio de código ante nuevas versiones.
+LLM_MODEL: str = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
+LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))
 
 # ── Observer Protocol — Autenticación ────────────────────────────────────────
 # Formato env: OBSERVER_API_KEYS=key1,key2,key3

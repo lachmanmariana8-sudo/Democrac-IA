@@ -209,8 +209,9 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-LLM_MODEL = "claude-sonnet-4-20250514"
-LLM_TEMPERATURE = 0.2
+# ID vigente (el anterior fue retirado → 404). Fuente única: modules/config.py.
+LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
+LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.2"))
 
 # ── Autenticación — API Keys para protocolo de observación ───────────────────
 # Formato env: OBSERVER_API_KEYS=key1,key2,key3
