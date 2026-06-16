@@ -910,9 +910,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Medidor de alerta antecipada",
     },
     "viz.early_warning_meter.caption": {
-        "es": "Índice de crisis 0–1, ponderado por severidad de los hallazgos (crítico=1,0; alto=0,55; medio=0,20). Verde <0,20 · ámbar 0,20–0,40 · naranja 0,40–0,60 · rojo ≥0,60. Mayor = mayor riesgo.",
-        "en": "Crisis index 0–1, weighted by finding severity (critical=1.0; high=0.55; medium=0.20). Green <0.20 · amber 0.20–0.40 · orange 0.40–0.60 · red ≥0.60. Higher = greater risk.",
-        "pt": "Índice de crise 0–1, ponderado pela severidade dos registros (crítico=1,0; alto=0,55; médio=0,20). Verde <0,20 · âmbar 0,20–0,40 · laranja 0,40–0,60 · vermelho ≥0,60. Maior = maior risco.",
+        "es": "Nivel de riesgo del período. Combina el índice de severidad del corpus monitoreado (ponderado: crítico=1,0; alto=0,55; medio=0,20) con un piso por hechos institucionales documentados (crisis del EMB, resultado indeterminado, sistema de cómputo sin auditoría). Escala: verde = estable (sin tensiones relevantes) · ámbar = tensión incipiente · naranja = tensión elevada · rojo = riesgo crítico. Mayor = mayor riesgo.",
+        "en": "Period risk level. Combines the severity index of the monitored corpus (weighted: critical=1.0; high=0.55; medium=0.20) with a floor from documented institutional facts (EMB crisis, undetermined result, unaudited count system). Scale: green = stable (no relevant strain) · amber = emerging strain · orange = elevated strain · red = critical risk. Higher = greater risk.",
+        "pt": "Nível de risco do período. Combina o índice de severidade do corpus monitorado (ponderado: crítico=1,0; alto=0,55; médio=0,20) com um piso por fatos institucionais documentados (crise do EMB, resultado indeterminado, sistema de apuração sem auditoria). Escala: verde = estável · âmbar = tensão incipiente · laranja = tensão elevada · vermelho = risco crítico. Maior = maior risco.",
     },
     "viz.semaphore_institutional.title": {
         "es": "Evaluación institucional por órgano",

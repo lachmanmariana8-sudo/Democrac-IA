@@ -193,6 +193,19 @@ class PEIRSEliteReport:
         self._attach_visualizations(chapters, bundle, forecast, stats,
                                      language=req.language or "es")
 
+        # ── 7b. AJUSTE POR HECHOS DOCUMENTADOS ─────────────────────────
+        # El radar/medidor se calculan del corpus OSINT del Hunter; por sí solos
+        # NO ven la crisis EMB, el resultado indeterminado ni el STAE (que viven
+        # en los datos cargados). Sin ese ajuste, el radar daba "Org. electoral
+        # = 100" y el medidor "Estable" pese a la crisis. Los alineamos con la
+        # evidencia documentada para que sean dinámicos y consistentes.
+        try:
+            self._apply_documented_risk(
+                chapters, runoff_obs, _adapter, req.language or "es")
+        except Exception as e:
+            bundle.warnings.append(
+                f"Ajuste de riesgo documentado falló: {type(e).__name__}: {e}")
+
         # ── 8. CITATION BUILDER ────────────────────────────────────────
         cb = CitationBuilder(language=req.language or "es")
         citations = cb.build_bibliography(
@@ -318,6 +331,80 @@ class PEIRSEliteReport:
 
     # ────────────────────────────────────────────────────────────────────
     # Helpers
+    # ────────────────────────────────────────────────────────────────────
+    @staticmethod
+    def _apply_documented_risk(chapters, runoff_obs, adapter, lang: str) -> None:
+        """Alinea el medidor de alerta y el radar con la EVIDENCIA DOCUMENTADA
+        (crisis EMB, resultado indeterminado, STAE), que el cálculo OSINT del
+        Hunter no captura. Escalera auditable; no inventa: cada ajuste responde
+        a un hecho cargado con fuente. Solo eleva el riesgo, nunca lo baja."""
+        if not isinstance(runoff_obs, dict):
+            return
+        obs = runoff_obs.get("runoff_phase_observation") or {}
+        emb = obs.get("emb_independence_stress_signals") or {}
+        n_emb = len(emb.get("signals") or []) if emb.get("audit_status") in (
+            "VERIFIED_SECONDARY", "CONFIRMED") else 0
+        sr = runoff_obs.get("second_round_results") or {}
+        indeterminate = bool((sr.get("uncertainty") or {}).get("indeterminate"))
+        stae = isinstance(runoff_obs.get("electoral_technology_note"), dict)
+        if not (n_emb or indeterminate or stae):
+            return
+
+        _RANK = {"green": 0, "amber": 1, "orange": 2, "red": 3}
+        _BAND_MIN = {"green": 0.10, "amber": 0.20, "orange": 0.45, "red": 0.70}
+        floor = "green"
+        if indeterminate or n_emb >= 2:
+            floor = "orange"
+        if (indeterminate and n_emb >= 2) or n_emb >= 4 or (n_emb >= 2 and stae):
+            floor = "red"
+        emb_penalty = n_emb * 12 + (15 if stae else 0)   # baja "Org. electoral"
+        drivers_doc = []
+        if n_emb:
+            drivers_doc.append("crisis institucional ONPE/JNE")
+        if indeterminate:
+            drivers_doc.append("resultado indeterminado")
+        if stae:
+            drivers_doc.append("STAE sin auditoría")
+
+        for ch in chapters:
+            if ch.chapter_id != "conclusiones":
+                continue
+            for v in ch.visualizations:
+                if v.kind == "early_warning_meter":
+                    cur = v.data.get("level", "green")
+                    if _RANK.get(floor, 0) > _RANK.get(cur, 0):
+                        v.data["level"] = floor
+                        v.data["label"] = adapter.early_warning_label(floor, lang)
+                        v.data["score"] = max(float(v.data.get("score") or 0), _BAND_MIN[floor])
+                    ds = list(v.data.get("drivers") or [])
+                    for d in drivers_doc:
+                        if d not in ds:
+                            ds.append(d)
+                    v.data["drivers"] = ds[:5]
+                elif v.kind == "dimensions_radar" and emb_penalty:
+                    for dim in (v.data.get("dimensions") or []):
+                        if "electoral" in (dim.get("label", "") or "").lower():
+                            dim["value"] = max(0, min(int(dim.get("value", 100)),
+                                                      100 - emb_penalty))
+                elif v.kind == "semaphore_institutional" and n_emb:
+                    # La crisis documentada recae sobre la ONPE (su titular
+                    # denunciado); el JNE actúa como árbitro y no se eleva.
+                    emb_status = "red" if (n_emb >= 4 or (n_emb >= 2 and stae)) \
+                        else ("orange" if n_emb >= 2 else "amber")
+                    organs = v.data.get("organs") or []
+                    for o in organs:
+                        if o.get("label") == "ONPE" and \
+                                _RANK.get(emb_status, 0) > _RANK.get(o.get("status", "green"), 0):
+                            o["status"] = emb_status
+                            o["note"] = "Crisis institucional documentada (ver eje EMB y Cap. 6)"
+                    worst = max((o.get("status", "green") for o in organs
+                                 if o.get("label") != "Proceso global"),
+                                key=lambda s: _RANK.get(s, 0), default="green")
+                    for o in organs:
+                        if o.get("label") == "Proceso global" and \
+                                _RANK.get(worst, 0) > _RANK.get(o.get("status", "green"), 0):
+                            o["status"] = worst
+
     # ────────────────────────────────────────────────────────────────────
     @staticmethod
     def _build_stats(bundle: EvidenceBundle) -> Dict[str, Any]:

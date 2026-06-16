@@ -631,6 +631,29 @@ def test_radar_emb_reflects_organ_questioning():
     assert emb_dim["value"] < 100, "el cuestionamiento al EMB debe reflejarse"
 
 
+def test_documented_risk_lifts_gauge_and_radar():
+    """Los gráficos analíticos reflejan la EVIDENCIA documentada (crisis EMB,
+    resultado indeterminado, STAE), no solo el corpus OSINT. Sin esto, el
+    medidor daba 'Estable' y el radar 'Org. electoral=100' pese a la crisis."""
+    import asyncio
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.models import EliteReportRequest, MissionMetadata
+    rep = PEIRSEliteReport(llm=None, observation_store={"PER": {"entries": []}})
+    req = EliteReportRequest(country_code="PER", language="es", include_predictive=False,
+        output_formats=["html"], mission_metadata=MissionMetadata(report_number="DR",
+        period_start="2026-04-12", period_end="2026-06-13", jornada_date="2026-06-07"))
+    out = asyncio.run(rep.compose(req))
+    concl = next(c for c in out.chapters if c.chapter_id == "conclusiones")
+    gauge = next(v for v in concl.visualizations if v.kind == "early_warning_meter")
+    radar = next(v for v in concl.visualizations if v.kind == "dimensions_radar")
+    # Medidor elevado por hechos documentados (no 'green'/'Estable')
+    assert gauge.data["level"] in ("orange", "red")
+    assert any("ONPE" in d or "indeterminado" in d for d in gauge.data.get("drivers", []))
+    # Radar: "Org. electoral" baja drásticamente (no queda en 100)
+    emb_val = next(d["value"] for d in radar.data["dimensions"] if "electoral" in d["label"].lower())
+    assert emb_val < 50
+
+
 def test_gauge_level_coherent_with_score():
     """La banda (level) del medidor debe ser coherente con el score que posiciona
     la aguja — antes el forecast podía mostrar 'green' con score 0.78 (rojo)."""
