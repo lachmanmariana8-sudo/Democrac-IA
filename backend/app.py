@@ -10129,6 +10129,119 @@ async def clear_runoff_proclamation(
     return {"status": "ok", "country_code": cc, "cleared": existed}
 
 
+# ── Agente de prensa: análisis periodístico fiel al informe ───────────────
+from agents.press_writer.models import PressArticleRequest  # noqa: E402
+
+_PRESS_DAILY: Dict[str, int] = {}   # "YYYY-MM-DD" -> count (budget en memoria)
+
+
+def _load_elite_report_from_disk(report_id: str) -> Optional[Dict[str, Any]]:
+    """Carga markdown + metadata (stats) del informe Elite persistido en disco.
+    Devuelve el `source` para PressWriter, o None si no existe."""
+    try:
+        from agents.elite_report.elite_report import REPORTS_DIR as ELITE_DIR
+        base = ELITE_DIR / report_id
+    except Exception:
+        base = pathlib.Path("reports") / "elite" / report_id
+    md_path = base / "report.md"
+    meta_path = base / "metadata.json"
+    if not md_path.exists():
+        return None
+    markdown = md_path.read_text(encoding="utf-8")
+    meta: Dict[str, Any] = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            meta = {}
+    cc = (meta.get("country_code") or "PER").upper()
+    mission = meta.get("mission") or {}
+    period = ""
+    if mission.get("period_start") or mission.get("period_end"):
+        period = f"{mission.get('period_start', '—')} → {mission.get('period_end', '—')}"
+    source: Dict[str, Any] = {
+        "country_code": cc,
+        "country_name": COUNTRY_NAMES_GLOBAL.get(cc, cc) if "COUNTRY_NAMES_GLOBAL" in globals() else cc,
+        "period": period,
+        "markdown": markdown,
+        "stats": meta.get("stats") or {},
+        "language": meta.get("language") or "es",
+    }
+    # Resultado del balotaje (con override de proclamación si fue cargado).
+    if cc == "PER":
+        try:
+            from agents.elite_report.country_adapters import get_adapter
+            entries = observation_store.get("PER", {}).get("entries", [])
+            source["result"] = get_adapter("PER").runoff_observation(entries)
+        except Exception:
+            pass
+    return source
+
+
+@app.post("/api/press/article/generate")
+async def generate_press_article(
+    req: PressArticleRequest,
+    _key: str = Depends(_require_observer_key),
+    _ip: str = Depends(_rate_limit_expensive),
+):
+    """Genera un análisis periodístico (~600 palabras) firmado por Democrac.IA,
+    fiel a un informe Elite ya producido (report_id). Requiere X-Observer-Key,
+    rate-limited; budget diario MAX_PRESS_PER_DAY (default 10). Valida fidelidad
+    con llm_guard contra el markdown del informe (cifras sin respaldo → audit_flags)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    limit = int(os.getenv("MAX_PRESS_PER_DAY", "10"))
+    if _PRESS_DAILY.get(today, 0) >= limit:
+        raise HTTPException(status_code=429, detail=f"Budget diario de artículos excedido ({limit}/día).")
+
+    source = _load_elite_report_from_disk(req.report_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail=f"Informe '{req.report_id}' no encontrado en disco.")
+
+    if req.use_llm:
+        llm_status = await _check_llm_alive()
+        if not llm_status.get("ok", False):
+            raise HTTPException(
+                status_code=503,
+                detail=(f"LLM no disponible: {llm_status.get('error', '—')}. "
+                        f"Reintentá con use_llm=false para una versión determinista."))
+
+    try:
+        from agents.press_writer import PressWriter
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"PressWriter no disponible: {e}")
+
+    writer = PressWriter(llm=llm if req.use_llm else None)
+    try:
+        article = await writer.compose(source, req)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error del PressWriter: {type(e).__name__}: {e}")
+
+    _PRESS_DAILY[today] = _PRESS_DAILY.get(today, 0) + 1
+    _persist_press_article(article)
+    return article.model_dump()
+
+
+def _persist_press_article(article) -> None:
+    """Guarda md/html/metadata del artículo en reports/press/{article_id}/."""
+    try:
+        base = pathlib.Path(DATA_DIR) / "reports" / "press" / article.article_id
+        base.mkdir(parents=True, exist_ok=True)
+        md = (f"# {article.headline}\n\n*{article.standfirst}*\n\n"
+              f"_{article.byline}_\n\n{article.body_markdown}\n")
+        (base / "article.md").write_text(md, encoding="utf-8")
+        (base / "article.html").write_text(article.html, encoding="utf-8")
+        (base / "metadata.json").write_text(
+            json.dumps({
+                "article_id": article.article_id, "report_id": article.report_id,
+                "country_code": article.country_code, "language": article.language,
+                "headline": article.headline, "word_count": article.word_count,
+                "byline": article.byline, "generated_at": article.generated_at,
+                "audit_flags": article.audit_flags, "warnings": article.warnings,
+            }, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception as e:
+        print(f"[press] Persistencia falló: {e}")
+
+
 @app.get("/api/alerts/{country_code}")
 async def get_country_alerts(
     country_code: str,
