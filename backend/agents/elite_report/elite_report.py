@@ -172,12 +172,15 @@ class PEIRSEliteReport:
         # Reemplaza la 'Declaración preliminar' del LLM (que inventaba cifras)
         # por texto institucional fijo + síntesis armada desde datos reales.
         try:
-            if (req.country_code or "").upper() == "PER" and isinstance(runoff_obs, dict) \
-                    and "second_round_results" in runoff_obs:
+            # Framework país-agnóstico: la apertura se arma para cualquier país
+            # cuyo adapter provea runoff_observation con second_round_results.
+            # La serie V-Dem del EMB viene del adapter (no se importa peru_data).
+            if isinstance(runoff_obs, dict) and "second_round_results" in runoff_obs:
                 from agents.elite_report.declaration_chapter import build_declaration_narrative
-                from modules.peru_data import PERU_VDEM_STATIC
+                _emb_series = (_adapter.vdem_emb_series()
+                               if hasattr(_adapter, "vdem_emb_series") else None)
                 decl_md = build_declaration_narrative(
-                    runoff_obs, stats, PERU_VDEM_STATIC.get("emb_series"),
+                    runoff_obs, stats, _emb_series,
                     lang=req.language or "es")
                 if decl_md:
                     for ch in chapters:
@@ -241,6 +244,17 @@ class PEIRSEliteReport:
 
         # Sello de auditoría: versión de pipeline + hash de config + clasificador.
         _audit_fp = config_fingerprint()
+        # P2 — Auditoría de sesgo + gold set: exactitud del clasificador (muestra
+        # de oro validada a mano) + severidad media por tipo de actor sobre el
+        # corpus real (detección de sesgo). Recomputable; se estampa en Anexo A.
+        try:
+            from agents.hunter_version import (
+                fingerprint as _hv_fingerprint, actor_bias_report)
+            _audit_fp["classifier_quality"] = _hv_fingerprint()
+            _audit_fp["actor_bias"] = actor_bias_report(bundle.hunter_entries)
+        except Exception as e:
+            bundle.warnings.append(
+                f"Auditoría de sesgo/gold set falló: {type(e).__name__}: {e}")
 
         # Dashboard ejecutivo: reutiliza las viz ya computadas (semáforo, radar,
         # medidor) que viven en el capítulo de conclusiones.

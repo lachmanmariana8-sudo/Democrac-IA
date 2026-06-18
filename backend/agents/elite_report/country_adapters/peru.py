@@ -333,6 +333,17 @@ class PeruAdapter:
             return None
         return enrich_runoff_observation(PERU_RUNOFF_2026, entries or [])
 
+    def vdem_emb_series(self) -> Optional[Dict[str, Any]]:
+        """Serie V-Dem de autonomía/capacidad del EMB (apertura determinista:
+        síntesis ejecutiva). Devuelve el dict emb_series de PERU_VDEM_STATIC o
+        None. Abstrae el acceso para que elite_report no importe peru_data
+        directamente (framework país-agnóstico)."""
+        try:
+            from modules.peru_data import PERU_VDEM_STATIC
+        except ImportError:
+            return None
+        return PERU_VDEM_STATIC.get("emb_series")
+
     # ── Modelo institucional (Sprint 3) ────────────────────────────────
 
     def institutional_model(self) -> InstitutionalModel:

@@ -1215,10 +1215,56 @@ def _render_version_block(audit: Optional[Dict[str, Any]], language: str = "es")
          f'escalación ≥{_esc(esc.get("min_independent_primary", "—"))}/'
          f'≥{_esc(esc.get("confirm_independent_primary", "—"))} fuentes primarias'),
     ]
+    # P2 — Calidad del clasificador (gold set) + sesgo por actor
+    cq = audit.get("classifier_quality") or {}
+    if cq:
+        rows.append((
+            t(language, "appendix.a.ver.classifier_quality"),
+            f'{t(language, "appendix.a.ver.gold_set")}: {_esc(cq.get("gold_set_size", "—"))} · '
+            f'cat. {_esc(cq.get("category_accuracy", "—"))} · '
+            f'sev. {_esc(cq.get("severity_accuracy", "—"))} · '
+            f'macro-F1 {_esc(cq.get("macro_f1", "—"))} '
+            f'({_esc(cq.get("validated_at", "—"))})'))
+
     trs = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in rows)
-    return (f'<h3>{t(language, "appendix.a.h_version")}</h3>'
-            f'<p>{t(language, "appendix.a.p_version")}</p>'
-            f'<table class="md-table"><tbody>{trs}</tbody></table>')
+    version_table = (f'<h3>{t(language, "appendix.a.h_version")}</h3>'
+                     f'<p>{t(language, "appendix.a.p_version")}</p>'
+                     f'<table class="md-table"><tbody>{trs}</tbody></table>')
+    return version_table + _render_bias_block(audit.get("actor_bias"), language)
+
+
+def _render_bias_block(bias: Optional[Dict[str, Any]], language: str = "es") -> str:
+    """Reporte de sesgo: severidad media por tipo de actor (Marco de Calidad, P2).
+    Expone si algún tipo de actor recibe sistemáticamente mayor/menor severidad."""
+    if not bias or not bias.get("by_actor"):
+        return ""
+    _ACTOR_LABEL = {
+        "state_institution": {"es": "Institución estatal", "en": "State institution", "pt": "Instituição estatal"},
+        "candidate_party":   {"es": "Candidato/partido",   "en": "Candidate/party",   "pt": "Candidato/partido"},
+        "media":             {"es": "Medios",              "en": "Media",             "pt": "Mídia"},
+        "civil_society":     {"es": "Sociedad civil",      "en": "Civil society",     "pt": "Sociedade civil"},
+        "international":      {"es": "Internacional",       "en": "International",      "pt": "Internacional"},
+        "other":             {"es": "Otros",               "en": "Other",             "pt": "Outros"},
+    }
+    lang = (language or "es").lower()
+    by_actor = bias["by_actor"]
+    rows = []
+    for actor, m in sorted(by_actor.items(), key=lambda kv: -kv[1].get("mean_severity", 0)):
+        lbl = _ACTOR_LABEL.get(actor, {}).get(lang, actor)
+        flag = " ⚠" if m.get("flagged") else ""
+        delta = m.get("delta_vs_global", 0)
+        delta_s = f"+{delta}" if isinstance(delta, (int, float)) and delta > 0 else str(delta)
+        rows.append(
+            f"<tr><td>{_esc(lbl)}{flag}</td><td>{_esc(m.get('count', 0))}</td>"
+            f"<td>{_esc(m.get('mean_severity', '—'))}</td><td>{_esc(delta_s)}</td></tr>")
+    head = (f"<th>{t(language, 'appendix.a.bias.actor')}</th>"
+            f"<th>{t(language, 'appendix.a.bias.count')}</th>"
+            f"<th>{t(language, 'appendix.a.bias.mean')}</th>"
+            f"<th>{t(language, 'appendix.a.bias.delta')}</th>")
+    return (f'<h3>{t(language, "appendix.a.h_bias")}</h3>'
+            f'<p>{t(language, "appendix.a.p_bias").format(g=bias.get("global_mean_severity", "—"))}</p>'
+            f'<table class="md-table"><thead><tr>{head}</tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table>')
 
 
 def _render_appendix_a(req: EliteReportRequest, stats: Dict[str, Any],

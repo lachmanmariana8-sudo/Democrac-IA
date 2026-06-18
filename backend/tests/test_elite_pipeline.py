@@ -627,6 +627,88 @@ def test_quant_panel_renders_with_methodological_captions():
     assert "consolidado" in panel.lower()
 
 
+def test_adapter_exposes_vdem_emb_series():
+    """P2 (framework agnóstico): la apertura ya no importa peru_data ni gatea
+    en ==PER; toma la serie V-Dem del EMB vía adapter.vdem_emb_series()."""
+    from agents.elite_report.country_adapters import get_adapter
+    adapter = get_adapter("PER")
+    assert hasattr(adapter, "vdem_emb_series")
+    series = adapter.vdem_emb_series()
+    assert series and isinstance(series, list)
+    assert all("year" in p and "v2elembaut" in p for p in series)
+    # elite_report ya no debe gatear la apertura en el literal "PER"
+    import inspect
+    from agents.elite_report import elite_report as er
+    src = inspect.getsource(er.PEIRSEliteReport.compose)
+    assert 'vdem_emb_series' in src
+    assert '== "PER"' not in src
+
+
+def test_hunter_gold_set_accuracy_is_recomputable():
+    """P2: ACCURACY_METRICS debe coincidir con recomputar desde GOLD_SET
+    (no son magic numbers) y exponer precision/recall/f1 por categoría."""
+    from agents.hunter_version import (
+        GOLD_SET, ACCURACY_METRICS, compute_accuracy, fingerprint)
+    assert ACCURACY_METRICS == compute_accuracy(GOLD_SET)
+    assert 0.0 <= ACCURACY_METRICS["category_accuracy"] <= 1.0
+    assert 0.0 <= ACCURACY_METRICS["severity_accuracy"] <= 1.0
+    # cada categoría del gold tiene precision/recall/f1/support
+    for c, m in ACCURACY_METRICS["per_category"].items():
+        assert {"precision", "recall", "f1", "support"} <= set(m)
+    fp = fingerprint()
+    assert fp["gold_set_size"] == len(GOLD_SET)
+    assert fp["category_accuracy"] == ACCURACY_METRICS["category_accuracy"]
+
+
+def test_actor_bias_report_detects_and_flags():
+    """P2: el reporte de sesgo agrupa por tipo de actor, calcula severidad media
+    y marca (flagged) las desviaciones marcadas respecto a la media global."""
+    from agents.hunter_version import actor_bias_report
+
+    class _E:
+        def __init__(self, sev, src, fnd):
+            self.severity, self.source_name, self.finding = sev, src, fnd
+
+    # Institución estatal sistemáticamente crítica; medios siempre info → sesgo.
+    entries = (
+        [_E("critical", "ONPE", "x") for _ in range(4)]
+        + [_E("info", "El Comercio diario", "y") for _ in range(4)]
+    )
+    rep = actor_bias_report(entries)
+    assert rep["total_classified"] == 8
+    by = rep["by_actor"]
+    assert "state_institution" in by and "media" in by
+    assert by["state_institution"]["mean_severity"] == 5.0
+    assert by["media"]["mean_severity"] == 1.0
+    # con esta separación extrema, ambos deben quedar flagged
+    assert by["state_institution"]["flagged"] and by["media"]["flagged"]
+
+
+def test_appendix_a_stamps_classifier_quality_and_bias():
+    """P2: el bloque de versión del Anexo A debe estampar calidad del
+    clasificador (gold set) y la tabla de sesgo por actor."""
+    from agents.elite_report.renderer.html_renderer import _render_version_block
+    from agents.hunter_version import fingerprint, actor_bias_report
+
+    class _E:
+        def __init__(self, sev, src, fnd):
+            self.severity, self.source_name, self.finding = sev, src, fnd
+
+    audit = {
+        "pipeline_version": "1.0.0", "config_version": "1.0.0", "config_hash": "h",
+        "classifier": {"model": "m", "prompt_sha256_16": "p"},
+        "config": {"llm": {"model": "m", "temperature": 0.2},
+                   "escalation": {"min_independent_primary": 2,
+                                  "confirm_independent_primary": 3},
+                   "consolidation": {"jaccard_threshold": 0.5}},
+        "classifier_quality": fingerprint(),
+        "actor_bias": actor_bias_report([_E("high", "JNE", "x")]),
+    }
+    html = _render_version_block(audit, "es")
+    assert "Calidad del clasificador" in html
+    assert "Auditoría de sesgo" in html
+
+
 def test_5b_renderers_have_no_embedded_title():
     """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
     lo pone el <figcaption> del HTML). Evita el doble título reportado."""

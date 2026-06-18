@@ -165,6 +165,15 @@ class CountryAdapter(Protocol):
         None si no se quiere mostrar el mapa regional."""
         ...
 
+    # ── Series V-Dem del EMB (opcional) ────────────────────────────────
+
+    def vdem_emb_series(self) -> Optional[Dict[str, Any]]:
+        """Serie V-Dem de autonomía/capacidad del organismo electoral, usada
+        por la apertura determinista (síntesis ejecutiva). None si el país no
+        provee la serie. Mantiene a elite_report agnóstico al país (no importa
+        módulos *_data específicos)."""
+        ...
+
     # ── Modelo institucional (Sprint 3) ────────────────────────────────
 
     def institutional_model(self) -> InstitutionalModel:

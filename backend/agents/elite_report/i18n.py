@@ -1279,6 +1279,24 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "appendix.a.ver.classifier": {"es": "Clasificador (Hunter)", "en": "Classifier (Hunter)", "pt": "Classificador (Hunter)"},
     "appendix.a.ver.llm": {"es": "Modelo de redacción", "en": "Drafting model", "pt": "Modelo de redação"},
     "appendix.a.ver.thresholds": {"es": "Umbrales", "en": "Thresholds", "pt": "Limiares"},
+    "appendix.a.ver.classifier_quality": {
+        "es": "Calidad del clasificador", "en": "Classifier quality", "pt": "Qualidade do classificador"},
+    "appendix.a.ver.gold_set": {"es": "muestra de oro", "en": "gold set", "pt": "amostra de ouro"},
+    # ── P2: Auditoría de sesgo por actor ─────────────────────────────────
+    "appendix.a.h_bias": {
+        "es": "Auditoría de sesgo por tipo de actor",
+        "en": "Bias audit by actor type",
+        "pt": "Auditoria de viés por tipo de ator",
+    },
+    "appendix.a.p_bias": {
+        "es": "Severidad media (escala 1=info … 5=crítico) de los hallazgos según el tipo de actor involucrado. Severidad media global del corpus: {g}. Una desviación marcada respecto a la media global (⚠) señala posible sesgo de severidad por actor y exige revisión humana; no implica error, sino punto de control de imparcialidad.",
+        "en": "Mean severity (scale 1=info … 5=critical) of findings by the actor type involved. Corpus global mean severity: {g}. A marked deviation from the global mean (⚠) signals possible per-actor severity bias and warrants human review; it does not imply error but an impartiality checkpoint.",
+        "pt": "Severidade média (escala 1=info … 5=crítico) dos registros segundo o tipo de ator envolvido. Severidade média global do corpus: {g}. Um desvio marcado em relação à média global (⚠) sinaliza possível viés de severidade por ator e exige revisão humana.",
+    },
+    "appendix.a.bias.actor": {"es": "Tipo de actor", "en": "Actor type", "pt": "Tipo de ator"},
+    "appendix.a.bias.count": {"es": "Hallazgos", "en": "Findings", "pt": "Registros"},
+    "appendix.a.bias.mean": {"es": "Severidad media", "en": "Mean severity", "pt": "Severidade média"},
+    "appendix.a.bias.delta": {"es": "Δ vs. global", "en": "Δ vs. global", "pt": "Δ vs. global"},
     # ── Dashboard ejecutivo ──────────────────────────────────────────────
     "exec.title": {"es": "Resumen ejecutivo", "en": "Executive summary", "pt": "Resumo executivo"},
     "exec.kpi.findings": {"es": "Hallazgos", "en": "Findings", "pt": "Achados"},
