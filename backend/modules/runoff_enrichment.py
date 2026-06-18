@@ -137,16 +137,73 @@ def compute_axis_audit_status(items):
     return AUDIT_PENDING
 
 
-def enrich_runoff_observation(runoff, entries, *, now=None):
+def apply_proclamation_override(enriched, override):
+    """Fusiona el resultado OFICIAL proclamado en second_round_results (in-place
+    sobre la copia ya profunda). Idempotente. Sin proclamación oficial, no toca nada.
+
+    `override` (cargado por proclamation_store) admite:
+      winner (str, requerido), winner_pct (float), winner_votes (int),
+      runner_up, runner_up_pct, runner_up_votes, actas_processed_pct, as_of,
+      source, source_url, note, dispute_resolution_tracker (dict/list).
+    Efectos: proclamation.proclaimed=True + winner + note; uncertainty.indeterminate
+    =False; status='proclaimed'; lead_flipped se conserva como dato histórico.
+    """
+    if not isinstance(override, dict) or not override.get("winner"):
+        return enriched
+    srr = enriched.get("second_round_results")
+    if not isinstance(srr, dict):
+        return enriched
+
+    proc = srr.setdefault("proclamation", {})
+    proc["proclaimed"] = True
+    proc["winner"] = override["winner"]
+    if override.get("note"):
+        proc["note"] = override["note"]
+    if override.get("as_of"):
+        proc["proclaimed_at"] = override["as_of"]
+
+    unc = srr.get("uncertainty")
+    if isinstance(unc, dict):
+        unc["indeterminate"] = False
+        unc["note"] = (unc.get("note", "") + " [Actualizado: el JNE proclamó el "
+                       "resultado oficial; la indeterminación queda resuelta.]").strip()
+
+    srr["status"] = "proclaimed"
+    for k_src, k_dst in (("as_of", "as_of"), ("actas_processed_pct", "actas_processed_pct"),
+                         ("source", "official_source"), ("source_url", "official_source_url")):
+        if override.get(k_src) is not None:
+            srr[k_dst] = override[k_src]
+
+    # Resultado oficial estructurado (no pisa el provisional 'candidates'; se añade
+    # como bloque oficial trazable).
+    official = {"winner": override["winner"]}
+    for k in ("winner_pct", "winner_votes", "runner_up", "runner_up_pct",
+              "runner_up_votes", "margin_votes", "margin_pct"):
+        if override.get(k) is not None:
+            official[k] = override[k]
+    srr["official_result"] = official
+
+    drt = override.get("dispute_resolution_tracker")
+    if drt is not None:
+        enriched["dispute_resolution_tracker"] = drt
+    return enriched
+
+
+def enrich_runoff_observation(runoff, entries, *, now=None, proclamation_override=None):
     """Devuelve una copia profunda de `runoff` con los 3 ejes OSINT poblados
     desde `entries` (observation_store) y su audit_status recalculado.
 
     No muta `runoff` ni `entries`. Los 6 ejes institucionales + 2 de conducta de
     campaña pasan tal cual (escalan solo con docs oficiales cargados a mano).
 
+    `proclamation_override` (opcional): resultado oficial proclamado, fusionado en
+    second_round_results vía apply_proclamation_override.
+
     `now` se acepta por compatibilidad de firma; la lógica no depende del reloj.
     """
     enriched = copy.deepcopy(runoff)
+    if proclamation_override:
+        apply_proclamation_override(enriched, proclamation_override)
     observation = enriched.get("runoff_phase_observation")
     if not isinstance(observation, dict):
         return enriched

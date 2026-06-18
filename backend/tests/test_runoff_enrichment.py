@@ -205,3 +205,63 @@ def test_named_constants_documented_values():
     assert AUDIT_PENDING == "PENDIENTE_VERIFICACION"
     assert AUDIT_SECONDARY == "VERIFIED_SECONDARY"
     assert AUDIT_CONFIRMED == "CONFIRMED"
+
+
+# ── Bloque C: override de proclamación + detección de cierre ──────────────────
+
+def test_proclamation_override_flips_proclaimed_and_indeterminate():
+    """apply_proclamation_override fija proclaimed=True + winner, apaga
+    indeterminate, status='proclaimed', y NO muta el dict fuente."""
+    ov = {
+        "winner": "Candidato X", "winner_pct": 50.31, "winner_votes": 9050000,
+        "source": "JNE", "as_of": "2026-07-10", "note": "El JNE proclamó.",
+        "dispute_resolution_tracker": {"resolved": 12, "pending": 0},
+    }
+    merged = enrich_runoff_observation(PERU_RUNOFF_2026, [], proclamation_override=ov)
+    srr = merged["second_round_results"]
+    assert srr["proclamation"]["proclaimed"] is True
+    assert srr["proclamation"]["winner"] == "Candidato X"
+    assert srr["uncertainty"]["indeterminate"] is False
+    assert srr["status"] == "proclaimed"
+    assert srr["official_result"]["winner_pct"] == 50.31
+    assert merged["dispute_resolution_tracker"]["resolved"] == 12
+    # fuente intacta
+    assert PERU_RUNOFF_2026["second_round_results"]["proclamation"]["proclaimed"] is False
+    assert PERU_RUNOFF_2026["second_round_results"]["uncertainty"]["indeterminate"] is True
+
+
+def test_proclamation_override_none_is_noop():
+    """Sin override (None / sin winner), second_round_results queda provisional."""
+    base = enrich_runoff_observation(PERU_RUNOFF_2026, [], proclamation_override=None)
+    assert base["second_round_results"]["proclamation"]["proclaimed"] is False
+    noop = enrich_runoff_observation(PERU_RUNOFF_2026, [], proclamation_override={"note": "x"})
+    assert noop["second_round_results"]["proclamation"]["proclaimed"] is False
+
+
+def test_proclamation_store_roundtrip(tmp_path, monkeypatch):
+    """save → load → clear del override (archivo JSON por país)."""
+    monkeypatch.setenv("RUNOFF_OVERRIDES_DIR", str(tmp_path))
+    from modules import proclamation_store as ps
+    assert ps.load_proclamation("PER") is None
+    ps.save_proclamation("PER", {"winner": "Z", "winner_pct": 51.0})
+    loaded = ps.load_proclamation("PER")
+    assert loaded["winner"] == "Z" and loaded["winner_pct"] == 51.0
+    assert ps.clear_proclamation("PER") is True
+    assert ps.load_proclamation("PER") is None
+
+
+def test_detect_closing_signals_requires_emb_and_verb():
+    """_detect_closing_signals exige co-ocurrencia EMB+verbo (sin falsos positivos)."""
+    import app
+    entries = [
+        {"entry_id": "1", "finding": "El pleno del JNE proclamó al ganador", "source_org": "JNE"},
+        {"entry_id": "2", "finding": "JEE resuelve nulidad declarada infundada", "source_org": "JEE"},
+        {"entry_id": "3", "finding": "El JNE informó horarios de atención", "source_org": ""},
+    ]
+    sigs = app._detect_closing_signals(entries)
+    assert "proclamation" in sigs
+    assert "dispute_resolution" in sigs
+    assert sigs["proclamation"]["entry_id"] == "1"
+    # mención escueta del JNE sin verbo de cierre no dispara
+    assert app._detect_closing_signals(
+        [{"entry_id": "x", "finding": "El JNE informó horarios", "source_org": ""}]) == {}

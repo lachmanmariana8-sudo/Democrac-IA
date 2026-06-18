@@ -331,7 +331,16 @@ class PeruAdapter:
             from modules.runoff_enrichment import enrich_runoff_observation
         except ImportError:
             return None
-        return enrich_runoff_observation(PERU_RUNOFF_2026, entries or [])
+        # Override oficial: si el JNE ya proclamó y el observador cargó el
+        # resultado (POST /api/runoff/PER/proclamation), se fusiona aquí.
+        override = None
+        try:
+            from modules.proclamation_store import load_proclamation
+            override = load_proclamation("PER")
+        except Exception:
+            override = None
+        return enrich_runoff_observation(
+            PERU_RUNOFF_2026, entries or [], proclamation_override=override)
 
     def vdem_emb_series(self) -> Optional[Dict[str, Any]]:
         """Serie V-Dem de autonomía/capacidad del EMB (apertura determinista:

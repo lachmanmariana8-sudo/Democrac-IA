@@ -5347,6 +5347,11 @@ _HUNTER_HEALTH = {"consecutive_errors": 0, "last_alert_sent_at": None}
 _HUNTER_INTENSIVE_WINDOWS = [
     ("PER", "2026-06-04T00:00:00+00:00", "2026-06-11T00:00:00+00:00", 360,
      "Perú balotaje 7-jun-2026 — cobertura intensiva T-3 a T+72h"),
+    # Ventana post-balotaje: cómputo final + proclamación JNE + resolución de
+    # impugnaciones (JEE/nulidades). El presidente del JNE estimó el resultado
+    # "casi un mes después" del 7-jun → cubrimos hasta ~25-jul cada 12h.
+    ("PER", "2026-06-11T00:00:00+00:00", "2026-07-25T00:00:00+00:00", 720,
+     "Perú post-balotaje — cómputo final, proclamación y resolución de impugnaciones"),
 ]
 
 
@@ -5553,6 +5558,119 @@ async def _phase_auto_advance_loop() -> None:
         except Exception as e:
             print(f"[phase-advance] loop error: {e}")
         await asyncio.sleep(6 * 3600)
+
+
+# ── Monitor de cierre del ciclo: detectar + alertar + preparar ────────────
+# Filosofía (decisión del usuario): detectamos señales de PROCLAMACIÓN y de
+# RESOLUCIÓN DE IMPUGNACIONES en el corpus del Hunter, alertamos por Discord y
+# marcamos un flag en la sesión para preparar el slot de datos. NO parseamos el
+# ganador desde un titular ni regeneramos el informe: la carga del resultado
+# oficial (POST /api/runoff/{cc}/proclamation) y la regeneración final son
+# acciones AUTORIZADAS por el usuario (evita cargar un ganador disputado y evita
+# costo de LLM no solicitado).
+
+# Señales por keyword. Cada señal exige co-ocurrencia de un término del EMB con un
+# verbo de cierre, para reducir falsos positivos (una nota que solo dice "JNE" no
+# dispara; "el JNE proclamó" sí).
+_CLOSING_SIGNALS = {
+    "proclamation": {
+        "emb": ("jne", "jurado nacional", "pleno del jne"),
+        "verb": ("proclam",),  # proclamó / proclamación / proclamado
+        "label": "Proclamación del resultado oficial",
+    },
+    "dispute_resolution": {
+        "emb": ("jee", "jurado electoral especial", "jne", "pleno"),
+        "verb": ("resuelt", "resolvió", "resuelve", "desestim", "nulidad declarada",
+                 "infundad", "fundad"),
+        "label": "Resolución de impugnaciones / nulidades",
+    },
+}
+
+
+def _detect_closing_signals(entries: List[dict]) -> Dict[str, dict]:
+    """Devuelve {signal_key: {entry_id, finding, recorded_at}} para la primera
+    entry que dispara cada señal de cierre. Vacío si no hay señales."""
+    found: Dict[str, dict] = {}
+    for e in entries or []:
+        text = f"{e.get('finding') or ''} {e.get('source_org') or ''}".lower()
+        if not text.strip():
+            continue
+        for key, sig in _CLOSING_SIGNALS.items():
+            if key in found:
+                continue
+            if any(k in text for k in sig["emb"]) and any(v in text for v in sig["verb"]):
+                found[key] = {
+                    "entry_id": e.get("entry_id"),
+                    "finding": (e.get("finding") or "")[:240],
+                    "recorded_at": e.get("recorded_at") or e.get("timestamp"),
+                }
+    return found
+
+
+async def _closing_monitor_once() -> None:
+    """Un ciclo: detecta señales de cierre en sesiones activas y, ante una señal
+    NUEVA, alerta por Discord + marca closing_flags en la sesión. No regenera."""
+    if not observation_store:
+        return
+    for cc, session in list(observation_store.items()):
+        try:
+            signals = _detect_closing_signals(session.get("entries", []))
+            if not signals:
+                continue
+            flags = session.setdefault("closing_flags", {})
+            new_signals = {k: v for k, v in signals.items() if k not in flags}
+            if not new_signals:
+                continue
+            now_iso = datetime.now(timezone.utc).isoformat()
+            for key, info in new_signals.items():
+                flags[key] = {**info, "detected_at": now_iso, "loaded_official": False}
+            observation_store[cc] = session
+            try:
+                with _get_db() as conn:
+                    conn.execute(
+                        "UPDATE observation_sessions SET data=?, updated_at=? "
+                        "WHERE country_code=? AND session_id=?",
+                        (json.dumps(session), now_iso, cc, session.get("session_id")),
+                    )
+                    conn.commit()
+            except Exception as _db_err:
+                print(f"[closing-monitor][{cc}] DB error: {_db_err}")
+
+            lines = "\n".join(
+                f"• **{_CLOSING_SIGNALS[k]['label']}** — “{v['finding']}” "
+                f"({v.get('recorded_at', '—')})"
+                for k, v in new_signals.items()
+            )
+            body = (
+                f"Señal(es) de cierre del ciclo detectada(s) para **{cc}** en el "
+                f"monitoreo OSINT:\n\n{lines}\n\n"
+                f"**Acción sugerida (manual, no automática):**\n"
+                f"1. Verificar la fuente oficial del JNE.\n"
+                f"2. Cargar el resultado oficial: `POST /api/runoff/{cc}/proclamation` "
+                f"(X-Observer-Key).\n"
+                f"3. Regenerar el informe final cuando lo autorices.\n\n"
+                f"_No se cargó ningún ganador ni se regeneró el informe automáticamente._"
+            )
+            await _send_admin_discord(
+                f"Cierre de ciclo detectado — {cc}", body, color=3447003)
+            print(f"[closing-monitor][{cc}] Señales nuevas: {list(new_signals.keys())}")
+        except Exception as e:
+            print(f"[closing-monitor][{cc}] error: {e}")
+
+
+async def _closing_monitor_loop() -> None:
+    """Background loop. Warm-up 3 min, luego cada 2h. Opt-out: CLOSING_MONITOR=0."""
+    if os.getenv("CLOSING_MONITOR", "1") != "1":
+        print("[closing-monitor] Disabled (CLOSING_MONITOR != 1).")
+        return
+    print("[closing-monitor] Loop activo — chequeo cada 2h (detectar+alertar+preparar).")
+    await asyncio.sleep(180)
+    while True:
+        try:
+            await _closing_monitor_once()
+        except Exception as e:
+            print(f"[closing-monitor] loop error: {e}")
+        await asyncio.sleep(2 * 3600)
 
 
 # ── Daily digest a Discord ────────────────────────────────────────────────
@@ -5804,6 +5922,7 @@ async def on_startup():
     # B) Daily digest: postea resumen 24h a Discord cada dia a las 13:00 UTC
     # F) Daily backup: corre scripts/backup.py --targz cada dia a las 03:00 UTC
     asyncio.create_task(_phase_auto_advance_loop())
+    asyncio.create_task(_closing_monitor_loop())
     asyncio.create_task(_daily_digest_loop())
     asyncio.create_task(_daily_backup_loop())
 
@@ -5877,6 +5996,28 @@ class ObservationAdvanceInput(BaseModel):
     country_code: str
     target_phase: str  # R4: cualquiera de _PHASE_ORDER (p.ej. "campaign", "electoral_silence", "election_day", "counting_tabulation", "post_election", "dispute_resolution", "completed")
     notes: Optional[str] = None
+
+
+class ProclamationInput(BaseModel):
+    """Resultado OFICIAL proclamado por el EMB, cargado por el observador.
+
+    Se persiste como override (no edita código fuente) y se fusiona en el informe
+    en la PRÓXIMA generación, que sigue siendo autorizada por el usuario. NO se
+    auto-regenera el informe ni se infiere el ganador desde titulares."""
+    winner: str                                  # Nombre oficial del ganador proclamado
+    winner_pct: Optional[float] = None
+    winner_votes: Optional[int] = None
+    runner_up: Optional[str] = None
+    runner_up_pct: Optional[float] = None
+    runner_up_votes: Optional[int] = None
+    margin_votes: Optional[int] = None
+    margin_pct: Optional[float] = None
+    actas_processed_pct: Optional[float] = None
+    as_of: Optional[str] = None                  # Fecha/hora del acto de proclamación (ISO)
+    source: Optional[str] = None                 # Fuente oficial (p.ej. "JNE")
+    source_url: Optional[str] = None
+    note: Optional[str] = None
+    dispute_resolution_tracker: Optional[Any] = None  # Estado de impugnaciones resueltas
 
 
 # Cache del LLM ping para no quemar API en cada /health (que UptimeRobot etc. pegan cada 5min)
@@ -9897,12 +10038,95 @@ async def get_peru_scenarios():
         "runoff": enrich_runoff_observation(
             PERU_RUNOFF_2026,
             observation_store.get("PER", {}).get("entries", []),
+            proclamation_override=_load_proclamation_safe("PER"),
         ),
         "historical_context": PERU_HISTORICAL_EVENTS,
         "regions": PERU_REGIONS_DATA,
         "data_note": "Fase entre vueltas. El bloque 'runoff' contiene scaffold PENDIENTE_VERIFICACION para finalistas y cara a cara; valores reales se cargan con cita primaria a ONPE/JNE.",
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def _load_proclamation_safe(country_code: str) -> Optional[Dict[str, Any]]:
+    """Carga el override de proclamación; None ante cualquier fallo."""
+    try:
+        from modules.proclamation_store import load_proclamation
+        return load_proclamation(country_code)
+    except Exception:
+        return None
+
+
+@app.get("/api/runoff/{country_code}/proclamation")
+async def get_runoff_proclamation(country_code: str):
+    """Estado del resultado oficial proclamado (override) y señales de cierre
+    detectadas por el monitor. Público (solo lectura, sin datos sensibles)."""
+    cc = country_code.upper()
+    override = _load_proclamation_safe(cc)
+    session = observation_store.get(cc, {})
+    return {
+        "country_code": cc,
+        "proclaimed": bool(override and override.get("winner")),
+        "official_result": override,
+        "closing_flags": session.get("closing_flags", {}),
+        "note": ("La regeneración del informe final es una acción autorizada por "
+                 "el usuario; este endpoint no la dispara."),
+    }
+
+
+@app.post("/api/runoff/{country_code}/proclamation")
+async def set_runoff_proclamation(
+    country_code: str,
+    request: ProclamationInput,
+    _key: str = Depends(_require_observer_key),
+):
+    """Carga el resultado OFICIAL proclamado por el EMB (X-Observer-Key).
+
+    Persiste un override (no edita código fuente) que la PRÓXIMA generación del
+    informe fusiona en second_round_results (proclaimed=True, winner, apaga
+    indeterminate, dispute_resolution_tracker). NO regenera el informe ni infiere
+    el ganador desde titulares: la regeneración final la autoriza el usuario."""
+    cc = country_code.upper()
+    try:
+        from modules.proclamation_store import save_proclamation
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"proclamation_store no disponible: {e}")
+
+    payload = request.model_dump(exclude_none=True)
+    payload["loaded_at"] = datetime.now(timezone.utc).isoformat()
+    path = save_proclamation(cc, payload)
+
+    # Marcar la señal como resuelta/cargada en la sesión, si existe.
+    session = observation_store.get(cc)
+    if session is not None:
+        flags = session.setdefault("closing_flags", {})
+        if "proclamation" in flags:
+            flags["proclamation"]["loaded_official"] = True
+        observation_store[cc] = session
+
+    return {
+        "status": "ok",
+        "country_code": cc,
+        "winner": request.winner,
+        "persisted_to": os.path.basename(path),
+        "next_step": ("Resultado oficial guardado. Regenera el informe final cuando "
+                      "lo autorices (POST al endpoint de generación) para incorporarlo."),
+        "auto_regenerated": False,
+    }
+
+
+@app.delete("/api/runoff/{country_code}/proclamation")
+async def clear_runoff_proclamation(
+    country_code: str,
+    _key: str = Depends(_require_observer_key),
+):
+    """Elimina el override de proclamación (vuelve al estado provisional)."""
+    cc = country_code.upper()
+    try:
+        from modules.proclamation_store import clear_proclamation
+        existed = clear_proclamation(cc)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "ok", "country_code": cc, "cleared": existed}
 
 
 @app.get("/api/alerts/{country_code}")
