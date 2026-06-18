@@ -1345,3 +1345,140 @@ def render_parliament_scenarios(data: Dict[str, Any]) -> str:
 
     svg.append('</svg>')
     return "".join(svg)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 15. findings_by_round — cuadro de hallazgos por vuelta (panel cuantitativo)
+# ═══════════════════════════════════════════════════════════════════════
+_SEV_ROWS = [
+    ("critical", {"es": "Críticos", "en": "Critical", "pt": "Críticos"}),
+    ("high",     {"es": "Altos",    "en": "High",     "pt": "Altos"}),
+    ("medium",   {"es": "Medios",   "en": "Medium",   "pt": "Médios"}),
+    ("low",      {"es": "Bajos",    "en": "Low",      "pt": "Baixos"}),
+    ("info",     {"es": "Info",     "en": "Info",     "pt": "Info"}),
+]
+
+
+def render_findings_by_round(data: Dict[str, Any]) -> str:
+    """Data:
+        {"round_1": {"label","total","critical","high","medium","low","info"},
+         "round_2": {...}, "total": int}
+    Cuadro: severidad × (1ª vuelta / 2ª vuelta / total)."""
+    r1 = data.get("round_1") or {}
+    r2 = data.get("round_2") or {}
+    if not (r1.get("total") or r2.get("total")):
+        return _render_empty_state("Sin hallazgos para el cuadro por vuelta")
+    lang = _lang(data)
+    total_all = data.get("total", (r1.get("total", 0) + r2.get("total", 0)))
+
+    W = 640
+    x_lbl, x_r1, x_r2, x_tot = 24, 360, 480, 600   # x de columnas (números right-aligned)
+    header_h, row_h = 46, 30
+    H = header_h + row_h * (len(_SEV_ROWS) + 1) + 16
+
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
+           f'role="img" aria-label="Hallazgos por vuelta">']
+    svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
+
+    # Cabecera de columnas
+    heads = [(x_r1, r1.get("label", "1ª vuelta")), (x_r2, r2.get("label", "2ª vuelta")),
+             (x_tot, {"es": "Total", "en": "Total", "pt": "Total"}.get(lang, "Total"))]
+    for x, label in heads:
+        svg.append(f'<text x="{x}" y="30" text-anchor="end" font-family="{FONT_SANS}" '
+                   f'font-size="11" font-weight="700" letter-spacing="0.5" '
+                   f'fill="{COLORS["teal_dark"]}">{_esc(label)}</text>')
+    svg.append(f'<line x1="{x_lbl}" y1="38" x2="{W-24}" y2="38" '
+               f'stroke="{COLORS["border"]}" stroke-width="1"/>')
+
+    # Filas por severidad
+    y = header_h + 4
+    for key, names in _SEV_ROWS:
+        cy = y + row_h / 2
+        color = _severity_color(key)
+        svg.append(f'<circle cx="{x_lbl+5}" cy="{cy:.1f}" r="4" fill="{color}"/>')
+        svg.append(f'<text x="{x_lbl+18}" y="{cy+4:.1f}" font-family="{FONT_SANS}" '
+                   f'font-size="11" fill="{COLORS["text"]}">{_esc(names.get(lang, key))}</text>')
+        for x, blk in ((x_r1, r1), (x_r2, r2)):
+            svg.append(f'<text x="{x}" y="{cy+4:.1f}" text-anchor="end" '
+                       f'font-family="{FONT_MONO}" font-size="11" '
+                       f'fill="{COLORS["text"]}">{int(blk.get(key, 0))}</text>')
+        tot = int(r1.get(key, 0)) + int(r2.get(key, 0))
+        svg.append(f'<text x="{x_tot}" y="{cy+4:.1f}" text-anchor="end" '
+                   f'font-family="{FONT_MONO}" font-size="11" font-weight="700" '
+                   f'fill="{COLORS["text"]}">{tot}</text>')
+        y += row_h
+
+    # Fila TOTAL
+    svg.append(f'<line x1="{x_lbl}" y1="{y}" x2="{W-24}" y2="{y}" '
+               f'stroke="{COLORS["border"]}" stroke-width="1"/>')
+    cy = y + row_h / 2
+    tlabel = {"es": "TOTAL", "en": "TOTAL", "pt": "TOTAL"}.get(lang, "TOTAL")
+    svg.append(f'<text x="{x_lbl+18}" y="{cy+4:.1f}" font-family="{FONT_SANS}" '
+               f'font-size="11" font-weight="800" fill="{COLORS["teal_dark"]}">{tlabel}</text>')
+    svg.append(f'<text x="{x_r1}" y="{cy+4:.1f}" text-anchor="end" font-family="{FONT_MONO}" '
+               f'font-size="11" font-weight="700" fill="{COLORS["teal_dark"]}">{int(r1.get("total", 0))}</text>')
+    svg.append(f'<text x="{x_r2}" y="{cy+4:.1f}" text-anchor="end" font-family="{FONT_MONO}" '
+               f'font-size="11" font-weight="700" fill="{COLORS["teal_dark"]}">{int(r2.get("total", 0))}</text>')
+    svg.append(f'<text x="{x_tot}" y="{cy+4:.1f}" text-anchor="end" font-family="{FONT_MONO}" '
+               f'font-size="12" font-weight="800" fill="{COLORS["teal_dark"]}">{int(total_all)}</text>')
+
+    svg.append('</svg>')
+    return "".join(svg)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 16. category_cloud — nube de hallazgos por temática (panel cuantitativo)
+# ═══════════════════════════════════════════════════════════════════════
+def render_category_cloud(data: Dict[str, Any]) -> str:
+    """Data:
+        {"categories": [{"label","count","severity_max"}], "total": int}
+    Nube de etiquetas: tamaño de fuente ∝ volumen; color = severidad máxima.
+    Layout determinista en filas (wrap por ancho estimado)."""
+    cats = data.get("categories") or []
+    if not cats:
+        return _render_empty_state("Sin hallazgos por temática")
+    counts = [c.get("count", 0) for c in cats]
+    cmax = max(counts) or 1
+    cmin = min(counts)
+    W, pad = 640, 16
+    fs_min, fs_max = 12.0, 30.0
+
+    def _fs(n: int) -> float:
+        if cmax == cmin:
+            return (fs_min + fs_max) / 2
+        return fs_min + (fs_max - fs_min) * (n - cmin) / (cmax - cmin)
+
+    # Layout en filas: estimar ancho ≈ len(texto)*fs*0.58 + padding del pill.
+    rows: List[List[Dict[str, Any]]] = [[]]
+    row_w = 0.0
+    gap = 14
+    for c in cats:
+        fs = _fs(c.get("count", 0))
+        text = f'{c.get("label","")} ({c.get("count",0)})'
+        w = len(text) * fs * 0.58 + 20
+        if row_w + w > (W - 2 * pad) and rows[-1]:
+            rows.append([])
+            row_w = 0.0
+        rows[-1].append({"text": text, "fs": fs, "w": w,
+                         "color": _severity_color((c.get("severity_max") or "info").lower())})
+        row_w += w + gap
+
+    line_h = fs_max + 14
+    H = pad * 2 + int(line_h * len(rows))
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
+           f'role="img" aria-label="Nube de hallazgos por temática">']
+    svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
+    y = pad + line_h / 2
+    for row in rows:
+        total_w = sum(it["w"] for it in row) + gap * (len(row) - 1)
+        x = (W - total_w) / 2 if total_w < (W - 2 * pad) else pad
+        for it in row:
+            cxp = x + it["w"] / 2
+            svg.append(f'<text x="{cxp:.1f}" y="{y+it["fs"]/3:.1f}" text-anchor="middle" '
+                       f'font-family="{FONT_SANS}" font-size="{it["fs"]:.1f}" '
+                       f'font-weight="700" fill="{it["color"]}">{_esc(it["text"])}</text>')
+            x += it["w"] + gap
+        y += line_h
+
+    svg.append('</svg>')
+    return "".join(svg)

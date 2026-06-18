@@ -585,6 +585,48 @@ def test_build_stats_populates_by_severity():
     assert total_w > 0
 
 
+def test_build_stats_populates_by_round_and_category():
+    """Bloque Q: _build_stats debe exponer by_round (split 1ª/2ª por umbral
+    2026-05-01), by_category (nube temática) y consolidated_total — y el split
+    por vuelta DEBE sumar el universo consolidado (coherencia con Anexo C)."""
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    bundle = _make_bundle()  # todos los findings son 2026-04-12 → 1ª vuelta
+    bundle.hunter_entries.append(_make_finding_ref(
+        "rv1", "Allanamiento ONPE en balotaje", "fraud_allegation", "high"))
+    bundle.hunter_entries[-1].recorded_at = "2026-06-02T10:00:00"  # 2ª vuelta
+    stats = PEIRSEliteReport._build_stats(bundle)
+
+    assert "by_round" in stats and "by_category" in stats
+    assert "consolidated_total" in stats
+    r1 = stats["by_round"]["1ª vuelta"]
+    r2 = stats["by_round"]["2ª vuelta"]
+    assert r2["total"] >= 1  # el finding de junio cae en 2ª vuelta
+    # Coherencia: split por vuelta = universo consolidado
+    assert r1["total"] + r2["total"] == stats["consolidated_total"]
+    # by_category ordenado desc por count, con severity_max
+    cats = stats["by_category"]
+    assert cats and all({"category", "count", "severity_max"} <= set(c) for c in cats)
+    counts = [c["count"] for c in cats]
+    assert counts == sorted(counts, reverse=True)
+
+
+def test_quant_panel_renders_with_methodological_captions():
+    """Bloque Q: el panorama cuantitativo debe renderizar ambos viz (cuadro por
+    vuelta + nube temática) con SVG válido y captions metodológicas no vacías."""
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.renderer.html_renderer import _render_quant_panel
+    import re
+    bundle = _make_bundle()
+    stats = PEIRSEliteReport._build_stats(bundle)
+    panel = _render_quant_panel(stats, "es")
+    assert 'id="panorama-cuantitativo"' in panel
+    assert panel.count("<svg") >= 2  # cuadro + nube
+    caps = re.findall(r'viz-caption">([^<]+)<', panel)
+    assert len(caps) >= 2 and all(c.strip() for c in caps)
+    # La metodología cita el umbral de vuelta y la consolidación
+    assert "consolidado" in panel.lower()
+
+
 def test_5b_renderers_have_no_embedded_title():
     """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
     lo pone el <figcaption> del HTML). Evita el doble título reportado."""

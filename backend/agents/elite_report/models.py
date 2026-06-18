@@ -229,6 +229,8 @@ VizKind = Literal[
     "dimensions_radar", "matrix_recommendations", "system_architecture",
     # Agregado 2026-04-29 — escenarios parlamentarios proyectados (Cap 9, PER-only).
     "parliament_scenarios",
+    # Panel cuantitativo (2026-06): cuadro de hallazgos por vuelta + nube temática.
+    "findings_by_round", "category_cloud",
 ]
 
 

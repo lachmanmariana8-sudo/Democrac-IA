@@ -955,6 +955,46 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Camadas STAE → SCE → SPR com fluxo de dados. Selos indicam status de auditoria pública.",
     },
 
+    # ── Panel cuantitativo (Bloque Q) ────────────────────────────────
+    "viz.findings_by_round.title": {
+        "es": "Hallazgos por vuelta y severidad",
+        "en": "Findings by round and severity",
+        "pt": "Registros por turno e severidade",
+    },
+    "viz.findings_by_round.caption": {
+        "es": "Cuadro de hallazgos del ciclo, desglosado por severidad y por vuelta (umbral 1ª→2ª: 1-may-2026). Conteo sobre el universo CONSOLIDADO (un hecho = un hallazgo, sin duplicados de medios), coherente con el Anexo C. El total puede ser menor al volumen crudo de capturas de la portada.",
+        "en": "Cycle findings broken down by severity and round (1st→2nd threshold: 2026-05-01). Counts use the CONSOLIDATED universe (one fact = one finding, no media duplicates), consistent with Appendix C. The total may be lower than the raw capture volume on the cover.",
+        "pt": "Quadro de registros do ciclo, por severidade e turno (limiar 1º→2º: 01-mai-2026). Contagem sobre o universo CONSOLIDADO (um fato = um registro), coerente com o Anexo C. O total pode ser menor que o volume bruto da capa.",
+    },
+    "viz.category_cloud.title": {
+        "es": "Nube de hallazgos por temática",
+        "en": "Findings cloud by topic",
+        "pt": "Nuvem de registros por temática",
+    },
+    "viz.category_cloud.caption": {
+        "es": "Temáticas del ciclo: el tamaño es proporcional al volumen de hallazgos consolidados; el color indica la severidad máxima observada en la temática (rojo = crítico · naranja = alto · ámbar = medio). Top-12 temáticas por volumen.",
+        "en": "Cycle topics: size is proportional to the volume of consolidated findings; color indicates the maximum severity observed in the topic (red = critical · orange = high · amber = medium). Top-12 topics by volume.",
+        "pt": "Temáticas do ciclo: o tamanho é proporcional ao volume de registros consolidados; a cor indica a severidade máxima observada (vermelho = crítico · laranja = alto · âmbar = médio). Top-12 temáticas por volume.",
+    },
+    "quant.section.title": {
+        "es": "Panorama cuantitativo",
+        "en": "Quantitative overview",
+        "pt": "Panorama quantitativo",
+    },
+    "quant.section.intro": {
+        "es": "Síntesis cuantitativa del ciclo monitoreado: distribución de hallazgos por vuelta y severidad, y concentración temática. Todas las cifras se calculan sobre el corpus consolidado (un hecho = un hallazgo con todas sus fuentes); ver metodología bajo cada figura y el detalle trazable en el Anexo C.",
+        "en": "Quantitative synthesis of the monitored cycle: distribution of findings by round and severity, and topic concentration. All figures are computed on the consolidated corpus (one fact = one finding with all its sources); see methodology under each figure and the traceable detail in Appendix C.",
+        "pt": "Síntese quantitativa do ciclo monitorado: distribuição de registros por turno e severidade, e concentração temática. Todos os números são calculados sobre o corpus consolidado (um fato = um registro com todas as fontes); ver metodologia sob cada figura e o detalhe rastreável no Anexo C.",
+    },
+    "quant.kpi.consolidated": {
+        "es": "Hallazgos consolidados",
+        "en": "Consolidated findings",
+        "pt": "Registros consolidados",
+    },
+    "quant.kpi.round1": {"es": "1ª vuelta", "en": "1st round", "pt": "1º turno"},
+    "quant.kpi.round2": {"es": "2ª vuelta", "en": "2nd round", "pt": "2º turno"},
+    "quant.kpi.topics": {"es": "Temáticas", "en": "Topics", "pt": "Temáticas"},
+
     # ─────────────────────────────────────────────────────────────────
     # Datos internos de SVG: status, niveles, headers de columnas
     # ─────────────────────────────────────────────────────────────────
@@ -1368,6 +1408,36 @@ def translate_instrument(name: str, language: str) -> str:
             replacement = _INSTRUMENT_TRANSLATIONS[pattern].get(lang, pattern)
             return name.replace(pattern, replacement, 1)
     return name
+
+
+# ── Etiquetas de categoría de hallazgo (nube temática, Bloque Q) ──────────
+_CATEGORY_LABELS: dict[str, dict[str, str]] = {
+    "voter_suppression":   {"es": "Restricción del voto",  "en": "Voter suppression",   "pt": "Restrição do voto"},
+    "legal":               {"es": "Legal/normativo",       "en": "Legal/regulatory",    "pt": "Legal/normativo"},
+    "irregular_procedure": {"es": "Procedimiento irregular","en": "Irregular procedure", "pt": "Procedimento irregular"},
+    "logistics":           {"es": "Logística electoral",   "en": "Electoral logistics", "pt": "Logística eleitoral"},
+    "fraud_allegation":    {"es": "Denuncia de fraude",     "en": "Fraud allegation",    "pt": "Denúncia de fraude"},
+    "counting":            {"es": "Escrutinio/cómputo",     "en": "Vote counting",       "pt": "Apuração"},
+    "results":             {"es": "Resultados",             "en": "Results",             "pt": "Resultados"},
+    "media":               {"es": "Medios/cobertura",       "en": "Media coverage",      "pt": "Mídia/cobertura"},
+    "hate_speech":         {"es": "Discurso de odio",       "en": "Hate speech",         "pt": "Discurso de ódio"},
+    "disinformation":      {"es": "Desinformación",         "en": "Disinformation",      "pt": "Desinformação"},
+    "campaign_violation":  {"es": "Financiamiento/campaña", "en": "Campaign finance",    "pt": "Financiamento/campanha"},
+    "digital":             {"es": "Entorno digital",        "en": "Digital environment", "pt": "Ambiente digital"},
+    "judicial":            {"es": "Judicial",               "en": "Judicial",            "pt": "Judicial"},
+    "security":            {"es": "Seguridad/violencia",    "en": "Security/violence",   "pt": "Segurança/violência"},
+    "other":               {"es": "Otros",                  "en": "Other",               "pt": "Outros"},
+}
+
+
+def category_label(category: str, language: str) -> str:
+    """Etiqueta legible para una categoría de hallazgo (nube temática).
+    Cae al título-case del key si la categoría no está mapeada."""
+    lang = (language or "es").lower()
+    bundle = _CATEGORY_LABELS.get((category or "other").lower())
+    if bundle:
+        return bundle.get(lang) or bundle.get("es") or category
+    return (category or "other").replace("_", " ").capitalize()
 
 
 def t(language: str, key: str, default: str | None = None) -> str:

@@ -405,10 +405,20 @@ class PEIRSEliteReport:
                                 _RANK.get(worst, 0) > _RANK.get(o.get("status", "green"), 0):
                             o["status"] = worst
 
+    # Umbral de vuelta (1ª → 2ª). 1ª vuelta: abr-2026; 2ª vuelta (balotaje): jun-2026.
+    _ROUND_THRESHOLD = "2026-05-01"
+
+    @staticmethod
+    def _round_label(date_str: str) -> str:
+        """Etiqueta de vuelta por fecha. Antes del umbral = 1ª vuelta."""
+        d = (date_str or "")[:10]
+        return "1ª vuelta" if d and d < PEIRSEliteReport._ROUND_THRESHOLD else "2ª vuelta"
+
     # ────────────────────────────────────────────────────────────────────
     @staticmethod
     def _build_stats(bundle: EvidenceBundle) -> Dict[str, Any]:
         """Stats agregadas a nivel de informe."""
+        from collections import Counter
         hs = bundle.hunter_stats or {}
         sev = {
             "critical": hs.get("critical", 0),
@@ -422,6 +432,35 @@ class PEIRSEliteReport:
         for f in bundle.hunter_entries:
             if f.recorded_at:
                 days.add(f.recorded_at[:10])
+
+        # ── Panel cuantitativo (Bloque Q) ──────────────────────────────
+        # by_round / by_category se calculan SOBRE EL CORPUS CONSOLIDADO
+        # (un hecho = un hallazgo) para que el cuadro por vuelta y la nube
+        # temática sean coherentes con el Anexo C, no con el volumen crudo.
+        _sev_rank = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
+        consolidated = consolidate_findingrefs(bundle.hunter_entries)
+        _empty_round = lambda: {"total": 0, "critical": 0, "high": 0,
+                                "medium": 0, "low": 0, "info": 0}
+        by_round = {"1ª vuelta": _empty_round(), "2ª vuelta": _empty_round()}
+        cat_counts: Counter = Counter()
+        cat_sevmax: Dict[str, str] = {}
+        for f in consolidated:
+            rnd = PEIRSEliteReport._round_label(f.recorded_at)
+            s = (f.severity or "info").lower()
+            if s not in ("critical", "high", "medium", "low", "info"):
+                s = "info"
+            by_round[rnd]["total"] += 1
+            by_round[rnd][s] += 1
+            cat = (f.category or "other")
+            cat_counts[cat] += 1
+            if _sev_rank.get(s, 0) > _sev_rank.get(cat_sevmax.get(cat, "info"), 0):
+                cat_sevmax[cat] = s
+        by_category = [
+            {"category": c, "count": n, "severity_max": cat_sevmax.get(c, "info")}
+            for c, n in cat_counts.most_common()
+        ]
+        consolidated_total = len(consolidated)
+
         return {
             "total": hs.get("total", len(bundle.hunter_entries)),
             "critical": sev["critical"],
@@ -432,6 +471,11 @@ class PEIRSEliteReport:
             # Mapa por severidad — consumido por el medidor de alerta temprana
             # (early_warning_data). Sin esto, crisis_index quedaba en 0.0 siempre.
             "by_severity": dict(sev),
+            # Panel cuantitativo (Bloque Q): split por vuelta + nube temática,
+            # ambos sobre el universo CONSOLIDADO (consolidated_total).
+            "by_round": by_round,
+            "by_category": by_category,
+            "consolidated_total": consolidated_total,
             "days_covered": len(days),
             "alerts_dispatched": bundle.alerts_dispatched,
         }

@@ -23,7 +23,7 @@ from agents.elite_report.models import (
     VizSpec,
 )
 from agents.elite_report.visualizer import render_svg
-from agents.elite_report.i18n import t
+from agents.elite_report.i18n import t, category_label
 from agents.elite_report.section_titles import translate_section_titles
 
 
@@ -608,6 +608,26 @@ section.datasets-overview h2 {
   font-family: 'Fraunces', serif; font-size: 20px; color: var(--teal-dark); margin: 0 0 6px;
 }
 
+/* ── Panorama cuantitativo (Bloque Q) ──────────────────────────────── */
+section.quant-panel { margin: 8px 0 44px; }
+section.quant-panel h2 {
+  font-family: 'Fraunces', serif; font-size: 20px; color: var(--teal-dark); margin: 0 0 6px;
+}
+.quant-kpis { display: flex; flex-wrap: wrap; gap: 12px; margin: 6px 0 22px; }
+.quant-kpi {
+  flex: 1 1 120px; min-width: 110px; padding: 12px 14px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  border-left: 3px solid var(--teal); border-radius: 6px;
+}
+.quant-kpi-val {
+  font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 600;
+  color: var(--teal-dark); line-height: 1.1;
+}
+.quant-kpi-lbl {
+  font-family: 'DM Sans', sans-serif; font-size: 10px; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--text-muted); margin-top: 4px;
+}
+
 /* ── Footer ────────────────────────────────────────────────────────── */
 footer.elite-footer {
   margin-top: 80px;
@@ -825,13 +845,21 @@ def render_html(
     # contexto histórico (su lugar natural — "cómo venía" el proceso).
     datasets_html = _render_datasets_overview(intl_series, req.language or "es")
 
-    # Capítulos (el cuadro de datasets se inserta tras "contexto_historico")
+    # Panorama cuantitativo (Bloque Q): cuadro por vuelta + nube temática.
+    # Va inmediatamente DESPUÉS del cuadro de datasets (bajo Contexto histórico).
+    quant_html = _render_quant_panel(stats, req.language or "es")
+
+    # Capítulos (datasets + panorama cuantitativo se insertan tras "contexto_historico")
     chapters_html_parts = []
     for ch in chapters:
         chapters_html_parts.append(_render_chapter(ch, req))
-        if ch.chapter_id == "contexto_historico" and datasets_html:
-            chapters_html_parts.append(datasets_html)
-            datasets_html = ""  # ya insertado
+        if ch.chapter_id == "contexto_historico" and (datasets_html or quant_html):
+            if datasets_html:
+                chapters_html_parts.append(datasets_html)
+                datasets_html = ""  # ya insertado
+            if quant_html:
+                chapters_html_parts.append(quant_html)
+                quant_html = ""  # ya insertado
     # Fallback: si no hubo capítulo de contexto, ubicarlo tras el TOC.
     chapters_html = "\n".join(chapters_html_parts)
 
@@ -863,6 +891,7 @@ def render_html(
 {dashboard_html}
 {toc_html}
 {datasets_html}
+{quant_html}
 {chapters_html}
 {appendix_a}
 {appendix_b}
@@ -871,6 +900,76 @@ def render_html(
 </article>
 </body>
 </html>"""
+
+
+def _render_quant_panel(stats: Dict[str, Any], language: str = "es") -> str:
+    """Panorama cuantitativo (Bloque Q): cuadro de hallazgos por vuelta/severidad
+    + nube de hallazgos por temática + banda de KPIs de volumen. Determinista,
+    construido sobre el corpus CONSOLIDADO (stats.by_round / stats.by_category).
+    Va tras el cuadro de datasets (bajo Contexto histórico)."""
+    by_round = stats.get("by_round") or {}
+    by_cat = stats.get("by_category") or []
+    r1 = by_round.get("1ª vuelta") or {}
+    r2 = by_round.get("2ª vuelta") or {}
+    if not (r1.get("total") or r2.get("total")) and not by_cat:
+        return ""
+    total = stats.get("consolidated_total",
+                      int(r1.get("total", 0)) + int(r2.get("total", 0)))
+
+    # 1) Cuadro por vuelta
+    fbr_data = {
+        "round_1": {**r1, "label": t(language, "quant.kpi.round1")},
+        "round_2": {**r2, "label": t(language, "quant.kpi.round2")},
+        "total": total,
+        "_language": language,
+    }
+    # 2) Nube temática (top-12)
+    cc_data = {
+        "categories": [
+            {"label": category_label(c.get("category", "other"), language),
+             "count": c.get("count", 0),
+             "severity_max": c.get("severity_max", "info")}
+            for c in by_cat[:12]
+        ],
+        "total": total,
+        "_language": language,
+    }
+
+    fbr_svg = render_svg("findings_by_round", fbr_data)
+    cc_svg = render_svg("category_cloud", cc_data)
+
+    # KPIs de volumen
+    kpis = [
+        (str(total), t(language, "quant.kpi.consolidated")),
+        (str(int(r1.get("total", 0))), t(language, "quant.kpi.round1")),
+        (str(int(r2.get("total", 0))), t(language, "quant.kpi.round2")),
+        (str(len(by_cat)), t(language, "quant.kpi.topics")),
+    ]
+    kpi_cards = "".join(
+        f'<div class="quant-kpi"><div class="quant-kpi-val">{_esc(v)}</div>'
+        f'<div class="quant-kpi-lbl">{_esc(lbl)}</div></div>'
+        for v, lbl in kpis
+    )
+
+    def _fig(title_key: str, caption_key: str, svg: str) -> str:
+        return (
+            f'<figure class="viz">'
+            f'<figcaption class="viz-title">{_esc(t(language, title_key))}</figcaption>'
+            f'<div class="viz-svg">{svg}</div>'
+            f'<figcaption class="viz-caption">{_esc(t(language, caption_key))}</figcaption>'
+            f'</figure>'
+        )
+
+    return (
+        f'<section class="quant-panel" id="panorama-cuantitativo">'
+        f'<h2>{t(language, "quant.section.title")}</h2>'
+        f'<p style="color:var(--text-muted);font-size:11px;margin-bottom:14px">'
+        f'{t(language, "quant.section.intro")}</p>'
+        f'<div class="quant-kpis">{kpi_cards}</div>'
+        f'{_fig("viz.findings_by_round.title", "viz.findings_by_round.caption", fbr_svg)}'
+        f'{_fig("viz.category_cloud.title", "viz.category_cloud.caption", cc_svg)}'
+        f'</section>'
+    )
 
 
 _TREND_GLYPH = {

@@ -51,6 +51,9 @@ _ELITE_MAP = {
     "system_architecture":      elite_5b.render_system_architecture,
     # Sprint 5b — extra (28-abr-2026): viz especifico de gobernabilidad
     "parliament_scenarios":     elite_5b.render_parliament_scenarios,
+    # Panel cuantitativo (Bloque Q)
+    "findings_by_round":        elite_5b.render_findings_by_round,
+    "category_cloud":           elite_5b.render_category_cloud,
 }
 
 # Kinds del ReportDesigner que se delegan al módulo legacy
