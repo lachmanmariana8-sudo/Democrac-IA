@@ -144,4 +144,7 @@ class HunterLoader:
             themes=entry.get("_themes", []) or [],
             priority_score=score,
             phase=entry.get("phase"),
+            # location: requerido por map_regions_affected / integrity_incidents_grid.
+            # Antes no se propagaba → esos viz quedaban siempre en empty-state.
+            location=entry.get("location") or None,
         )

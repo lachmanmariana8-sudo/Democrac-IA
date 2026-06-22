@@ -875,6 +875,7 @@ from modules.state_constants import (
     CONFIDENCE_CONFIRMED, CONFIDENCE_PROBABLE, CONFIDENCE_UNVERIFIED, CONFIDENCE_MOCK,
     SOURCE_API, SOURCE_SCRAPING, SOURCE_DOCUMENT, SOURCE_SOCIAL, SOURCE_MANUAL, SOURCE_MOCK,
 )
+from modules import evidence_base  # base de prueba append-only (persistencia de capturas)
 
 REGION_AMERICAS = "americas"
 REGION_EUROPE = "europe"
@@ -4867,6 +4868,36 @@ def _init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_waitlist_email
             ON waitlist_signups(email)
         """)
+        # ── Base de prueba trazable (append-only) ─────────────────────────
+        # Persiste CADA captura cruda del Hunter apenas se registra, de modo
+        # que la evidencia NUNCA se pierda aunque el proceso reinicie (antes
+        # las capturas solo vivían en observation_store en memoria). La base
+        # deduplicada y los conteos del informe se DERIVAN de esta tabla
+        # (scripts/build_evidence_base.py). UNIQUE(entry_id) → INSERT OR IGNORE
+        # idempotente: re-procesar la misma sesión no duplica filas.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS evidence_entries (
+                entry_id      TEXT PRIMARY KEY,
+                country_code  TEXT NOT NULL,
+                session_id    TEXT,
+                round         TEXT,
+                category      TEXT,
+                severity      TEXT,
+                finding       TEXT,
+                location      TEXT,
+                recorded_at   TEXT,
+                source_url    TEXT,
+                source_name   TEXT,
+                source_title  TEXT,
+                phase         TEXT,
+                ingested_at   TEXT NOT NULL,
+                raw_json      TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_evidence_country_round
+            ON evidence_entries(country_code, round, recorded_at)
+        """)
         conn.commit()
     print("[DB] SQLite iniciado:", DB_PATH)
 
@@ -5273,7 +5304,17 @@ async def _hunter_run_for_session(cc: str, session: Dict[str, Any], max_items: i
                     "UPDATE observation_sessions SET phase=?, updated_at=?, data=? WHERE country_code=? AND session_id=?",
                     (session.get("phase", "campaign"), now, json.dumps(session), cc, session["session_id"])
                 )
-                conn.commit()
+                # Base de prueba append-only: persistir CADA captura cruda recién
+                # registrada en esta corrida, idempotente (UNIQUE entry_id). Así la
+                # evidencia sobrevive a reinicios y la base deduplicada del informe
+                # se puede reconstruir desde aquí. Best-effort: no rompe el Hunter.
+                try:
+                    new_entries = session.get("entries", [])[-out["registered"]:]
+                    evidence_base.persist_captures(
+                        conn, cc, session.get("session_id"), new_entries)
+                    conn.commit()
+                except Exception as _ee:
+                    out["hunter_errors"].append(f"evidence_base persist: {_ee}")
             out["persisted"] = True
         except Exception as e:
             out["persisted"] = False
