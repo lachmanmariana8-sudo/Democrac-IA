@@ -2,15 +2,15 @@
   "country_code": "PER",
   "built_at": "2026-06-22T00:00:00Z",
   "raw_total": 3747,
-  "dedup_total": 1867,
+  "dedup_total": 1855,
   "by_round": {
     "1ª vuelta": {
       "raw": 1923,
-      "dedup": 843
+      "dedup": 836
     },
     "2ª vuelta": {
       "raw": 1824,
-      "dedup": 1024
+      "dedup": 1019
     }
   },
   "by_category": [
@@ -21,12 +21,12 @@
     },
     {
       "category": "logistics",
-      "count": 315,
+      "count": 314,
       "severity_max": "critical"
     },
     {
       "category": "counting",
-      "count": 260,
+      "count": 255,
       "severity_max": "critical"
     },
     {
@@ -36,28 +36,28 @@
     },
     {
       "category": "results",
-      "count": 186,
+      "count": 184,
       "severity_max": "critical"
     },
     {
       "category": "other",
-      "count": 142,
+      "count": 141,
       "severity_max": "critical"
     },
     {
       "category": "campaign_violation",
-      "count": 131,
+      "count": 130,
       "severity_max": "high"
     },
     {
       "category": "fraud_allegation",
-      "count": 84,
+      "count": 82,
       "severity_max": "critical"
     },
     {
       "category": "irregular_procedure",
       "count": 55,
-      "severity_max": "critical"
+      "severity_max": "high"
     },
     {
       "category": "media_restriction",
@@ -108,7 +108,7 @@
   "by_category_round1": [
     {
       "category": "logistics",
-      "count": 230,
+      "count": 229,
       "severity_max": "critical"
     },
     {
@@ -128,7 +128,7 @@
     },
     {
       "category": "results",
-      "count": 76,
+      "count": 74,
       "severity_max": "critical"
     },
     {
@@ -138,17 +138,17 @@
     },
     {
       "category": "fraud_allegation",
-      "count": 49,
+      "count": 47,
       "severity_max": "critical"
     },
     {
       "category": "irregular_procedure",
-      "count": 32,
-      "severity_max": "critical"
+      "count": 31,
+      "severity_max": "high"
     },
     {
       "category": "campaign_violation",
-      "count": 28,
+      "count": 27,
       "severity_max": "high"
     },
     {
@@ -200,7 +200,7 @@
     },
     {
       "category": "counting",
-      "count": 144,
+      "count": 139,
       "severity_max": "critical"
     },
     {
@@ -211,7 +211,7 @@
     {
       "category": "results",
       "count": 110,
-      "severity_max": "critical"
+      "severity_max": "high"
     },
     {
       "category": "campaign_violation",
@@ -225,7 +225,7 @@
     },
     {
       "category": "other",
-      "count": 75,
+      "count": 74,
       "severity_max": "high"
     },
     {
@@ -240,7 +240,7 @@
     },
     {
       "category": "irregular_procedure",
-      "count": 23,
+      "count": 24,
       "severity_max": "high"
     },
     {
@@ -274,17 +274,17 @@
       "severity_max": "info"
     }
   ],
-  "facts_with_source_url": 1867,
+  "facts_with_source_url": 1855,
   "pct_with_source_url": 100.0,
   "round_threshold": "2026-05-03",
   "files": {
     "PER_round1.jsonl": {
-      "facts": 843,
-      "sha256": "6e35e96fa98b399c84de89f5e3afd307071e05a1baecb770f56380d3921a664d"
+      "facts": 836,
+      "sha256": "6e804a26e01c1366bab7045d8f1c6c4e6b33578758da3a538644b6a05f4e1ccb"
     },
     "PER_round2.jsonl": {
-      "facts": 1024,
-      "sha256": "ef0d32c225bf943bd9f65a9bfcbb6418c82aa429b091809276e15eab43b0898b"
+      "facts": 1019,
+      "sha256": "e280943d925818fcb367c62a622b46919d224ad786f24c42964aa322959bcd82"
     }
   }
 }

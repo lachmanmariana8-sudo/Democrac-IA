@@ -122,12 +122,21 @@ def build(country: str, stamp: str) -> Dict[str, Any]:
     raw = _load_raw(cc)
     now = datetime.now(timezone.utc)
     findings = [HunterLoader._to_finding_ref(e, now) for e in raw]
+    # cluster_records es greedy y SENSIBLE AL ORDEN. El loader del informe ordena
+    # por priority_score desc antes de consolidar; replicamos ese orden para que
+    # los clusters (y por ende los conteos) sean idénticos a los del informe.
+    findings.sort(key=lambda x: -(x.priority_score or 0))
 
-    # Split por ronda (mismo umbral que el informe) ANTES de consolidar:
-    # la dedup es same-day, así que partir primero no rompe ningún cluster.
+    # Coherencia EXACTA con el informe: _build_stats consolida TODO el corpus y
+    # luego asigna cada hecho a su vuelta por la fecha más temprana del cluster.
+    # Replicamos ese orden (consolidar→partir), no partir→consolidar, para que
+    # manifest.dedup_total == report.consolidated_total y los splits coincidan.
+    all_facts = _consolidate(findings)
+    facts1 = [f for f in all_facts if f["round"] == "1ª vuelta"]
+    facts2 = [f for f in all_facts if f["round"] == "2ª vuelta"]
+    # "raw" por vuelta = capturas crudas en cada ventana (volumen monitoreado).
     r1 = [f for f in findings if PEIRSEliteReport._round_label(f.recorded_at) == "1ª vuelta"]
     r2 = [f for f in findings if PEIRSEliteReport._round_label(f.recorded_at) == "2ª vuelta"]
-    facts1, facts2 = _consolidate(r1), _consolidate(r2)
 
     EB_DIR.mkdir(parents=True, exist_ok=True)
     p1, p2 = EB_DIR / f"{cc}_round1.jsonl", EB_DIR / f"{cc}_round2.jsonl"
