@@ -205,9 +205,15 @@ def _build_observation_section(observation: Dict[str, Any], lang: str) -> List[s
             parts.append(lead)
         items = _axis_items(block)
         if items:
-            # Una sola lista <ul> (las viñetas van juntas, sin línea en blanco
-            # entre ellas que rompería el grupo en <ul> separados).
-            parts.append("\n".join(_render_items(items)))
+            # Anti-repetición: el panel cuantitativo (desglose temático + tabla de
+            # eventos críticos) y el Anexo C ya listan los hallazgos. Aquí dejamos
+            # solo 2 ejemplos representativos por eje y remitimos al resto, en vez
+            # de re-listar 8 viñetas que duplican el resto del informe.
+            shown = 2
+            parts.append("\n".join(_render_items(items, limit=shown)))
+            if count > shown:
+                parts.append("> " + t(lang, "runoff_obs.more_in_panel").format(
+                    n=count - shown))
 
     # Nota de cobertura para los ejes sin hechos documentados.
     if monitored_empty or no_source_empty:

@@ -977,6 +977,69 @@ def _render_theme_breakdown(by_cat: List[Dict[str, Any]], total: int,
     )
 
 
+_ORGAN_DETECT = [
+    ("JNE", ["jne", "jurado nacional", "jurado electoral"]),
+    ("ONPE", ["onpe", "oficina nacional de procesos"]),
+    ("RENIEC", ["reniec", "registro nacional"]),
+    ("Fiscalía", ["fiscal", "ministerio público"]),
+    ("Poder Judicial", ["poder judicial", "corte suprema", "juez", "tribunal constitucional"]),
+    ("Congreso", ["congreso", "parlamento"]),
+]
+
+
+def _detect_organ(text: str) -> str:
+    low = (text or "").lower()
+    for label, kws in _ORGAN_DETECT:
+        if any(k in low for k in kws):
+            return label
+    return "—"
+
+
+def _render_critical_events(findings: Optional[List[Any]], language: str) -> str:
+    """Tabla de eventos críticos del ciclo (reemplaza la línea de tiempo que
+    amontonaba puntos): fecha · evento · severidad · órgano · fuente enlazada.
+    Selección: críticos y altos, ordenados por severidad y luego fecha; top 14."""
+    if not findings:
+        return ""
+    rank = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
+    crit = [f for f in findings
+            if (_finding_attr(f, "severity", "") or "").lower() in ("critical", "high")]
+    crit.sort(key=lambda f: (-rank.get((_finding_attr(f, "severity", "") or "").lower(), 0),
+                             str(_finding_attr(f, "recorded_at", "") or "")))
+    crit = crit[:14]
+    if not crit:
+        return ""
+    rows = []
+    for f in crit:
+        date = str(_finding_attr(f, "recorded_at", "") or "")[:10] or "—"
+        sev = (_finding_attr(f, "severity", "info") or "info").lower()
+        txt = str(_finding_attr(f, "finding", "") or "").strip()
+        if len(txt) > 160:
+            txt = txt[:157] + "…"
+        organ = _detect_organ(_finding_attr(f, "finding", "") + " " +
+                              (_finding_attr(f, "source_name", "") or ""))
+        rows.append(
+            f'<tr><td style="white-space:nowrap">{_esc(date)}</td>'
+            f'<td><span class="sev {_sev_class(sev)}">{_esc(sev)}</span></td>'
+            f'<td>{_esc(organ)}</td>'
+            f'<td>{_esc(txt)}</td>'
+            f'<td>{_finding_source_link(f)}</td></tr>'
+        )
+    head = (f'<th>{t(language, "crit.col.date")}</th>'
+            f'<th>{t(language, "crit.col.sev")}</th>'
+            f'<th>{t(language, "crit.col.organ")}</th>'
+            f'<th>{t(language, "crit.col.event")}</th>'
+            f'<th>{t(language, "crit.col.source")}</th>')
+    return (
+        f'<figure class="viz crit-events">'
+        f'<figcaption class="viz-title">{t(language, "crit.title")}</figcaption>'
+        f'<table class="md-table crit-table"><thead><tr>{head}</tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table>'
+        f'<figcaption class="viz-caption">{t(language, "crit.caption")}</figcaption>'
+        f'</figure>'
+    )
+
+
 def _render_quant_panel(stats: Dict[str, Any], language: str = "es",
                         findings: Optional[List[Any]] = None) -> str:
     """Panorama cuantitativo (Bloque Q): cuadro de hallazgos por vuelta/severidad
@@ -1037,6 +1100,7 @@ def _render_quant_panel(stats: Dict[str, Any], language: str = "es",
         )
 
     theme_html = _render_theme_breakdown(by_cat, total, findings, language)
+    crit_html = _render_critical_events(findings, language)
 
     return (
         f'<section class="quant-panel" id="panorama-cuantitativo">'
@@ -1047,6 +1111,7 @@ def _render_quant_panel(stats: Dict[str, Any], language: str = "es",
         f'{_fig("viz.findings_by_round.title", "viz.findings_by_round.caption", fbr_svg)}'
         f'{_fig("viz.category_cloud.title", "viz.category_cloud.caption", cc_svg)}'
         f'{theme_html}'
+        f'{crit_html}'
         f'</section>'
     )
 
@@ -1063,34 +1128,60 @@ def _render_datasets_overview(series_list: Optional[List[Any]], language: str = 
     if not series_list:
         return ""
     rows = []
+    multi_window = set()
     for s in series_list:
         dps = sorted((getattr(s, "datapoints", None) or []), key=lambda d: getattr(d, "year", 0))
         if not dps:
             continue
         first, last = dps[0], dps[-1]
+        fy, ly = getattr(first, "year", None), getattr(last, "year", None)
+        multi_window.add((fy, ly))
+        # Variación: Δ (con signo) y % sobre el valor inicial. Para todos estos
+        # índices, mayor = mejor → Δ<0 = deterioro (rojo), Δ>0 = mejora (verde).
+        var_cell = "—"
+        try:
+            fv, lv = float(getattr(first, "value")), float(getattr(last, "value"))
+            delta = lv - fv
+            pct = (delta / fv * 100) if fv else 0.0
+            color = ("#c0392b" if delta < -0.001 else
+                     "#1e8449" if delta > 0.001 else "var(--text-muted)")
+            sign = "+" if delta > 0 else ""
+            var_cell = (f"<span style='color:{color};font-family:\"DM Mono\",monospace'>"
+                        f"{sign}{delta:.2f} ({sign}{pct:.0f}%)</span>")
+        except (TypeError, ValueError):
+            pass
         glyph = _TREND_GLYPH.get(getattr(s, "trend_direction", "stable"), "→")
         rows.append(
             f"<tr><td>{_esc(getattr(s, 'indicator_label', ''))}</td>"
             f"<td><span style='color:var(--text-muted)'>{_esc(getattr(first, 'value', '—'))} "
-            f"({_esc(getattr(first, 'year', '—'))})</span></td>"
+            f"<small>({_esc(fy or '—')})</small></span></td>"
             f"<td><strong>{_esc(getattr(last, 'value', '—'))}</strong> "
-            f"({_esc(getattr(last, 'year', '—'))})</td>"
+            f"<small>({_esc(ly or '—')})</small></td>"
+            f"<td>{var_cell}</td>"
             f"<td>{glyph}</td>"
-            f"<td style='color:var(--text-muted);font-size:10px'>{_esc(getattr(s, 'unit', ''))} · "
-            f"{_esc(getattr(s, 'source', ''))}</td></tr>")
+            f"<td style='font-size:10px'>{_esc(getattr(s, 'unit', ''))}</td>"
+            f"<td style='color:var(--text-muted);font-size:10px'>{_esc(getattr(s, 'source', ''))}</td></tr>")
     if not rows:
         return ""
     head = (f"<th>{t(language, 'intl.col.indicator')}</th>"
             f"<th>{t(language, 'intl.col.initial')}</th>"
             f"<th>{t(language, 'intl.col.current')}</th>"
+            f"<th>{t(language, 'intl.col.variation')}</th>"
             f"<th>{t(language, 'intl.col.trend')}</th>"
+            f"<th>{t(language, 'intl.col.unit')}</th>"
             f"<th>{t(language, 'intl.col.source')}</th>")
+    # Nota: las ventanas temporales difieren por dataset (cada serie usa su rango
+    # disponible). Lo explicitamos para que la comparación sea honesta.
+    footnote = ""
+    if len(multi_window) > 1:
+        footnote = (f'<p style="color:var(--text-muted);font-size:10px;margin-top:8px">'
+                    f'{t(language, "intl.windows_note")}</p>')
     return (f'<section class="datasets-overview" id="datasets-overview">'
             f'<h2>{t(language, "intl.title")}</h2>'
             f'<p style="color:var(--text-muted);font-size:11px;margin-bottom:14px">'
             f'{t(language, "intl.intro")}</p>'
             f'<table class="md-table"><thead><tr>{head}</tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table></section>')
+            f'<tbody>{"".join(rows)}</tbody></table>{footnote}</section>')
 
 
 def _render_executive_dashboard(stats: Dict[str, Any], req: EliteReportRequest,
@@ -1104,19 +1195,34 @@ def _render_executive_dashboard(stats: Dict[str, Any], req: EliteReportRequest,
     level = gauge.get("level", "—")
     score = gauge.get("score")
     risk_val = f'{_esc(level)}' + (f' · {_esc(score)}' if score is not None else "")
+    # Universo CONSOLIDADO (un hecho = un hallazgo): cifra titular del informe,
+    # coherente con el panel cuantitativo y el Anexo C. La severidad consolidada
+    # se reconcilia sumando by_round (no el crudo, para no inflar la portada).
+    raw_total = int(stats.get("total", 0))
+    consolidated = int(stats.get("consolidated_total", raw_total))
+    by_round = stats.get("by_round") or {}
+    rounds = [v for v in by_round.values() if isinstance(v, dict)]
+    cons_crit = sum(int(r.get("critical", 0)) for r in rounds) if rounds else int(stats.get("critical", 0))
+    cons_high = sum(int(r.get("high", 0)) for r in rounds) if rounds else int(stats.get("high", 0))
     kpis = [
-        (str(stats.get("total", 0)), t(lang, "exec.kpi.findings")),
-        (str(stats.get("critical", 0)), t(lang, "exec.kpi.critical")),
-        (str(stats.get("high", 0)), t(lang, "exec.kpi.high")),
+        (str(consolidated), t(lang, "exec.kpi.consolidated")),
+        (str(raw_total), t(lang, "exec.kpi.captures")),
+        (str(cons_crit), t(lang, "exec.kpi.critical")),
+        (str(cons_high), t(lang, "exec.kpi.high")),
         (str(_monitoring_days(req.mission_metadata, stats)), t(lang, "exec.kpi.days")),
         (risk_val, t(lang, "exec.kpi.risk")),
     ]
     kpi_html = "".join(
         f'<div class="kpi"><div class="kpi-num">{v}</div>'
         f'<div class="kpi-label">{_esc(lbl)}</div></div>' for v, lbl in kpis)
+    # Nota de trazabilidad al inicio (los totales de la base, antes enterrados en
+    # el Anexo C): deja claro de entrada que cada cifra está respaldada y sellada.
+    trace_note = (f'<p class="exec-trace" style="font-size:10px;color:var(--text-muted);'
+                  f'margin-top:10px">{t(lang, "exec.traceability").format(consolidated=consolidated, raw=raw_total)}</p>')
     return f"""<section class="executive-dashboard" id="executive-dashboard">
 <h2>{t(lang, "exec.title")}</h2>
 <div class="kpi-grid">{kpi_html}</div>
+{trace_note}
 </section>"""
 
 

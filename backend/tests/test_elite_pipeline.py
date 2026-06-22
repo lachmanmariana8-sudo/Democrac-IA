@@ -769,6 +769,77 @@ def test_parliament_scenarios_removed_from_dispatcher():
     assert "parliament_scenarios" not in _ELITE_MAP
 
 
+def test_loader_falls_back_to_durable_base(monkeypatch):
+    """Con observation_store vacío, el loader debe poblarse desde la base de
+    prueba durable (evidence_base/raw/*.jsonl) — el informe nunca sale vacío.
+    En los tests la base está desactivada por conftest; la rehabilitamos aquí."""
+    import os
+    from pathlib import Path
+    from agents.elite_report.loaders.hunter_loader import HunterLoader, _EVIDENCE_RAW_DIR
+    if not list(Path(_EVIDENCE_RAW_DIR).glob("PER_session_*.jsonl")):
+        import pytest
+        pytest.skip("No hay base de prueba durable committeada para PER")
+    monkeypatch.delenv("PEIRS_DISABLE_DURABLE_BASE", raising=False)
+    hl = HunterLoader(observation_store={})  # store vacío
+    findings, _, stats = hl.load("PER", "2026-04-08", "2026-06-22")
+    assert stats["total"] > 1000, "el fallback durable debería traer el corpus completo"
+
+
+def test_rights_bars_replaces_heatmap():
+    """rights_bars (barras claras) reemplaza el heatmap denso en el dispatcher y
+    renderiza SVG válido; el heatmap viejo ya no se adjunta."""
+    from agents.elite_report.visualizer.renderer import _ELITE_MAP, render_svg
+    assert "rights_bars" in _ELITE_MAP
+    svg = render_svg("rights_bars", {"items": [
+        {"label": "ICCPR Art. 25", "count": 40}, {"label": "CADH Art. 23", "count": 12}]})
+    assert svg.startswith("<svg") and "40" in svg
+    # Sin instrumentos → empty-state, no barras vacías
+    assert "Sin" in render_svg("rights_bars", {"items": []})
+
+
+def test_critical_events_table_links_sources():
+    """La tabla de eventos críticos (reemplazo de la línea de tiempo amontonada)
+    lista críticos/altos con enlace a fuente; no usa la línea de tiempo vieja."""
+    from agents.elite_report.renderer.html_renderer import _render_critical_events
+    from agents.elite_report.consolidators import consolidate_findingrefs
+    bundle = _make_bundle()
+    cons = consolidate_findingrefs(bundle.hunter_entries)
+    html = _render_critical_events(cons, "es")
+    assert 'crit-events' in html and '<table' in html
+    assert 'href=' in html  # fuentes enlazadas
+
+
+def test_evidence_note_matches_report_consolidated():
+    """Coherencia numérica: el manifest de la base (que alimenta la nota del
+    Anexo C) debe declarar el mismo universo consolidado que _build_stats."""
+    import json
+    from pathlib import Path
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    man_path = Path(__file__).resolve().parents[2] / "evidence_base" / "manifest.json"
+    raw_dir = Path(__file__).resolve().parents[2] / "evidence_base" / "raw"
+    if not man_path.exists() or not list(raw_dir.glob("PER_session_*.jsonl")):
+        import pytest
+        pytest.skip("No hay base de prueba committeada")
+    import glob
+    from datetime import datetime, timezone
+    from agents.elite_report.models import EvidenceBundle
+    from agents.elite_report.loaders.hunter_loader import HunterLoader
+    raw = []
+    for fp in glob.glob(str(raw_dir / "PER_session_*.jsonl")):
+        raw += [json.loads(l) for l in open(fp, encoding="utf-8") if l.strip()]
+    now = datetime.now(timezone.utc)
+    findings = [HunterLoader._to_finding_ref(e, now) for e in raw]
+    findings.sort(key=lambda x: -(x.priority_score or 0))
+    bundle = EvidenceBundle(country_code="PER", period_start="2026-04-08",
+        period_end="2026-06-22", loaded_at=now.isoformat(), hunter_entries=findings,
+        hunter_stats={"total": len(findings)}, alerts_dispatched=0, phase_evidence={},
+        rag_documents=[], historical_series=[], cross_references=[], warnings=[])
+    stats = PEIRSEliteReport._build_stats(bundle)
+    man = json.loads(man_path.read_text(encoding="utf-8"))
+    assert man["dedup_total"] == stats["consolidated_total"], (
+        f"manifest {man['dedup_total']} != report {stats['consolidated_total']}")
+
+
 def test_5b_renderers_have_no_embedded_title():
     """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
     lo pone el <figcaption> del HTML). Evita el doble título reportado."""

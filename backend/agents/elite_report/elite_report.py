@@ -648,6 +648,12 @@ class PEIRSEliteReport:
             "categories": top_cats,
             "matrix": heatmap_matrix,
         }
+        # rights_bars: reemplaza el heatmap denso por barras horizontales legibles
+        # (un instrumento/derecho por fila, conteo de hallazgos que lo invocan).
+        rights_bars_data = {
+            "items": [{"label": _ti_instr(r, language), "count": n}
+                      for r, n in cr_counts.most_common(10)],
+        }
 
         # ── Sprint 2: CountryAdapter resuelve toda la data PER-especifica ──
         # En lugar de inline data dicts, llamamos al adapter del pais. Para
@@ -1051,8 +1057,9 @@ class PEIRSEliteReport:
             if ch.chapter_id == "contexto_historico":
                 if series_data["series"]:
                     ch.visualizations.append(_vs("timeseries_multi", series_data))
-                if events_timeline_data["events"]:
-                    ch.visualizations.append(_vs("events_timeline", events_timeline_data))
+                # events_timeline (línea de tiempo) reemplazado por la TABLA de
+                # eventos críticos del panel cuantitativo: la línea amontonaba los
+                # 12 críticos más tempranos a la izquierda y resultaba ilegible.
             elif ch.chapter_id == "marco_juridico":
                 ch.visualizations.append(_vs("matrix_normativa", matrix_norm_data))
             elif ch.chapter_id == "sistema_electoral":
@@ -1078,7 +1085,10 @@ class PEIRSEliteReport:
                 if judicial_data["actions"]:
                     ch.visualizations.append(_vs("judicial_timeline", judicial_data))
             elif ch.chapter_id == "derechos_vulnerados":
-                ch.visualizations.append(_vs("heatmap_rights", heatmap_data))
+                # Barras claras de derechos invocados (reemplaza el heatmap denso).
+                # Sólo si hay instrumentos realmente invocados (cross_references).
+                if rights_bars_data["items"]:
+                    ch.visualizations.append(_vs("rights_bars", rights_bars_data))
                 if compliance_data["rows"]:
                     ch.visualizations.append(_vs("compliance_matrix", compliance_data))
             elif ch.chapter_id == "conclusiones":

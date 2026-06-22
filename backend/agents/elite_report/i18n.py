@@ -404,6 +404,11 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Findings recorded: {n}.",
         "pt": "Achados registrados: {n}.",
     },
+    "runoff_obs.more_in_panel": {
+        "es": "(+{n} hallazgos más en este eje — detalle en el Panorama cuantitativo y el Anexo C, sin repetir aquí.)",
+        "en": "(+{n} more findings in this axis — detail in the Quantitative overview and Appendix C, not repeated here.)",
+        "pt": "(+{n} registros a mais neste eixo — detalhe no Panorama quantitativo e no Anexo C, sem repetir aqui.)",
+    },
     "runoff_obs.global_header": {
         "es": "Estado de auditoría global: {status} · Hallazgos totales: {n}",
         "en": "Global audit status: {status} · Total findings: {n}",
@@ -966,6 +971,16 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Cycle findings broken down by severity and round. 1st→2nd cutoff: close of first-round counting (findings through 2026-05-02 = 1st round; from 2026-05-03, inter-round period and runoff = 2nd round). Counts use the CONSOLIDATED universe (one fact = one finding, no media duplicates), consistent with Appendix C and the evidence base. The consolidated total is lower than the raw capture volume.",
         "pt": "Quadro de registros do ciclo, por severidade e turno. Corte 1º→2º: encerramento da apuração do 1º turno (registros até 02-mai-2026 = 1º turno; a partir de 03-mai, período entre turnos e 2º turno). Contagem sobre o universo CONSOLIDADO (um fato = um registro), coerente com o Anexo C e a base de provas. O total consolidado é menor que o volume bruto.",
     },
+    "viz.rights_bars.title": {
+        "es": "Derechos e instrumentos más invocados",
+        "en": "Most-invoked rights and instruments",
+        "pt": "Direitos e instrumentos mais invocados",
+    },
+    "viz.rights_bars.caption": {
+        "es": "Instrumentos normativos (ICCPR, CADH, Constitución, etc.) invocados por los hallazgos del ciclo, ordenados por cantidad de hallazgos que los referencian. Deriva de las referencias cruzadas hallazgo→norma; reemplaza el mapa de calor denso por una lectura directa.",
+        "en": "Normative instruments (ICCPR, ACHR, Constitution, etc.) invoked by the cycle's findings, ranked by number of findings referencing each. Derived from finding→norm cross-references; replaces the dense heatmap with a direct read.",
+        "pt": "Instrumentos normativos (PIDCP, CADH, Constituição, etc.) invocados pelos registros do ciclo, ordenados pela quantidade de registros que os referenciam. Deriva das referências cruzadas registro→norma; substitui o mapa de calor denso por uma leitura direta.",
+    },
     "viz.category_cloud.title": {
         "es": "Nube de hallazgos por temática",
         "en": "Findings cloud by topic",
@@ -1006,6 +1021,22 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Deduplicated count per topic (one fact = one finding); the «+» sign marks a verified floor. Topics sum to {total} consolidated facts. 1-2 representative examples per topic (highest priority) are shown, each linked to its primary source; the full traceable universe is in Appendix C and the evidence base.",
         "pt": "Contagem deduplicada por temática (um fato = um registro); o sinal «+» indica um piso verificado. A soma das temáticas = {total} fatos consolidados. Mostram-se 1-2 exemplos representativos por temática (maior prioridade), cada um com link à fonte primária; o universo íntegro está no Anexo C e na base de provas.",
     },
+    # Tabla de eventos críticos (reemplaza la línea de tiempo amontonada)
+    "crit.title": {
+        "es": "Eventos críticos del ciclo monitoreado",
+        "en": "Critical events of the monitored cycle",
+        "pt": "Eventos críticos do ciclo monitorado",
+    },
+    "crit.caption": {
+        "es": "Hallazgos de severidad crítica y alta del ciclo, ordenados por severidad y fecha (hasta 14), con el órgano implicado y enlace a la fuente primaria. Reemplaza la línea de tiempo previa, que amontonaba los eventos más tempranos y resultaba ilegible. El detalle completo está en el Anexo C y la base de prueba.",
+        "en": "Critical- and high-severity findings of the cycle, ordered by severity and date (up to 14), with the body involved and a link to the primary source. Replaces the previous timeline, which clustered the earliest events and was unreadable. Full detail in Appendix C and the evidence base.",
+        "pt": "Registros de severidade crítica e alta do ciclo, ordenados por severidade e data (até 14), com o órgão implicado e link à fonte primária. Substitui a linha do tempo anterior, que amontoava os eventos mais antigos. Detalhe completo no Anexo C e na base de provas.",
+    },
+    "crit.col.date": {"es": "Fecha", "en": "Date", "pt": "Data"},
+    "crit.col.sev": {"es": "Severidad", "en": "Severity", "pt": "Severidade"},
+    "crit.col.organ": {"es": "Órgano", "en": "Body", "pt": "Órgão"},
+    "crit.col.event": {"es": "Evento", "en": "Event", "pt": "Evento"},
+    "crit.col.source": {"es": "Fuente", "en": "Source", "pt": "Fonte"},
     "theme.col.topic": {"es": "Temática", "en": "Topic", "pt": "Temática"},
     "theme.col.count": {"es": "Hallazgos", "en": "Findings", "pt": "Registros"},
     "theme.col.sevmax": {"es": "Sev. máx.", "en": "Max sev.", "pt": "Sev. máx."},
@@ -1321,10 +1352,17 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     # ── Dashboard ejecutivo ──────────────────────────────────────────────
     "exec.title": {"es": "Resumen ejecutivo", "en": "Executive summary", "pt": "Resumo executivo"},
     "exec.kpi.findings": {"es": "Hallazgos", "en": "Findings", "pt": "Achados"},
+    "exec.kpi.consolidated": {"es": "Hechos consolidados", "en": "Consolidated facts", "pt": "Fatos consolidados"},
+    "exec.kpi.captures": {"es": "Capturas monitoreadas", "en": "Monitored captures", "pt": "Capturas monitoradas"},
     "exec.kpi.critical": {"es": "Críticos", "en": "Critical", "pt": "Críticos"},
     "exec.kpi.high": {"es": "Severidad alta", "en": "High severity", "pt": "Severidade alta"},
     "exec.kpi.days": {"es": "Días monitoreados", "en": "Days monitored", "pt": "Dias monitorados"},
     "exec.kpi.risk": {"es": "Nivel de riesgo", "en": "Risk level", "pt": "Nível de risco"},
+    "exec.traceability": {
+        "es": "Base de prueba: {consolidated} hechos consolidados (un hecho = un hallazgo, sin repetir) a partir de {raw} capturas monitoreadas — 100% con fuente primaria, archivada y sellada por integridad (sha256). Detalle trazable en el Anexo C.",
+        "en": "Evidence base: {consolidated} consolidated facts (one fact = one finding, no duplicates) from {raw} monitored captures — 100% with a primary source, archived and integrity-sealed (sha256). Traceable detail in Appendix C.",
+        "pt": "Base de provas: {consolidated} fatos consolidados (um fato = um registro, sem repetir) a partir de {raw} capturas monitoradas — 100% com fonte primária, arquivada e selada por integridade (sha256). Detalhe rastreável no Anexo C.",
+    },
     # ── Panel internacional ──────────────────────────────────────────────
     "intl.title": {
         "es": "Indicadores internacionales de democracia",
@@ -1336,7 +1374,14 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "intl.col.initial": {"es": "Inicial", "en": "Initial", "pt": "Inicial"},
     "intl.col.current": {"es": "Actual", "en": "Current", "pt": "Atual"},
     "intl.col.trend": {"es": "Tendencia", "en": "Trend", "pt": "Tendência"},
+    "intl.col.variation": {"es": "Variación", "en": "Change", "pt": "Variação"},
+    "intl.col.unit": {"es": "Escala", "en": "Scale", "pt": "Escala"},
     "intl.col.source": {"es": "Fuente", "en": "Source", "pt": "Fonte"},
+    "intl.windows_note": {
+        "es": "Las ventanas temporales difieren por dataset: cada serie usa su rango disponible más reciente (p. ej. PEI hasta 2021; RSF desde 2024). La variación se calcula sobre los extremos de cada serie, no sobre un año común.",
+        "en": "Time windows differ by dataset: each series uses its most recent available range (e.g. PEI through 2021; RSF from 2024). Change is computed over each series' own endpoints, not a common year.",
+        "pt": "As janelas temporais diferem por dataset: cada série usa seu intervalo disponível mais recente (ex.: PEI até 2021; RSF desde 2024). A variação é calculada sobre os extremos de cada série, não sobre um ano comum.",
+    },
     "intl.intro": {
         "es": "Cómo venía el proceso electoral según los principales índices internacionales: valor al inicio de la serie disponible y valor más reciente, con su tendencia.",
         "en": "How the electoral process was trending per the main international indices: value at the start of the available series and the most recent value, with its trend.",

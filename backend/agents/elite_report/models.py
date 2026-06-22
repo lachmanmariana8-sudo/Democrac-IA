@@ -231,6 +231,8 @@ VizKind = Literal[
     "parliament_scenarios",
     # Panel cuantitativo (2026-06): cuadro de hallazgos por vuelta + nube temática.
     "findings_by_round", "category_cloud",
+    # Derechos invocados como barras (reemplaza heatmap denso, 2026-06).
+    "rights_bars",
 ]
 
 

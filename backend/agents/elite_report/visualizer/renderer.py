@@ -52,6 +52,8 @@ _ELITE_MAP = {
     # Panel cuantitativo (Bloque Q)
     "findings_by_round":        elite_5b.render_findings_by_round,
     "category_cloud":           elite_5b.render_category_cloud,
+    # Derechos invocados (reemplaza heatmap denso por barras claras)
+    "rights_bars":              elite_5b.render_rights_bars,
 }
 
 # Kinds del ReportDesigner que se delegan al módulo legacy
