@@ -8,6 +8,11 @@ import pytest
 # Asegura que backend/ está en el path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Aísla los tests de la base de prueba durable (evidence_base/*.jsonl): los
+# fixtures construyen stores chicos/vacíos a propósito. En prod el loader SÍ usa
+# la base durable como respaldo para que el informe nunca salga vacío.
+os.environ["PEIRS_DISABLE_DURABLE_BASE"] = "1"
+
 
 def pytest_configure(config):
     """Registra markers custom para no tirar warnings."""

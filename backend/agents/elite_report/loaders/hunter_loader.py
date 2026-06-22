@@ -6,11 +6,20 @@ el Hunter) al FindingRef canónico del EliteReport.
 """
 from __future__ import annotations
 
+import glob
+import json
 from collections import Counter
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from agents.elite_report.models import FindingRef
+
+# Base de prueba durable versionada (capturas crudas commiteadas). Es la fuente
+# de respaldo del loader: el observation_store vive en memoria y se vacía en cada
+# redeploy de Railway, por lo que un informe podía salir con 0 hallazgos. La base
+# committeada garantiza cobertura completa y reproducible. Ver modules/evidence_base.
+_EVIDENCE_RAW_DIR = Path(__file__).resolve().parents[4] / "evidence_base" / "raw"
 
 
 # Pesos de priorización (alineados con Structurer del ReportDesigner)
@@ -58,9 +67,24 @@ class HunterLoader:
         Filtra por período si se proveen period_start/period_end (ISO dates).
         """
         cc = country_code.upper()
+        # Unión: store en vivo ∪ base de prueba durable (committeada), dedup por
+        # entry_id (el store, más fresco, gana en conflicto). Garantiza que el
+        # informe NUNCA salga vacío aunque el proceso se haya reiniciado.
         entries: List[Dict[str, Any]] = []
+        seen_ids: set = set()
         if self._store and cc in self._store:
-            entries = list(self._store[cc].get("entries", []))
+            for e in self._store[cc].get("entries", []):
+                eid = e.get("entry_id")
+                if eid:
+                    seen_ids.add(eid)
+                entries.append(e)
+        for e in self._load_durable_entries(cc):
+            eid = e.get("entry_id")
+            if eid and eid in seen_ids:
+                continue
+            if eid:
+                seen_ids.add(eid)
+            entries.append(e)
 
         # Filtro por período
         if period_start or period_end:
@@ -96,6 +120,23 @@ class HunterLoader:
                 alerts_count = 0
 
         return findings, alerts_count, stats
+
+    @staticmethod
+    def _load_durable_entries(cc: str) -> List[Dict[str, Any]]:
+        """Lee las capturas crudas committeadas en evidence_base/raw/{CC}_session_*.jsonl.
+        Best-effort: si no hay base durable, devuelve []. Los tests la desactivan
+        con PEIRS_DISABLE_DURABLE_BASE=1 (aislamiento de fixtures)."""
+        import os
+        if os.getenv("PEIRS_DISABLE_DURABLE_BASE") == "1":
+            return []
+        out: List[Dict[str, Any]] = []
+        try:
+            for fp in sorted(glob.glob(str(_EVIDENCE_RAW_DIR / f"{cc}_session_*.jsonl"))):
+                with open(fp, encoding="utf-8") as fh:
+                    out.extend(json.loads(l) for l in fh if l.strip())
+        except Exception:
+            pass
+        return out
 
     @staticmethod
     def _in_period(recorded_at: Optional[str],
