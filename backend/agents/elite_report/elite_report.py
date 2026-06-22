@@ -419,8 +419,12 @@ class PEIRSEliteReport:
                                 _RANK.get(worst, 0) > _RANK.get(o.get("status", "green"), 0):
                             o["status"] = worst
 
-    # Umbral de vuelta (1ª → 2ª). 1ª vuelta: abr-2026; 2ª vuelta (balotaje): jun-2026.
-    _ROUND_THRESHOLD = "2026-05-01"
+    # Umbral de vuelta (1ª → 2ª). 1ª vuelta = hasta el cierre del cómputo de la
+    # 1ª vuelta (2-may-2026): los hallazgos con recorded_at < 2026-05-03 quedan en
+    # 1ª vuelta. Este corte reconcilia EXACTAMENTE con el informe preliminar de 1ª
+    # vuelta (período hasta 2026-05-02 = 1923 capturas). Lo posterior (período
+    # inter-vuelta + monitoreo del balotaje hasta la proclamación) es 2ª vuelta.
+    _ROUND_THRESHOLD = "2026-05-03"
 
     @staticmethod
     def _round_label(date_str: str) -> str:
@@ -867,9 +871,7 @@ class PEIRSEliteReport:
             progress_data = {"points": [], "current_pct": None}
 
         # integrity_incidents_grid: regiones × categorías (cap 6)
-        # Sprint 2: regions y parliament data via adapter.
         _regions_data = _adapter.regions_data() or []
-        _parliament_payload = _adapter.parliament_scenarios()
 
         # Verificar si tenemos datos de location en el bundle (campo opcional
         # en FindingRef desde 2026-04-29; antes era None para todos los findings).
@@ -1030,9 +1032,6 @@ class PEIRSEliteReport:
 
         # flow_chart_voting (cap 3)
         flow_voting_data = _adapter.flow_voting_stages(language)
-
-        # parliament_scenarios (cap 9) — opcional, segun adapter
-        parliament_data: Optional[Dict[str, Any]] = _parliament_payload
 
         # ── Asignar viz por chapter_id ──────────────────────────────────────
         # Helper local: crea VizSpec con title/caption traducidos via i18n.

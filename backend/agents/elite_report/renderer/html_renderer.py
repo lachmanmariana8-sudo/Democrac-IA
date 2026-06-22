@@ -11,8 +11,10 @@ Produce HTML autónomo (todo inline: CSS, SVG, fuentes webfont) para:
 from __future__ import annotations
 
 import html as _html
+import json as _json
 import re
 from datetime import datetime
+from pathlib import Path as _Path
 from typing import Any, Dict, List, Optional
 
 from agents.elite_report.models import (
@@ -627,6 +629,10 @@ section.quant-panel h2 {
   font-family: 'DM Sans', sans-serif; font-size: 10px; letter-spacing: 0.5px;
   text-transform: uppercase; color: var(--text-muted); margin-top: 4px;
 }
+table.theme-table td { vertical-align: top; font-size: 11px; }
+table.theme-table ul.theme-examples { margin: 0; padding-left: 16px; }
+table.theme-table ul.theme-examples li { margin-bottom: 4px; line-height: 1.4; }
+table.theme-table .theme-src { color: var(--text-muted); font-size: 10px; }
 
 /* ── Footer ────────────────────────────────────────────────────────── */
 footer.elite-footer {
@@ -845,9 +851,10 @@ def render_html(
     # contexto histórico (su lugar natural — "cómo venía" el proceso).
     datasets_html = _render_datasets_overview(intl_series, req.language or "es")
 
-    # Panorama cuantitativo (Bloque Q): cuadro por vuelta + nube temática.
-    # Va inmediatamente DESPUÉS del cuadro de datasets (bajo Contexto histórico).
-    quant_html = _render_quant_panel(stats, req.language or "es")
+    # Panorama cuantitativo (Bloque Q): cuadro por vuelta + nube temática +
+    # desglose temático con ejemplos enlazados. Va inmediatamente DESPUÉS del
+    # cuadro de datasets (bajo Contexto histórico).
+    quant_html = _render_quant_panel(stats, req.language or "es", findings=findings)
 
     # Capítulos (datasets + panorama cuantitativo se insertan tras "contexto_historico")
     chapters_html_parts = []
@@ -902,11 +909,80 @@ def render_html(
 </html>"""
 
 
-def _render_quant_panel(stats: Dict[str, Any], language: str = "es") -> str:
+def _theme_examples(findings: Optional[List[Any]], category: str, k: int = 2) -> List[Any]:
+    """Hasta k hallazgos representativos de una categoría (mayor priority_score)."""
+    if not findings:
+        return []
+    sub = [f for f in findings if (_finding_attr(f, "category", "") or "") == category]
+    sub.sort(key=lambda f: (_finding_attr(f, "priority_score", 0) or 0), reverse=True)
+    return sub[:k]
+
+
+def _finding_source_link(f: Any) -> str:
+    """Primer enlace de fuente de un hallazgo consolidado (o nombre si no hay URL)."""
+    srcs = _finding_attr(f, "sources", []) or []
+    for s in srcs:
+        su = (s.get("url") if isinstance(s, dict) else "") or ""
+        sn = (s.get("name") if isinstance(s, dict) else "") or "fuente"
+        if su:
+            return f'<a href="{_esc(str(su))}" target="_blank" rel="noopener">{_esc(str(sn))}</a>'
+    url = _finding_attr(f, "source_url", "") or ""
+    name = _finding_attr(f, "source_name", "") or "fuente"
+    if url:
+        return f'<a href="{_esc(str(url))}" target="_blank" rel="noopener">{_esc(str(name))}</a>'
+    return _esc(str(name))
+
+
+def _render_theme_breakdown(by_cat: List[Dict[str, Any]], total: int,
+                            findings: Optional[List[Any]], language: str) -> str:
+    """Tabla 'Hallazgos por temática': categoría → conteo deduplicado ('+N') →
+    severidad máx → 1-2 ejemplos representativos enlazados a su fuente. Los
+    conteos son el universo CONSOLIDADO (sin repetir); Σ = total."""
+    if not by_cat:
+        return ""
+    rows = []
+    for c in by_cat:
+        cat = c.get("category", "other")
+        n = c.get("count", 0)
+        sev = c.get("severity_max", "info")
+        label = category_label(cat, language)
+        exs = _theme_examples(findings, cat, k=2)
+        ex_html = ""
+        if exs:
+            items = []
+            for f in exs:
+                txt = str(_finding_attr(f, "finding", "") or "").strip()
+                if len(txt) > 150:
+                    txt = txt[:147] + "…"
+                items.append(f'<li>{_esc(txt)} <span class="theme-src">— {_finding_source_link(f)}</span></li>')
+            ex_html = f'<ul class="theme-examples">{"".join(items)}</ul>'
+        rows.append(
+            f'<tr><td><strong>{_esc(label)}</strong></td>'
+            f'<td style="text-align:right;font-family:\'DM Mono\',monospace">+{n}</td>'
+            f'<td><span class="sev {_sev_class(sev)}">{_esc(sev)}</span></td>'
+            f'<td>{ex_html or "—"}</td></tr>'
+        )
+    head = (f'<th>{t(language, "theme.col.topic")}</th>'
+            f'<th style="text-align:right">{t(language, "theme.col.count")}</th>'
+            f'<th>{t(language, "theme.col.sevmax")}</th>'
+            f'<th>{t(language, "theme.col.examples")}</th>')
+    return (
+        f'<figure class="viz theme-breakdown">'
+        f'<figcaption class="viz-title">{t(language, "theme.title")}</figcaption>'
+        f'<table class="md-table theme-table"><thead><tr>{head}</tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table>'
+        f'<figcaption class="viz-caption">'
+        f'{t(language, "theme.caption").format(total=total)}</figcaption>'
+        f'</figure>'
+    )
+
+
+def _render_quant_panel(stats: Dict[str, Any], language: str = "es",
+                        findings: Optional[List[Any]] = None) -> str:
     """Panorama cuantitativo (Bloque Q): cuadro de hallazgos por vuelta/severidad
-    + nube de hallazgos por temática + banda de KPIs de volumen. Determinista,
-    construido sobre el corpus CONSOLIDADO (stats.by_round / stats.by_category).
-    Va tras el cuadro de datasets (bajo Contexto histórico)."""
+    + nube de hallazgos por temática + desglose temático con ejemplos + banda de
+    KPIs de volumen. Determinista, construido sobre el corpus CONSOLIDADO
+    (stats.by_round / stats.by_category). Va tras el cuadro de datasets."""
     by_round = stats.get("by_round") or {}
     by_cat = stats.get("by_category") or []
     r1 = by_round.get("1ª vuelta") or {}
@@ -960,6 +1036,8 @@ def _render_quant_panel(stats: Dict[str, Any], language: str = "es") -> str:
             f'</figure>'
         )
 
+    theme_html = _render_theme_breakdown(by_cat, total, findings, language)
+
     return (
         f'<section class="quant-panel" id="panorama-cuantitativo">'
         f'<h2>{t(language, "quant.section.title")}</h2>'
@@ -968,6 +1046,7 @@ def _render_quant_panel(stats: Dict[str, Any], language: str = "es") -> str:
         f'<div class="quant-kpis">{kpi_cards}</div>'
         f'{_fig("viz.findings_by_round.title", "viz.findings_by_round.caption", fbr_svg)}'
         f'{_fig("viz.category_cloud.title", "viz.category_cloud.caption", cc_svg)}'
+        f'{theme_html}'
         f'</section>'
     )
 
@@ -1352,6 +1431,26 @@ def _phase_chip(phase: Any, language: str = "es") -> str:
     return f'<span class="phase-chip phase-{cls}" aria-label="Fase: {_lbl}">{_lbl}</span>'
 
 
+def _evidence_base_note(language: str = "es") -> str:
+    """Nota que cita la base de prueba completa archivada (evidence_base/) con sus
+    sha256, para dejar claro que el Anexo C es una MUESTRA y que la base íntegra y
+    verificable respalda cada cifra. Best-effort: si no hay manifest, no estorba."""
+    try:
+        manifest = _Path(__file__).resolve().parents[4] / "evidence_base" / "manifest.json"
+        if not manifest.exists():
+            return ""
+        m = _json.loads(manifest.read_text(encoding="utf-8"))
+        files = m.get("files", {})
+        shas = " · ".join(f"{name}: <code>{(info.get('sha256') or '')[:12]}…</code>"
+                          for name, info in files.items())
+        return (f'<p class="evidence-note" style="font-size:10px;color:var(--text-muted);'
+                f'border-top:1px solid var(--border);padding-top:8px;margin-top:10px">'
+                f'{t(language, "appendix.c.evidence_base").format(dedup=m.get("dedup_total", "—"), raw=m.get("raw_total", "—"))}'
+                f' {shas}</p>')
+    except Exception:
+        return ""
+
+
 def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
     """Anexo C — listado completo de hallazgos del Hunter con TRAZABILIDAD.
 
@@ -1424,6 +1523,7 @@ def _render_appendix_c(findings: List[Any], language: str = "es") -> str:
 </tbody>
 </table>
 {truncated}
+{_evidence_base_note(language)}
 </aside>"""
 
 

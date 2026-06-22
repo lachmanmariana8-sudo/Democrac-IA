@@ -1449,6 +1449,7 @@ def render_category_cloud(data: Dict[str, Any]) -> str:
         return fs_min + (fs_max - fs_min) * (n - cmin) / (cmax - cmin)
 
     # Layout en filas: estimar ancho ≈ len(texto)*fs*0.58 + padding del pill.
+    avail = W - 2 * pad
     rows: List[List[Dict[str, Any]]] = [[]]
     row_w = 0.0
     gap = 14
@@ -1456,7 +1457,13 @@ def render_category_cloud(data: Dict[str, Any]) -> str:
         fs = _fs(c.get("count", 0))
         text = f'{c.get("label","")} ({c.get("count",0)})'
         w = len(text) * fs * 0.58 + 20
-        if row_w + w > (W - 2 * pad) and rows[-1]:
+        # Guard: una etiqueta sola nunca debe exceder el ancho disponible —
+        # si lo hace, se reduce su fuente hasta encajar (evita desborde de texto
+        # largo, p. ej. "Financiamiento/campaña (244)").
+        if w > avail:
+            fs = max(fs_min, fs * (avail - 20) / max(w - 20, 1))
+            w = len(text) * fs * 0.58 + 20
+        if row_w + w > avail and rows[-1]:
             rows.append([])
             row_w = 0.0
         rows[-1].append({"text": text, "fs": fs, "w": w,

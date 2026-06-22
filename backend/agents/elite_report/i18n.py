@@ -962,9 +962,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Registros por turno e severidade",
     },
     "viz.findings_by_round.caption": {
-        "es": "Cuadro de hallazgos del ciclo, desglosado por severidad y por vuelta (umbral 1ª→2ª: 1-may-2026). Conteo sobre el universo CONSOLIDADO (un hecho = un hallazgo, sin duplicados de medios), coherente con el Anexo C. El total puede ser menor al volumen crudo de capturas de la portada.",
-        "en": "Cycle findings broken down by severity and round (1st→2nd threshold: 2026-05-01). Counts use the CONSOLIDATED universe (one fact = one finding, no media duplicates), consistent with Appendix C. The total may be lower than the raw capture volume on the cover.",
-        "pt": "Quadro de registros do ciclo, por severidade e turno (limiar 1º→2º: 01-mai-2026). Contagem sobre o universo CONSOLIDADO (um fato = um registro), coerente com o Anexo C. O total pode ser menor que o volume bruto da capa.",
+        "es": "Cuadro de hallazgos del ciclo, desglosado por severidad y por vuelta. Corte 1ª→2ª: cierre del cómputo de 1ª vuelta (hallazgos hasta el 2-may-2026 = 1ª vuelta; desde el 3-may, período inter-vuelta y balotaje = 2ª vuelta). Conteo sobre el universo CONSOLIDADO (un hecho = un hallazgo, sin duplicados de medios), coherente con el Anexo C y la base de prueba. El total consolidado es menor al volumen crudo de capturas.",
+        "en": "Cycle findings broken down by severity and round. 1st→2nd cutoff: close of first-round counting (findings through 2026-05-02 = 1st round; from 2026-05-03, inter-round period and runoff = 2nd round). Counts use the CONSOLIDATED universe (one fact = one finding, no media duplicates), consistent with Appendix C and the evidence base. The consolidated total is lower than the raw capture volume.",
+        "pt": "Quadro de registros do ciclo, por severidade e turno. Corte 1º→2º: encerramento da apuração do 1º turno (registros até 02-mai-2026 = 1º turno; a partir de 03-mai, período entre turnos e 2º turno). Contagem sobre o universo CONSOLIDADO (um fato = um registro), coerente com o Anexo C e a base de provas. O total consolidado é menor que o volume bruto.",
     },
     "viz.category_cloud.title": {
         "es": "Nube de hallazgos por temática",
@@ -994,6 +994,27 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "quant.kpi.round1": {"es": "1ª vuelta", "en": "1st round", "pt": "1º turno"},
     "quant.kpi.round2": {"es": "2ª vuelta", "en": "2nd round", "pt": "2º turno"},
     "quant.kpi.topics": {"es": "Temáticas", "en": "Topics", "pt": "Temáticas"},
+
+    # Desglose temático (tabla categoría → +N → ejemplos)
+    "theme.title": {
+        "es": "Hallazgos por temática (con ejemplos trazables)",
+        "en": "Findings by topic (with traceable examples)",
+        "pt": "Registros por temática (com exemplos rastreáveis)",
+    },
+    "theme.caption": {
+        "es": "Conteo deduplicado por temática (un hecho = un hallazgo); el signo «+» indica que es un piso verificado. La suma de las temáticas = {total} hechos consolidados. Se muestran 1-2 ejemplos representativos por temática (mayor prioridad), cada uno enlazado a su fuente primaria; el universo íntegro y trazable está en el Anexo C y en la base de prueba.",
+        "en": "Deduplicated count per topic (one fact = one finding); the «+» sign marks a verified floor. Topics sum to {total} consolidated facts. 1-2 representative examples per topic (highest priority) are shown, each linked to its primary source; the full traceable universe is in Appendix C and the evidence base.",
+        "pt": "Contagem deduplicada por temática (um fato = um registro); o sinal «+» indica um piso verificado. A soma das temáticas = {total} fatos consolidados. Mostram-se 1-2 exemplos representativos por temática (maior prioridade), cada um com link à fonte primária; o universo íntegro está no Anexo C e na base de provas.",
+    },
+    "theme.col.topic": {"es": "Temática", "en": "Topic", "pt": "Temática"},
+    "theme.col.count": {"es": "Hallazgos", "en": "Findings", "pt": "Registros"},
+    "theme.col.sevmax": {"es": "Sev. máx.", "en": "Max sev.", "pt": "Sev. máx."},
+    "theme.col.examples": {"es": "Ejemplos representativos", "en": "Representative examples", "pt": "Exemplos representativos"},
+    "appendix.c.evidence_base": {
+        "es": "Este anexo es una MUESTRA trazable. La base de prueba completa y verificable — {dedup} hechos consolidados a partir de {raw} capturas, cada uno con su(s) fuente(s) — está archivada y sellada por integridad (sha256):",
+        "en": "This appendix is a traceable SAMPLE. The full, verifiable evidence base — {dedup} consolidated facts from {raw} captures, each with its source(s) — is archived and integrity-sealed (sha256):",
+        "pt": "Este anexo é uma AMOSTRA rastreável. A base de provas completa e verificável — {dedup} fatos consolidados a partir de {raw} capturas, cada um com sua(s) fonte(s) — está arquivada e selada por integridade (sha256):",
+    },
 
     # ─────────────────────────────────────────────────────────────────
     # Datos internos de SVG: status, niveles, headers de columnas

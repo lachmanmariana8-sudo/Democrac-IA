@@ -709,6 +709,66 @@ def test_appendix_a_stamps_classifier_quality_and_bias():
     assert "Auditoría de sesgo" in html
 
 
+def test_round_threshold_reconciles_first_round():
+    """El umbral de vuelta debe ser 2026-05-03: hallazgos hasta el cierre del
+    cómputo de 1ª vuelta (2-may) quedan en 1ª; desde el 3-may, en 2ª. Esto
+    reconcilia con el informe preliminar de 1ª vuelta (1923 capturas a 2-may)."""
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    assert PEIRSEliteReport._ROUND_THRESHOLD == "2026-05-03"
+    assert PEIRSEliteReport._round_label("2026-05-02T23:59:00") == "1ª vuelta"
+    assert PEIRSEliteReport._round_label("2026-05-03T00:01:00") == "2ª vuelta"
+    assert PEIRSEliteReport._round_label("2026-04-12T10:00:00") == "1ª vuelta"
+    assert PEIRSEliteReport._round_label("2026-06-07T10:00:00") == "2ª vuelta"
+
+
+def test_evidence_base_persist_is_append_only_idempotent():
+    """La base de prueba persiste cada captura una sola vez (UNIQUE entry_id):
+    re-ingerir la misma sesión NO duplica filas. Garantía anti-pérdida."""
+    import sqlite3
+    from modules import evidence_base as eb
+    conn = sqlite3.connect(":memory:")
+    conn.execute("""CREATE TABLE evidence_entries (entry_id TEXT PRIMARY KEY,
+        country_code TEXT NOT NULL, session_id TEXT, round TEXT, category TEXT,
+        severity TEXT, finding TEXT, location TEXT, recorded_at TEXT, source_url TEXT,
+        source_name TEXT, source_title TEXT, phase TEXT, ingested_at TEXT NOT NULL,
+        raw_json TEXT NOT NULL)""")
+    caps = [
+        {"entry_id": "a1", "category": "disinformation", "severity": "high",
+         "finding": "x", "recorded_at": "2026-04-12T10:00:00", "evidence_ref": "http://e/1"},
+        {"entry_id": "a2", "category": "fraud_allegation", "severity": "critical",
+         "finding": "y", "recorded_at": "2026-06-02T10:00:00", "evidence_ref": "http://e/2"},
+    ]
+    assert eb.persist_captures(conn, "PER", "s1", caps) == 2
+    assert eb.persist_captures(conn, "PER", "s1", caps) == 0  # idempotente
+    c = eb.count(conn, "PER")
+    assert c["total"] == 2 and c["1ª vuelta"] == 1 and c["2ª vuelta"] == 1
+
+
+def test_theme_breakdown_reconciles_to_consolidated_total():
+    """El desglose temático ('+N' por temática) debe sumar el universo
+    consolidado: Σ counts == consolidated_total (coherencia con la nube y el
+    cuadro por vuelta)."""
+    import re
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.consolidators import consolidate_findingrefs
+    from agents.elite_report.renderer.html_renderer import _render_theme_breakdown
+    bundle = _make_bundle()
+    stats = PEIRSEliteReport._build_stats(bundle)
+    cons = consolidate_findingrefs(bundle.hunter_entries)
+    html = _render_theme_breakdown(stats["by_category"], stats["consolidated_total"], cons, "es")
+    plus = [int(x) for x in re.findall(r">\+(\d+)<", html)]
+    assert sum(plus) == stats["consolidated_total"]
+    # Cada temática enlaza al menos un ejemplo a su fuente (si hay findings)
+    assert 'class="theme-src"' in html
+
+
+def test_parliament_scenarios_removed_from_dispatcher():
+    """parliament_scenarios era deuda muerta (renderer sin capítulo tras quitar
+    el predictivo) → fuera del dispatcher."""
+    from agents.elite_report.visualizer.renderer import _ELITE_MAP
+    assert "parliament_scenarios" not in _ELITE_MAP
+
+
 def test_5b_renderers_have_no_embedded_title():
     """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
     lo pone el <figcaption> del HTML). Evita el doble título reportado."""
