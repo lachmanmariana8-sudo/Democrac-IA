@@ -46,6 +46,7 @@ data/*_static*.json
 
 # Reportes generados (auto-generados por el pipeline, no necesitan versionarse)
 data/reports/
+reports/
 
 # Base de datos SQLite (se regenera en startup desde los datos)
 data/democracia.db
