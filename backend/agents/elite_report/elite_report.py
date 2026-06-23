@@ -107,7 +107,7 @@ class PEIRSEliteReport:
         forecast = None
 
         # ── 6. CHAPTER COMPOSER ────────────────────────────────────────
-        stats = self._build_stats(bundle)
+        stats = self._build_stats(bundle, req)
         sources_list = self._build_sources_list(bundle)
 
         composer = ChapterComposer(
@@ -434,7 +434,7 @@ class PEIRSEliteReport:
 
     # ────────────────────────────────────────────────────────────────────
     @staticmethod
-    def _build_stats(bundle: EvidenceBundle) -> Dict[str, Any]:
+    def _build_stats(bundle: EvidenceBundle, req=None) -> Dict[str, Any]:
         """Stats agregadas a nivel de informe."""
         from collections import Counter
         hs = bundle.hunter_stats or {}
@@ -445,11 +445,27 @@ class PEIRSEliteReport:
             "low": hs.get("low", 0),
             "info": hs.get("info", 0),
         }
-        # Días cubiertos = días únicos con al menos un finding
+        # Días de monitoreo = span CALENDARIO del período declarado (inclusive),
+        # coherente con _monitoring_days() del renderer (header + resumen). El
+        # monitoreo es continuo; usar 'días con hallazgos' (len(days)) subestima
+        # y además desincronizaba metadata/narrativa LLM (72) vs header (76).
+        # Fallback a días-con-hallazgos si no hay período parseable.
         days = set()
         for f in bundle.hunter_entries:
             if f.recorded_at:
                 days.add(f.recorded_at[:10])
+        days_covered = len(days)
+        mm = getattr(req, "mission_metadata", None) if req is not None else None
+        if mm is not None:
+            try:
+                from datetime import date as _date
+                d0 = _date.fromisoformat((mm.period_start or "")[:10])
+                d1 = _date.fromisoformat((mm.period_end or "")[:10])
+                span = (d1 - d0).days + 1
+                if span > 0:
+                    days_covered = span
+            except Exception:
+                pass
 
         # ── Panel cuantitativo (Bloque Q) ──────────────────────────────
         # by_round / by_category se calculan SOBRE EL CORPUS CONSOLIDADO
@@ -494,7 +510,7 @@ class PEIRSEliteReport:
             "by_round": by_round,
             "by_category": by_category,
             "consolidated_total": consolidated_total,
-            "days_covered": len(days),
+            "days_covered": days_covered,
             "alerts_dispatched": bundle.alerts_dispatched,
         }
 
