@@ -499,7 +499,7 @@ def test_milestones_and_emb_event_grouping():
     assert "Hitos del ciclo electoral 2026" in n
     assert "Primera vuelta" in n and "Keiko Fujimori" in n
     assert "Segunda vuelta" in n
-    assert "Escrutinio en curso" in n and "1.303" in n
+    assert "Escrutinio finalizado" in n and "49.641" in n
     # Bloque 3 — evento EMB agrupador + sus señales debajo
     assert "Crisis institucional de la ONPE" in n
     assert "Corvetto" in n          # las 6 señales siguen presentes, agrupadas
@@ -537,7 +537,8 @@ def test_runoff_chapter_none_observation_returns_none():
 
 def test_runoff_chapter_is_factual_record_both_rounds():
     """El capítulo es el registro factual de AMBAS vueltas: 1ª (resultados),
-    fase entre vueltas (observación) y 2ª (provisional, sin ganador) + STAE."""
+    fase entre vueltas (observación) y 2ª (cómputo final al 100% el 29-jun, SIN
+    proclamación — la del JNE es el 15-jul) + STAE."""
     from agents.elite_report.country_adapters import get_adapter
     from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
 
@@ -548,11 +549,14 @@ def test_runoff_chapter_is_factual_record_both_rounds():
     assert "Primera vuelta" in narrative
     assert "Keiko Fujimori" in narrative and "Roberto Sánchez" in narrative
     assert "17.19" in narrative
-    # 2ª vuelta — provisional, SIN ganador proclamado
+    # 2ª vuelta — cómputo FINAL al 100%, SIN ganador proclamado (proclamación 15-jul)
     assert "Segunda vuelta" in narrative
-    assert "provisional" in narrative.lower()
     assert "Sin ganador proclamado" in narrative
-    assert "50.004" in narrative                      # % provisional 2ª vuelta (corte 98.3%)
+    assert "50.135" in narrative                      # % final 2ª vuelta (cómputo 100%)
+    assert "49.641" in narrative                      # margen final
+    assert "2026-06-29" in narrative                  # fecha de finalización del escrutinio
+    assert "2026-07-15" in narrative                  # proclamación oficial del JNE pendiente
+    assert "Implicancia de la demora" in narrative    # comentario sobre la demora
     # STAE — corrección factual (no se afirma buen funcionamiento)
     assert "STAE" in narrative
     assert "sin fallas" not in narrative.lower()
@@ -1085,18 +1089,24 @@ def test_llm_guard_flags_unsupported_numbers():
     assert "1969" not in flagged                           # año — no se marca
 
 
-def test_uncertainty_rendered_in_synthesis_and_risk():
-    """P0.1: el resultado provisional se marca estadísticamente indeterminado."""
+def test_final_count_pending_proclamation_rendered():
+    """Cómputo final al 100% (29-jun) con virtual ganadora pero SIN proclamación
+    oficial (JNE el 15-jul): el capítulo y la síntesis lo reflejan sin declarar
+    presidenta electa, e incluyen el comentario sobre la demora."""
     from agents.elite_report.country_adapters import get_adapter
     from agents.elite_report.runoff_chapter import build_runoff_observation_chapter
     from agents.elite_report.declaration_chapter import build_declaration_narrative
     from modules.peru_data import PERU_VDEM_STATIC
     runoff = get_adapter("PER").runoff_observation([])
     n = build_runoff_observation_chapter(runoff, lang="es").narrative
-    assert "estadísticamente indeterminado" in n.lower()
+    assert "Sin ganador proclamado" in n
+    assert "2026-07-15" in n                          # proclamación pendiente
+    assert "Implicancia de la demora" in n            # comentario sobre la demora
+    assert "no declara presidenta electa" in n.lower()  # negación explícita, no se anticipa
     syn = build_declaration_narrative(runoff, {"total": 10, "critical": 1, "high": 2},
                                       PERU_VDEM_STATIC.get("emb_series"), lang="es")
-    assert "indeterminado" in syn.lower()
+    assert "no proclama" in syn.lower() or "sin proclamación" in syn.lower()
+    assert "49.641" in syn                            # margen final
 
 
 def test_appendix_a_has_version_and_limits():
@@ -1129,8 +1139,8 @@ def test_deterministic_declaration_prologue_and_synthesis():
     assert "Quiénes somos" in md and "Síntesis ejecutiva" in md
     assert "monitoreó" in md and "monitoreo" in md.lower()
     assert "1.922" in md or "1922" in md            # corpus (volumen)
-    assert "Sin proclamación".lower() in md.lower() or "no ha proclamado" in md
-    assert "~1.303 votos" in md                      # margen real
+    assert "sin proclamación" in md.lower() or "no proclama" in md.lower()
+    assert "~49.641 votos" in md                      # margen final (cómputo 100%)
     # V-Dem real, NO el inventado 1.31/2025
     assert "2,40" in md and "0,96" in md
     assert "1.31" not in md and "2025" not in md

@@ -443,53 +443,57 @@ PERU_RUNOFF_2026 = {
     # en vivo). Fuente primaria: ONPE; secundarias: Infobae / Gestión / El Comercio.
     "second_round_results": {
         "election_date": "2026-06-07",
-        "status": "EN_ESCRUTINIO_SIN_PROCLAMACION",
-        "as_of": "2026-06-12",
-        "provisional": True,
-        "actas_processed_pct": 98.3,
-        # Orden = liderazgo marginal en el corte 98.3% (21:58). NO implica
-        # ganador: la diferencia (~1.303 votos) está dentro del ruido del conteo
-        # y el liderazgo se invirtió respecto de cortes previos (Sánchez lideraba
-        # al 97.9%). Empate técnico sin proclamación.
+        "status": "COMPUTO_FINAL_100PCT_SIN_PROCLAMACION",
+        "as_of": "2026-06-29",
+        "provisional": False,  # cómputo ONPE al 100%; resta solo la proclamación del JNE
+        "actas_processed_pct": 100.0,
+        "actas_processed": 92_766,
+        "actas_total": 92_766,
+        # Fecha/hora de finalización del escrutinio (último corte publicado en la
+        # web de ONPE el 29-jun; 05:10:26 p.m. hora de Perú, UTC-5).
+        "scrutiny_finalized_at": "2026-06-29T17:10:26-05:00",
+        "scrutiny_finalized_note": "ONPE alcanzó el 100% de actas procesadas (92.766/92.766) el 29-jun-2026, 22 días después de la jornada (7-jun). Cortes del día: 14:42 (100%), 15:02; último refresh de la página 17:10:26.",
+        # Orden = resultado del cómputo final al 100%. Fujimori supera a Sánchez
+        # por 49.641 votos (~0.27 pp): resultado extremadamente ajustado pero ya
+        # NO indeterminado a nivel de cómputo. Falta la proclamación del JNE.
         "candidates": [
             {"candidate_name": "Keiko Fujimori", "party": "Fuerza Popular",
-             "party_id": "fp", "pct_valid": 50.004, "votes": 9_036_046},
+             "party_id": "fp", "pct_valid": 50.135, "votes": 9_223_396},
             {"candidate_name": "Roberto Sánchez Palomino", "party": "Juntos por el Perú",
-             "party_id": "jpp", "pct_valid": 49.996, "votes": 9_034_743},
+             "party_id": "jpp", "pct_valid": 49.865, "votes": 9_173_755},
         ],
-        "margin_votes_approx": 1_303,
-        "margin_pct_approx": 0.008,
-        # Capa de incertidumbre estadística: el margen es MENOR que el volumen de
-        # votos aún en juego (actas pendientes + observadas en revisión). El
-        # resultado es estadísticamente indeterminado hasta el cómputo final.
-        "uncertainty": {
-            "actas_pending_pct": 1.7,
-            "actas_in_jee_review_approx": 1_615,
-            "indeterminate": True,
-            "note": "Las actas pendientes (~1,7%) y las ~1.615 en revisión en JEE involucran un volumen de votos muy superior al margen (~1.303). El resultado es estadísticamente INDETERMINADO hasta el cómputo final y la resolución de impugnaciones.",
-        },
-        "valid_votes": 18_070_789,
-        "blank_null_abs": 1_263_538,
+        "margin_votes_approx": 49_641,
+        "margin_pct_approx": 0.27,
+        "valid_votes": 18_397_151,  # suma de votos válidos de ambos candidatos al 100%
+        # Participación/blancos/nulos: corresponden al corte 98.3% — pendiente el
+        # desglose oficial de ONPE al 100% (ver audit_note).
         "turnout_pct": 70.8,
-        "non_voters": 7_991_105,
-        "registered_voters_mm": 27.3,
+        "blank_null_abs": 1_263_538,
         "blank_pct": 0.6,
         "null_pct": 5.93,
+        "non_voters": 7_991_105,
+        "registered_voters_mm": 27.3,
+        # Durante el escrutinio el liderazgo se invirtió: Sánchez lideraba al
+        # 97.9%; Fujimori pasó adelante desde el 98.3% y cerró el 100% arriba.
         "lead_flipped": True,
         "proclamation": {
             "proclaimed": False,
             "winner": None,
-            "note": "El JNE no ha proclamado ganador. El liderazgo marginal se invirtió entre cómputos sucesivos (Sánchez al 97.9%, Fujimori al 98.3%), con una diferencia de ~1.303 votos. Persisten actas observadas en revisión en JEE; el presidente del JNE, Roberto Burneo, estimó que el resultado se conocería «casi un mes después» del 7-jun.",
+            "virtual_winner": "Keiko Fujimori",  # virtual ganadora por cómputo ONPE al 100%; NO proclamada
+            "scheduled_date": "2026-07-15",
+            "note": "El cómputo de ONPE cerró al 100% el 29-jun-2026 con Keiko Fujimori como virtual ganadora por 49.641 votos. La proclamación oficial y entrega de credenciales del JNE está fijada para el 15-jul-2026 (anuncio del presidente del JNE, Roberto Burneo; vocería JNE: «a mediados de julio»). Hasta la proclamación oficial el informe NO declara presidenta electa.",
         },
-        "source": "ONPE — Presentación de Resultados, Segunda Vuelta EG 2026",
-        "source_url": "https://resultadosegundavuelta.onpe.gob.pe/",
+        # Comentario sobre la implicancia de la demora del cómputo y la proclamación.
+        "delay_implication": "La demora del cómputo final (22 días: 7→29-jun) y la postergación de la proclamación (~5 semanas, al 15-jul) son atípicas y reflejan: (a) un margen extremadamente estrecho (0.27 pp, 49.641 votos) que obligó a revisar la totalidad de actas observadas antes de cerrar; (b) la crisis de credibilidad e independencia de ONPE arrastrada desde la 1ª vuelta (denuncias penales a Piero Corvetto, 270 informes/600 observaciones de la Contraloría); (c) un patrón de alta litigiosidad comparable al balotaje 2021 (Castillo–Fujimori, ~44.000 votos, proclamación a las ~6 semanas). La prolongación de la incertidumbre erosiona la confianza pública en el resultado y amplifica el riesgo de narrativas de fraude post-electorales.",
+        "source": "ONPE — Presentación de Resultados, Segunda Vuelta EG 2026 (100% de actas, 29-jun-2026)",
+        "source_url": "https://resultadosegundavuelta.onpe.gob.pe/main/resumen",
         "sources_secondary": [
-            "https://elcomercio.pe/politica/elecciones/resultados-segunda-vuelta-elecciones-peru-2026-en-vivo-conteo-onpe-flash-electoral-y-quien-gana-entre-keiko-fujimori-y-roberto-sanchez-hoy-7-de-junio-noticia/",
-            "https://www.infobae.com/peru/2026/06/07/resultados-onpe-en-vivo-conteo-oficial-de-votos-de-keiko-fujimori-y-roberto-sanchez-en-la-segunda-vuelta-de-elecciones-2026/",
-            "https://gestion.pe/mix/respuestas/quien-gano-las-elecciones-generales-2026-en-peru-en-vivo-keiko-fujimori-o-roberto-sanchez-resultados-de-la-onpe-en-directo-segunda-vuelta-nnda-nnrt-noticia/",
+            "https://elcomercio.pe/politica/elecciones/resultados-onpe-en-vivo-segunda-vuelta-presidencial-keiko-fujimori-mantiene-ventaja-sobre-roberto-sanchez-presidencia-del-peru-lbposting-noticia/",
+            "https://elcomercio.pe/politica/elecciones/cual-es-la-cantidad-de-votos-que-separa-a-keiko-fujimori-y-roberto-sanchez-segun-ultimos-resultados-onpe-de-la-segunda-vuelta-elecciones-peru-2026-noticia/",
+            "https://elperuano.pe/noticia/297556-resultados-onpe-al-97914-roberto-sanchez-obtiene-50027-y-keiko-fujimori-49973",
         ],
-        "audit_status": "PROVISIONAL_VERIFIED_SECONDARY",
-        "audit_note": "Conteo en curso al corte 98.3% de actas (21:58), fuente El Comercio/ONPE. Diferencia ~1.303 votos (~0.008 pp); el liderazgo marginal se invirtió entre cortes (Sánchez 50.02% al 97.9% → Fujimori 50.004% al 98.3%), lo que confirma un empate técnico dentro del ruido del escrutinio. Participación 2ª vuelta 70.8%; válidos 18.070.789; blancos+nulos 1.263.538. SIN ganador proclamado — el informe NO debe declarar presidente electo hasta la proclamación oficial del JNE.",
+        "audit_status": "FINAL_COMPUTO_VERIFIED_SECONDARY",
+        "audit_note": "Cómputo ONPE al 100% (92.766/92.766 actas) al 29-jun-2026: Keiko Fujimori 50.135% (9.223.396), Roberto Sánchez 49.865% (9.173.755); diferencia 49.641 votos (0.27 pp); válidos 18.397.151. Cifras cruzadas con El Comercio y El Peruano (el sitio ONPE es una SPA no parseable por fetch directo). Participación/blancos/nulos siguen del corte 98.3% (pendiente desglose oficial al 100%). PROCLAMACIÓN OFICIAL DEL JNE: 15-jul-2026 — hasta entonces PROHIBIDO declarar presidenta electa; usar 'virtual ganadora según cómputo ONPE al 100%'.",
     },
     # ── Sistema tecnológico STAE — corrección factual ────────────────────
     # El STAE (Sistema/Solución Tecnológica de Apoyo al Escrutinio, con IA) NO

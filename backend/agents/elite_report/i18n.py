@@ -283,9 +283,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "O monitoramento de ambos os turnos identifica uma convergência de fatores que tensiona a legitimidade do resultado:",
     },
     "declaration.pattern_result": {
-        "es": "- **Resultado al filo, sin proclamación.** En la segunda vuelta, el escrutinio oficial de la ONPE arrojó un empate técnico: al corte del {actas} % de actas, {a} ({ap}) y {b} ({bp}) se separaban por **~{margin} votos (≈{mp} pp)**, con el liderazgo marginal alternando entre cómputos. El JNE no ha proclamado ganador (ONPE; El Comercio, 2026).",
-        "en": "- **Razor-thin result, not proclaimed.** In the second round, ONPE's official count produced a technical tie: at the {actas} % tally-sheet cut, {a} ({ap}) and {b} ({bp}) were separated by **~{margin} votes (≈{mp} pp)**, with the marginal lead alternating between counts. The JNE has not proclaimed a winner (ONPE; El Comercio, 2026).",
-        "pt": "- **Resultado no limite, sem proclamação.** No segundo turno, a apuração oficial da ONPE produziu um empate técnico: no corte de {actas} % das atas, {a} ({ap}) e {b} ({bp}) separavam-se por **~{margin} votos (≈{mp} pp)**, com a liderança marginal alternando entre apurações. O JNE não proclamou vencedor (ONPE; El Comercio, 2026).",
+        "es": "- **Resultado al filo, sin proclamación oficial.** En la segunda vuelta, el cómputo oficial de la ONPE se cerró al {actas} % de actas el 29-jun-2026: {a} ({ap}) superó a {b} ({bp}) por apenas **~{margin} votos (≈{mp} pp)**, uno de los balotajes más estrechos de la historia peruana reciente. El JNE aún no proclama ganador: la proclamación oficial está fijada para el 15-jul-2026 (ONPE; El Comercio, 2026).",
+        "en": "- **Razor-thin result, not yet proclaimed.** In the second round, ONPE's official count closed at {actas} % of tally sheets on 29 Jun 2026: {a} ({ap}) edged {b} ({bp}) by just **~{margin} votes (≈{mp} pp)**, one of the closest runoffs in recent Peruvian history. The JNE has not yet proclaimed a winner: the official proclamation is set for 15 Jul 2026 (ONPE; El Comercio, 2026).",
+        "pt": "- **Resultado no limite, sem proclamação oficial.** No segundo turno, a apuração oficial da ONPE encerrou a {actas} % das atas em 29-jun-2026: {a} ({ap}) superou {b} ({bp}) por apenas **~{margin} votos (≈{mp} pp)**, um dos segundos turnos mais estreitos da história peruana recente. O JNE ainda não proclamou vencedor: a proclamação oficial está marcada para 15-jul-2026 (ONPE; El Comercio, 2026).",
     },
     "declaration.uncertainty": {
         "es": "- **Resultado estadísticamente indeterminado.** El margen (~{margin} votos) es menor que el volumen de votos en actas pendientes (~{pending}% del total) y ~{jee} actas en revisión en JEE: el desenlace no está definido por el cómputo actual.",
@@ -293,9 +293,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "- **Resultado estatisticamente indeterminado.** A margem (~{margin} votos) é menor que o volume de votos em atas pendentes (~{pending}% do total) e ~{jee} atas em revisão no JEE: o desfecho não está definido pela apuração atual.",
     },
     "declaration.pattern_count": {
-        "es": "- **Escrutinio prolongado.** El presidente del JNE estimó que el resultado se conocería alrededor de un mes después de la votación, por las actas observadas en revisión en los JEE (JNE, 2026).",
-        "en": "- **Protracted count.** The JNE president estimated the result would be known about a month after the vote, owing to observed tally sheets under JEE review (JNE, 2026).",
-        "pt": "- **Apuração prolongada.** O presidente do JNE estimou que o resultado seria conhecido cerca de um mês após a votação, devido às atas observadas em revisão nos JEE (JNE, 2026).",
+        "es": "- **Escrutinio prolongado.** El cómputo final al 100 % recién se alcanzó el 29-jun-2026, 22 días después de la votación, y la proclamación oficial del JNE quedó fijada para el 15-jul — una demora atípica que refleja el margen mínimo y las actas observadas en revisión en los JEE (JNE/ONPE, 2026).",
+        "en": "- **Protracted count.** The 100 % final count was only reached on 29 Jun 2026, 22 days after the vote, and the JNE's official proclamation was set for 15 Jul — an atypical delay reflecting the razor-thin margin and observed tally sheets under JEE review (JNE/ONPE, 2026).",
+        "pt": "- **Apuração prolongada.** A apuração final a 100 % só foi alcançada em 29-jun-2026, 22 dias após a votação, e a proclamação oficial do JNE foi marcada para 15-jul — um atraso atípico que reflete a margem mínima e as atas observadas em revisão nos JEE (JNE/ONPE, 2026).",
     },
     "declaration.pattern_emb": {
         "es": "- **Órgano electoral bajo cuestionamiento.** La primera vuelta dejó a la ONPE en crisis institucional —su titular denunciado penalmente, pedido de separación cautelar del Fiscal de la Nación y observaciones de la Contraloría—, documentada con fuentes primarias (véase Cap. 6 y Anexo C).",
@@ -475,22 +475,32 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "runoff_obs.tbl.votes": {"es": "Votos", "en": "Votes", "pt": "Votos"},
     "runoff_obs.tbl.result": {"es": "Resultado", "en": "Result", "pt": "Resultado"},
     "runoff_obs.tbl.advances": {"es": "Pasa al balotaje", "en": "Advances", "pt": "Avança ao 2º turno"},
-    "runoff_obs.tbl.pct_prov": {"es": "% válidos (prov.)", "en": "% valid (prov.)", "pt": "% válidos (prov.)"},
-    "runoff_obs.tbl.votes_prov": {"es": "Votos (prov.)", "en": "Votes (prov.)", "pt": "Votos (prov.)"},
+    "runoff_obs.tbl.pct_prov": {"es": "% válidos", "en": "% valid", "pt": "% válidos"},
+    "runoff_obs.tbl.votes_prov": {"es": "Votos", "en": "Votes", "pt": "Votos"},
     "runoff_obs.between_header": {
         "es": "Fase entre vueltas — monitoreo del proceso (13 abr – 7 jun 2026)",
         "en": "Between rounds — process monitoring (13 Apr – 7 Jun 2026)",
         "pt": "Entre turnos — monitoramento do processo (13 abr – 7 jun 2026)",
     },
     "runoff_obs.second_round_header": {
-        "es": "Segunda vuelta — resultado provisional (7 de junio de 2026)",
-        "en": "Second round — provisional result (7 June 2026)",
-        "pt": "Segundo turno — resultado provisório (7 de junho de 2026)",
+        "es": "Segunda vuelta — cómputo final ONPE al 100% (jornada del 7 de junio de 2026)",
+        "en": "Second round — final ONPE count at 100% (election day 7 June 2026)",
+        "pt": "Segundo turno — apuração final da ONPE a 100% (jornada de 7 de junho de 2026)",
     },
     "runoff_obs.second_round_status": {
-        "es": "Escrutinio oficial de ONPE en curso al {as_of} ({actas}% de actas procesadas). Resultado **provisional**, sujeto a cambios:",
-        "en": "Official ONPE count in progress as of {as_of} ({actas}% of tally sheets processed). **Provisional** result, subject to change:",
-        "pt": "Apuração oficial da ONPE em curso em {as_of} ({actas}% das atas processadas). Resultado **provisório**, sujeito a alterações:",
+        "es": "Cómputo oficial de ONPE **finalizado al {actas}% de actas** el {as_of}. Resultado del cómputo final, **pendiente de proclamación oficial del JNE**:",
+        "en": "Official ONPE count **completed at {actas}% of tally sheets** on {as_of}. Final count result, **pending official JNE proclamation**:",
+        "pt": "Apuração oficial da ONPE **concluída a {actas}% das atas** em {as_of}. Resultado da apuração final, **pendente de proclamação oficial do JNE**:",
+    },
+    "runoff_obs.second_round_finalized": {
+        "es": "**Escrutinio finalizado:** {note}",
+        "en": "**Count finalized:** {note}",
+        "pt": "**Apuração concluída:** {note}",
+    },
+    "runoff_obs.second_round_delay": {
+        "es": "**Implicancia de la demora.** {note}",
+        "en": "**Implication of the delay.** {note}",
+        "pt": "**Implicação do atraso.** {note}",
     },
     "runoff_obs.candidate_line_prov": {
         "es": "- **{name}** ({party}) — {pct}% ({votes} votos) · provisional",
@@ -566,9 +576,9 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "- **{date}** — Segundo turno.",
     },
     "runoff_obs.milestone_count": {
-        "es": "- **{as_of}** — Escrutinio en curso ({actas} % de actas): empate técnico (~{margin} votos), sin proclamación del JNE.",
-        "en": "- **{as_of}** — Count in progress ({actas} % of tally sheets): technical tie (~{margin} votes), no JNE proclamation.",
-        "pt": "- **{as_of}** — Apuração em curso ({actas} % das atas): empate técnico (~{margin} votos), sem proclamação do JNE.",
+        "es": "- **{as_of}** — Escrutinio finalizado al {actas} % de actas: {winner} virtual ganadora por ~{margin} votos; proclamación oficial del JNE pendiente ({procl_date}).",
+        "en": "- **{as_of}** — Count completed at {actas} % of tally sheets: {winner} virtual winner by ~{margin} votes; official JNE proclamation pending ({procl_date}).",
+        "pt": "- **{as_of}** — Apuração concluída a {actas} % das atas: {winner} virtual vencedora por ~{margin} votos; proclamação oficial do JNE pendente ({procl_date}).",
     },
     "runoff_obs.observation_intro": {
         "es": "Durante la fase entre vueltas (13 abr – 7 jun 2026) el monitoreo se organizó en 9 ejes del proceso. A continuación, los ejes con hechos documentados; al cierre, la cobertura del resto.",
@@ -615,14 +625,14 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Para além de quem seja proclamado, o monitoramento PEIRS identifica uma convergência de fatores que tensiona a legitimidade do resultado do 2º turno:",
     },
     "runoff_obs.risk_margin": {
-        "es": "**Margen mínimo.** El resultado provisional se define por ~{mp} puntos porcentuales (~{mv} votos), dentro del universo de actas aún en revisión.",
-        "en": "**Razor-thin margin.** The provisional result is decided by ~{mp} percentage points (~{mv} votes), within the universe of tally sheets still under review.",
-        "pt": "**Margem mínima.** O resultado provisório é definido por ~{mp} pontos percentuais (~{mv} votos), dentro do universo de atas ainda em revisão.",
+        "es": "**Margen mínimo.** El resultado se definió por apenas ~{mp} puntos porcentuales (~{mv} votos) sobre el cómputo final al 100 % — uno de los más estrechos de la historia electoral peruana reciente.",
+        "en": "**Razor-thin margin.** The result was decided by just ~{mp} percentage points (~{mv} votes) on the 100 % final count — one of the closest in recent Peruvian electoral history.",
+        "pt": "**Margem mínima.** O resultado foi definido por apenas ~{mp} pontos percentuais (~{mv} votos) na apuração final a 100 % — um dos mais estreitos da história eleitoral peruana recente.",
     },
     "runoff_obs.risk_unproclaimed": {
-        "es": "**Resultado no proclamado.** El JNE no ha proclamado ganador; persisten actas observadas en revisión en JEE.",
-        "en": "**Result not proclaimed.** The JNE has not proclaimed a winner; observed tally sheets remain under JEE review.",
-        "pt": "**Resultado não proclamado.** O JNE não proclamou vencedor; persistem atas observadas em revisão no JEE.",
+        "es": "**Resultado aún no proclamado.** El cómputo de ONPE cerró al 100 % el 29-jun-2026, pero la proclamación oficial del JNE recién está fijada para el 15-jul-2026, más de cinco semanas después de la jornada.",
+        "en": "**Result not yet proclaimed.** ONPE's count closed at 100 % on 29 Jun 2026, but the JNE's official proclamation is only set for 15 Jul 2026, more than five weeks after election day.",
+        "pt": "**Resultado ainda não proclamado.** A apuração da ONPE encerrou a 100 % em 29-jun-2026, mas a proclamação oficial do JNE só está marcada para 15-jul-2026, mais de cinco semanas após a jornada.",
     },
     "runoff_obs.risk_emb": {
         "es": "**Órgano electoral cuestionado.** La ONPE atravesó la 1ª vuelta con su titular denunciado penalmente y pedidos de separación cautelar ({n} señales documentadas más arriba).",

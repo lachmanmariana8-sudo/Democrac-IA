@@ -251,10 +251,18 @@ def _build_second_round_section(runoff: Dict[str, Any], lang: str) -> List[str]:
                 name=c.get("candidate_name", "—"), party=c.get("party", "—"),
                 pct=c.get("pct_valid", "—"), votes=_fmt_int(c.get("votes"), lang)))
         parts.append("\n".join(rows))
+    # Fecha/hora de finalización del escrutinio (cómputo al 100%).
+    fin_note = sr.get("scrutiny_finalized_note")
+    if fin_note:
+        parts.append(t(lang, "runoff_obs.second_round_finalized").format(note=fin_note))
     procl = sr.get("proclamation") or {}
     if not procl.get("proclaimed"):
         parts.append(t(lang, "runoff_obs.second_round_pending").format(
             note=procl.get("note", "")))
+    # Comentario sobre la implicancia de la demora del cómputo / proclamación.
+    delay = sr.get("delay_implication")
+    if delay:
+        parts.append(t(lang, "runoff_obs.second_round_delay").format(note=delay))
     src_url = sr.get("source_url")
     if src_url:
         parts.append("> Fuente: [" + sr.get("source", "ONPE") + "](" + src_url + ")")
@@ -359,10 +367,13 @@ def _build_milestones_section(runoff: Dict[str, Any], lang: str) -> List[str]:
         date=runoff.get("runoff_date", "—")))
     sr = runoff.get("second_round_results")
     if isinstance(sr, dict):
+        _procl = sr.get("proclamation") or {}
         lines.append(t(lang, "runoff_obs.milestone_count").format(
             as_of=sr.get("as_of", "—"),
             actas=sr.get("actas_processed_pct", "—"),
-            margin=_fmt_int(sr.get("margin_votes_approx"), lang)))
+            margin=_fmt_int(sr.get("margin_votes_approx"), lang),
+            winner=_procl.get("virtual_winner") or "—",
+            procl_date=_procl.get("scheduled_date", "—")))
     parts.append("\n".join(lines))
     return parts
 

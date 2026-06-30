@@ -210,8 +210,9 @@ def test_named_constants_documented_values():
 # ── Bloque C: override de proclamación + detección de cierre ──────────────────
 
 def test_proclamation_override_flips_proclaimed_and_indeterminate():
-    """apply_proclamation_override fija proclaimed=True + winner, apaga
-    indeterminate, status='proclaimed', y NO muta el dict fuente."""
+    """apply_proclamation_override fija proclaimed=True + winner,
+    status='proclaimed', y NO muta el dict fuente. (El cómputo ya es final al
+    100%; el override modela la proclamación oficial del JNE del 15-jul.)"""
     ov = {
         "winner": "Candidato X", "winner_pct": 50.31, "winner_votes": 9050000,
         "source": "JNE", "as_of": "2026-07-10", "note": "El JNE proclamó.",
@@ -221,13 +222,11 @@ def test_proclamation_override_flips_proclaimed_and_indeterminate():
     srr = merged["second_round_results"]
     assert srr["proclamation"]["proclaimed"] is True
     assert srr["proclamation"]["winner"] == "Candidato X"
-    assert srr["uncertainty"]["indeterminate"] is False
     assert srr["status"] == "proclaimed"
     assert srr["official_result"]["winner_pct"] == 50.31
     assert merged["dispute_resolution_tracker"]["resolved"] == 12
     # fuente intacta
     assert PERU_RUNOFF_2026["second_round_results"]["proclamation"]["proclaimed"] is False
-    assert PERU_RUNOFF_2026["second_round_results"]["uncertainty"]["indeterminate"] is True
 
 
 def test_proclamation_override_none_is_noop():
