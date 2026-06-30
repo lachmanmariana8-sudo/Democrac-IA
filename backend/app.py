@@ -8101,13 +8101,26 @@ async def get_elite_report_printable(report_id: str):
             detail=f"HTML no encontrado para {report_id}. Regenerá el informe.",
         )
 
-    # Inyectar script de auto-print justo antes de </body>. Se dispara con
-    # un pequeño delay para que webfonts y SVGs terminen de cargar.
+    # Inyectar script de auto-print justo antes de </body>. Esperamos a
+    # document.fonts.ready (no un timeout fijo) para que las webfonts y el
+    # texto de los SVG estén renderizados ANTES de imprimir. El timeout fijo
+    # de 600ms disparaba print() durante el font-swap → 'l' con grosor raro y
+    # gráficos sin texto. Fallback de 3s por si fonts.ready nunca resuelve.
     print_script = (
         "<script>"
-        "window.addEventListener('load', function() {"
-        "  setTimeout(function() { window.print(); }, 600);"
-        "});"
+        "(function(){"
+        "  var fired=false;"
+        "  function go(){ if(fired) return; fired=true;"
+        "    setTimeout(function(){ try{ window.print(); }catch(e){} }, 150); }"
+        "  function ready(){"
+        "    if (document.fonts && document.fonts.ready) {"
+        "      document.fonts.ready.then(go);"
+        "      setTimeout(go, 3000);"
+        "    } else { setTimeout(go, 1200); }"
+        "  }"
+        "  if (document.readyState === 'complete') ready();"
+        "  else window.addEventListener('load', ready);"
+        "})();"
         "</script>"
     )
     if "</body>" in html_content:

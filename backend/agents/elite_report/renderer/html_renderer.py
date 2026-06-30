@@ -49,18 +49,31 @@ ELITE_CSS = """
   --info: #1976d2;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500;700&display=swap');
+/* display=block: el navegador espera a la webfont (hasta ~3s) en vez de
+   pintar primero un fallback. Evita el "flash" de fuente de sistema que en
+   impresión/PDF dejaba la 'l' minúscula con grosor distinto al sustituir. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500;700&display=block');
 
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0; padding: 0;
-  font-family: 'DM Sans', -apple-system, sans-serif;
+  /* Fallback cross-platform (system-ui/Segoe UI/Roboto) para que, si la
+     webfont no carga, la sustitución sea consistente y no afecte la 'l'. */
+  font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   font-size: 13px;
   line-height: 1.65;
   color: var(--text);
   background: var(--bg);
   overflow-x: hidden;  /* evita scroll horizontal accidental */
+  /* Ligaduras desactivadas + smoothing uniforme: el bug de la 'l' en negrita
+     al imprimir venía de ligaduras/anti-aliasing inconsistente entre la
+     webfont y el fallback durante el swap. */
+  font-feature-settings: "liga" 0, "clig" 0;
+  font-variant-ligatures: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 article.elite-report {
