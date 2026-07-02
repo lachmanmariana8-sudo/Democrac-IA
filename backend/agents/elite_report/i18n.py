@@ -1523,6 +1523,10 @@ _CATEGORY_LABELS: dict[str, dict[str, str]] = {
     "digital":             {"es": "Entorno digital",        "en": "Digital environment", "pt": "Ambiente digital"},
     "judicial":            {"es": "Judicial",               "en": "Judicial",            "pt": "Judicial"},
     "security":            {"es": "Seguridad/violencia",    "en": "Security/violence",   "pt": "Segurança/violência"},
+    "media_restriction":   {"es": "Restricción mediática",  "en": "Media restriction",   "pt": "Restrição à mídia"},
+    "ballot_tampering":    {"es": "Manipulación de cédulas/actas", "en": "Ballot tampering", "pt": "Manipulação de cédulas/atas"},
+    "accessibility":       {"es": "Accesibilidad",          "en": "Accessibility",       "pt": "Acessibilidade"},
+    "voter_intimidation":  {"es": "Intimidación al votante", "en": "Voter intimidation",  "pt": "Intimidação do eleitor"},
     "other":               {"es": "Otros",                  "en": "Other",               "pt": "Outros"},
 }
 

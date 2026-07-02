@@ -1109,8 +1109,9 @@ class PEIRSEliteReport:
             elif ch.chapter_id == "sistema_electoral":
                 ch.visualizations.append(_vs("flow_chart_voting", flow_voting_data))
                 ch.visualizations.append(_vs("network_institutions", network_inst_data))
-            elif ch.chapter_id == "fase_pre_electoral" and phase_data["phases"]:
-                ch.visualizations.append(_vs("phase_timeline", phase_data))
+            # phase_timeline ("Distribución de hallazgos por fase — barras
+            # apiladas por severidad") QUITADO: duplica el cuadro por fase y
+            # severidad del panel cuantitativo (tabla HTML), más legible.
             elif ch.chapter_id == "jornada_electoral":
                 if hourly_data["events"]:
                     ch.visualizations.append(_vs("hourly_timeline", hourly_data))

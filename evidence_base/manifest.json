@@ -1,16 +1,16 @@
 {
   "country_code": "PER",
-  "built_at": "2026-07-02T02:09:58Z",
+  "built_at": "2026-07-02T12:23:39Z",
   "raw_total": 4024,
-  "dedup_total": 2113,
+  "dedup_total": 2125,
   "by_round": {
     "1ª vuelta": {
       "raw": 1923,
-      "dedup": 836
+      "dedup": 843
     },
     "2ª vuelta": {
       "raw": 2101,
-      "dedup": 1277
+      "dedup": 1282
     }
   },
   "by_category": [
@@ -21,12 +21,12 @@
     },
     {
       "category": "logistics",
-      "count": 316,
+      "count": 319,
       "severity_max": "critical"
     },
     {
       "category": "counting",
-      "count": 268,
+      "count": 269,
       "severity_max": "critical"
     },
     {
@@ -36,22 +36,22 @@
     },
     {
       "category": "results",
-      "count": 251,
+      "count": 254,
       "severity_max": "critical"
     },
     {
       "category": "other",
-      "count": 164,
-      "severity_max": "critical"
+      "count": 162,
+      "severity_max": "high"
     },
     {
       "category": "campaign_violation",
-      "count": 140,
+      "count": 142,
       "severity_max": "high"
     },
     {
       "category": "fraud_allegation",
-      "count": 103,
+      "count": 110,
       "severity_max": "critical"
     },
     {
@@ -61,27 +61,27 @@
     },
     {
       "category": "irregular_procedure",
-      "count": 61,
-      "severity_max": "high"
+      "count": 59,
+      "severity_max": "critical"
     },
     {
       "category": "security",
-      "count": 30,
+      "count": 29,
       "severity_max": "high"
     },
     {
       "category": "digital",
-      "count": 22,
+      "count": 23,
       "severity_max": "critical"
     },
     {
       "category": "ballot_tampering",
-      "count": 18,
+      "count": 20,
       "severity_max": "critical"
     },
     {
       "category": "hate_speech",
-      "count": 14,
+      "count": 13,
       "severity_max": "critical"
     },
     {
@@ -95,30 +95,30 @@
       "severity_max": "high"
     },
     {
-      "category": "voter_suppression",
-      "count": 3,
-      "severity_max": "high"
-    },
-    {
       "category": "voter_intimidation",
       "count": 3,
       "severity_max": "medium"
+    },
+    {
+      "category": "voter_suppression",
+      "count": 2,
+      "severity_max": "high"
     }
   ],
   "by_category_round1": [
     {
       "category": "logistics",
-      "count": 229,
+      "count": 230,
       "severity_max": "critical"
     },
     {
       "category": "counting",
-      "count": 116,
+      "count": 115,
       "severity_max": "critical"
     },
     {
       "category": "legal",
-      "count": 113,
+      "count": 110,
       "severity_max": "critical"
     },
     {
@@ -128,43 +128,43 @@
     },
     {
       "category": "results",
-      "count": 74,
+      "count": 78,
       "severity_max": "critical"
     },
     {
       "category": "other",
-      "count": 67,
-      "severity_max": "critical"
+      "count": 66,
+      "severity_max": "high"
     },
     {
       "category": "fraud_allegation",
-      "count": 47,
+      "count": 52,
       "severity_max": "critical"
     },
     {
       "category": "irregular_procedure",
       "count": 31,
-      "severity_max": "high"
+      "severity_max": "critical"
     },
     {
       "category": "campaign_violation",
-      "count": 27,
+      "count": 29,
       "severity_max": "high"
     },
     {
       "category": "ballot_tampering",
-      "count": 16,
-      "severity_max": "critical"
-    },
-    {
-      "category": "hate_speech",
-      "count": 10,
+      "count": 18,
       "severity_max": "critical"
     },
     {
       "category": "security",
-      "count": 10,
+      "count": 9,
       "severity_max": "high"
+    },
+    {
+      "category": "hate_speech",
+      "count": 9,
+      "severity_max": "critical"
     },
     {
       "category": "accessibility",
@@ -173,12 +173,7 @@
     },
     {
       "category": "digital",
-      "count": 3,
-      "severity_max": "high"
-    },
-    {
-      "category": "voter_suppression",
-      "count": 3,
+      "count": 4,
       "severity_max": "high"
     },
     {
@@ -190,6 +185,11 @@
       "category": "media",
       "count": 2,
       "severity_max": "medium"
+    },
+    {
+      "category": "voter_suppression",
+      "count": 2,
+      "severity_max": "high"
     }
   ],
   "by_category_round2": [
@@ -200,17 +200,17 @@
     },
     {
       "category": "results",
-      "count": 177,
+      "count": 176,
       "severity_max": "critical"
     },
     {
       "category": "counting",
-      "count": 152,
+      "count": 154,
       "severity_max": "critical"
     },
     {
       "category": "legal",
-      "count": 144,
+      "count": 147,
       "severity_max": "high"
     },
     {
@@ -220,13 +220,13 @@
     },
     {
       "category": "other",
-      "count": 97,
+      "count": 96,
       "severity_max": "high"
     },
     {
       "category": "logistics",
-      "count": 87,
-      "severity_max": "high"
+      "count": 89,
+      "severity_max": "critical"
     },
     {
       "category": "media_restriction",
@@ -235,12 +235,12 @@
     },
     {
       "category": "fraud_allegation",
-      "count": 56,
+      "count": 58,
       "severity_max": "critical"
     },
     {
       "category": "irregular_procedure",
-      "count": 30,
+      "count": 28,
       "severity_max": "high"
     },
     {
@@ -274,17 +274,17 @@
       "severity_max": "info"
     }
   ],
-  "facts_with_source_url": 2113,
+  "facts_with_source_url": 2125,
   "pct_with_source_url": 100.0,
   "round_threshold": "2026-05-03",
   "files": {
     "PER_round1.jsonl": {
-      "facts": 836,
-      "sha256": "6e804a26e01c1366bab7045d8f1c6c4e6b33578758da3a538644b6a05f4e1ccb"
+      "facts": 843,
+      "sha256": "28a1781b0cb19184ab5759505939500e49329253df1cb746b34082e3def554e2"
     },
     "PER_round2.jsonl": {
-      "facts": 1277,
-      "sha256": "0c68951f03169faa49fa9cb61eda2cbc147e9de2f4770b8b24df91334573f988"
+      "facts": 1282,
+      "sha256": "a61d2053c827a3cacb37c6465b99c03f24ebcd6ce6fc87375c831eb9a0b7463a"
     }
   }
 }

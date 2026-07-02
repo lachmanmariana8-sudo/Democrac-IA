@@ -613,6 +613,35 @@ table.phase-sev-table tr.tbl-total td {
 .sev-dot.sev-low      { background: var(--low); }
 .sev-dot.sev-info     { background: var(--info); }
 
+/* Cuadro 'Indicadores internacionales de democracia' — apariencia nítida,
+   encabezado teal, números tabulares y celdas centradas salvo indicador/fuente. */
+table.datasets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 8px 0 4px;
+}
+table.datasets-table th {
+  background: var(--teal);
+  color: #fff;
+  padding: 7px 9px;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+table.datasets-table th:first-child,
+table.datasets-table th:last-child { text-align: left; }
+table.datasets-table td {
+  padding: 6px 9px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-dim);
+  font-variant-numeric: tabular-nums;
+}
+table.datasets-table tr:nth-child(even) td { background: var(--bg-soft); }
+
 /* Chips de FASE — diferencian cada temática por fase electoral con color. */
 .phase-chip {
   display: inline-block;
@@ -965,13 +994,33 @@ def render_html(
 </html>"""
 
 
+def _norm_prefix(text: str, n: int = 55) -> str:
+    """Prefijo normalizado (minúsculas, solo alfanumérico) para deduplicar
+    ejemplos casi idénticos (misma noticia con redacción/fecha levemente
+    distinta entre capturas)."""
+    low = "".join(ch for ch in (text or "").lower() if ch.isalnum() or ch == " ")
+    return " ".join(low.split())[:n]
+
+
 def _theme_examples(findings: Optional[List[Any]], category: str, k: int = 2) -> List[Any]:
-    """Hasta k hallazgos representativos de una categoría (mayor priority_score)."""
+    """Hasta k hallazgos representativos de una categoría (mayor priority_score),
+    SIN ejemplos casi duplicados: se descartan los que comparten prefijo
+    normalizado con uno ya elegido (misma noticia, redacción levemente distinta)."""
     if not findings:
         return []
     sub = [f for f in findings if (_finding_attr(f, "category", "") or "") == category]
     sub.sort(key=lambda f: (_finding_attr(f, "priority_score", 0) or 0), reverse=True)
-    return sub[:k]
+    out: List[Any] = []
+    seen: set = set()
+    for f in sub:
+        pref = _norm_prefix(str(_finding_attr(f, "finding", "") or ""))
+        if not pref or pref in seen:
+            continue
+        seen.add(pref)
+        out.append(f)
+        if len(out) >= k:
+            break
+    return out
 
 
 def _finding_source_link(f: Any) -> str:
@@ -1257,17 +1306,22 @@ def _render_datasets_overview(series_list: Optional[List[Any]], language: str = 
                         f"{sign}{delta:.2f} ({sign}{pct:.0f}%)</span>")
         except (TypeError, ValueError):
             pass
-        glyph = _TREND_GLYPH.get(getattr(s, "trend_direction", "stable"), "→")
+        _dir = getattr(s, "trend_direction", "stable")
+        glyph = _TREND_GLYPH.get(_dir, "→")
+        _gcolor = ("#c0392b" if _dir == "down" else "#1e8449" if _dir == "up"
+                   else "var(--text-muted)")
+        glyph_cell = (f"<span style='color:{_gcolor};font-size:15px;font-weight:700'>"
+                      f"{glyph}</span>")
         rows.append(
-            f"<tr><td>{_esc(getattr(s, 'indicator_label', ''))}</td>"
+            f"<tr><td style='text-align:left'>{_esc(getattr(s, 'indicator_label', ''))}</td>"
             f"<td><span style='color:var(--text-muted)'>{_esc(getattr(first, 'value', '—'))} "
             f"<small>({_esc(fy or '—')})</small></span></td>"
             f"<td><strong>{_esc(getattr(last, 'value', '—'))}</strong> "
             f"<small>({_esc(ly or '—')})</small></td>"
             f"<td>{var_cell}</td>"
-            f"<td>{glyph}</td>"
+            f"<td>{glyph_cell}</td>"
             f"<td style='font-size:10px'>{_esc(getattr(s, 'unit', ''))}</td>"
-            f"<td style='color:var(--text-muted);font-size:10px'>{_esc(getattr(s, 'source', ''))}</td></tr>")
+            f"<td style='color:var(--text-muted);font-size:10px;text-align:left'>{_esc(getattr(s, 'source', ''))}</td></tr>")
     if not rows:
         return ""
     head = (f"<th>{t(language, 'intl.col.indicator')}</th>"
@@ -1287,7 +1341,7 @@ def _render_datasets_overview(series_list: Optional[List[Any]], language: str = 
             f'<h2>{t(language, "intl.title")}</h2>'
             f'<p style="color:var(--text-muted);font-size:11px;margin-bottom:14px">'
             f'{t(language, "intl.intro")}</p>'
-            f'<table class="md-table"><thead><tr>{head}</tr></thead>'
+            f'<table class="datasets-table"><thead><tr>{head}</tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table>{footnote}</section>')
 
 

@@ -97,6 +97,15 @@ def consolidate_findingrefs(findings: List[Any], threshold: float = DEFAULT_THRE
     El representante es el de mayor priority_score/severidad."""
     if not findings:
         return []
+    # Determinismo: ordenar por clave ESTABLE (fecha, entry_id) antes de agrupar.
+    # NO por priority_score, que depende de `now` y hacía derivar el conteo
+    # consolidado ±2 entre corridas (el clustering greedy es sensible al orden).
+    # Una clave estable garantiza el MISMO universo consolidado en cada
+    # generación → coherencia perfecta informe ↔ manifest.
+    findings = sorted(
+        findings,
+        key=lambda f: ((getattr(f, "recorded_at", "") or ""),
+                       (getattr(f, "entry_id", "") or "")))
     groups = cluster_records(
         findings, text_of=lambda f: getattr(f, "finding", "") or "",
         date_of=lambda f: getattr(f, "recorded_at", "") or "", threshold=threshold)
@@ -104,7 +113,8 @@ def consolidate_findingrefs(findings: List[Any], threshold: float = DEFAULT_THRE
     for idxs in groups:
         group = [findings[i] for i in idxs]
         rep = max(group, key=lambda f: (getattr(f, "priority_score", 0) or 0,
-                                        _SEV_RANK.get((getattr(f, "severity", "") or "").lower(), 0)))
+                                        _SEV_RANK.get((getattr(f, "severity", "") or "").lower(), 0),
+                                        (getattr(f, "entry_id", "") or "")))
         sources: List[Dict[str, str]] = []
         seen = set()
         for f in group:

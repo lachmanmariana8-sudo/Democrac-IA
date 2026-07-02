@@ -60,7 +60,14 @@ def _load_raw(country: str) -> List[Dict[str, Any]]:
 
 def _consolidate(findings: List[Any]) -> List[Dict[str, Any]]:
     """Agrupa por (fecha + similitud) y devuelve un dict-hecho por grupo con
-    TODAS las fuentes y entry_ids fusionados. Mismo clustering que el informe."""
+    TODAS las fuentes y entry_ids fusionados. Mismo clustering DETERMINISTA que
+    el informe (idéntica clave estable de orden → mismo universo consolidado)."""
+    # Orden estable (fecha, entry_id) — idéntico a consolidate_findingrefs — para
+    # que build y el informe produzcan EXACTAMENTE los mismos clusters.
+    findings = sorted(
+        findings,
+        key=lambda f: ((getattr(f, "recorded_at", "") or ""),
+                       (getattr(f, "entry_id", "") or "")))
     groups = cluster_records(
         findings,
         text_of=lambda f: getattr(f, "finding", "") or "",
@@ -70,7 +77,8 @@ def _consolidate(findings: List[Any]) -> List[Dict[str, Any]]:
     for idxs in groups:
         grp = [findings[i] for i in idxs]
         rep = max(grp, key=lambda f: (getattr(f, "priority_score", 0) or 0,
-                                      _SEV_RANK.get((getattr(f, "severity", "") or "").lower(), 0)))
+                                      _SEV_RANK.get((getattr(f, "severity", "") or "").lower(), 0),
+                                      (getattr(f, "entry_id", "") or "")))
         sources, seen = [], set()
         for f in grp:
             url = getattr(f, "source_url", "") or ""
