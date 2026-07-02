@@ -36,7 +36,6 @@ RAW_DIR = BACKEND.parent / "evidence_base" / "raw"
 # Período COMPLETO del ciclo: incluye 1ª vuelta (abr) y 2ª vuelta (jun). Si se
 # acorta el period_start, la 1ª vuelta se filtra y el informe sale incompleto.
 PERIOD_START = "2026-04-08"
-PERIOD_END = "2026-06-22"
 JORNADA = "2026-06-07"
 
 
@@ -46,6 +45,15 @@ def _load_corpus() -> list:
         with open(fp, encoding="utf-8") as fh:
             rows.extend(json.loads(l) for l in fh if l.strip())
     return rows
+
+
+def _period_end(rows: list) -> str:
+    """period_end = fecha de la última captura del corpus. Garantiza que el
+    informe cubra TODO el corpus (nada se filtra por ventana) y que el total
+    consolidado del informe == manifest (coherencia perfecta)."""
+    dates = [(r.get("recorded_at") or "")[:10] for r in rows]
+    dates = [d for d in dates if d]
+    return max(dates) if dates else "2026-06-29"
 
 
 async def _run() -> None:
@@ -64,11 +72,12 @@ async def _run() -> None:
                  f"Verificá la ANTHROPIC_API_KEY en backend/.env.")
 
     raw = _load_corpus()
-    print(f"[final] corpus: {len(raw)} capturas")
+    period_end = _period_end(raw)
+    print(f"[final] corpus: {len(raw)} capturas | period_end={period_end}")
     session = {
         "session_id": "4053dd18", "country_code": "PER", "phase": "counting_tabulation",
         "mission_name": "DemocracIA Misión Perú 2026", "lead_org": "DemocracIA",
-        "started_at": "2026-04-08T04:31:36+00:00", "updated_at": f"{PERIOD_END}T00:00:00+00:00",
+        "started_at": "2026-04-08T04:31:36+00:00", "updated_at": f"{period_end}T23:59:59+00:00",
         "finalized": False, "entries": raw,
     }
     rep = PEIRSEliteReport(llm=llm, observation_store={"PER": session})
@@ -77,7 +86,7 @@ async def _run() -> None:
         report_type="final", use_llm=True, output_formats=["md", "html"],
         mission_metadata=MissionMetadata(
             report_number="PE-2026-FINAL", period_start=PERIOD_START,
-            period_end=PERIOD_END, jornada_date=JORNADA),
+            period_end=period_end, jornada_date=JORNADA),
     )
     out = await rep.compose(req)
     st = out.stats or {}
