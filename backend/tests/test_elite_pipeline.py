@@ -844,6 +844,27 @@ def test_evidence_note_matches_report_consolidated():
         f"manifest {man['dedup_total']} != report {stats['consolidated_total']}")
 
 
+def test_manifest_invariants_partitions_sum_to_totals():
+    """Coherencia cuantitativa: en el manifest, toda partición del universo
+    reconcilia — la suma por vuelta y por temática == dedup_total, y la suma de
+    capturas crudas por vuelta == raw_total. Blinda el pedido de 'perfecta
+    coherencia de datos vs hallazgos documentados'."""
+    import json
+    from pathlib import Path
+    man_path = Path(__file__).resolve().parents[2] / "evidence_base" / "manifest.json"
+    if not man_path.exists():
+        import pytest
+        pytest.skip("No hay base de prueba committeada")
+    man = json.loads(man_path.read_text(encoding="utf-8"))
+    n_dedup = man["dedup_total"]
+    assert sum(v["dedup"] for v in man["by_round"].values()) == n_dedup
+    assert sum(c["count"] for c in man["by_category"]) == n_dedup
+    assert sum(v["raw"] for v in man["by_round"].values()) == man["raw_total"]
+    # Coherencia de las temáticas por vuelta con el total temático.
+    assert sum(c["count"] for c in man["by_category_round1"]) == man["by_round"]["1ª vuelta"]["dedup"]
+    assert sum(c["count"] for c in man["by_category_round2"]) == man["by_round"]["2ª vuelta"]["dedup"]
+
+
 def test_5b_renderers_have_no_embedded_title():
     """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
     lo pone el <figcaption> del HTML). Evita el doble título reportado."""

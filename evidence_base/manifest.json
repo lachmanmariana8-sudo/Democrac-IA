@@ -1,72 +1,72 @@
 {
   "country_code": "PER",
-  "built_at": "2026-06-22T00:00:00Z",
-  "raw_total": 3747,
-  "dedup_total": 1855,
+  "built_at": "2026-07-02T02:09:58Z",
+  "raw_total": 4024,
+  "dedup_total": 2113,
   "by_round": {
     "1ª vuelta": {
       "raw": 1923,
       "dedup": 836
     },
     "2ª vuelta": {
-      "raw": 1824,
-      "dedup": 1019
+      "raw": 2101,
+      "dedup": 1277
     }
   },
   "by_category": [
     {
       "category": "disinformation",
-      "count": 336,
+      "count": 367,
       "severity_max": "high"
     },
     {
       "category": "logistics",
-      "count": 314,
+      "count": 316,
       "severity_max": "critical"
     },
     {
       "category": "counting",
-      "count": 255,
+      "count": 268,
       "severity_max": "critical"
     },
     {
       "category": "legal",
-      "count": 228,
+      "count": 257,
       "severity_max": "critical"
     },
     {
       "category": "results",
-      "count": 184,
+      "count": 251,
       "severity_max": "critical"
     },
     {
       "category": "other",
-      "count": 141,
+      "count": 164,
       "severity_max": "critical"
     },
     {
       "category": "campaign_violation",
-      "count": 130,
+      "count": 140,
       "severity_max": "high"
     },
     {
       "category": "fraud_allegation",
-      "count": 82,
+      "count": 103,
       "severity_max": "critical"
     },
     {
-      "category": "irregular_procedure",
-      "count": 55,
+      "category": "media_restriction",
+      "count": 82,
       "severity_max": "high"
     },
     {
-      "category": "media_restriction",
-      "count": 32,
+      "category": "irregular_procedure",
+      "count": 61,
       "severity_max": "high"
     },
     {
       "category": "security",
-      "count": 26,
+      "count": 30,
       "severity_max": "high"
     },
     {
@@ -81,12 +81,12 @@
     },
     {
       "category": "hate_speech",
-      "count": 13,
+      "count": 14,
       "severity_max": "critical"
     },
     {
       "category": "media",
-      "count": 8,
+      "count": 9,
       "severity_max": "medium"
     },
     {
@@ -195,52 +195,57 @@
   "by_category_round2": [
     {
       "category": "disinformation",
-      "count": 255,
-      "severity_max": "high"
-    },
-    {
-      "category": "counting",
-      "count": 139,
-      "severity_max": "critical"
-    },
-    {
-      "category": "legal",
-      "count": 115,
+      "count": 286,
       "severity_max": "high"
     },
     {
       "category": "results",
-      "count": 110,
+      "count": 177,
+      "severity_max": "critical"
+    },
+    {
+      "category": "counting",
+      "count": 152,
+      "severity_max": "critical"
+    },
+    {
+      "category": "legal",
+      "count": 144,
       "severity_max": "high"
     },
     {
       "category": "campaign_violation",
-      "count": 103,
-      "severity_max": "high"
-    },
-    {
-      "category": "logistics",
-      "count": 85,
+      "count": 113,
       "severity_max": "high"
     },
     {
       "category": "other",
-      "count": 74,
+      "count": 97,
+      "severity_max": "high"
+    },
+    {
+      "category": "logistics",
+      "count": 87,
+      "severity_max": "high"
+    },
+    {
+      "category": "media_restriction",
+      "count": 82,
       "severity_max": "high"
     },
     {
       "category": "fraud_allegation",
-      "count": 35,
+      "count": 56,
       "severity_max": "critical"
     },
     {
-      "category": "media_restriction",
-      "count": 32,
+      "category": "irregular_procedure",
+      "count": 30,
       "severity_max": "high"
     },
     {
-      "category": "irregular_procedure",
-      "count": 24,
+      "category": "security",
+      "count": 20,
       "severity_max": "high"
     },
     {
@@ -249,18 +254,13 @@
       "severity_max": "critical"
     },
     {
-      "category": "security",
-      "count": 16,
-      "severity_max": "high"
-    },
-    {
       "category": "media",
-      "count": 6,
-      "severity_max": "info"
+      "count": 7,
+      "severity_max": "low"
     },
     {
       "category": "hate_speech",
-      "count": 3,
+      "count": 4,
       "severity_max": "high"
     },
     {
@@ -274,7 +274,7 @@
       "severity_max": "info"
     }
   ],
-  "facts_with_source_url": 1855,
+  "facts_with_source_url": 2113,
   "pct_with_source_url": 100.0,
   "round_threshold": "2026-05-03",
   "files": {
@@ -283,8 +283,8 @@
       "sha256": "6e804a26e01c1366bab7045d8f1c6c4e6b33578758da3a538644b6a05f4e1ccb"
     },
     "PER_round2.jsonl": {
-      "facts": 1019,
-      "sha256": "e280943d925818fcb367c62a622b46919d224ad786f24c42964aa322959bcd82"
+      "facts": 1277,
+      "sha256": "0c68951f03169faa49fa9cb61eda2cbc147e9de2f4770b8b24df91334573f988"
     }
   }
 }
