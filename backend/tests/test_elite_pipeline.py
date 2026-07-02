@@ -615,8 +615,9 @@ def test_build_stats_populates_by_round_and_category():
 
 
 def test_quant_panel_renders_with_methodological_captions():
-    """Bloque Q: el panorama cuantitativo debe renderizar ambos viz (cuadro por
-    vuelta + nube temática) con SVG válido y captions metodológicas no vacías."""
+    """Bloque Q: el panorama cuantitativo debe renderizar el cuadro por FASE
+    (tabla HTML nítida) + la nube temática (SVG), con captions metodológicas no
+    vacías. El cuadro por vuelta pasó de gráfico SVG a tabla HTML imprimible."""
     from agents.elite_report.elite_report import PEIRSEliteReport
     from agents.elite_report.renderer.html_renderer import _render_quant_panel
     import re
@@ -624,11 +625,14 @@ def test_quant_panel_renders_with_methodological_captions():
     stats = PEIRSEliteReport._build_stats(bundle)
     panel = _render_quant_panel(stats, "es")
     assert 'id="panorama-cuantitativo"' in panel
-    assert panel.count("<svg") >= 2  # cuadro + nube
+    assert "phase-sev-table" in panel          # cuadro por fase = tabla HTML
+    assert panel.count("<svg") >= 1            # nube temática sigue siendo SVG
     caps = re.findall(r'viz-caption">([^<]+)<', panel)
     assert len(caps) >= 2 and all(c.strip() for c in caps)
     # La metodología cita el umbral de vuelta y la consolidación
     assert "consolidado" in panel.lower()
+    # Las 3 fases aparecen en el cuadro
+    assert "Entre vueltas" in panel or "entre vueltas" in panel.lower()
 
 
 def test_adapter_exposes_vdem_emb_series():

@@ -972,14 +972,14 @@ _STRINGS: Dict[str, Dict[str, str]] = {
 
     # ── Panel cuantitativo (Bloque Q) ────────────────────────────────
     "viz.findings_by_round.title": {
-        "es": "Hallazgos por vuelta y severidad",
-        "en": "Findings by round and severity",
-        "pt": "Registros por turno e severidade",
+        "es": "Hallazgos por fase electoral y severidad",
+        "en": "Findings by electoral phase and severity",
+        "pt": "Registros por fase eleitoral e severidade",
     },
     "viz.findings_by_round.caption": {
-        "es": "Cuadro de hallazgos del ciclo, desglosado por severidad y por vuelta. Corte 1ª→2ª: cierre del cómputo de 1ª vuelta (hallazgos hasta el 2-may-2026 = 1ª vuelta; desde el 3-may, período inter-vuelta y balotaje = 2ª vuelta). Conteo sobre el universo CONSOLIDADO (un hecho = un hallazgo, sin duplicados de medios), coherente con el Anexo C y la base de prueba. El total consolidado es menor al volumen crudo de capturas.",
-        "en": "Cycle findings broken down by severity and round. 1st→2nd cutoff: close of first-round counting (findings through 2026-05-02 = 1st round; from 2026-05-03, inter-round period and runoff = 2nd round). Counts use the CONSOLIDATED universe (one fact = one finding, no media duplicates), consistent with Appendix C and the evidence base. The consolidated total is lower than the raw capture volume.",
-        "pt": "Quadro de registros do ciclo, por severidade e turno. Corte 1º→2º: encerramento da apuração do 1º turno (registros até 02-mai-2026 = 1º turno; a partir de 03-mai, período entre turnos e 2º turno). Contagem sobre o universo CONSOLIDADO (um fato = um registro), coerente com o Anexo C e a base de provas. O total consolidado é menor que o volume bruto.",
+        "es": "Hallazgos del ciclo desglosados por severidad y por fase electoral: 1ª vuelta (hasta el 2-may-2026, incl. jornada del 12-abr y su cómputo), entre vueltas (3-may a 6-jun) y 2ª vuelta (desde la jornada del 7-jun: balotaje, escrutinio y post-electoral). Conteo sobre el universo CONSOLIDADO (un hecho = un hallazgo, sin duplicados de medios), coherente con el Anexo C y la base de prueba. El total consolidado es menor al volumen crudo de capturas monitoreadas.",
+        "en": "Cycle findings broken down by severity and electoral phase: 1st round (through 2026-05-02, incl. the 12 Apr election day and its count), between rounds (3 May–6 Jun) and 2nd round (from the 7 Jun runoff day: balloting, count and post-election). Counts use the CONSOLIDATED universe (one fact = one finding, no media duplicates), consistent with Appendix C and the evidence base. The consolidated total is lower than the raw capture volume.",
+        "pt": "Registros do ciclo por severidade e fase eleitoral: 1º turno (até 02-mai-2026, incl. jornada de 12-abr e sua apuração), entre turnos (3-mai a 6-jun) e 2º turno (desde a jornada de 7-jun: 2º turno, apuração e pós-eleição). Contagem sobre o universo CONSOLIDADO, coerente com o Anexo C e a base de provas. O total consolidado é menor que o volume bruto.",
     },
     "viz.rights_bars.title": {
         "es": "Derechos e instrumentos más invocados",
@@ -997,8 +997,8 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Nuvem de registros por temática",
     },
     "viz.category_cloud.caption": {
-        "es": "Temáticas del ciclo: el tamaño es proporcional al volumen de hallazgos consolidados; el color indica la severidad máxima observada en la temática (rojo = crítico · naranja = alto · ámbar = medio). Top-12 temáticas por volumen.",
-        "en": "Cycle topics: size is proportional to the volume of consolidated findings; color indicates the maximum severity observed in the topic (red = critical · orange = high · amber = medium). Top-12 topics by volume.",
+        "es": "Temáticas de TODO el ciclo electoral (1ª vuelta, entre vueltas y 2ª vuelta): el tamaño es proporcional al volumen de hallazgos consolidados; el color indica la severidad máxima observada en la temática (rojo = crítico · naranja = alto · ámbar = medio). Se muestran todas las temáticas del ciclo.",
+        "en": "Topics across the WHOLE electoral cycle (1st round, between rounds and 2nd round): size is proportional to the volume of consolidated findings; color indicates the maximum severity observed in the topic (red = critical · orange = high · amber = medium). All cycle topics are shown.",
         "pt": "Temáticas do ciclo: o tamanho é proporcional ao volume de registros consolidados; a cor indica a severidade máxima observada (vermelho = crítico · laranja = alto · âmbar = médio). Top-12 temáticas por volume.",
     },
     "quant.section.title": {
@@ -1018,7 +1018,10 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     },
     "quant.kpi.round1": {"es": "1ª vuelta", "en": "1st round", "pt": "1º turno"},
     "quant.kpi.round2": {"es": "2ª vuelta", "en": "2nd round", "pt": "2º turno"},
+    "quant.kpi.interround": {"es": "Entre vueltas", "en": "Between rounds", "pt": "Entre turnos"},
     "quant.kpi.topics": {"es": "Temáticas", "en": "Topics", "pt": "Temáticas"},
+    "quant.tbl.severity": {"es": "Severidad", "en": "Severity", "pt": "Severidade"},
+    "quant.tbl.total": {"es": "Total", "en": "Total", "pt": "Total"},
 
     # Desglose temático (tabla categoría → +N → ejemplos)
     "theme.title": {

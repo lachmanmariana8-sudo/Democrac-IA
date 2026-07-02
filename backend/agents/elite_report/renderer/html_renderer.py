@@ -570,6 +570,49 @@ table.findings-table td {
 
 table.findings-table tr:nth-child(even) { background: var(--bg-soft); }
 
+/* Cuadro de hallazgos por FASE electoral y severidad — tabla nítida (reemplaza
+   el gráfico SVG previo, poco legible al imprimir). */
+table.phase-sev-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 8px 0 4px;
+}
+table.phase-sev-table th {
+  background: var(--teal);
+  color: #fff;
+  padding: 7px 10px;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+table.phase-sev-table td {
+  padding: 6px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-dim);
+  font-variant-numeric: tabular-nums;
+}
+table.phase-sev-table tr:nth-child(even) td { background: var(--bg-soft); }
+table.phase-sev-table tr.tbl-total td {
+  border-top: 2px solid var(--teal);
+  background: var(--bg-soft);
+}
+.sev-dot {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: middle;
+}
+.sev-dot.sev-critical { background: var(--critical); }
+.sev-dot.sev-high     { background: var(--high); }
+.sev-dot.sev-medium   { background: var(--medium); }
+.sev-dot.sev-low      { background: var(--low); }
+.sev-dot.sev-info     { background: var(--info); }
+
 /* Chips de FASE — diferencian cada temática por fase electoral con color. */
 .phase-chip {
   display: inline-block;
@@ -1053,6 +1096,52 @@ def _render_critical_events(findings: Optional[List[Any]], language: str) -> str
     )
 
 
+def _render_phase_severity_table(by_phase: Dict[str, Any], total: int,
+                                 language: str) -> str:
+    """Cuadro HTML determinista de hallazgos por FASE electoral y severidad
+    (1ª vuelta · entre vueltas · 2ª vuelta · Total). Reemplaza el gráfico SVG
+    previo por una tabla nítida e imprimible; cada columna y la fila TOTAL suman
+    exactamente el universo consolidado (coherencia auditable)."""
+    phases = ["1ª vuelta", "entre vueltas", "2ª vuelta"]
+    phase_lbls = {
+        "1ª vuelta": t(language, "quant.kpi.round1"),
+        "entre vueltas": t(language, "quant.kpi.interround"),
+        "2ª vuelta": t(language, "quant.kpi.round2"),
+    }
+    sev_keys = ["critical", "high", "medium", "low", "info"]
+    cols = [by_phase.get(p) or {} for p in phases]
+    header = (
+        f'<th style="text-align:left">{_esc(t(language, "quant.tbl.severity"))}</th>'
+        + "".join(f'<th>{_esc(phase_lbls[p])}</th>' for p in phases)
+        + f'<th>{_esc(t(language, "quant.tbl.total"))}</th>'
+    )
+    body_rows = []
+    for s in sev_keys:
+        cells = [int(c.get(s, 0) or 0) for c in cols]
+        row_total = sum(cells)
+        body_rows.append(
+            f'<tr><td style="text-align:left"><span class="sev-dot sev-{s}"></span>'
+            f'{_esc(t(language, "sev." + s))}</td>'
+            + "".join(f"<td>{v}</td>" for v in cells)
+            + f"<td><strong>{row_total}</strong></td></tr>"
+        )
+    tot_cells = [int((c.get("total", 0)) or 0) for c in cols]
+    total_row = (
+        f'<tr class="tbl-total"><td style="text-align:left"><strong>'
+        f'{_esc(t(language, "quant.tbl.total"))}</strong></td>'
+        + "".join(f"<td><strong>{v}</strong></td>" for v in tot_cells)
+        + f"<td><strong>{total}</strong></td></tr>"
+    )
+    return (
+        f'<figure class="viz"><figcaption class="viz-title">'
+        f'{_esc(t(language, "viz.findings_by_round.title"))}</figcaption>'
+        f'<table class="phase-sev-table"><thead><tr>{header}</tr></thead>'
+        f'<tbody>{"".join(body_rows)}{total_row}</tbody></table>'
+        f'<figcaption class="viz-caption">'
+        f'{_esc(t(language, "viz.findings_by_round.caption"))}</figcaption></figure>'
+    )
+
+
 def _render_quant_panel(stats: Dict[str, Any], language: str = "es",
                         findings: Optional[List[Any]] = None) -> str:
     """Panorama cuantitativo (Bloque Q): cuadro de hallazgos por vuelta/severidad
@@ -1061,40 +1150,45 @@ def _render_quant_panel(stats: Dict[str, Any], language: str = "es",
     (stats.by_round / stats.by_category). Va tras el cuadro de datasets."""
     by_round = stats.get("by_round") or {}
     by_cat = stats.get("by_category") or []
+    # by_phase (3 fases) con fallback al binario by_round para compatibilidad.
+    by_phase = stats.get("by_phase") or {
+        "1ª vuelta": by_round.get("1ª vuelta") or {},
+        "entre vueltas": {},
+        "2ª vuelta": by_round.get("2ª vuelta") or {},
+    }
     r1 = by_round.get("1ª vuelta") or {}
     r2 = by_round.get("2ª vuelta") or {}
+    ph_i = by_phase.get("1ª vuelta") or {}
+    ph_e = by_phase.get("entre vueltas") or {}
+    ph_2 = by_phase.get("2ª vuelta") or {}
     if not (r1.get("total") or r2.get("total")) and not by_cat:
         return ""
     total = stats.get("consolidated_total",
                       int(r1.get("total", 0)) + int(r2.get("total", 0)))
 
-    # 1) Cuadro por vuelta
-    fbr_data = {
-        "round_1": {**r1, "label": t(language, "quant.kpi.round1")},
-        "round_2": {**r2, "label": t(language, "quant.kpi.round2")},
-        "total": total,
-        "_language": language,
-    }
-    # 2) Nube temática (top-12)
+    # 1) Cuadro por FASE electoral (tabla HTML nítida, imprimible)
+    fbr_html = _render_phase_severity_table(by_phase, total, language)
+
+    # 2) Nube temática — TODO el ciclo (todas las temáticas, sin recorte top-N)
     cc_data = {
         "categories": [
             {"label": category_label(c.get("category", "other"), language),
              "count": c.get("count", 0),
              "severity_max": c.get("severity_max", "info")}
-            for c in by_cat[:12]
+            for c in by_cat
         ],
         "total": total,
         "_language": language,
     }
 
-    fbr_svg = render_svg("findings_by_round", fbr_data)
     cc_svg = render_svg("category_cloud", cc_data)
 
-    # KPIs de volumen
+    # KPIs de volumen — consolidado + 3 fases + temáticas
     kpis = [
         (str(total), t(language, "quant.kpi.consolidated")),
-        (str(int(r1.get("total", 0))), t(language, "quant.kpi.round1")),
-        (str(int(r2.get("total", 0))), t(language, "quant.kpi.round2")),
+        (str(int(ph_i.get("total", 0))), t(language, "quant.kpi.round1")),
+        (str(int(ph_e.get("total", 0))), t(language, "quant.kpi.interround")),
+        (str(int(ph_2.get("total", 0))), t(language, "quant.kpi.round2")),
         (str(len(by_cat)), t(language, "quant.kpi.topics")),
     ]
     kpi_cards = "".join(
@@ -1121,7 +1215,7 @@ def _render_quant_panel(stats: Dict[str, Any], language: str = "es",
         f'<p style="color:var(--text-muted);font-size:11px;margin-bottom:14px">'
         f'{t(language, "quant.section.intro")}</p>'
         f'<div class="quant-kpis">{kpi_cards}</div>'
-        f'{_fig("viz.findings_by_round.title", "viz.findings_by_round.caption", fbr_svg)}'
+        f'{fbr_html}'
         f'{_fig("viz.category_cloud.title", "viz.category_cloud.caption", cc_svg)}'
         f'{theme_html}'
         f'{crit_html}'

@@ -432,6 +432,24 @@ class PEIRSEliteReport:
         d = (date_str or "")[:10]
         return "1ª vuelta" if d and d < PEIRSEliteReport._ROUND_THRESHOLD else "2ª vuelta"
 
+    # Umbral de la jornada del balotaje (7-jun). Refina la 2ª vuelta binaria en
+    # dos fases: 'entre vueltas' (inter-vuelta, 3-may → 6-jun) y '2ª vuelta'
+    # (jornada 7-jun en adelante: balotaje, escrutinio y post-electoral).
+    _RUNOFF_THRESHOLD = "2026-06-07"
+    _PHASES = ("1ª vuelta", "entre vueltas", "2ª vuelta")
+
+    @staticmethod
+    def _phase_label(date_str: str) -> str:
+        """Etiqueta de FASE (3 fases) para el cuadro de hallazgos: 1ª vuelta
+        (<3-may) · entre vueltas (3-may→6-jun) · 2ª vuelta (≥7-jun). El corte
+        1ª vuelta preserva la reconciliación con el informe preliminar (1923)."""
+        d = (date_str or "")[:10]
+        if d and d < PEIRSEliteReport._ROUND_THRESHOLD:
+            return "1ª vuelta"
+        if d and d < PEIRSEliteReport._RUNOFF_THRESHOLD:
+            return "entre vueltas"
+        return "2ª vuelta"
+
     # ────────────────────────────────────────────────────────────────────
     @staticmethod
     def _build_stats(bundle: EvidenceBundle, req=None) -> Dict[str, Any]:
@@ -476,15 +494,19 @@ class PEIRSEliteReport:
         _empty_round = lambda: {"total": 0, "critical": 0, "high": 0,
                                 "medium": 0, "low": 0, "info": 0}
         by_round = {"1ª vuelta": _empty_round(), "2ª vuelta": _empty_round()}
+        by_phase = {p: _empty_round() for p in PEIRSEliteReport._PHASES}
         cat_counts: Counter = Counter()
         cat_sevmax: Dict[str, str] = {}
         for f in consolidated:
             rnd = PEIRSEliteReport._round_label(f.recorded_at)
+            ph = PEIRSEliteReport._phase_label(f.recorded_at)
             s = (f.severity or "info").lower()
             if s not in ("critical", "high", "medium", "low", "info"):
                 s = "info"
             by_round[rnd]["total"] += 1
             by_round[rnd][s] += 1
+            by_phase[ph]["total"] += 1
+            by_phase[ph][s] += 1
             cat = (f.category or "other")
             cat_counts[cat] += 1
             if _sev_rank.get(s, 0) > _sev_rank.get(cat_sevmax.get(cat, "info"), 0):
@@ -508,6 +530,7 @@ class PEIRSEliteReport:
             # Panel cuantitativo (Bloque Q): split por vuelta + nube temática,
             # ambos sobre el universo CONSOLIDADO (consolidated_total).
             "by_round": by_round,
+            "by_phase": by_phase,
             "by_category": by_category,
             "consolidated_total": consolidated_total,
             "days_covered": days_covered,
@@ -1071,11 +1094,16 @@ class PEIRSEliteReport:
 
         for ch in chapters:
             if ch.chapter_id == "contexto_historico":
-                if series_data["series"]:
-                    ch.visualizations.append(_vs("timeseries_multi", series_data))
+                # El gráfico "Trayectoria histórica" (timeseries_multi) se QUITÓ:
+                # amontonaba las etiquetas y —por normalizar cada serie— mostraba
+                # inicio/fin invertidos respecto del cuadro "Indicadores
+                # internacionales", contradiciéndolo. El cuadro HTML determinista
+                # (_render_datasets_overview) es ahora la única fuente de las
+                # series, legible e imprimible.
                 # events_timeline (línea de tiempo) reemplazado por la TABLA de
                 # eventos críticos del panel cuantitativo: la línea amontonaba los
                 # 12 críticos más tempranos a la izquierda y resultaba ilegible.
+                pass
             elif ch.chapter_id == "marco_juridico":
                 ch.visualizations.append(_vs("matrix_normativa", matrix_norm_data))
             elif ch.chapter_id == "sistema_electoral":
