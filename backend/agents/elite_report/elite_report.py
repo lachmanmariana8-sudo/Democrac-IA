@@ -1172,7 +1172,9 @@ class PEIRSEliteReport:
                 if any(any(v > 0 for v in row) for row in incidents_grid_data["values"]):
                     ch.visualizations.append(_vs("integrity_incidents_grid", incidents_grid_data))
             elif ch.chapter_id == "post_electoral":
-                ch.visualizations.append(_vs("actor_network", actor_network_data))
+                # actor_network ("Red de actores institucionales") QUITADO:
+                # redundante con "Red institucional electoral" (sistema_electoral)
+                # y con el nuevo capítulo de Actores y situación procesal.
                 if judicial_data["actions"]:
                     ch.visualizations.append(_vs("judicial_timeline", judicial_data))
             elif ch.chapter_id == "derechos_vulnerados":
