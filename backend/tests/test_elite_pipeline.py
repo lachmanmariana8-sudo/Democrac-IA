@@ -916,6 +916,38 @@ def test_actors_chapter_inserted_after_electoral_system():
     assert ids.index("actores_situacion_procesal") == ids.index("sistema_electoral") + 1
 
 
+def test_anticipatory_synthesis_pairs_trends_with_findings():
+    """C2: la síntesis anticipatoria empareja la tendencia de cada índice con
+    conteos REALES de hallazgos (sin inventar), y no afirma causalidad."""
+    from agents.elite_report.anticipatory_synthesis import build_anticipatory_synthesis
+    from agents.elite_report.models import HistoricalSeries, HistoricalDatapoint as DP
+    series = [
+        HistoricalSeries(indicator="rsf_score", indicator_label="Press Freedom Index (RSF)",
+            source="Reporters Without Borders", source_citation="RSF (2025)", unit="0–100",
+            trend_direction="down",
+            datapoints=[DP(year=2024, value=47.76, source="RSF"),
+                        DP(year=2025, value=42.88, source="RSF")]),
+        HistoricalSeries(indicator="vdem_libdem", indicator_label="Liberal Democracy Index (V-Dem)",
+            source="V-Dem Institute", source_citation="V-Dem (2025)", unit="0.0–1.0",
+            trend_direction="down",
+            datapoints=[DP(year=2016, value=0.673, source="V-Dem"),
+                        DP(year=2025, value=0.506, source="V-Dem")]),
+    ]
+    stats = {"by_category": [
+        {"category": "disinformation", "count": 367, "severity_max": "high"},
+        {"category": "legal", "count": 257, "severity_max": "critical"},
+        {"category": "counting", "count": 269, "severity_max": "critical"},
+    ]}
+    md = build_anticipatory_synthesis(series, stats, lang="es")
+    assert "anticipaban" in md.lower()
+    assert "Desinformación (367)" in md          # conteo real emparejado a RSF
+    assert "Legal/normativo (257)" in md         # conteo real emparejado a V-Dem
+    assert "no se afirma causalidad" in md.lower()
+    # Sin datos, no rompe
+    assert build_anticipatory_synthesis(None, stats, "es") == ""
+    assert build_anticipatory_synthesis(series, None, "es") == ""
+
+
 def test_5b_renderers_have_no_embedded_title():
     """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
     lo pone el <figcaption> del HTML). Evita el doble título reportado."""

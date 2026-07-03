@@ -218,6 +218,25 @@ class PEIRSEliteReport:
                 f"Apertura determinista (prólogo+síntesis) falló: {type(e).__name__}: {e}"
             )
 
+        # ── 6e. SÍNTESIS ANTICIPATORIA (determinista) → Conclusiones ────
+        # Cierra el loop datos↔hallazgos: empareja la tendencia de los índices
+        # internacionales con el volumen de hallazgos del ciclo. Se anexa al
+        # capítulo de Conclusiones. Factual, sin LLM, cifras auditables.
+        try:
+            from agents.elite_report.anticipatory_synthesis import (
+                build_anticipatory_synthesis)
+            synth_md = build_anticipatory_synthesis(
+                bundle.historical_series, stats, lang=req.language or "es")
+            if synth_md:
+                for ch in chapters:
+                    if ch.chapter_id == "conclusiones":
+                        ch.narrative = ((ch.narrative or "").rstrip()
+                                        + "\n\n" + synth_md)
+                        break
+        except Exception as e:
+            bundle.warnings.append(
+                f"Síntesis anticipatoria falló: {type(e).__name__}: {e}")
+
         # ── 7. ATTACH VISUALIZATIONS A CADA CAPÍTULO ───────────────────
         self._attach_visualizations(chapters, bundle, forecast, stats,
                                      language=req.language or "es")

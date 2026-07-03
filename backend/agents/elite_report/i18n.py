@@ -1058,6 +1058,50 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "en": "Full profiles (electoral history, policies, strengths and vulnerabilities per force) available in the mission database. Data as of the close of the 2026 cycle.",
         "pt": "Perfis completos (histórico eleitoral, políticas, forças e vulnerabilidades por força) disponíveis na base de dados da missão. Dados ao fechamento do ciclo 2026.",
     },
+    # ── Síntesis anticipatoria (datasets ↔ hallazgos del ciclo) ──────────
+    "trend.down": {"es": "↓ deterioro", "en": "↓ decline", "pt": "↓ deterioração"},
+    "trend.up": {"es": "↑ mejora", "en": "↑ improvement", "pt": "↑ melhora"},
+    "trend.stable": {"es": "→ estancado", "en": "→ stagnant", "pt": "→ estagnado"},
+    "trend.volatile": {"es": "↕ volátil", "en": "↕ volatile", "pt": "↕ volátil"},
+    "synth.header": {
+        "es": "Síntesis: lo que anticipaban los indicadores internacionales",
+        "en": "Synthesis: what the international indicators anticipated",
+        "pt": "Síntese: o que os indicadores internacionais anteciparam",
+    },
+    "synth.intro": {
+        "es": "Los índices estructurales de democracia venían señalando una trayectoria de deterioro *antes* del ciclo 2026. El cuadro empareja la tendencia de cada índice con el volumen de hallazgos consolidados en las dimensiones que ese índice mide. No se afirma causalidad: se documenta la **congruencia** entre lo que anticipaban los datos y lo que registró el monitoreo del ciclo.",
+        "en": "Structural democracy indices were already signalling a deteriorating trajectory *before* the 2026 cycle. The table pairs each index's trend with the volume of consolidated findings in the dimensions it measures. No causality is claimed: it documents the **congruence** between what the data anticipated and what the cycle's monitoring recorded.",
+        "pt": "Os índices estruturais de democracia já sinalizavam uma trajetória de deterioração *antes* do ciclo 2026. O quadro emparelha a tendência de cada índice com o volume de achados consolidados nas dimensões que ele mede. Não se afirma causalidade: documenta-se a **congruência** entre o que os dados anteciparam e o que o monitoramento registrou.",
+    },
+    "synth.col.indicator": {"es": "Indicador", "en": "Indicator", "pt": "Indicador"},
+    "synth.col.trend": {"es": "Tendencia previa", "en": "Prior trend", "pt": "Tendência prévia"},
+    "synth.col.anticipated": {"es": "Qué anticipaba", "en": "What it anticipated", "pt": "O que antecipava"},
+    "synth.col.evidence": {"es": "Evidencia del ciclo 2026 (hallazgos)", "en": "2026 cycle evidence (findings)", "pt": "Evidência do ciclo 2026 (achados)"},
+    "synth.anticipated.rsf": {
+        "es": "Ecosistema informativo degradado y mayor exposición a la desinformación",
+        "en": "Degraded information ecosystem and greater exposure to disinformation",
+        "pt": "Ecossistema informativo degradado e maior exposição à desinformação",
+    },
+    "synth.anticipated.vdem": {
+        "es": "Erosión de la democracia liberal y de los contrapesos institucionales",
+        "en": "Erosion of liberal democracy and institutional checks",
+        "pt": "Erosão da democracia liberal e dos freios institucionais",
+    },
+    "synth.anticipated.fh": {
+        "es": "Presión creciente sobre las libertades civiles y políticas",
+        "en": "Growing pressure on civil and political liberties",
+        "pt": "Pressão crescente sobre as liberdades civis e políticas",
+    },
+    "synth.anticipated.pei": {
+        "es": "Integridad electoral estancada en niveles mediocres",
+        "en": "Electoral integrity stagnant at mediocre levels",
+        "pt": "Integridade eleitoral estagnada em níveis medíocres",
+    },
+    "synth.closing": {
+        "es": "La convergencia es clara: la trayectoria descendente de los indicadores estructurales anticipaba las tensiones que el ciclo 2026 materializó —crisis logística e institucional del organismo electoral, resultado extremadamente estrecho y contestado, y un ecosistema informativo saturado de desinformación—. El monitoreo PEIRS no pronostica; constata que el deterioro medido por los índices independientes se tradujo en hechos verificables durante el proceso.",
+        "en": "The convergence is clear: the downward trajectory of the structural indicators anticipated the tensions the 2026 cycle materialised —logistical and institutional crisis of the electoral body, an extremely narrow and contested result, and an information ecosystem saturated with disinformation—. PEIRS monitoring does not forecast; it confirms that the deterioration measured by independent indices translated into verifiable facts during the process.",
+        "pt": "A convergência é clara: a trajetória descendente dos indicadores estruturais antecipou as tensões que o ciclo 2026 materializou —crise logística e institucional do órgão eleitoral, resultado extremamente estreito e contestado, e um ecossistema informativo saturado de desinformação—. O monitoramento PEIRS não prevê; constata que a deterioração medida por índices independentes se traduziu em fatos verificáveis durante o processo.",
+    },
 
     # Desglose temático (tabla categoría → +N → ejemplos)
     "theme.title": {
