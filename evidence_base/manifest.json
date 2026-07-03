@@ -1,22 +1,22 @@
 {
   "country_code": "PER",
-  "built_at": "2026-07-02T12:23:39Z",
-  "raw_total": 4024,
-  "dedup_total": 2125,
+  "built_at": "2026-07-03T03:05:04Z",
+  "raw_total": 4043,
+  "dedup_total": 2144,
   "by_round": {
     "1ª vuelta": {
       "raw": 1923,
       "dedup": 843
     },
     "2ª vuelta": {
-      "raw": 2101,
-      "dedup": 1282
+      "raw": 2120,
+      "dedup": 1301
     }
   },
   "by_category": [
     {
       "category": "disinformation",
-      "count": 367,
+      "count": 369,
       "severity_max": "high"
     },
     {
@@ -31,22 +31,22 @@
     },
     {
       "category": "legal",
-      "count": 257,
+      "count": 261,
       "severity_max": "critical"
     },
     {
       "category": "results",
-      "count": 254,
+      "count": 258,
       "severity_max": "critical"
     },
     {
       "category": "other",
-      "count": 162,
+      "count": 163,
       "severity_max": "high"
     },
     {
       "category": "campaign_violation",
-      "count": 142,
+      "count": 143,
       "severity_max": "high"
     },
     {
@@ -56,12 +56,12 @@
     },
     {
       "category": "media_restriction",
-      "count": 82,
+      "count": 88,
       "severity_max": "high"
     },
     {
       "category": "irregular_procedure",
-      "count": 59,
+      "count": 60,
       "severity_max": "critical"
     },
     {
@@ -195,12 +195,12 @@
   "by_category_round2": [
     {
       "category": "disinformation",
-      "count": 286,
+      "count": 288,
       "severity_max": "high"
     },
     {
       "category": "results",
-      "count": 176,
+      "count": 180,
       "severity_max": "critical"
     },
     {
@@ -210,17 +210,17 @@
     },
     {
       "category": "legal",
-      "count": 147,
+      "count": 151,
       "severity_max": "high"
     },
     {
       "category": "campaign_violation",
-      "count": 113,
+      "count": 114,
       "severity_max": "high"
     },
     {
       "category": "other",
-      "count": 96,
+      "count": 97,
       "severity_max": "high"
     },
     {
@@ -230,7 +230,7 @@
     },
     {
       "category": "media_restriction",
-      "count": 82,
+      "count": 88,
       "severity_max": "high"
     },
     {
@@ -240,7 +240,7 @@
     },
     {
       "category": "irregular_procedure",
-      "count": 28,
+      "count": 29,
       "severity_max": "high"
     },
     {
@@ -274,7 +274,7 @@
       "severity_max": "info"
     }
   ],
-  "facts_with_source_url": 2125,
+  "facts_with_source_url": 2144,
   "pct_with_source_url": 100.0,
   "round_threshold": "2026-05-03",
   "files": {
@@ -283,8 +283,8 @@
       "sha256": "28a1781b0cb19184ab5759505939500e49329253df1cb746b34082e3def554e2"
     },
     "PER_round2.jsonl": {
-      "facts": 1282,
-      "sha256": "a61d2053c827a3cacb37c6465b99c03f24ebcd6ce6fc87375c831eb9a0b7463a"
+      "facts": 1301,
+      "sha256": "29b9f3aa6991c80b874d49a98d846866cf9d3752405e85fa14fdf4c496d078bc"
     }
   }
 }

@@ -320,12 +320,20 @@ def _check_daily_budget(country_code: str, kind: str) -> None:
             },
         )
 
-# Inicialización del LLM (se usa en agentes 3 y 4)
-llm = ChatAnthropic(
-    model=LLM_MODEL,
-    temperature=LLM_TEMPERATURE,
-    anthropic_api_key=ANTHROPIC_API_KEY,
-) if ANTHROPIC_API_KEY else None
+# Inicialización del LLM (se usa en agentes 3 y 4).
+# Opus 4.8 deprecó `temperature` (devuelve 400 si se envía): se omite para esa
+# familia; el resto de modelos lo mantiene. Permite usar Opus en prod (informe
+# Elite Premium) sin romper la generación.
+def _build_llm():
+    if not ANTHROPIC_API_KEY:
+        return None
+    kwargs = {"model": LLM_MODEL, "anthropic_api_key": ANTHROPIC_API_KEY}
+    if "opus-4-8" not in (LLM_MODEL or ""):
+        kwargs["temperature"] = LLM_TEMPERATURE
+    return ChatAnthropic(**kwargs)
+
+
+llm = _build_llm()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

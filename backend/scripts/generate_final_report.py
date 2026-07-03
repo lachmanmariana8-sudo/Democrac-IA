@@ -61,12 +61,19 @@ async def _run() -> None:
     if not key:
         sys.exit("[final] Falta ANTHROPIC_API_KEY en backend/.env")
     temp = float(os.getenv("LLM_TEMPERATURE", "0.2"))
-    llm = ChatAnthropic(model=LLM_MODEL, temperature=temp, anthropic_api_key=key)
+    # Opus 4.8 deprecó el parámetro `temperature`: pasarlo devuelve 400. Se
+    # omite para esa familia; el resto de modelos sí lo acepta.
+    _kwargs = {"model": LLM_MODEL, "anthropic_api_key": key}
+    _no_temp = "opus-4-8" in LLM_MODEL
+    if not _no_temp:
+        _kwargs["temperature"] = temp
+    llm = ChatAnthropic(**_kwargs)
 
     # Pre-check: una sola llamada barata para no gastar 13 chapters si la key falla.
     try:
         ping = llm.invoke("Responde solo: OK")
-        print(f"[final] LLM OK ({LLM_MODEL}, temp {temp}) -> {str(ping.content)[:40]!r}")
+        print(f"[final] LLM OK ({LLM_MODEL}, temp {'n/a' if _no_temp else temp}) "
+              f"-> {str(ping.content)[:40]!r}")
     except Exception as e:
         sys.exit(f"[final] LLM no disponible ({type(e).__name__}: {str(e)[:200]}). "
                  f"Verificá la ANTHROPIC_API_KEY en backend/.env.")
