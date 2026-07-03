@@ -7902,6 +7902,20 @@ async def generate_elite_report(
             period_end=req.mission.period_end,
             jornada_date=req.mission.jornada_date,
         )
+        # Un informe FINAL cubre el CICLO COMPLETO, no una ventana relativa. El
+        # frontend manda por defecto los últimos 30 días (_default_period_start),
+        # lo que truncaba la 1ª vuelta (columna vacía) y daba "30 días
+        # monitoreados". Para report_type=="final" extendemos el período al
+        # inicio real de la observación (started_at de la sesión) y hasta el
+        # último día monitoreado, sin depender de lo que envíe el cliente.
+        if req.report_type == "final":
+            _sess = (observation_store or {}).get(req.country_code.upper(), {}) or {}
+            _started = (_sess.get("started_at") or "")[:10]
+            if _started and _started < (mm.period_start or "9999-12-31"):
+                mm.period_start = _started
+            _end_default = _default_period_end()
+            if (mm.period_end or "") < _end_default:
+                mm.period_end = _end_default
         rr = EliteRR(
             country_code=req.country_code,
             mission_metadata=mm,
