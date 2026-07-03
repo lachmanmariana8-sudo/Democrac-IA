@@ -318,6 +318,16 @@ class PeruAdapter:
             return None
         return PERU_REGIONS_DATA
 
+    def political_forces(self) -> Optional[List[Dict[str, Any]]]:
+        """Fuerzas políticas y candidaturas con antecedentes y situación
+        procesal/judicial (PERU_POLITICAL_FORCES). Alimenta el capítulo
+        determinista de Actores. Devuelve None si no hay datos."""
+        try:
+            from modules.peru_data import PERU_POLITICAL_FORCES
+        except ImportError:
+            return None
+        return PERU_POLITICAL_FORCES or None
+
     def runoff_observation(self, entries: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Dict COMPLETO del balotaje (PERU_RUNOFF_2026) enriquecido con los
         hallazgos del Hunter: finalistas, fechas, comparativa de 1ª vuelta y

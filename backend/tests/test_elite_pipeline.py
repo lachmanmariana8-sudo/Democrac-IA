@@ -869,6 +869,53 @@ def test_manifest_invariants_partitions_sum_to_totals():
     assert sum(c["count"] for c in man["by_category_round2"]) == man["by_round"]["2ª vuelta"]["dedup"]
 
 
+def test_actors_chapter_has_forces_table_and_procedural_status():
+    """C1: el capítulo de Actores trae la tabla de fuerzas + la situación
+    procesal de las figuras con antecedentes judiciales (con fuente primaria),
+    sin declarar responsabilidad penal y sin falsos positivos (colectivos)."""
+    from agents.elite_report.country_adapters import get_adapter
+    from agents.elite_report.actors_chapter import build_actors_chapter
+    forces = get_adapter("PER").political_forces()
+    assert forces, "PERU_POLITICAL_FORCES debe estar disponible"
+    ch = build_actors_chapter(forces, lang="es")
+    assert ch is not None and ch.chapter_id == "actores_situacion_procesal"
+    n = ch.narrative
+    # Tabla de fuerzas
+    assert "Fuerza política" in n and "Riesgo (ICCPR)" in n
+    assert "Fuerza Popular" in n and "Perú Libre" in n and "Alianza para el Progreso" in n
+    # Situación procesal de las 4 figuras con antecedentes judiciales
+    assert "Keiko Fujimori" in n and "Vladimir Cerrón" in n
+    assert "César Acuña" in n and "José Luna" in n
+    assert "lavado de activos" in n.lower()      # antecedente documentado
+    assert "Expediente" in n or "Res." in n or "Carpeta" in n  # cita fuente primaria
+    # Presunción de inocencia explícita, sin prejuzgar
+    assert "presunción de inocencia" in n.lower()
+    # Sin falso positivo: los independientes/colectivos no tienen subsección propia
+    assert "#### N/A" not in n
+
+
+def test_actors_chapter_inserted_after_electoral_system():
+    """El capítulo de actores se inserta tras 'Sistema electoral' y se renumera."""
+    import asyncio
+    from agents.elite_report.models import EliteReportRequest, MissionMetadata
+    from agents.elite_report.elite_report import PEIRSEliteReport
+    from agents.elite_report.country_adapters import get_adapter
+    forces = get_adapter("PER").political_forces()
+    if not forces:
+        import pytest
+        pytest.skip("sin fuerzas políticas")
+    rep = PEIRSEliteReport(llm=None, observation_store={"PER": {
+        "session_id": "s", "country_code": "PER", "entries": []}})
+    req = EliteReportRequest(country_code="PER", language="es", report_type="final",
+        use_llm=False, output_formats=[],
+        mission_metadata=MissionMetadata(report_number="T", period_start="2026-04-08",
+            period_end="2026-07-02", jornada_date="2026-06-07"))
+    out = asyncio.run(rep.compose(req))
+    ids = [c.chapter_id for c in out.chapters]
+    assert "actores_situacion_procesal" in ids
+    assert ids.index("actores_situacion_procesal") == ids.index("sistema_electoral") + 1
+
+
 def test_5b_renderers_have_no_embedded_title():
     """Los renderers de Sprint 5b ya NO dibujan su título embebido (el título
     lo pone el <figcaption> del HTML). Evita el doble título reportado."""

@@ -168,6 +168,32 @@ class PEIRSEliteReport:
                 f"Capítulo observación entre vueltas falló: {type(e).__name__}: {e}"
             )
 
+        # ── 6b-bis. CAPÍTULO DETERMINISTA: Actores y situación procesal ──
+        # Perfiles de las fuerzas políticas + antecedentes judiciales con fuente
+        # primaria (PERU_POLITICAL_FORCES). Sin LLM: factual y trazable. Se
+        # inserta tras "Sistema electoral" (cap. 3), antes de la fase pre-electoral.
+        try:
+            from agents.elite_report.actors_chapter import build_actors_chapter
+            forces = (_adapter.political_forces()
+                      if hasattr(_adapter, "political_forces") else None)
+            actors_chapter = build_actors_chapter(forces, lang=req.language or "es")
+            if actors_chapter is not None:
+                insert_at = len(chapters)
+                for i, ch in enumerate(chapters):
+                    if ch.chapter_id == "sistema_electoral":
+                        insert_at = i + 1
+                        break
+                chapters.insert(insert_at, actors_chapter)
+                n = 0
+                for ch in chapters:
+                    if ch.number > 0:
+                        n += 1
+                        ch.number = n
+        except Exception as e:
+            bundle.warnings.append(
+                f"Capítulo de actores falló: {type(e).__name__}: {e}"
+            )
+
         # ── 6c. APERTURA DETERMINISTA: Prólogo + Síntesis ejecutiva ────
         # Reemplaza la 'Declaración preliminar' del LLM (que inventaba cifras)
         # por texto institucional fijo + síntesis armada desde datos reales.
@@ -231,7 +257,8 @@ class PEIRSEliteReport:
         _audit_flags: List[str] = []
         try:
             from agents.elite_report.llm_guard import guard_chapter
-            _det = {"declaracion_preliminar", "observacion_entre_vueltas"}
+            _det = {"declaracion_preliminar", "observacion_entre_vueltas",
+                    "actores_situacion_procesal"}
             _ctx = getattr(composer, "_last_shared_context", "") or ""
             if not _ctx:  # fallback si el composer no expuso el contexto
                 _ctx = " ".join((f.finding or "") for f in bundle.hunter_entries)

@@ -1022,6 +1022,42 @@ _STRINGS: Dict[str, Dict[str, str]] = {
     "quant.kpi.topics": {"es": "Temáticas", "en": "Topics", "pt": "Temáticas"},
     "quant.tbl.severity": {"es": "Severidad", "en": "Severity", "pt": "Severidade"},
     "quant.tbl.total": {"es": "Total", "en": "Total", "pt": "Total"},
+    # ── Capítulo de Actores político-electorales y situación procesal ─────
+    "actors.title": {
+        "es": "Actores político-electorales y situación procesal",
+        "en": "Political-electoral actors and legal status",
+        "pt": "Atores político-eleitorais e situação processual",
+    },
+    "actors.intro": {
+        "es": "Perfil de las principales fuerzas políticas que compitieron en el ciclo 2026, con su liderazgo, peso parlamentario y —cuando existe— la situación procesal o judicial documentada de sus figuras centrales. Cada antecedente cita su fuente primaria (resolución del JNE, expediente del Poder Judicial o carpeta fiscal). PEIRS reporta hechos con trazabilidad; NO imputa responsabilidad penal ni prejuzga procesos en curso, en resguardo de la presunción de inocencia (Art. 14(2) ICCPR).",
+        "en": "Profile of the main political forces in the 2026 cycle, with leadership, parliamentary weight and —where it exists— the documented legal or judicial status of their central figures. Each antecedent cites its primary source (JNE resolution, Judiciary case file or prosecutorial docket). PEIRS reports traceable facts; it does NOT impute criminal liability nor prejudge ongoing proceedings, safeguarding the presumption of innocence (Art. 14(2) ICCPR).",
+        "pt": "Perfil das principais forças políticas do ciclo 2026, com liderança, peso parlamentar e —quando existe— a situação processual ou judicial documentada de suas figuras centrais. Cada antecedente cita sua fonte primária (resolução do JNE, processo do Judiciário ou inquérito). O PEIRS relata fatos rastreáveis; NÃO imputa responsabilidade penal nem prejulga processos em curso, resguardando a presunção de inocência (Art. 14(2) PIDCP).",
+    },
+    "actors.col.force": {"es": "Fuerza política", "en": "Political force", "pt": "Força política"},
+    "actors.col.leader": {"es": "Liderazgo", "en": "Leadership", "pt": "Liderança"},
+    "actors.col.ideology": {"es": "Ideología", "en": "Ideology", "pt": "Ideologia"},
+    "actors.col.seats": {"es": "Escaños", "en": "Seats", "pt": "Cadeiras"},
+    "actors.col.risk": {"es": "Perfil de riesgo", "en": "Risk profile", "pt": "Perfil de risco"},
+    "actors.col.iccpr": {"es": "Riesgo (ICCPR)", "en": "Risk (ICCPR)", "pt": "Risco (PIDCP)"},
+    "actors.risk.high": {"es": "Alto", "en": "High", "pt": "Alto"},
+    "actors.risk.medium": {"es": "Medio", "en": "Medium", "pt": "Médio"},
+    "actors.risk.low": {"es": "Bajo", "en": "Low", "pt": "Baixo"},
+    "actors.judicial_header": {
+        "es": "Situación procesal de los actores con antecedentes judiciales",
+        "en": "Legal status of actors with judicial records",
+        "pt": "Situação processual dos atores com antecedentes judiciais",
+    },
+    "actors.judicial_intro": {
+        "es": "Fuerzas cuyas figuras centrales registran procesos penales, condenas o inhabilitaciones documentadas con fuente primaria. La existencia de un proceso no equivale a condena firme.",
+        "en": "Forces whose central figures have criminal proceedings, convictions or disqualifications documented with a primary source. An ongoing proceeding does not amount to a final conviction.",
+        "pt": "Forças cujas figuras centrais registram processos penais, condenações ou inabilitações documentadas com fonte primária. A existência de um processo não equivale a condenação transitada em julgado.",
+    },
+    "actors.iccpr_label": {"es": "Riesgo de derechos (ICCPR)", "en": "Rights risk (ICCPR)", "pt": "Risco de direitos (PIDCP)"},
+    "actors.note": {
+        "es": "Perfiles completos (historial electoral, políticas, fortalezas y vulnerabilidades por fuerza) disponibles en la base de datos de la misión. Datos al cierre del ciclo 2026.",
+        "en": "Full profiles (electoral history, policies, strengths and vulnerabilities per force) available in the mission database. Data as of the close of the 2026 cycle.",
+        "pt": "Perfis completos (histórico eleitoral, políticas, forças e vulnerabilidades por força) disponíveis na base de dados da missão. Dados ao fechamento do ciclo 2026.",
+    },
 
     # Desglose temático (tabla categoría → +N → ejemplos)
     "theme.title": {
