@@ -3,7 +3,7 @@ DEMOCRAC.IA — Cuestionario de Evaluación de Ciclo Electoral
 ===========================================================
 Cuestionario estructurado para observadores de campo que permite
 comparar las respuestas del observador con los scores de los datasets
-(V-Dem v15, FH FIW 2025, RSF 2025, PEI v10.0) al final del ciclo.
+(V-Dem v15, FH FIW 2025, RSF 2025, PEI v11.0) al final del ciclo.
 
 Escala de respuesta (Likert extendida):
   5 — Cumple plenamente / Sin problemas detectados

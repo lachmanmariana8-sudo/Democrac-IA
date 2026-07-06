@@ -759,15 +759,15 @@ def get_rsf_country(df: Optional[pd.DataFrame], country_code: str) -> Optional[D
 RSF_DF = load_rsf_data()
 
 
-PEI_CSV_PATH = os.getenv("PEI_CSV_PATH", "../data/PEI/PEI_10 Election External.csv")
+PEI_CSV_PATH = os.getenv("PEI_CSV_PATH", "../data/PEI/PEI_11 Election External.csv")
 
 PEI_CITATION = (
     "Garnett, H. A., James, T. S., & Caal-Lam, S. (2024). "
-    "'Perceptions of Electoral Integrity (PEI-10.0).' "
+    "'Perceptions of Electoral Integrity (PEI-11.0).' "
     "Electoral Integrity Project. https://doi.org/10.7910/DVN/FQ5ECC"
 )
 PEI_SOURCE_URL = "https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/FQ5ECC"
-PEI_VERSION = "PEI-10.0"
+PEI_VERSION = "PEI-11.0"
 
 PEI_COLUMNS = [
     "ISO", "election", "year", "office",
@@ -2193,7 +2193,7 @@ V-DEM v15 ({vdem_year}): libdem={vdem_libdem} | polyarchy={vdem_polyarchy}
 EMB ({emb_name}): independencia {emb_level} ({emb_label})
 Autonomía normalizada: {emb_autonomy}
 
-PEI-10.0 ({pei_year}): integridad={pei_integrity}/100 | EMBs={pei_emb}/100
+PEI-11.0 ({pei_year}): integridad={pei_integrity}/100 | EMBs={pei_emb}/100
 → Interpretación: {pei_interp}
 
 RSF 2025: score={rsf_score}/100 | rank=#{rsf_rank}/180
@@ -2776,7 +2776,7 @@ def _generate_executive_summary(state: ElectionRiskState) -> str:  # MIGRADO a c
         f"| V-Dem Liberal Democracy | {vdem_libdem} | V-Dem v15 | {vdem_year} |\n"
         f"| V-Dem Electoral Democracy | {vdem_polyarchy} | V-Dem v15 | {vdem_year} |\n"
         f"| Independencia EMB | {emb_level} (autonomia: {emb_autonomy}) | V-Dem v15 | {vdem_year} |\n"
-        f"| PEI Integridad | {pei_integrity_str}/100 (EMBs: {pei_emb}) | PEI-10.0 | {pei_year} |\n"
+        f"| PEI Integridad | {pei_integrity_str}/100 (EMBs: {pei_emb}) | PEI-11.0 | {pei_year} |\n"
         f"| Violaciones | {len(violations)} ({len(critical)} criticas) | PEIRS Legal | \u2014 |\n"
         f"| Tratados | {', '.join(legal.get('treaties_referenced', []))} | PEIRS Legal | \u2014 |"
     )
@@ -2898,9 +2898,9 @@ def _generate_political_context(context: dict, country_code: str = "") -> str:  
         f"| Restricciones a medios | {legal_fw.get('media_law_restrictions', 'N/D')} | FH FIW {fh_edition} |",
     ]
     if pei_laws is not None:
-        legal_rows.append(f"| Score marco legal (PEI) | {pei_laws}/100 | PEI 10.0 |")
+        legal_rows.append(f"| Score marco legal (PEI) | {pei_laws}/100 | PEI 11.0 |")
     if pei_laws_unfair is not None:
-        legal_rows.append(f"| Leyes favorecen incumbente (PEI) | {pei_laws_unfair}/100 | PEI 10.0 |")
+        legal_rows.append(f"| Leyes favorecen incumbente (PEI) | {pei_laws_unfair}/100 | PEI 11.0 |")
     if vdem_opp_barriers is not None:
         legal_rows.append(f"| Barreras a partidos (V-Dem v2psbars) | {vdem_label(vdem_opp_barriers)} | V-Dem v15 {vdem_year} |")
     if vdem_opp_autonomy is not None:
@@ -3047,7 +3047,7 @@ def _generate_political_context(context: dict, country_code: str = "") -> str:  
 
 ---
 
-### 2.1 Fuerzas Políticas — Perú 2026 *(JNE + V-Dem v15 + PEI 10.0)*
+### 2.1 Fuerzas Políticas — Perú 2026 *(JNE + V-Dem v15 + PEI 11.0)*
 
 | Partido | Nombre | Ideología | Escaños actuales | Fuerza electoral | Perfil de riesgo |
 |---|---|---|---|---|---|
@@ -3127,7 +3127,7 @@ def _generate_emb_chapter(context: dict, country_code: str = "") -> str:  # MIGR
         f"- Autonomia (score normalizado): {emb_autonomy}\n"
         f"- Irregularidades electorales: {emb_irregularities}\n"
         f"- Representacion opositora: {'Si' if emb.get('opposition_representation') else 'No'}\n\n"
-        f"**Padron Electoral** *(PEI 10.0)*\n"
+        f"**Padron Electoral** *(PEI 11.0)*\n"
         f"- Estado de auditoria: {registry.get('status', 'N/D')}\n"
         f"- Votantes registrados: {reg_size}\n"
         f"- Score registro PEI: {pei_reg_score}/100\n"
@@ -3143,7 +3143,7 @@ def _generate_emb_chapter(context: dict, country_code: str = "") -> str:  # MIGR
     )
     user_prompt = (
         f"Escribe exactamente 2 parrafos analiticos sobre el EMB.\n\n"
-        f"DATOS (V-Dem v15 + PEI 10.0, confidence=confirmed):\n"
+        f"DATOS (V-Dem v15 + PEI 11.0, confidence=confirmed):\n"
         f"- EMB: {emb_name}\n"
         f"- Independencia: {emb_level}\n"
         f"- Autonomia: {emb_autonomy} (0=ninguna, 1=plena)\n"
@@ -3417,24 +3417,24 @@ def _generate_campaign_chapter(political: dict, context: dict = None) -> str:  #
         rsf_media_row = f"\n| Score libertad de prensa (RSF 2025) | {rsf_score_cap5}/100 (Rank #{rsf_rank_cap5}/180) | RSF 2025 — confirmed |"
 
     # Tabla estructurada con indicación de fuente
-    struct = f"""**Análisis de Medios** *({'PEI-10.0 — confirmed' if media_confirmed else 'datos mock — pendiente'})*
+    struct = f"""**Análisis de Medios** *({'PEI-11.0 — confirmed' if media_confirmed else 'datos mock — pendiente'})*
 | Indicador | Valor | Fuente |
 |---|---|---|
-| Score cobertura mediática (PEI) | {f"{pei_media_score}/100" if pei_media_score else "N/D"} | {'PEI-10.0' if media_confirmed else 'mock'} |
-| Índice de sesgo derivado | {bias_index} | {'PEI-10.0' if media_confirmed else 'mock'} |
+| Score cobertura mediática (PEI) | {f"{pei_media_score}/100" if pei_media_score else "N/D"} | {'PEI-11.0' if media_confirmed else 'mock'} |
+| Índice de sesgo derivado | {bias_index} | {'PEI-11.0' if media_confirmed else 'mock'} |
 | Evaluación general | {media_assessment} | PEIRS |
 | Dirección del sesgo | {bias_dir} | mock |{rsf_media_row}
 
-**Distribución de exposición** *({'PEI 10.0 — confirmado' if media_confirmed else 'estimación derivada — pendiente verificación ONPE/JNE'})*
+**Distribución de exposición** *({'PEI 11.0 — confirmado' if media_confirmed else 'estimación derivada — pendiente verificación ONPE/JNE'})*
 | Actor | Exposición |
 |---|---|
 {exposure_rows}
 
-**Financiamiento de Campaña** *({'PEI-10.0 — confirmed' if finance_confirmed else 'datos mock — pendiente'})*
+**Financiamiento de Campaña** *({'PEI-11.0 — confirmed' if finance_confirmed else 'datos mock — pendiente'})*
 | Indicador | Valor | Fuente |
 |---|---|---|
-| Score transparencia financiera (PEI) | {f"{pei_finance_score}/100" if pei_finance_score else "N/D"} | {'PEI-10.0' if finance_confirmed else 'mock'} |
-| Transparencia derivada | {finance_score} ({finance_assessment}) | {'PEI-10.0' if finance_confirmed else 'mock'} |
+| Score transparencia financiera (PEI) | {f"{pei_finance_score}/100" if pei_finance_score else "N/D"} | {'PEI-11.0' if finance_confirmed else 'mock'} |
+| Transparencia derivada | {finance_score} ({finance_assessment}) | {'PEI-11.0' if finance_confirmed else 'mock'} |
 | Abuso de recursos estatales | {state_abuse} | mock |
 | Donaciones corporativas divulgadas | {'Sí' if donations_disclosed else 'No'} | mock |
 
@@ -3490,7 +3490,7 @@ def _generate_campaign_chapter(political: dict, context: dict = None) -> str:  #
 
     user_prompt = (
         f"Escribe exactamente 3 parrafos para el Capitulo 5 'Campana, Redes de Poder y Financiamiento'.\n\n"
-        f"DATOS VERIFICADOS (PEI-10.0, confidence=confirmed):\n"
+        f"DATOS VERIFICADOS (PEI-11.0, confidence=confirmed):\n"
         f"- Score cobertura mediatica PEI: {pei_media_score}/100 — interpretacion: {pei_media_interpretation}\n"
         f"- Bias index derivado: {bias_index} | Evaluacion: {media_assessment}\n"
         f"- Score financiamiento campaña PEI: {pei_finance_score}/100 — interpretacion: {pei_finance_interpretation}\n"
@@ -4699,7 +4699,7 @@ def _generate_recommendations(state: ElectionRiskState) -> str:  # MIGRADO a cha
         "",
         "### 9.2 Notas Metodológicas",
         "",
-        "- Las recomendaciones se derivan del análisis PEIRS integrado de 4 datasets (V-Dem v15, FH FIW 2025, PEI 10.0, RSF 2025) y el análisis de conformidad legal con estándares internacionales.",
+        "- Las recomendaciones se derivan del análisis PEIRS integrado de 4 datasets (V-Dem v15, FH FIW 2025, PEI 11.0, RSF 2025) y el análisis de conformidad legal con estándares internacionales.",
         "- Los plazos son calculados respecto a la jornada electoral del **12 de abril de 2026**.",
         "- Base legal: **ICCPR** = Pacto Internacional de Derechos Civiles y Políticos (ONU, 1966); **CADH** = Convención Americana sobre Derechos Humanos (1969); **CDI** = Carta Democrática Interamericana (OEA, 2001); **UNDRIP** = Declaración de Derechos de Pueblos Indígenas (ONU, 2007); **UNCAC** = Convención de la ONU contra la Corrupción.",
         "- Prioridades: 🔴 **URGENTE** = riesgo de impacto directo en integridad del proceso si no se implementa; 🟠 **ALTA** = déficit estructural con ventana de corrección; 🟡 **MEDIA** = mejora significativa posible a mediano plazo.",

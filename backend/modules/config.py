@@ -29,7 +29,7 @@ VDEM_CSV_PATH: str = os.getenv("VDEM_CSV_PATH", "../data/vdem/vdem_v16.csv")
 # FH FIW 2026 disponible desde marzo 2026 — setear FH_CSV_PATH para usar la nueva versión
 FH_CSV_PATH: str   = os.getenv("FH_CSV_PATH",   "../data/All_data_FIW_2013-2025 - Index.csv")
 RSF_CSV_PATH: str  = os.getenv("RSF_CSV_PATH",  "../data/RSF/2025 - 2025.csv")
-PEI_CSV_PATH: str  = os.getenv("PEI_CSV_PATH",  "../data/PEI/PEI_10 Election External.csv")
+PEI_CSV_PATH: str  = os.getenv("PEI_CSV_PATH",  "../data/PEI/PEI_11 Election External.csv")
 
 # ── Columnas V-Dem ───────────────────────────────────────────────────────────
 VDEM_COLUMNS = [

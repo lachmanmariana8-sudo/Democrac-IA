@@ -141,8 +141,8 @@ def check_rsf() -> CheckResult:
 
 def check_pei() -> CheckResult:
     return check_dataset(
-        "PEI v10.0", "PEI_CSV_PATH",
-        "../data/PEI/PEI_10 Election External.csv"
+        "PEI v11.0", "PEI_CSV_PATH",
+        "../data/PEI/PEI_11 Election External.csv"
     )
 
 

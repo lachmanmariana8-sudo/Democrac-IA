@@ -1,7 +1,7 @@
 """
 DEMOCRAC.IA / PEIRS — Data Loaders
 Carga y consulta de los datasets externos: V-Dem (v16 vía static fallback +
-v15 CSV legado), Freedom House FIW 2025, RSF Press Freedom Index 2025, PEI v10.0.
+v15 CSV legado), Freedom House FIW 2025, RSF Press Freedom Index 2025, PEI v11.0.
 
 Todos los loaders siguen el mismo patrón:
   - load_*_data()  → DataFrame o None (fallback gracioso si CSV no existe)
