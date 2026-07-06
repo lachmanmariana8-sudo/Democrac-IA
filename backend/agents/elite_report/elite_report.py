@@ -990,6 +990,16 @@ class PEIRSEliteReport:
             "rows": top_regions_per, "cols": cat_top6, "values": grid_values,
         }
 
+        # incidents_category_ranking: ranking de categorías por TOTAL de hallazgos
+        # (todo el ciclo, sin filtro geográfico). Complementa el grid región×categoría,
+        # que solo cuenta hallazgos con ubicación regional atribuible y por eso
+        # sub-representa las categorías de alcance nacional (desinformación, etc.).
+        from agents.elite_report.i18n import category_label as _cat_lbl
+        category_ranking_data = {
+            "items": [{"label": _cat_lbl(cat, language), "count": int(n)}
+                      for cat, n in all_cats.most_common()],
+        }
+
         # map_regions_affected: intensidad por región (cap 5)
         # Sólo se popula si hay location data en el bundle. Caso contrario,
         # el viz cae en empty_state placeholder en el renderer.
@@ -1171,6 +1181,10 @@ class PEIRSEliteReport:
                     ch.visualizations.append(_vs("progress_chart", progress_data))
                 if any(any(v > 0 for v in row) for row in incidents_grid_data["values"]):
                     ch.visualizations.append(_vs("integrity_incidents_grid", incidents_grid_data))
+                # Ranking temático — se emite aunque el grid geográfico esté vacío,
+                # porque captura las categorías de alcance nacional que el grid omite.
+                if any(it["count"] > 0 for it in category_ranking_data["items"]):
+                    ch.visualizations.append(_vs("incidents_category_ranking", category_ranking_data))
             elif ch.chapter_id == "post_electoral":
                 # actor_network ("Red de actores institucionales") QUITADO:
                 # redundante con "Red institucional electoral" (sistema_electoral)

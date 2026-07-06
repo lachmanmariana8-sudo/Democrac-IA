@@ -1536,3 +1536,55 @@ def render_rights_bars(data: Dict[str, Any]) -> str:
         y += row_h
     svg.append('</svg>')
     return "".join(svg)
+
+
+def render_incidents_category_ranking(data: Dict[str, Any]) -> str:
+    """Data: {"items": [{"label","count"}], "_language"}.
+    Ranking de categorías de incidente por total de hallazgos (TODO el ciclo,
+    sin filtro geográfico). Complementa integrity_incidents_grid: la grilla
+    región×categoría solo cuenta hallazgos con ubicación regional atribuible,
+    por lo que sub-representa las categorías de alcance nacional (desinformación,
+    restricción de medios, amenazas digitales). Este ranking muestra su peso real."""
+    items = [it for it in (data.get("items") or []) if it.get("count", 0) > 0]
+    if not items:
+        return _render_empty_state("Sin categorías de incidente registradas")
+    items = sorted(items, key=lambda x: -x.get("count", 0))[:12]
+    cmax = max(it["count"] for it in items) or 1
+
+    lang = (data.get("_language") or "es").lower()
+    hdr_cat = {"es": "CATEGORÍA DE INCIDENTE", "en": "INCIDENT CATEGORY",
+               "pt": "CATEGORIA DE INCIDENTE"}.get(lang, "CATEGORÍA DE INCIDENTE")
+    hdr_n = {"es": "HALLAZGOS", "en": "FINDINGS", "pt": "ACHADOS"}.get(lang, "HALLAZGOS")
+
+    W = 640
+    row_h, top, lbl_w, pad_r = 30, 40, 250, 60
+    bar_x = lbl_w + 8
+    bar_max = W - bar_x - pad_r
+    H = top + row_h * len(items) + 16
+
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
+           f'role="img" aria-label="{_esc(hdr_cat)}">']
+    svg.append(f'<rect width="{W}" height="{H}" fill="{COLORS["bg"]}"/>')
+    svg.append(f'<text x="0" y="22" font-family="{FONT_SANS}" font-size="11" '
+               f'font-weight="700" letter-spacing="0.5" fill="{COLORS["teal_dark"]}">'
+               f'{_esc(hdr_cat)}</text>')
+    svg.append(f'<text x="{W}" y="22" text-anchor="end" font-family="{FONT_SANS}" '
+               f'font-size="11" font-weight="700" letter-spacing="0.5" '
+               f'fill="{COLORS["teal_dark"]}">{_esc(hdr_n)}</text>')
+    y = top
+    for it in items:
+        label = str(it.get("label", ""))
+        if len(label) > 38:
+            label = label[:37] + "…"
+        n = int(it.get("count", 0))
+        bw = max(3, bar_max * n / cmax)
+        cy = y + row_h / 2
+        svg.append(f'<text x="0" y="{cy+4:.0f}" font-family="{FONT_SANS}" font-size="11" '
+                   f'fill="{COLORS["text"]}">{_esc(label)}</text>')
+        svg.append(f'<rect x="{bar_x}" y="{y+5:.0f}" width="{bw:.0f}" height="{row_h-12}" '
+                   f'rx="3" fill="{COLORS["teal"]}"/>')
+        svg.append(f'<text x="{bar_x+bw+6:.0f}" y="{cy+4:.0f}" font-family="{FONT_MONO}" '
+                   f'font-size="11" font-weight="700" fill="{COLORS["text"]}">{n}</text>')
+        y += row_h
+    svg.append('</svg>')
+    return "".join(svg)

@@ -43,6 +43,7 @@ _ELITE_MAP = {
     "map_regions_affected":     elite_5b.render_map_regions_affected,
     "progress_chart":           elite_5b.render_progress_chart,
     "integrity_incidents_grid": elite_5b.render_integrity_incidents_grid,
+    "incidents_category_ranking": elite_5b.render_incidents_category_ranking,
     "actor_network":            elite_5b.render_actor_network,
     "judicial_timeline":        elite_5b.render_judicial_timeline,
     "compliance_matrix":        elite_5b.render_compliance_matrix,

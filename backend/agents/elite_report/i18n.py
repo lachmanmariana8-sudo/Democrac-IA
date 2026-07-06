@@ -855,9 +855,19 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "pt": "Incidentes de integridade — região × categoria",
     },
     "viz.integrity_incidents_grid.caption": {
-        "es": "Intensidad cromática proporcional al conteo.",
-        "en": "Chromatic intensity proportional to the count.",
-        "pt": "Intensidade cromática proporcional à contagem.",
+        "es": "Intensidad cromática proporcional al conteo. Solo incluye hallazgos con ubicación regional atribuible; las categorías de alcance nacional se ven en el ranking temático adjunto.",
+        "en": "Chromatic intensity proportional to the count. Includes only findings with an attributable regional location; national-scope categories are shown in the accompanying thematic ranking.",
+        "pt": "Intensidade cromática proporcional à contagem. Inclui apenas achados com localização regional atribuível; categorias de alcance nacional aparecem no ranking temático anexo.",
+    },
+    "viz.incidents_category_ranking.title": {
+        "es": "Hallazgos por categoría de incidente — ciclo completo",
+        "en": "Findings by incident category — full cycle",
+        "pt": "Achados por categoria de incidente — ciclo completo",
+    },
+    "viz.incidents_category_ranking.caption": {
+        "es": "Total de hallazgos por categoría, sin filtro geográfico. Complementa la grilla región×categoría, que sub-representa los fenómenos de alcance nacional (desinformación, restricción de medios, amenazas digitales).",
+        "en": "Total findings per category, without geographic filter. Complements the region×category grid, which under-represents national-scope phenomena (disinformation, media restriction, digital threats).",
+        "pt": "Total de achados por categoria, sem filtro geográfico. Complementa a grade região×categoria, que sub-representa fenômenos de alcance nacional (desinformação, restrição de mídia, ameaças digitais).",
     },
     "viz.actor_network.title": {
         "es": "Red de actores institucionales",
