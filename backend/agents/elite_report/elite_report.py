@@ -1048,18 +1048,23 @@ class PEIRSEliteReport:
         }
 
         # compliance_matrix: cumplimiento ICCPR/CADH por artículo (cap 8)
-        # Derivar de cross_references contando severidad por artículo
-        article_breaches: Dict[str, Dict[str, int]] = {}
+        # Derivar de cross_references contando severidad por artículo. La columna
+        # "tema" se enriquece con las CATEGORÍAS de los hallazgos que originan cada
+        # cruce normativo (derecho ← temas), no con un guion vacío: así la matriz
+        # muestra qué fenómenos generan cada posible incumplimiento.
+        _entry_cat = {f.entry_id: (f.category or "other") for f in bundle.hunter_entries}
+        _entry_sev = {f.entry_id: (f.severity or "").lower() for f in bundle.hunter_entries}
+        article_breaches: Dict[str, Dict[str, Any]] = {}
         for cr in bundle.cross_references:
             art = cr.normative_instrument
             if art not in article_breaches:
-                article_breaches[art] = {"total": 0, "high": 0}
+                article_breaches[art] = {"total": 0, "high": 0, "cats": Counter()}
             article_breaches[art]["total"] += 1
-            # find linked finding
-            for f in bundle.hunter_entries:
-                if f.entry_id == cr.finding_entry_id and (f.severity or "").lower() in ("critical", "high"):
-                    article_breaches[art]["high"] += 1
-                    break
+            if _entry_sev.get(cr.finding_entry_id) in ("critical", "high"):
+                article_breaches[art]["high"] += 1
+            _c = _entry_cat.get(cr.finding_entry_id)
+            if _c:
+                article_breaches[art]["cats"][_c] += 1
         compliance_rows = []
         for art, br in sorted(article_breaches.items(), key=lambda x: -x[1]["total"])[:12]:
             if br["high"] >= 5:
@@ -1070,9 +1075,12 @@ class PEIRSEliteReport:
                 status = "ok"
             else:
                 status = "unknown"
+            # Top 2 categorías que originan los hallazgos vinculados a este artículo.
+            top_cats = [_cat_lbl(c, language) for c, _ in br["cats"].most_common(2)]
+            topic = " · ".join(top_cats) if top_cats else "—"
             compliance_rows.append({
                 "article": art[:32],
-                "topic": "—",  # se podría enriquecer mapeando art→tema
+                "topic": topic,
                 "status": status,
                 "evidence_count": br["total"],
             })

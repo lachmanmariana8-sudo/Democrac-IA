@@ -895,7 +895,7 @@ def render_compliance_matrix(data: Dict[str, Any]) -> str:
             svg.append(f'<rect x="12" y="{y-18}" width="{W-24}" height="{row_h}" '
                        f'fill="{COLORS["bg_soft"]}"/>')
         article = _esc(r.get("article", ""))[:24]
-        topic = _esc(r.get("topic", ""))[:38]
+        topic = _esc(r.get("topic", ""))[:46]
         ev_count = r.get("evidence_count", 0)
         status = r.get("status", "unknown")
         color = status_color.get(status, COLORS["text_muted"])
