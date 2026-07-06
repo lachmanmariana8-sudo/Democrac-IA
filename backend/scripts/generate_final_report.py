@@ -19,6 +19,7 @@ import glob
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -48,12 +49,17 @@ def _load_corpus() -> list:
 
 
 def _period_end(rows: list) -> str:
-    """period_end = fecha de la última captura del corpus. Garantiza que el
-    informe cubra TODO el corpus (nada se filtra por ventana) y que el total
-    consolidado del informe == manifest (coherencia perfecta)."""
+    """period_end = máximo entre la última captura del corpus y la fecha de
+    generación (UTC). El monitoreo es continuo hasta la emisión del informe:
+    la ausencia de una captura el día de generación no implica que la
+    observación se detuvo, así que el período debe cubrir hasta hoy. Al usar
+    max() nunca queda por debajo de la última captura → no filtra corpus por
+    ventana y el total consolidado del informe == manifest (coherencia)."""
     dates = [(r.get("recorded_at") or "")[:10] for r in rows]
     dates = [d for d in dates if d]
-    return max(dates) if dates else "2026-06-29"
+    last = max(dates) if dates else "2026-06-29"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return max(last, today)
 
 
 async def _run() -> None:

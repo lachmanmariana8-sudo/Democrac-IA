@@ -7805,7 +7805,11 @@ async def ask_constitutionalist(query: ConstitutionalistQuery):
 # fechas relativas a "ahora", a menos que el cliente las especifique
 # explicitamente (lo cual sigue siendo posible para auditorias retroactivas).
 def _default_period_end() -> str:
-    return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    # Fecha de generación (hoy, UTC), no "ayer": el monitoreo es continuo hasta
+    # la emisión del informe, así que el período cubierto debe llegar hasta hoy.
+    # (Antes restaba 1 día → un informe generado el 07-06 reportaba cobertura
+    # solo hasta el 07-05.)
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def _default_period_start() -> str:
