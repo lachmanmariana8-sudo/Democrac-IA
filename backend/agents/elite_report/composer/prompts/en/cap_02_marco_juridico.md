@@ -24,7 +24,8 @@
 
 - Treaties ratified by the country: ICCPR Art. 25, ACHR Art. 23, other applicable
 - Regional instruments: Inter-American Democratic Charter (Arts. 3, 4, 20)
-- Applicable standards: OSCE/ODIHR, OAS/DECO, UN (2005 Declaration of Principles)
+- Observation standards applicable to the Inter-American region: **OAS/DECO** methodology and the **Declaration of Principles for International Election Observation (UN, 2005)** — global in scope and endorsed by the OAS.
+- International methodologies for comparative reference (NOT a regional framework applicable to Peru): EU EOM, Carter Center, International IDEA and OSCE/ODIHR. **IMPORTANT:** do not present OSCE/ODIHR as a framework applicable to Peru — its scope is the OSCE region (Europe, Central Asia and North America), outside the Inter-American system; mention it only as a comparative methodological reference if it provides a specific technical standard.
 - **Inter-American jurisprudence** where relevant to electoral justice and effective remedy: IACtHR, *Yatama v. Nicaragua* (2005) and *Castañeda Gutman v. Mexico* (2008) — right to be elected under equal conditions and to an effective remedy (ACHR Arts. 23 and 25). Cite only if applicable; do not force.
 
 **Requirements:**

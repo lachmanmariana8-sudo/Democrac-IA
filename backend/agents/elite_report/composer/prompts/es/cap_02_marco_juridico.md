@@ -24,7 +24,8 @@
 
 - Tratados ratificados por el país: ICCPR Art. 25, CADH Art. 23, otros aplicables
 - Instrumentos regionales: Carta Democrática Interamericana (Arts. 3, 4, 20)
-- Estándares aplicables: OSCE/ODIHR, OEA/DECO, ONU (Declaración de Principios 2005)
+- Estándares de observación aplicables a la región interamericana: metodología **OEA/DECO** y la **Declaración de Principios para la Observación Internacional de Elecciones (ONU, 2005)** — de alcance global y suscrita por la OEA.
+- Metodologías internacionales de referencia comparada (NO son marco regional aplicable a Perú): EU EOM, Carter Center, IDEA Internacional y OSCE/ODIHR. **IMPORTANTE:** no presentes OSCE/ODIHR como marco aplicable a Perú — su ámbito es la región OSCE (Europa, Asia Central y América del Norte), fuera del sistema interamericano; menciónala solo como referencia metodológica comparada si aporta un estándar técnico puntual.
 - **Jurisprudencia interamericana** cuando sea pertinente a la justicia electoral y al recurso efectivo: Corte IDH, *Yatama vs. Nicaragua* (2005) y *Castañeda Gutman vs. México* (2008) — derecho a ser elegido en condiciones de igualdad y a un recurso efectivo (CADH Arts. 23 y 25). Citar solo si aplica al ciclo; no forzar.
 
 **Requisitos:**
