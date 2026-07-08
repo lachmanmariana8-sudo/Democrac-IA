@@ -81,10 +81,10 @@ RSF_CITATION  = (
 RSF_SOURCE_URL = "https://rsf.org/en/index"
 
 # ── PEI ──────────────────────────────────────────────────────────────────────
-PEI_VERSION  = "PEI-10.0"
+PEI_VERSION  = "PEI-11.0"
 PEI_CITATION = (
     "Garnett, H. A., James, T. S., & Caal-Lam, S. (2024). "
-    "'Perceptions of Electoral Integrity (PEI-10.0).' "
+    "'Perceptions of Electoral Integrity (PEI-11.0).' "
     "Electoral Integrity Project. https://doi.org/10.7910/DVN/FQ5ECC"
 )
 PEI_SOURCE_URL = "https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/FQ5ECC"

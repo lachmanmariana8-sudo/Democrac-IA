@@ -304,7 +304,7 @@ class DatasetsLoader:
                 indicator="pei_overall",
                 indicator_label="Perceptions of Electoral Integrity (PEI Overall)",
                 source="Electoral Integrity Project",
-                source_citation="Electoral Integrity Project. (2024). *Perceptions of Electoral Integrity (PEI 10.0) Dataset*. Universities of Sydney and Harvard.",
+                source_citation="Electoral Integrity Project. (2025). *Perceptions of Electoral Integrity (PEI 11.0) Dataset*. University of East Anglia and Harvard Dataverse.",
                 unit="0–100",
                 datapoints=datapoints,
                 trend_direction=trend[0],

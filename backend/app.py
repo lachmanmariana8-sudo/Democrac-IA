@@ -6118,7 +6118,7 @@ async def health_check(deep: bool = False):
         "version": "0.4.0",
         "features": [
             "country_profile", "electoral_observation_protocol", "traceability",
-            f"vdem_{VDEM_VERSION}", "freedom_house", "pei_v10", "rsf_index",
+            f"vdem_{VDEM_VERSION}", "freedom_house", "pei_v11", "rsf_index",
             "ooni_live", "fraud_hate_analysis", "rag_legal", "constitutionalist",
             "report_designer", "elite_report",
         ],

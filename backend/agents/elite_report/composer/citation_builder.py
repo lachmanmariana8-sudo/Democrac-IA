@@ -107,9 +107,9 @@ NORMATIVE_APA = {
         "https://freedomhouse.org/report/freedom-world"
     ),
     "pei": (
-        "Norris, P., & Grömping, M. (2024). *Perceptions of Electoral Integrity "
-        "(PEI-10.0) Dataset*. Electoral Integrity Project, University of Sydney & "
-        "Harvard Kennedy School. https://www.electoralintegrityproject.com"
+        "Garnett, H. A., James, T. S., & Caal-Lam, S. (2024). *Perceptions of "
+        "Electoral Integrity (PEI-11.0) Dataset*. Electoral Integrity Project. "
+        "https://www.electoralintegrityproject.com"
     ),
     "rsf": (
         "Reporteros Sin Fronteras. (2025). *Índice Mundial de la Libertad de Prensa 2025*. "
